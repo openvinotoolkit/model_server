@@ -19,6 +19,7 @@ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_z
 :::{dropdown} **Deploying with Docker**
 Start OVMS container with image pulled in previous step and mount `model` directory :
 ```bash
+chmod -R 755 model
 docker run --rm -d -u $(id -u):$(id -g) -v $(pwd)/model:/models/age_gender -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_path /models/age_gender --model_name age_gender --port 9000 --rest_port 8000
 ```
 :::
@@ -30,7 +31,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\age_gender_recognition\python
 ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000
 ```
 :::

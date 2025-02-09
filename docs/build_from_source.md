@@ -5,9 +5,11 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 8.10 host
+1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.4 host
 1. make
 1. bash
+
+ > **Note**: Building Windows Model Server is covered in [Developer Guide for Windows](windows_developer_guide.md).
 
 ## Makefile and building
 
@@ -141,7 +143,7 @@ make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 
 ### `GPU`
 
-When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
+When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
 
 Example:
 ```bash
@@ -171,10 +173,7 @@ dist/ubuntu22
 └── ovms.tar.gz.sha256
 ```
 
+---
 
-Read more detailed usage in [developer guide](https://github.com/openvinotoolkit/model_server/blob/main/docs/developer_guide.md).
+Read more details about building and testing changes in [developer guide](./developer_guide.md).
 
-## Building ovms.exe on Windows
-
-[Developer Guide for Windows](windows_developer_guide.md) document describes building procedure for ovms.exe binary.
-Follow the instructions to start the ovms server as a standalone binary on a Windows 11 system.

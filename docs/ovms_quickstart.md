@@ -1,12 +1,12 @@
-# Quickstart Guide {#ovms_docs_quick_start_guide}
+# QuickStart - classic models {#ovms_docs_quick_start_guide}
 
-OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2024/documentation/openvino-ir-format/operation-sets.html)
+OpenVINO Model Server can perform inference using pre-trained models in either [OpenVINO IR](https://docs.openvino.ai/2025/documentation/openvino-ir-format/operation-sets.html)
 , [ONNX](https://onnx.ai/), [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) or [TensorFlow](https://www.tensorflow.org/) format. You can get them by:
 
 - downloading models from [Open Model Zoo](https://storage.openvinotoolkit.org/repositories/open_model_zoo/)
 - generating the model in a training framework and saving it to a supported format: TensorFlow saved_model, ONNX or PaddlePaddle.
 - downloading the models from models hubs like [Kaggle](https://www.kaggle.com/models) or [ONNX models zoo](https://github.com/onnx/models).
-- converting models from any formats using [conversion tool](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html)
+- converting models from any formats using [conversion tool](https://docs.openvino.ai/2025/openvino-workflow/model-preparation/convert-model-to-ir.html)
 
 This guide uses a [Faster R-CNN with Resnet-50 V1 Object Detection model](https://www.kaggle.com/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1) in TensorFlow format.
 
@@ -50,8 +50,8 @@ docker pull openvino/model_server:latest
 Store components of the model in the `model/1` directory. Here are example commands pulling an object detection model from Kaggle:
 
 ```console
-curl --create-dir https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
-tar xzf 1.tar.gz -C model/1
+curl -L --create-dirs https://www.kaggle.com/api/v1/models/tensorflow/faster-rcnn-resnet-v1/tensorFlow2/faster-rcnn-resnet50-v1-640x640/1/download -o model/1/1.tar.gz
+tar xzf model/1/1.tar.gz -C model/1
 ```
 
 OpenVINO Model Server expects a particular folder structure for models - in this case `model` directory has the following content:
@@ -73,6 +73,7 @@ For more information about the directory structure and how to deploy multiple mo
 ### Step 4: Start the Model Server
 :::{dropdown} **Deploying with Docker**
 ```bash
+chmod -R 755 model
 docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/model_server:latest --model_name faster_rcnn --model_path /model --port 9000
 ```
 
@@ -84,7 +85,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_name faster_rcnn --model_path model --port 9000
 ```
@@ -132,3 +133,4 @@ In our case, it will be a modified input image with bounding boxes indicating de
 or [PaddlePaddle model demo](../demos/classification_using_paddlepaddle_model/python/README.md).
 
 Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
+Check also how to write the client code using [TFS API](./clients_tfs.md) and [KServe API](./clients_kfs.md)

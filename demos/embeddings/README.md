@@ -186,10 +186,10 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 ## Benchmarking feature extraction
 
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
-```bash
-popd
+```console
+git clone https://github.com/openvinotoolkit/model_server
 pushd .
-cd demos/benchmark/embeddings/
+cd model_server/demos/benchmark/embeddings/
 pip install -r requirements.txt
 python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
 Number of documents: 1000
@@ -237,7 +237,7 @@ A simple method of testing the response accuracy is via comparing the response f
 The script [compare_results.py](./compare_results.py) can assist with such experiment.
 ```bash
 popd
-cd demos/embeddings
+cd model_server/demos/embeddings
 python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
@@ -270,5 +270,81 @@ It is easy also to run model evaluation using [MTEB](https://github.com/embeddin
 ```bash
 pip install mteb
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
+```
+Results will be stored in `results` folder:
+``json
+{
+  "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
+  "task_name": "Banking77Classification",
+  "mteb_version": "1.31.6",
+  "scores": {
+    "test": [
+      {
+        "accuracy": 0.849416,
+        "f1": 0.845058,
+        "f1_weighted": 0.845058,
+        "scores_per_experiment": [
+          {
+            "accuracy": 0.854545,
+            "f1": 0.850033,
+            "f1_weighted": 0.850033
+          },
+          {
+            "accuracy": 0.86461,
+            "f1": 0.860671,
+            "f1_weighted": 0.860671
+          },
+          {
+            "accuracy": 0.847403,
+            "f1": 0.843897,
+            "f1_weighted": 0.843897
+          },
+          {
+            "accuracy": 0.856169,
+            "f1": 0.853613,
+            "f1_weighted": 0.853613
+          },
+          {
+            "accuracy": 0.843831,
+            "f1": 0.839043,
+            "f1_weighted": 0.839043
+          },
+          {
+            "accuracy": 0.847078,
+            "f1": 0.844124,
+            "f1_weighted": 0.844124
+          },
+          {
+            "accuracy": 0.842208,
+            "f1": 0.837938,
+            "f1_weighted": 0.837938
+          },
+          {
+            "accuracy": 0.843506,
+            "f1": 0.837239,
+            "f1_weighted": 0.837239
+          },
+          {
+            "accuracy": 0.85,
+            "f1": 0.844696,
+            "f1_weighted": 0.844696
+          },
+          {
+            "accuracy": 0.844805,
+            "f1": 0.839321,
+            "f1_weighted": 0.839321
+          }
+        ],
+        "main_score": 0.849416,
+        "hf_subset": "default",
+        "languages": [
+          "eng-Latn"
+        ]
+      }
+    ]
+  },
+  "evaluation_time": 109.37459182739258,
+  "kg_co2_emissions": null
+}
 ```
 

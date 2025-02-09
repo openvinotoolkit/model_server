@@ -7,7 +7,7 @@ The client can work efficiently also over slow internet connection with long lat
 ### Download horizontal text detection model from OpenVINO Model Zoo
 
 ```bash
-curl -L --create-dir https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
+curl -L --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
 ```
 
 ```bash
@@ -20,6 +20,7 @@ horizontal-text-detection-0001
 
 ### Start the OVMS container:
 ```bash
+chmod -R 755 horizontal-text-detection-0001
 docker run -d -u $(id -u):$(id -g) -v $(pwd)/horizontal-text-detection-0001:/model -p 9000:9000 openvino/model_server:latest \
 --model_path /model --model_name text --port 9000 --layout NHWC:NCHW
 ```
