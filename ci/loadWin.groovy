@@ -73,6 +73,9 @@ def deleteOldDirectories() {
     def existing_prs = existing_prs_string.split(/\n/)
 
     for (int i = 0; i < existing_prs.size(); i++) {
+        // Check for empty output
+        if (existing_prs[i] == "") { continue }
+
         // Check if directory was created more than 14 days ago
         def pathToDelete = "c:\\" + existing_prs[i]
         // Sanity check not to delete anything else
