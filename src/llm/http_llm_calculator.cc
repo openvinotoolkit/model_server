@@ -59,8 +59,8 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
     std::shared_ptr<ClientConnection> client;
 
-    // TODO: To be  moved to CB library
-    std::shared_ptr<TextStreamer> streamer;
+    std::shared_ptr<ov::genai::TextCallbackStreamer> streamer;
+    std::string lastStreamerCallbackOutput;
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -181,8 +181,14 @@ public:
                     });
                 }
                 nodeResources->notifyExecutorThread();
-                this->streamer = std::make_shared<TextStreamer>(
-                    std::make_shared<ov::genai::Tokenizer>(nodeResources->cbPipe->get_tokenizer()));
+
+                auto callback = [this](std::string text) {
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
+                    this->lastStreamerCallbackOutput = text;
+                    return false;
+                };
+
+                this->streamer = std::make_shared<ov::genai::TextCallbackStreamer>(nodeResources->cbPipe->get_tokenizer(), callback);
             }
 
             RET_CHECK(this->generationHandle != nullptr);
@@ -221,25 +227,30 @@ public:
                     ov::genai::GenerationOutputs generationOutputs = this->generationHandle->read();
                     RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
                     this->apiHandler->incrementProcessedTokens(generationOutputs.begin()->second.generated_ids.size());
-
-                    // TODO(dkalinow): Move this logic to CB library
                     auto generationOutput = generationOutputs.begin()->second;
-                    auto chunk = this->streamer->put(generationOutput.generated_ids);
+                    // This loop could be handled in the streamer, but for now we want to keep it identical with GenAI
+                    // so such change should be done in GenAI first
+                    std::stringstream ss;
+                    for (const auto& token : generationOutput.generated_ids) {
+                        this->streamer->put(token);
+                        ss << this->lastStreamerCallbackOutput;
+                    }
+                    std::string lastTextChunk = ss.str();
                     ov::genai::GenerationFinishReason finishReason = generationOutputs.begin()->second.finish_reason;
                     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
-                        if (chunk.has_value()) {
-                            std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(chunk.value(), finishReason));
+                        if (lastTextChunk.size() > 0) {
+                            std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
                             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", response);
                             cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new OutputDataType{std::move(response)}, timestamp);
                         }
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, timestamp);
                     } else {  // finish generation
                         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-                        std::string finalChunk = this->streamer->end();
+                        this->streamer->end();
                         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-                        if (chunk.has_value())
-                            finalChunk = chunk.value() + finalChunk;
-                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(finalChunk, finishReason));
+                        if (!this->lastStreamerCallbackOutput.empty())
+                            lastTextChunk = lastTextChunk + this->lastStreamerCallbackOutput;
+                        std::string response = packIntoServerSideEventMessage(this->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
                         if (this->apiHandler->getStreamOptions().includeUsage)
                             response += packIntoServerSideEventMessage(this->apiHandler->serializeStreamingUsageChunk());
 
