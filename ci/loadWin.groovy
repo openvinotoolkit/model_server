@@ -14,7 +14,7 @@ def cleanup_directories() {
     println existing_workspace_string
     def existing_workspace = existing_workspace_string.split(/\n/)
 
-    command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
+    command = 'ls c:\\ | grep -oE "(PR-[0-9]*)$"'
     status = bat(returnStatus: true, script: command)
     if ( status != 0) {
         println "No PR-XXXX detected for cleanup."
@@ -43,7 +43,7 @@ def cleanup_directories() {
         if (!found) {
             def pathToDelete = "c:\\" + existing_prs[i]
             // Sanity check not to delete anything else
-            if (!pathToDelete.contains("c:\\pr-")) {
+            if (!pathToDelete.contains("c:\\PR-")) {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
             } else {
                 println "Deleting: " + pathToDelete
