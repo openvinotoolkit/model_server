@@ -355,7 +355,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
 #ifdef _WIN32
-        "--cpu_extension",  "tmp_cpu_extension_library_dir",
+        "--cpu_extension", "tmp_cpu_extension_library_dir",
 #else
         "--cpu_extension", "/ovms",
 #endif
@@ -426,9 +426,11 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
 #ifdef _WIN32
-        "--cpu_extension",  "tmp_cpu_extension_library_dir",
+        "--cpu_extension",
+        "tmp_cpu_extension_library_dir",
 #else
-        "--cpu_extension", "/ovms",
+        "--cpu_extension",
+        "/ovms",
 #endif
         "--cache_dir",
         "/tmp/model_cache",
