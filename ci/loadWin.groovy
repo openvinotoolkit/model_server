@@ -57,7 +57,7 @@ def cleanup_directories() {
 
 def get_short_bazel_path() {
     if (env.JOB_BASE_NAME.contains("release"))
-        return "release"
+        return "rel"
     else
         return env.JOB_BASE_NAME
 }
