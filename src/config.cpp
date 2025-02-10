@@ -166,7 +166,7 @@ bool Config::validate() {
 
     // check cpu_extension path:
     if (!cpuExtensionLibraryPath().empty() && !std::filesystem::exists(cpuExtensionLibraryPath())) {
-        std::cerr << "File path provided as an --cpu_extension parameter does not exists in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
+        std::cerr << "File path provided as an --cpu_extension parameter does not exist in the filesystem: " << this->cpuExtensionLibraryPath() << std::endl;
         return false;
     }
 

@@ -276,7 +276,7 @@ TEST_F(OvmsConfigDeathTest, negativeGrpcWorkersMax) {
 TEST_F(OvmsConfigDeathTest, cpuExtensionMissingPath) {
     char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir"};
     int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "File path provided as an --cpu_extension parameter does not exists in the filesystem");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "File path provided as an --cpu_extension parameter does not exist in the filesystem");
 }
 
 TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
@@ -338,6 +338,11 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
 }
 
 TEST(OvmsConfigTest, positiveMulti) {
+#ifdef _WIN32
+    const std::string cpu_extension_lib_path = "tmp_cpu_extension_library_dir";
+    std::filesystem::create_directory(cpu_extension_lib_path);
+#endif
+
     char* n_argv[] = {"ovms",
         "--port", "44",
         "--grpc_workers", "2",
@@ -349,7 +354,11 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--file_system_poll_wait_seconds", "2",
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
+#ifdef _WIN32
+        "--cpu_extension",  "tmp_cpu_extension_library_dir",
+#else
         "--cpu_extension", "/ovms",
+#endif
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
         "--log_level", "ERROR",
@@ -371,16 +380,29 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+#ifdef _WIN32
+    EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
+#else
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
+#endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
     EXPECT_EQ(config.logLevel(), "ERROR");
     EXPECT_EQ(config.configPath(), "/config.json");
     EXPECT_EQ(config.grpcMaxThreads(), 100);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)1000000);
+
+#ifdef _WIN32
+    std::filesystem::remove_all(cpu_extension_lib_path);
+#endif
 }
 
 TEST(OvmsConfigTest, positiveSingle) {
+#ifdef _WIN32
+    const std::string cpu_extension_lib_path = "tmp_cpu_extension_library_dir";
+    std::filesystem::create_directory(cpu_extension_lib_path);
+#endif
+
     char* n_argv[] = {
         "ovms",
         "--port",
@@ -403,8 +425,11 @@ TEST(OvmsConfigTest, positiveSingle) {
         "7",
         "--custom_node_resources_cleaner_interval_seconds",
         "8",
-        "--cpu_extension",
-        "/ovms",
+#ifdef _WIN32
+        "--cpu_extension",  "tmp_cpu_extension_library_dir",
+#else
+        "--cpu_extension", "/ovms",
+#endif
         "--cache_dir",
         "/tmp/model_cache",
         "--log_path",
@@ -452,7 +477,11 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.sequenceCleanerPollWaitMinutes(), 7);
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+#ifdef _WIN32
+    EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
+#else
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
+#endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
     EXPECT_EQ(config.logLevel(), "ERROR");
@@ -473,6 +502,10 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.maxSequenceNumber(), 52);
     EXPECT_EQ(config.grpcMaxThreads(), ovms::getCoreCount() * 8.0);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)2 * 1024 * 1024 * 1024);
+
+#ifdef _WIN32
+    std::filesystem::remove_all(cpu_extension_lib_path);
+#endif
 }
 
 #pragma GCC diagnostic pop
