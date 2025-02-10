@@ -42,13 +42,15 @@ extern const std::string MP_IMAGE_PREFIX;
         }                                                        \
     }
 
-#define OVMS_RETURN_ON_FAIL(code) \
-    {                             \
-        auto status = code;       \
-        if (!status.ok()) {       \
-            return status;        \
-        }                         \
-    }
+#define OVMS_RETURN_ON_FAIL(code)                 \
+    _Pragma("warning(push)")                      \
+        _Pragma("warning(disable : 4456 6246)") { \
+        auto status = code;                       \
+        if (!status.ok()) {                       \
+            return status;                        \
+        }                                         \
+    }                                             \
+    _Pragma("warning(pop)")
 
 #define OVMS_RETURN_MP_ERROR_ON_FAIL(code, message)                     \
     {                                                                   \

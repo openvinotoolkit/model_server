@@ -21,7 +21,7 @@
 #include <variant>
 
 #pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6386 6011)
+#pragma warning(disable : 4005 4309 6001 6386 6011 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/port/canonical_errors.h"
@@ -166,8 +166,8 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
         return absl::InvalidArgumentError("Invalid embeddings tensor shape");
     }
     size_t batchSize = outputShape[0];
-    for (size_t i = 0; i < batchSize; i++) {
-        size_t stride = i * outputShape[1] * outputShape[2];
+    for (size_t batchIterator = 0; batchIterator < batchSize; batchIterator++) {
+        size_t stride = batchIterator * outputShape[1] * outputShape[2];
         size_t size = outputShape[2];
         float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
         float* dataPtrEnd = dataPtr + size;
@@ -194,7 +194,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
             writer.EndArray();
         }
         writer.String("index");
-        writer.Uint(i);
+        writer.Uint(batchIterator);
         writer.EndObject();
     }
 

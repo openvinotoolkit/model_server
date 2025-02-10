@@ -132,29 +132,18 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/GS",
                         "/DYNAMICBASE",
                         "/Qspectre",
-                        "/guard:cf",
-                        "/wd4018", # level 3
-                        "/wd4068", # level 1
-                        "/wd4458", # level 4
-                        "/wd4100", # level 4
-                        "/wd4267", # level 1
-                        "/wd4389", # level 4
-                        "/wd4127", # level 4
-                        "/wd4456", # level 4
-                        "/wd4673", # level 4
-                        "/wd4670", # level 4
-                        "/wd4244", # level 3
-                        "/wd4457", # level 4
-                        "/wd4505", # level 4
-                        "/wd6246", # level 3
-                        "/wd4702", # level 4
-                        "/wd4101", # level 3/4
-                        "/wd6387", # level 4
-                        "/wd6308", # level 4
-                        "/wd6319", # level 3/4
-                        "/wd4297", # level 3/4
-                        "/wd4701",
-                        "/wd4804",
+                        "/wd4068", # level 1 Unknown pragma GCC
+                        "/wd4458", # level 4 warning C4458: declaration of 'name' hides class member
+                        "/wd4100", # level 4 drogon_http_async_writer_impl.cpp(30): warning C4100: 'status': unreferenced formal parameter
+                        "/wd4389", # level 4 predict_request_validation_utils.cpp(722): warning C4389: '!=': signed/unsigned mismatch
+                        "/wd4127", # level 4 conditional expression is constant
+                        "/wd4673", # level 4 src/python/python_executor_calculator.cc(74): warning C4673: throwing 'ovms::UnexpectedInputPythonObjectError' the following types will not be considered at the catch site
+                        "/wd4670", # level 4 src/python/python_executor_calculator.cc(74): src/python/python_executor_calculator.cc(74): warning C4670: 'UnexpectedPythonObjectError': this base class is inaccessible
+                        "/wd4244", # level 3 MSVC\14.29.30133\include\algorithm(2650): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+                        "/wd4297", # level 3/4 - exception specification 
+                        "/wd4701", # warning C4701: potentially uninitialized local variable 'requestOrder' used ??
+                        "/wd4702", # level 4 pipelinedefinitionstatus.cpp(100) : warning C4702: unreachable code
+                        "/wd4267", # level 4 src/dags/nodesessionmetadata.cpp(86): 'initializing': conversion from 'size_t' to 'int32_t', possible loss of data
                     ],
                 })
 
