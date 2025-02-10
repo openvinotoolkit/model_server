@@ -55,6 +55,8 @@ static std::string packPromptTokens(T* input, size_t size) {
     return ss.str();
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static std::string getPromptTokensString(const ov::Tensor& tensor) {
@@ -78,5 +80,5 @@ static std::string getPromptTokensString(const ov::Tensor& tensor) {
     }
 }
 #pragma GCC diagnostic pop
-
+#pragma warning(pop)
 }  // namespace ovms

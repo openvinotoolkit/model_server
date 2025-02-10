@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 #pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6326)
+#pragma warning(disable : 6001 4324 6385 6326 6308 6387 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
@@ -38,7 +38,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6386 6326)
+#pragma warning(disable : 6001 4324 6385 6386 6326 6246)
 #include "mediapipe/framework/deps/registration.h"
 #pragma warning(pop)
 #include "mediapipegraphdefinition.hpp"
