@@ -205,13 +205,6 @@ static auto Disconnect() {
     };
 }
 
-// static auto DisconnectWhenNotified(std::mutex& mtx) {
-//     return [&mtx](::inference::ModelInferRequest* req) {
-//         std::lock_guard<std::mutex> lock(mtx);  // waits for lock to be released
-//         return false;
-//     };
-// }
-
 static auto DisconnectWhenNotified_(std::future<void>& fut) {
     return [&fut](::inference::ModelInferRequest* req) {
         fut.get();
@@ -233,14 +226,6 @@ static auto ReceiveWithServableNameAndVersion(std::vector<std::tuple<std::string
     };
 }
 
-// static auto ReceiveWithServableNameAndVersionWhenNotified(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion, std::mutex& mtx) {
-//     return [content, servableName, servableVersion, &mtx](::inference::ModelInferRequest* req) {
-//         std::lock_guard<std::mutex> lock(mtx);
-//         prepareRequest(*req, content, std::nullopt, servableName, servableVersion);
-//         return true;
-//     };
-// }
-
 static auto ReceiveWithServableNameAndVersionWhenNotified_(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion, std::future<void>& fut) {
     return [content, servableName, servableVersion, &fut](::inference::ModelInferRequest* req) {
         fut.get();
@@ -257,14 +242,6 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
     };
 }
 
-// static auto ReceiveWhenNotified(std::vector<std::tuple<std::string, float>> content, std::mutex& mtx) {
-//     return [content, &mtx](::inference::ModelInferRequest* req) {
-//         std::lock_guard<std::mutex> lock(mtx);
-//         prepareRequest(*req, content);
-//         return true;
-//     };
-// }
-
 static auto ReceiveWhenNotified_(std::vector<std::tuple<std::string, float>> content, std::future<void>& fut) {
     return [content, &fut](::inference::ModelInferRequest* req) {
         fut.get();
@@ -272,15 +249,6 @@ static auto ReceiveWhenNotified_(std::vector<std::tuple<std::string, float>> con
         return true;
     };
 }
-
-// static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
-//     return [content, timestamp, &mtx](::inference::ModelInferRequest* req) {
-//         std::lock_guard<std::mutex> lock(mtx);
-//         prepareRequest(*req, content);
-//         setRequestTimestamp(*req, std::to_string(timestamp));
-//         return true;
-//     };
-// }
 
 static auto ReceiveWithTimestampWhenNotified_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::future<void>& fut) {
     return [content, timestamp, &fut](::inference::ModelInferRequest* req) {
@@ -291,15 +259,6 @@ static auto ReceiveWithTimestampWhenNotified_(std::vector<std::tuple<std::string
     };
 }
 
-// static auto ReceiveInvalidWithTimestampWhenNotified(std::vector<std::string> inputs, int64_t timestamp, std::mutex& mtx) {
-//     return [inputs, timestamp, &mtx](::inference::ModelInferRequest* req) {
-//         std::lock_guard<std::mutex> lock(mtx);
-//         prepareInvalidRequest(*req, inputs);
-//         setRequestTimestamp(*req, std::to_string(timestamp));
-//         return true;
-//     };
-// }
-
 static auto ReceiveInvalidWithTimestampWhenNotified_(std::vector<std::string> inputs, int64_t timestamp, std::future<void>& fut) {
     return [inputs, timestamp, &fut](::inference::ModelInferRequest* req) {
         fut.get();
@@ -308,15 +267,6 @@ static auto ReceiveInvalidWithTimestampWhenNotified_(std::vector<std::string> in
         return true;
     };
 }
-
-
-// static auto DisconnectOnWriteAndNotifyEnd(std::mutex& mtx) {
-//     mtx.lock();
-//     return [&mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-//         mtx.unlock();
-//         return false;
-//     };
-// }
 
 static auto DisconnectOnWriteAndNotifyEnd_(std::promise<void>& prom) {
     return [&prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -339,15 +289,6 @@ static auto SendWithTimestampServableNameAndVersion(std::vector<std::tuple<std::
     };
 }
 
-// static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::mutex& mtx) {
-//     mtx.lock();
-//     return [content, timestamp, servableName, servableVersion, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-//         assertResponse(msg, content, timestamp, servableName, servableVersion);
-//         mtx.unlock();
-//         return true;
-//     };
-// }
-
 static auto SendWithTimestampServableNameAndVersionAndNotifyEnd_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::promise<void>& prom) {
     return [content, timestamp, servableName, servableVersion, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, timestamp, servableName, servableVersion);
@@ -355,15 +296,6 @@ static auto SendWithTimestampServableNameAndVersionAndNotifyEnd_(std::vector<std
         return true;
     };
 }
-
-// static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::mutex& mtx) {
-//     mtx.lock();
-//     return [content, timestamp, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-//         assertResponse(msg, content, timestamp);
-//         mtx.unlock();
-//         return true;
-//     };
-// }
 
 static auto SendWithTimestampAndNotifyEnd_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::promise<void>& prom) {
     return [content, timestamp, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -379,15 +311,6 @@ static auto SendError(const std::string& expectedMessage) {
         return true;
     };
 }
-
-// static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::mutex& mtx) {
-//     mtx.lock();
-//     return [expectedMessage, &mtx](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-//         assertResponseError(msg, expectedMessage);
-//         mtx.unlock();
-//         return true;
-//     };
-// }
 
 static auto SendErrorAndNotifyEnd_(const std::string& expectedMessage, std::promise<void>& prom) {
     return [expectedMessage, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
