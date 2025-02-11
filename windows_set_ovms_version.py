@@ -28,8 +28,13 @@ def help():
           for example: \n\
           python windows_set_ovms_version.py \"--config=windows\" c:\\opt\\ \n\
           ")
-    
+
+def escape_string(input):
+    output = input.replace(r"\n",r"\\n").replace(r"\r",r"\\r")
+    return output
+
 def replace_in_file(file_path, old_string, new_string):
+    new_string = escape_string(new_string)
     with open(file_path, 'r+') as file:
         contents = file.read()
         contents = contents.replace(old_string, new_string)
