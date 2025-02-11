@@ -197,7 +197,7 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080", (char*)"--grpc_max_threads", (chat*)"4"};  // Workaround to have rest_port parsed in order to enable metrics
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
@@ -1012,8 +1012,8 @@ std::string MetricFlowTest::prepareConfigContent() {
         "model_config_list": [
             {"config": {
                     "name": "dummy",
-                    "nireq": 2,
-                    "plugin_config": {"CPU_THROUGHPUT_STREAMS": 4},
+                    "nireq": 6,
+                    "plugin_config": {"NUM_STREAMS": 4},
                     "base_path": "/ovms/src/test/dummy"}}
         ],
         "pipeline_config_list": [
