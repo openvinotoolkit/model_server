@@ -26,6 +26,8 @@
 #include <openvino/genai/scheduler_config.hpp>
 #include <openvino/openvino.hpp>
 
+#include "openvino/genai/streamer_base.hpp"
+
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005)
 #pragma GCC diagnostic push
@@ -45,62 +47,83 @@
 #include "src/python/utils.hpp"
 #include "text_processor.hpp"
 
+// Text streamer implementation copied from GenAI. Use GenAI directly when it's moved to the interface.
+namespace ov {
+namespace genai {
+class TextCallbackStreamer : public StreamerBase {
+protected:
+    Tokenizer m_tokenizer;
+    std::vector<int64_t> m_tokens_cache;
+    std::vector<int64_t> m_decoded_lengths;
+    size_t m_printed_len = 0;
+
+public:
+    bool put(int64_t token) {
+        std::stringstream res;
+        m_tokens_cache.push_back(token);
+        std::string text = m_tokenizer.decode(m_tokens_cache);
+        m_decoded_lengths.push_back(text.length());
+
+        if (!text.empty() && '\n' == text.back() && text.size() > m_printed_len) {
+            // Flush the cache after the new line symbol
+            res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len};
+            m_tokens_cache.clear();
+            m_decoded_lengths.clear();
+            m_printed_len = 0;
+            return on_finalized_subword_callback(res.str());
+        }
+
+        constexpr size_t delay_n_tokens = 3;
+        // In some cases adding the next token can shorten the text,
+        // e.g. when apostrophe removing regex had worked after adding new tokens.
+        // Printing several last tokens is delayed.
+        if (m_decoded_lengths.size() < delay_n_tokens) {
+            return on_finalized_subword_callback(res.str());
+        }
+        constexpr char replacement[] = "\xef\xbf\xbd";  // MSVC with /utf-8 fails to compile <UNK> directly with newline in string literal error.
+        if (text.size() >= 3 && text.compare(text.size() - 3, 3, replacement) == 0) {
+            m_decoded_lengths[m_decoded_lengths.size() - 1] = -1;
+            // Don't print incomplete text
+            return on_finalized_subword_callback(res.str());
+        }
+        int64_t print_until = m_decoded_lengths[m_decoded_lengths.size() - delay_n_tokens];
+        if (print_until != -1 && print_until > static_cast<int64_t>(m_printed_len)) {
+            // It is possible to have a shorter text after adding new token.
+            // Print to output only if text length is increaesed.
+            res << std::string_view{text.data() + m_printed_len, print_until - m_printed_len} << std::flush;
+            m_printed_len = print_until;
+        }
+
+        return on_finalized_subword_callback(res.str());
+    }
+
+    void end() {
+        std::stringstream res;
+        std::string text = m_tokenizer.decode(m_tokens_cache);
+        if (text.size() <= m_printed_len)
+            return;
+        res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len} << std::flush;
+        m_tokens_cache.clear();
+        m_decoded_lengths.clear();
+        m_printed_len = 0;
+        on_finalized_subword_callback(res.str());
+        return;
+    }
+
+    TextCallbackStreamer(const Tokenizer& tokenizer, std::function<bool(std::string)> callback) {
+        m_tokenizer = tokenizer;
+        on_finalized_subword_callback = callback;
+    }
+
+    std::function<bool(std::string)> on_finalized_subword_callback = [](std::string words) -> bool { return false; };
+};
+}  // namespace genai
+}  // namespace ov
+// End of text streamer implementation copy
+
 namespace ovms {
 
 class LLMExecutorWrapper;
-
-// TODO: To be moved to CB library.
-class TextStreamer {
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
-    std::vector<int64_t> tokenCache;
-    size_t printLen{0};
-
-public:
-    TextStreamer(std::shared_ptr<ov::genai::Tokenizer> tokenizer) :
-        tokenizer(std::move(tokenizer)) {}
-
-    std::optional<std::string> put(std::vector<int64_t>& tokens) {
-        for (auto token : tokens) {
-            tokenCache.push_back(token);
-        }
-        std::string text = tokenizer->decode(tokenCache);
-        if (!text.empty() && '\n' == text.back() && text.size() > printLen) {
-            // The chunk is ready if the generated text ends with new line.
-            // Also, clear the cache.
-            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
-            tokenCache.clear();
-            printLen = 0;
-            return chunk;
-        } else if (!isValidUtf8(text)) {
-            return std::nullopt;
-        } else if (text.size() > printLen) {
-            // The chunk is ready if the new text in the cache contains space.
-            // The chunk is constructed from the new text, however only up to the last space character (including it)
-            // Does not clear the cache.
-            auto lastSpacePos = text.rfind(' ');
-            if (lastSpacePos == std::string::npos || lastSpacePos < printLen) {
-                return std::nullopt;
-            }
-            std::string chunk = std::string{text.data() + printLen, lastSpacePos - printLen + 1};
-            printLen = lastSpacePos + 1;
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
-            return chunk;
-        }
-        return std::nullopt;
-    }
-    std::string end() {
-        if (tokenCache.size() > 0) {
-            std::string text = tokenizer->decode(tokenCache);
-            std::string chunk = std::string{text.data() + printLen, text.size() - printLen};
-            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokenCache);
-            tokenCache.clear();
-            printLen = 0;
-            return chunk;
-        }
-        return "";
-    }
-};
 
 class Status;
 
