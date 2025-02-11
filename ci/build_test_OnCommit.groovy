@@ -2,6 +2,8 @@ def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
 def shortCommit = ""
+def agent_name_windows = ""
+def agent_name_linux = ""
 
 pipeline {
     agent {
@@ -10,6 +12,7 @@ pipeline {
     stages {
         stage('Configure') {
           steps {
+            agent_name_linux = env.NODE_NAME
             script{
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
             }
@@ -52,6 +55,7 @@ pipeline {
                 label 'win_ovms'
               }
               steps {
+                agent_name_windows = env.NODE_NAME
                 script {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
@@ -81,6 +85,9 @@ pipeline {
         stage('Build') {
           parallel {
             stage("Build linux") {
+              agent {
+                label ${agent_name_linux}
+              }
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
@@ -89,7 +96,7 @@ pipeline {
             }
             stage('Build windows') {
               agent {
-                label 'win_ovms'
+                label ${agent_name_windows}
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
@@ -116,6 +123,9 @@ pipeline {
           when { expression { image_build_needed == "true" } }
           parallel {
             stage("Run unit tests") {
+              agent {
+                label ${agent_name_linux}
+              }
               steps {
               script {
               println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
@@ -130,6 +140,9 @@ pipeline {
               }
             } 
             stage("Internal tests") {
+              agent {
+                label ${agent_name_linux}
+              }
               steps {
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
@@ -147,7 +160,7 @@ pipeline {
             }
             stage('Test windows') {
               agent {
-                label 'win_ovms'
+                label ${agent_name_windows}
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
