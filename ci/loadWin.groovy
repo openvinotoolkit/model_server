@@ -76,7 +76,7 @@ def deleteOldDirectories() {
         
         // Check for empty output, Part of output contains the command that was run
         if ( existing_prs[i] == null || existing_prs[i].allWhitespace || existing_prs[i].toLowerCase().contains("grep")) { continue }
-        println "\"" + existing_prs[i] "\""
+        println "\"" + existing_prs[i] + "\""
         // Check if directory was created more than 14 days ago
         def pathToDelete = "C:\\" + existing_prs[i]
         // Sanity check not to delete anything else
