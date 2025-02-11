@@ -395,19 +395,10 @@ http_archive(
       "https://github.com/tensorflow/tensorflow/archive/%s.tar.gz" % _TENSORFLOW_GIT_COMMIT,
     ],
     patches = [
-        #"@mediapipe//third_party:org_tensorflow_compatibility_fixes.diff",
-        # Diff is generated with a script, don't update it manually.
-        #"@mediapipe//third_party:org_tensorflow_custom_ops.diff",
-        #"tf.patch",
-        #"tf_graph_info_multilinecomment.patch",
         "@mediapipe//third_party:org_tensorflow_c_api_experimental.diff",
-        # Diff is generated with a script, don't update it manually.
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
-        # Works around Bazel issue with objc_library.
-        # See https://github.com/bazelbuild/bazel/issues/19912
         "@mediapipe//third_party:org_tensorflow_objc_build_fixes.diff",
         "tf_2.18_logging.patch",
-        #"tf_graph_info_multilinecomment.patch", # TODO @atobisze remove unneeded patches after CI pass & rev
     ],
     patch_args = [
         "-p1",
