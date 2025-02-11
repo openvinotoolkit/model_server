@@ -64,7 +64,7 @@ dynamic_libraries = {
     OvmsBaseImageType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseImageType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseImageType.UBUNTU24_PYTHON: {'libpython3.12.so',},
-    OvmsBaseImageType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so','libcrypt.so',},
+    OvmsBaseImageType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'libcrypt.so',},
     OvmsBaseImageType.REDHAT_PYTHON:{'libpython3.9.so'},
 }
 
