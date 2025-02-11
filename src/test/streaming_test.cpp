@@ -1434,7 +1434,7 @@ node {
     // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                              // correct request
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                                      // correct request
         .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, signalFuture[0]))                          // invalid request - missing data in buffer
         .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, signalFuture[1]))  // invalid request - non existing input
         .WillOnce(DisconnectWhenNotified(signalFuture[2]));
@@ -1781,10 +1781,10 @@ node {
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithServableNameAndVersionWhenNotified({{"in", 7.2f}}, "wrong name", this->version, signalFuture))  // no timestamp specified, server will assign one
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                    // no timestamp specified, server will assign one
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                      // correct
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                               // default - user does not care - correct
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                                // empty = default - correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                            // no timestamp specified, server will assign one
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                              // correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                                       // default - user does not care - correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                                        // empty = default - correct
         .WillOnce(Disconnect());
 
     EXPECT_CALL(this->stream, Write(_, _))
