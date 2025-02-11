@@ -92,7 +92,7 @@ def deleteOldDirectories() {
 }
 def install_dependencies() {
     println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
-    def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + env.JOB_BASE_NAME.toUpperCase() + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
         error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
     } else {
@@ -101,18 +101,18 @@ def install_dependencies() {
 }
 
 def clean() {
-    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME.toUpperCase() + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
 def build_and_test(){
-    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME)
+    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME.toUpperCase())
     status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
     }
-    status = bat(returnStatus: true, script: 'windows_test.bat ' + env.JOB_BASE_NAME)
+    status = bat(returnStatus: true, script: 'windows_test.bat ' + env.JOB_BASE_NAME.toUpperCase())
     if (status != 0) {
         error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
     } else {
@@ -124,7 +124,7 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
+    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME.toUpperCase())
     if (status_pkg != 0) {
         error "Error: Windows package failed ${status_pkg}."
     } else {
