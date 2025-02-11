@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include <chrono>
 #include <future>
-#include <mutex>  // ?
 #include <optional>
 
 #include <gmock/gmock.h>
@@ -205,9 +204,9 @@ static auto Disconnect() {
     };
 }
 
-static auto DisconnectWhenNotified_(std::future<void>& fut) {
-    return [&fut](::inference::ModelInferRequest* req) {
-        fut.get();
+static auto DisconnectWhenNotified(std::future<void>& signalPromise) {
+    return [&signalPromise](::inference::ModelInferRequest* req) {
+        signalPromise.get();
         return false;
     };
 }
@@ -226,9 +225,9 @@ static auto ReceiveWithServableNameAndVersion(std::vector<std::tuple<std::string
     };
 }
 
-static auto ReceiveWithServableNameAndVersionWhenNotified_(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion, std::future<void>& fut) {
-    return [content, servableName, servableVersion, &fut](::inference::ModelInferRequest* req) {
-        fut.get();
+static auto ReceiveWithServableNameAndVersionWhenNotified(std::vector<std::tuple<std::string, float>> content, const std::string& servableName, const std::string& servableVersion, std::future<void>& signalPromise) {
+    return [content, servableName, servableVersion, &signalPromise](::inference::ModelInferRequest* req) {
+        signalPromise.get();
         prepareRequest(*req, content, std::nullopt, servableName, servableVersion);
         return true;
     };
@@ -242,35 +241,35 @@ static auto ReceiveWithTimestamp(std::vector<std::tuple<std::string, float>> con
     };
 }
 
-static auto ReceiveWhenNotified_(std::vector<std::tuple<std::string, float>> content, std::future<void>& fut) {
-    return [content, &fut](::inference::ModelInferRequest* req) {
-        fut.get();
+static auto ReceiveWhenNotified(std::vector<std::tuple<std::string, float>> content, std::future<void>& signalPromise) {
+    return [content, &signalPromise](::inference::ModelInferRequest* req) {
+        signalPromise.get();
         prepareRequest(*req, content);
         return true;
     };
 }
 
-static auto ReceiveWithTimestampWhenNotified_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::future<void>& fut) {
-    return [content, timestamp, &fut](::inference::ModelInferRequest* req) {
-        fut.get();
+static auto ReceiveWithTimestampWhenNotified(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::future<void>& signalPromise) {
+    return [content, timestamp, &signalPromise](::inference::ModelInferRequest* req) {
+        signalPromise.get();
         prepareRequest(*req, content);
         setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
 
-static auto ReceiveInvalidWithTimestampWhenNotified_(std::vector<std::string> inputs, int64_t timestamp, std::future<void>& fut) {
-    return [inputs, timestamp, &fut](::inference::ModelInferRequest* req) {
-        fut.get();
+static auto ReceiveInvalidWithTimestampWhenNotified(std::vector<std::string> inputs, int64_t timestamp, std::future<void>& signalPromise) {
+    return [inputs, timestamp, &signalPromise](::inference::ModelInferRequest* req) {
+        signalPromise.get();
         prepareInvalidRequest(*req, inputs);
         setRequestTimestamp(*req, std::to_string(timestamp));
         return true;
     };
 }
 
-static auto DisconnectOnWriteAndNotifyEnd_(std::promise<void>& prom) {
-    return [&prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
-        prom.set_value();
+static auto DisconnectOnWriteAndNotifyEnd(std::promise<void>& signalPromise) {
+    return [&signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+        signalPromise.set_value();
         return false;
     };
 }
@@ -289,18 +288,18 @@ static auto SendWithTimestampServableNameAndVersion(std::vector<std::tuple<std::
     };
 }
 
-static auto SendWithTimestampServableNameAndVersionAndNotifyEnd_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::promise<void>& prom) {
-    return [content, timestamp, servableName, servableVersion, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+static auto SendWithTimestampServableNameAndVersionAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, const std::string& servableName, const std::string& servableVersion, std::promise<void>& signalPromise) {
+    return [content, timestamp, servableName, servableVersion, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, timestamp, servableName, servableVersion);
-        prom.set_value();
+        signalPromise.set_value();
         return true;
     };
 }
 
-static auto SendWithTimestampAndNotifyEnd_(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::promise<void>& prom) {
-    return [content, timestamp, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, int64_t timestamp, std::promise<void>& signalPromise) {
+    return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, timestamp);
-        prom.set_value();
+        signalPromise.set_value();
         return true;
     };
 }
@@ -312,10 +311,10 @@ static auto SendError(const std::string& expectedMessage) {
     };
 }
 
-static auto SendErrorAndNotifyEnd_(const std::string& expectedMessage, std::promise<void>& prom) {
-    return [expectedMessage, &prom](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
+static auto SendErrorAndNotifyEnd(const std::string& expectedMessage, std::promise<void>& signalPromise) {
+    return [expectedMessage, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponseError(msg, expectedMessage);
-        prom.set_value();
+        signalPromise.set_value();
         return true;
     };
 }
@@ -767,9 +766,6 @@ node {
 // symmetric_scalar_increment.py returns outputs symmetrically,
 // so if Process() is run with one input, there will be one output
 TEST_F(PythonStreamingTest, Positive_SingleStreamSendIncompleteInputs) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -804,19 +800,19 @@ node {
     ASSERT_EQ(mediapipeDummy.create(pipeline), StatusCode::OK);
     ASSERT_NE(pipeline, nullptr);
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
     this->pythonModule->releaseGILFromThisThread();
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"input1", 3.5f}});  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(Receive({{"input2", 7.2f}}))  // no timestamp specified, server will assign one
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
 
     // Expect 3 responses
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, 0))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"output2", 8.2f}}, 1, prom));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 8.2f}}, 1, signalPromise));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -883,9 +879,6 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -952,9 +945,6 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -1003,14 +993,14 @@ node_options: {
 
     this->pythonModule->releaseGILFromThisThread();
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
     const int64_t timestamp = 64;
 
     prepareRequest(this->firstRequest, {{"input1", 3.5f}}, timestamp);
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"input2", 7.2f}}, timestamp))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
 
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"output1", 4.5f}}, timestamp))
@@ -1018,7 +1008,7 @@ node_options: {
         .WillOnce(SendWithTimestamp({{"output1", 5.5f}}, timestamp + 1))
         .WillOnce(SendWithTimestamp({{"output2", 9.2f}}, timestamp + 1))
         .WillOnce(SendWithTimestamp({{"output1", 6.5f}}, timestamp + 2))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"output2", 10.2f}}, timestamp + 2, prom));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"output2", 10.2f}}, timestamp + 2, signalPromise));
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1135,9 +1125,6 @@ node {
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1170,29 +1157,26 @@ node {
         {"out1", "out2", "out3"},
         {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
     const int64_t timestamp = 64;
 
     prepareRequest(this->firstRequest, {{"in1", 3.5f}}, timestamp);
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"in2", 7.2f}}, timestamp))
         .WillOnce(ReceiveWithTimestamp({{"in3", 102.4f}}, timestamp))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
 
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, timestamp))
         .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"out3", 103.4f}}, timestamp, prom));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 // Sending inputs together for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaSingleRequest) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1225,26 +1209,23 @@ node {
         {"out1", "out2", "out3"},
         {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
     const int64_t timestamp = 64;
 
     prepareRequest(this->firstRequest, {{"in1", 3.5f}, {"in2", 7.2f}, {"in3", 102.4f}}, timestamp);
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
 
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out1", 4.5f}}, timestamp))
         .WillOnce(SendWithTimestamp({{"out2", 8.2f}}, timestamp))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"out3", 103.4f}}, timestamp, prom));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out3", 103.4f}}, timestamp, signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1263,17 +1244,17 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
 
     // Mock receiving 3 requests with manually (client) assigned descending order of timestamp and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);  // first request with timestamp 3
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestampWhenNotified_({{"in", 7.2f}}, 2, fut));  // This should break the execution loop because 2<3
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"in", 7.2f}}, 2, signalFuture));  // This should break the execution loop because 2<3
 
     // Expect 1 correct response (second request malformed the timestamp)
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"out", 4.5f}}, 3, prom));
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, 3, signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
@@ -1332,9 +1313,6 @@ node {
 }
 
 TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1353,15 +1331,15 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
 
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(DisconnectOnWriteAndNotifyEnd_(prom));
+        .WillOnce(DisconnectOnWriteAndNotifyEnd(signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
@@ -1415,23 +1393,20 @@ node {
     // Invalid request - missing data in buffer
     prepareInvalidRequest(this->firstRequest, {"in"});  // no timestamp specified, server will assign one
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
 
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendErrorAndNotifyEnd_(
+        .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of first request"},
-            prom));
+            signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
 
 TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1450,30 +1425,30 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom[3];
-    std::future<void> fut[3] = {
-        prom[0].get_future(),
-        prom[1].get_future(),
-        prom[2].get_future()};
+    std::promise<void> signalPromise[3];
+    std::future<void> signalFuture[3] = {
+        signalPromise[0].get_future(),
+        signalPromise[1].get_future(),
+        signalPromise[2].get_future()};
 
     // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                              // correct request
-        .WillOnce(ReceiveInvalidWithTimestampWhenNotified_({"in"}, 2, fut[0]))                          // invalid request - missing data in buffer
-        .WillOnce(ReceiveWithTimestampWhenNotified_({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, fut[1]))  // invalid request - non existing input
-        .WillOnce(DisconnectWhenNotified_(fut[2]));
+        .WillOnce(ReceiveInvalidWithTimestampWhenNotified({"in"}, 2, signalFuture[0]))                          // invalid request - missing data in buffer
+        .WillOnce(ReceiveWithTimestampWhenNotified({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, signalFuture[1]))  // invalid request - non existing input
+        .WillOnce(DisconnectWhenNotified(signalFuture[2]));
 
     // Expect 2 responses, no more due to error
     EXPECT_CALL(this->stream, Write(_, _))
         .WillOnce(SendWithTimestamp({{"out", 4.5f}}, 0))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"out", 8.2f}}, 1, prom[0]))
-        .WillOnce(SendErrorAndNotifyEnd_(
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 8.2f}}, 1, signalPromise[0]))
+        .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::INVALID_CONTENT_SIZE).string() + std::string{" - Expected: 4 bytes; Actual: 0 bytes; input name: in; partial deserialization of subsequent requests"},
-            prom[1]))
-        .WillOnce(SendErrorAndNotifyEnd_(
+            signalPromise[1]))
+        .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::INVALID_UNEXPECTED_INPUT).string() + " - NONEXISTING is unexpected; partial deserialization of subsequent requests",
-            prom[2]));
+            signalPromise[2]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1507,9 +1482,6 @@ node {
 }
 
 TEST_F(StreamingTest, ManualTimestampWrongType) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1531,15 +1503,15 @@ node {
     prepareRequest(this->firstRequest, {{"in", 3.5f}});
     setRequestTimestamp(this->firstRequest, std::string("not an int"));
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
 
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(DisconnectWhenNotified_(fut));
+        .WillOnce(DisconnectWhenNotified(signalFuture));
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendErrorAndNotifyEnd_(
+        .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP, "Invalid timestamp format in request parameter OVMS_MP_TIMESTAMP. Should be int64").string() + std::string{"; partial deserialization of first request"},
-            prom));
+            signalPromise));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1573,23 +1545,20 @@ node {
              ::mediapipe::kint64max - 1,  // ::mediapipe::Timestamp::OneOverPostStream()
              ::mediapipe::kint64max,      // ::mediapipe::Timestamp::Done()
          }) {
-        std::promise<void> prom;
-        std::future<void> fut = prom.get_future();
+        std::promise<void> signalPromise;
+        std::future<void> signalFuture = signalPromise.get_future();
         prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp);
         EXPECT_CALL(this->stream, Read(_))
-            .WillOnce(DisconnectWhenNotified_(fut));
+            .WillOnce(DisconnectWhenNotified(signalFuture));
         EXPECT_CALL(this->stream, Write(_, _))
-            .WillOnce(SendErrorAndNotifyEnd_(
+            .WillOnce(SendErrorAndNotifyEnd(
                 Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - "} + ::mediapipe::Timestamp::CreateNoErrorChecking(timestamp).DebugString() + std::string{"; partial deserialization of first request"},
-                prom));
+                signalPromise));
         ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
     }
 }
 
 TEST_F(StreamingTest, ManualTimestampInRange) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1613,21 +1582,18 @@ node {
              ::mediapipe::Timestamp::Min(),
              ::mediapipe::Timestamp::Max(),
          }) {
-        std::promise<void> prom;
-        std::future<void> fut = prom.get_future();
+        std::promise<void> signalPromise;
+        std::future<void> signalFuture = signalPromise.get_future();
         prepareRequest(this->firstRequest, {{"in", 3.5f}}, timestamp.Value());
         EXPECT_CALL(this->stream, Read(_))
-            .WillOnce(DisconnectWhenNotified_(fut));  // To ensure the read loop is stopped
+            .WillOnce(DisconnectWhenNotified(signalFuture));  // To ensure the read loop is stopped
         EXPECT_CALL(this->stream, Write(_, _))
-            .WillOnce(SendWithTimestampAndNotifyEnd_({{"out", 4.5f}}, timestamp.Value(), prom));
+            .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, timestamp.Value(), signalPromise));
         ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
     }
 }
 
 TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1646,21 +1612,21 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom[2];
-    std::future<void> fut[2] = {
-        prom[0].get_future(),
-        prom[1].get_future()};
+    std::promise<void> signalPromise[2];
+    std::future<void> signalFuture[2] = {
+        signalPromise[0].get_future(),
+        signalPromise[1].get_future()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, ::mediapipe::Timestamp::Max().Value());  // valid
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWhenNotified_({{"in", 10.f}}, fut[0]))  // automatic timestamping overflow
-        .WillOnce(DisconnectWhenNotified_(fut[1]));              // automatic timestamping overflow
+        .WillOnce(ReceiveWhenNotified({{"in", 10.f}}, signalFuture[0]))  // automatic timestamping overflow
+        .WillOnce(DisconnectWhenNotified(signalFuture[1]));              // automatic timestamping overflow
 
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampAndNotifyEnd_({{"out", 4.5f}}, ::mediapipe::Timestamp::Max().Value(), prom[0]))
-        .WillOnce(SendErrorAndNotifyEnd_(
+        .WillOnce(SendWithTimestampAndNotifyEnd({{"out", 4.5f}}, ::mediapipe::Timestamp::Max().Value(), signalPromise[0]))
+        .WillOnce(SendErrorAndNotifyEnd(
             Status(StatusCode::MEDIAPIPE_INVALID_TIMESTAMP).string() + std::string{" - Timestamp::OneOverPostStream(); partial deserialization of subsequent requests"},
-            prom[1]));
+            signalPromise[1]));
 
     ASSERT_EQ(executor.inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::OK);
 }
@@ -1791,9 +1757,6 @@ node {
 }
 
 TEST_F(StreamingTest, SubsequentRequestsDoNotMatchServableNameAndVersion) {
-    // #ifdef _WIN32
-    //     GTEST_SKIP() << "Test disabled on windows";
-    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1812,12 +1775,12 @@ node {
         {{"out", mediapipe_packet_type_enum::OVTENSOR}},
         {"in"}, {"out"}, {}, {}, nullptr, this->reporter.get()};
 
-    std::promise<void> prom;
-    std::future<void> fut = prom.get_future();
+    std::promise<void> signalPromise;
+    std::future<void> signalFuture = signalPromise.get_future();
     // Mock receiving 2 requests and disconnection
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithServableNameAndVersionWhenNotified_({{"in", 7.2f}}, "wrong name", this->version, fut))  // no timestamp specified, server will assign one
+        .WillOnce(ReceiveWithServableNameAndVersionWhenNotified({{"in", 7.2f}}, "wrong name", this->version, signalFuture))  // no timestamp specified, server will assign one
         .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                    // no timestamp specified, server will assign one
         .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                      // correct
         .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                               // default - user does not care - correct
@@ -1825,7 +1788,7 @@ node {
         .WillOnce(Disconnect());
 
     EXPECT_CALL(this->stream, Write(_, _))
-        .WillOnce(SendWithTimestampServableNameAndVersionAndNotifyEnd_({{"out", 4.5f}}, 0, this->name, this->version, prom))
+        .WillOnce(SendWithTimestampServableNameAndVersionAndNotifyEnd({{"out", 4.5f}}, 0, this->name, this->version, signalPromise))
         .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME).string() + "; validate subsequent requests"))
         .WillOnce(SendError(Status(StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION).string() + "; validate subsequent requests"))
         .WillOnce(SendWithTimestampServableNameAndVersion({{"out", 10.2f}}, 1, this->name, this->version))
