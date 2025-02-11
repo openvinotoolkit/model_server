@@ -101,6 +101,7 @@ pipeline {
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                      echo sh(script: 'env|sort', returnStdout: true)
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
@@ -167,6 +168,7 @@ pipeline {
                   script {
                       def windows = load 'ci/loadWin.groovy'
                       println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
+                      echo sh(script: 'env|sort', returnStdout: true)
                       if (windows != null) {
                         try {
                           windows.setup_bazel_remote_cache()
