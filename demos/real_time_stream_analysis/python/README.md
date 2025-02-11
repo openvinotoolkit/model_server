@@ -170,3 +170,19 @@ Such use case with the unary calls with a horizontal text analysis can be follow
 
 
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.
+
+
+## Metric integrations
+
+Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
+visualisation of metrics using grafana.
+
+In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visialize 
+metrics about mediapipe graphs' status.
+
+Here are some exemplary visualisations included in above menitoned grafana dashboard:
+
+![processing_time_distr](assets/processing_time_distr.png)
+![processing_time](assets/processing_time.png)
+![request_latency_distr](assets/request_latency_distr.png)
+![request_latency](assets/request_latency.png)

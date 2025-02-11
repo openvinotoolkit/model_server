@@ -19,10 +19,12 @@ import cv2
 from functools import partial
 import queue
 import threading
+from functools import reduce
 import tritonclient.grpc as grpcclient
 import numpy as np
 import ffmpeg
 import sys
+import time
 
 class Datatype:
     def dtype(self):
@@ -162,7 +164,7 @@ class StreamClient:
                     break
                 self.output_backend.write(received_frame)
                 if self.benchmark:
-                    self.inference_time.insert(displayed_frame_id, (self.get_timestamp()) - timestamp)
+                    self.inference_time.insert(displayed_frame_id, timestamp)
                     self.frames += 1
                 if self.exact:
                     displayed_frame_id += 1
@@ -170,9 +172,6 @@ class StreamClient:
                     displayed_frame_id = sent_frame_id
             elif self.exact:
                 self.pq.put((sent_frame_id, received_frame, timestamp))
-
-    def get_timestamp(self) -> int:
-        return int(cv2.getTickCount() / cv2.getTickFrequency() * 1e6)
 
     def start(self, *, ovms_address : str, input_name : str, model_name : str, datatype : Datatype = FP32(), batch = True, limit_stream_duration : int = 0, limit_frames : int = 0, streaming_api: bool = False):
         """
@@ -221,25 +220,24 @@ class StreamClient:
             triton_client.start_stream(partial(self.callback, None, None, None))
             
         frame_number = 0
-        total_time_start = self.get_timestamp()
+        total_time_start = time.time()
         try:
             while not self.force_exit:
                 self.req_s.acquire()
-                timestamp = self.get_timestamp()
                 frame = self.grab_frame()
                 if frame is not None:
                     np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
                     inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                     inputs[0].set_data_from_numpy(np_frame)
                     if streaming_api:
-                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs, parameters={"OVMS_MP_TIMESTAMP":self.get_timestamp()})
+                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs)
                     else:
                         triton_client.async_infer(
                             model_name=model_name,
-                            callback=partial(self.callback, frame, frame_number, timestamp),
+                            callback=partial(self.callback, frame, frame_number, time.time()),
                             inputs=inputs)
                     frame_number += 1
-                if limit_stream_duration > 0 and self.get_timestamp() - total_time_start > limit_stream_duration:
+                if limit_stream_duration > 0 and time.time() - total_time_start > limit_stream_duration:
                     break
                 if limit_frames > 0 and frame_number > limit_frames:
                     break
@@ -247,12 +245,13 @@ class StreamClient:
             self.pq.put((frame_number, "EOS", 0))
             if streaming_api:
                 triton_client.stop_stream()
-        sent_all_frames = self.get_timestamp() - total_time_start
+        sent_all_frames = time.time() - total_time_start
 
 
         self.cap.release()
         display_th.join()
         self.output_backend.release()
-        total_time = self.get_timestamp() - total_time_start
+        total_time = time.time() - total_time_start
         if self.benchmark:
-            print(f"{{\"average_inference_latency\": {sum(self.inference_time)/len(self.inference_time)/1e6}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/(total_time/1e6)}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
+            inference_time_sum = reduce(lambda x, y: x + y, [abs(self.inference_time[x] - self.inference_time[x+1]) for x in range(len(self.inference_time)-1)])
+            print(f"{{\"average_inference_latency\": {(inference_time_sum)/len(self.inference_time)/1e6}, \"dropped_frames\": {self.dropped_frames}, \"frames\": {self.frames}, \"fps\": {self.frames/(total_time)}, \"total_time\": {total_time}, \"sent_all_frames\": {sent_all_frames}}}")
