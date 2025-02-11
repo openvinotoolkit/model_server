@@ -105,7 +105,7 @@ C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
 grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
 grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
 if !errorlevel! equ 0 goto :exit_build_error
-:exit_build
+:exit_build 
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
 :exit_build_error
