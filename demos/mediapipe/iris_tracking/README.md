@@ -32,6 +32,7 @@ docker pull openvino/model_server:latest
 
 ```
 ```bash
+chmod -R 755 .
 docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_iris.json --port 9000
 ```
 :::
