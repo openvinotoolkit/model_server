@@ -41,9 +41,9 @@ def cleanup_directories() {
             }
         }
         if (!found) {
-            def pathToDelete = "c:\\" + existing_prs[i]
+            def pathToDelete = "C:\\" + existing_prs[i]
             // Sanity check not to delete anything else
-            if (!pathToDelete.contains("c:\\PR-")) {
+            if (!pathToDelete.contains("C:\\PR-")) {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
             } else {
                 println "Deleting: " + pathToDelete
@@ -73,13 +73,14 @@ def deleteOldDirectories() {
     def existing_prs = existing_prs_string.split(/\n/)
 
     for (int i = 0; i < existing_prs.size(); i++) {
-        // Check for empty output
-        if (existing_prs[i] == "") { continue }
+        println "\"" + existing_prs[i] "\""
+        // Check for empty output, Part of output contains the command that was run
+        if (existing_prs[i].allWhitespace || existing_prs[i].toLowerCase().contains("grep")) { continue }
 
         // Check if directory was created more than 14 days ago
-        def pathToDelete = "c:\\" + existing_prs[i]
+        def pathToDelete = "C:\\" + existing_prs[i]
         // Sanity check not to delete anything else
-        if (!pathToDelete.contains("c:\\PR-")) {
+        if (!pathToDelete.contains("C:\\PR-")) {
             error "Error: trying to delete a directory that is not expected: " + pathToDelete
         } else {
             println "Deleting: " + pathToDelete
