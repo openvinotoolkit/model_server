@@ -14,9 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <future>
 #include <mutex>  // ?
 #include <optional>
-#include <future>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -767,9 +767,9 @@ node {
 // symmetric_scalar_increment.py returns outputs symmetrically,
 // so if Process() is run with one input, there will be one output
 TEST_F(PythonStreamingTest, Positive_SingleStreamSendIncompleteInputs) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -883,9 +883,9 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInSingleRequestSend1Receive3Python) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -952,9 +952,9 @@ node {
 }
 
 TEST_F(PythonStreamingTest, MultipleStreamsInMultipleRequestSend1Receive3Python) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     std::string testPbtxt{R"(
 input_stream: "OVMS_PY_TENSOR1:input1"
 input_stream: "OVMS_PY_TENSOR2:input2"
@@ -1135,9 +1135,9 @@ node {
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1190,9 +1190,9 @@ node {
 
 // Sending inputs together for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaSingleRequest) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in1"
 input_stream: "in2"
@@ -1242,9 +1242,9 @@ node {
 }
 
 TEST_F(StreamingTest, WrongOrderOfManualTimestamps) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1332,9 +1332,9 @@ node {
 }
 
 TEST_F(StreamingTest, ErrorOnDisconnectionDuringWrite) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1429,9 +1429,9 @@ node {
 }
 
 TEST_F(StreamingTest, ErrorDuringSubsequentRequestDeserializations) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1454,14 +1454,12 @@ node {
     std::future<void> fut[3] = {
         prom[0].get_future(),
         prom[1].get_future(),
-        prom[2].get_future()
-    };
-
+        prom[2].get_future()};
 
     // Mock receiving 4 requests, the last two malicious
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, 0);  // correct request
     EXPECT_CALL(this->stream, Read(_))
-        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                             // correct request
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}}, 1))                                              // correct request
         .WillOnce(ReceiveInvalidWithTimestampWhenNotified_({"in"}, 2, fut[0]))                          // invalid request - missing data in buffer
         .WillOnce(ReceiveWithTimestampWhenNotified_({{"NONEXISTING", 13.f}, {"in", 2.3f}}, 2, fut[1]))  // invalid request - non existing input
         .WillOnce(DisconnectWhenNotified_(fut[2]));
@@ -1509,9 +1507,9 @@ node {
 }
 
 TEST_F(StreamingTest, ManualTimestampWrongType) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1589,9 +1587,9 @@ node {
 }
 
 TEST_F(StreamingTest, ManualTimestampInRange) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1627,9 +1625,9 @@ node {
 }
 
 TEST_F(StreamingTest, AutomaticTimestampingExceedsMax) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1651,8 +1649,7 @@ node {
     std::promise<void> prom[2];
     std::future<void> fut[2] = {
         prom[0].get_future(),
-        prom[1].get_future()
-    };
+        prom[1].get_future()};
 
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, ::mediapipe::Timestamp::Max().Value());  // valid
     EXPECT_CALL(this->stream, Read(_))
@@ -1794,9 +1791,9 @@ node {
 }
 
 TEST_F(StreamingTest, SubsequentRequestsDoNotMatchServableNameAndVersion) {
-// #ifdef _WIN32
-//     GTEST_SKIP() << "Test disabled on windows";
-// #endif
+    // #ifdef _WIN32
+    //     GTEST_SKIP() << "Test disabled on windows";
+    // #endif
     const std::string pbTxt{R"(
 input_stream: "in"
 output_stream: "out"
@@ -1821,10 +1818,10 @@ node {
     prepareRequest(this->firstRequest, {{"in", 3.5f}}, std::nullopt, this->name, this->version);  // no timestamp specified, server will assign one
     EXPECT_CALL(this->stream, Read(_))
         .WillOnce(ReceiveWithServableNameAndVersionWhenNotified_({{"in", 7.2f}}, "wrong name", this->version, fut))  // no timestamp specified, server will assign one
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                   // no timestamp specified, server will assign one
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                     // correct
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                              // default - user does not care - correct
-        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                               // empty = default - correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 8.2f}}, this->name, "wrong version"))                    // no timestamp specified, server will assign one
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 9.2f}}, this->name, this->version))                      // correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 10.4f}}, this->name, "0"))                               // default - user does not care - correct
+        .WillOnce(ReceiveWithServableNameAndVersion({{"in", 12.5f}}, this->name, ""))                                // empty = default - correct
         .WillOnce(Disconnect());
 
     EXPECT_CALL(this->stream, Write(_, _))
