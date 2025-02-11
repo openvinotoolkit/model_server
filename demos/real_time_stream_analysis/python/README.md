@@ -51,9 +51,10 @@ The model server with the holistic use case can be deployed using steps from [th
 
 ### Start the client with real time stream analysis
 
-Prepare the python environment by installing required dependencies:
+Prepare the python environment by cloning the repo and installing required dependencies:
 ```console
-cd ../../real_time_stream_analysis/python/
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server/demos/real_time_stream_analysis/python/
 pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.
