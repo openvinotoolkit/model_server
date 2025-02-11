@@ -96,7 +96,7 @@ pipeline {
             }
             stage('Build windows') {
               agent {
-                label ${agent_name_windows}
+                label "${agent_name_windows}"
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
