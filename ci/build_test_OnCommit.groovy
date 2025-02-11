@@ -12,9 +12,9 @@ pipeline {
     stages {
         stage('Configure') {
           steps {
-            agent_name_linux = env.NODE_NAME
             script{
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+              agent_name_linux = env.NODE_NAME
             }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
@@ -55,8 +55,8 @@ pipeline {
                 label 'win_ovms'
               }
               steps {
-                agent_name_windows = env.NODE_NAME
                 script {
+                    agent_name_windows = env.NODE_NAME
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         windows.cleanup_directories()
@@ -86,7 +86,7 @@ pipeline {
           parallel {
             stage("Build linux") {
               agent {
-                label ${agent_name_linux}
+                label "${agent_name_linux}"
               }
               when { expression { image_build_needed == "true" } }
                 steps {
@@ -124,7 +124,7 @@ pipeline {
           parallel {
             stage("Run unit tests") {
               agent {
-                label ${agent_name_linux}
+                label "${agent_name_linux}"
               }
               steps {
               script {
@@ -141,7 +141,7 @@ pipeline {
             } 
             stage("Internal tests") {
               agent {
-                label ${agent_name_linux}
+                label "${agent_name_linux}"
               }
               steps {
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
@@ -160,7 +160,7 @@ pipeline {
             }
             stage('Test windows') {
               agent {
-                label ${agent_name_windows}
+                label "${agent_name_windows}"
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
