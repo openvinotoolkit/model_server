@@ -181,6 +181,7 @@ TEST_F(StressPipelineConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
+// Disabled because we cannot start http server multiple times https://github.com/drogonframework/drogon/issues/2210
 #if (USE_DROGON == 0)
 TEST_F(ConfigChangeStressTest, GetMetricsDuringLoad) {
 #else
