@@ -198,7 +198,7 @@ protected:
     void SetUp() override {
         TestWithTempDir::SetUp();
         char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080", (char*)"--grpc_max_threads", (char*)"4"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 5;
+        int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
         ASSERT_TRUE(createConfigFileWithContent(this->prepareConfigContent(), fileToReload));
