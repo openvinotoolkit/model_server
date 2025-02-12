@@ -177,7 +177,7 @@ public:
                         this->apiHandler->createGenerationConfig());
 
                     this->client->registerDisconnectionCallback([genHandle = this->generationHandle]() {
-                        genHandle->drop();
+                        genHandle->stop();
                     });
                 }
                 nodeResources->notifyExecutorThread();
@@ -205,7 +205,7 @@ public:
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
 
                 std::vector<ov::genai::GenerationOutput> generationOutputs = this->generationHandle->read_all();
-                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::STOP) {
                     return absl::CancelledError();
                 }
                 RET_CHECK(generationOutputs.size() >= 1);
@@ -217,7 +217,7 @@ public:
                 // Streaming scenario
                 // Each iteration is single execution of Process() method
 
-                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::DROPPED_BY_HANDLE) {
+                if (this->generationHandle->get_status() == ov::genai::GenerationStatus::STOP) {
                     return absl::CancelledError();
                 }
 
