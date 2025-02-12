@@ -1132,6 +1132,17 @@ public:
             ovmsConfig.replace(it, pathToReplace.size(), newDir);
             it = ovmsConfig.find(pathToReplace);
         }
+        pathToReplace = std::string{"/ovms/src/test"};
+        it = ovmsConfig.find(pathToReplace);
+        while (it != std::string::npos) {
+            std::string newDir = getGenericFullPathForSrcTest("/ovms/src/test");
+            SPDLOG_ERROR("CCCCCCCCCCCCCCCCC {}", newDir);
+            std::filesystem::path resolved_path = std::filesystem::absolute(newDir).lexically_normal();
+            newDir = resolved_path.generic_string();
+            SPDLOG_ERROR("ABBBBBBBBBBBBBBBBBBBBBBBB {}", newDir);
+            ovmsConfig.replace(it, pathToReplace.size(), newDir);
+            it = ovmsConfig.find(pathToReplace);
+        }
         configFilePath = directoryPath + "/ovms_config.json";
     }
 
