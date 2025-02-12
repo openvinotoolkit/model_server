@@ -55,6 +55,12 @@ using testing::UnorderedElementsAre;
 
 using namespace ovms;
 
+/* 
+------------------------------------------------
+AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW CONFIGURATIONS ARE NOT USED
+NEED TO DECIDE THE FUTURE OF THAT FEATURE
+-------------------------------------------------
+
 namespace {
 
 // Custom Loader Config Keys
@@ -310,6 +316,8 @@ const char* expected_json_loading_error = R"({
 
 }  // namespace
 
+*/
+
 class TestCustomLoader : public ::testing::Test {
 public:
     void SetUp() {
@@ -328,6 +336,10 @@ public:
     }
     void TearDown() {
         // Create config file with an empty config & reload
+        const char* empty_config = R"({
+          "custom_loader_config_list":[],
+          "model_config_list":[]
+        })";
         std::string configStr = empty_config;
         std::string fileToReload = cl_models_path + "/cl_config.json";
         createConfigFileWithContent(configStr, fileToReload);
