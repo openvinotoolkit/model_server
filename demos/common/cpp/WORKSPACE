@@ -19,10 +19,50 @@ workspace(name = "cpp_clients")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
+    urls = [
+        "https://storage.googleapis.com/mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
+    ],
+)
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+bazel_skylib_workspace()
+load("@bazel_skylib//lib:versions.bzl", "versions")
+versions.check(minimum_bazel_version = "6.0.0")
+
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
     commit = "8a7fff74151dd112d0aae87d8c74fb0d07e206ec", # Replace for windows (#105) 21/01/2025
+)
+
+http_archive(
+    name = "rules_python",
+    sha256 = "0cc05ddb27614baecace068986931e2a6e9f69114e6115fc5dc58250faf56e0f",
+    strip_prefix = "rules_python-0.37.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.37.0/rules_python-0.37.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+# We need to override upb due to false positive stringop-truncation warning
+# second patch is needed & copied from TF
+http_archive(
+    name = "upb",
+    sha256 = "61d0417abd60e65ed589c9deee7c124fe76a4106831f6ad39464e1525cef1454",
+    strip_prefix = "upb-9effcbcb27f0a665f9f345030188c0b291e32482",
+    patches = [
+            "upb_platform_fix.patch",
+            "upb_warning_turn_off.patch"
+    ],
+    patch_args = [
+        "-p1",
+    ],
+    urls = ["https://github.com/protocolbuffers/upb/archive/9effcbcb27f0a665f9f345030188c0b291e32482.tar.gz"],
 )
 
 # Tensorflow serving
@@ -61,15 +101,39 @@ http_archive(
     repo_mapping = {"@curl" : "@curl"}
 )
 
+
 load("@tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
 
-# Check bazel version requirement, which is stricter than TensorFlow's.
-load(
-    "@org_tensorflow//tensorflow:version_check.bzl",
-    "check_bazel_version_at_least"
-)
-check_bazel_version_at_least("5.3.1")
+# Initialize TensorFlow's external dependencies.
+load("@org_tensorflow//tensorflow:workspace3.bzl", "workspace")
+workspace()
+# Initialize hermetic Python
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_rules.bzl", "python_init_rules")
+python_init_rules()
 
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_repositories.bzl", "python_init_repositories")
+python_init_repositories(
+    default_python_version = "system",
+    local_wheel_dist_folder = "dist",
+    requirements = {
+        "3.9": "@mediapipe//:requirements_lock.txt",
+        "3.10": "@mediapipe//:requirements_lock_3_10.txt",
+        "3.11": "@mediapipe//:requirements_lock_3_11.txt",
+        "3.12": "@mediapipe//:requirements_lock_3_12.txt",
+    },
+    #local_wheel_inclusion_list = ["mediapipe*"],
+    #local_wheel_workspaces = ["//:WORKSPACE"],
+)
+
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
+python_init_toolchains()
+
+load("@org_tensorflow//third_party/xla/third_party/py:python_init_pip.bzl", "python_init_pip")
+python_init_pip()
+
+load("@pypi//:requirements.bzl", "install_deps")
+install_deps()
+# End hermetic Python initialization
 load("@org_tensorflow//tensorflow:workspace2.bzl", "workspace")
 workspace()
 load("@org_tensorflow//tensorflow:workspace1.bzl", "workspace")
@@ -78,16 +142,27 @@ load("@org_tensorflow//tensorflow:workspace0.bzl", "workspace")
 workspace()
 
 tf_serving_workspace() #moved past TF
+# required after update to mp 0.10.18
+load(
+    "@org_tensorflow//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "cuda_configure",
+)
+cuda_configure(name = "local_config_cuda")
+
+
 
 # Initialize bazel package rules' external dependencies.
 load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 rules_pkg_dependencies()
 
+git_repository(
+    name = "mediapipe",
+    remote = "https://github.com/openvinotoolkit/mediapipe",
+    commit = "8a7fff74151dd112d0aae87d8c74fb0d07e206ec", # Replace for windows (#105) 21/01/2025
+)
+
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-grpc_extra_deps()
 
 ##################### OPEN CV ######################
 # OPENCV DEFINITION FOR BUILDING FROM BINARY RELEASE: ##########################

@@ -66,7 +66,7 @@ RUN pip3 --no-cache-dir install \
     --ignore-installed six
 
 # Set up Bazel
-ENV BAZEL_VERSION 5.3.1
+ENV BAZEL_VERSION 6.0.0
 WORKDIR /
 RUN mkdir /bazel && \
     cd /bazel && \
@@ -83,11 +83,11 @@ RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/dem
     for I in `cat input_images.txt  | cut -d"/" -f6 | cut -d" " -f1` ; do curl  https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/$I -o images/$I --create-dirs; done
 
 WORKDIR /build
+COPY third_party /build/third_party/
+RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/opencv_cmake_flags.txt . && ./install_opencv.sh
+
 COPY .bazelrc WORKSPACE /build/
 COPY external /build/external/
-COPY third_party /build/third_party/
-
-RUN cp /build/third_party/opencv/install_opencv.sh /build/third_party/opencv/opencv_cmake_flags.txt . && ./install_opencv.sh
 
 RUN bazel build @org_tensorflow//tensorflow/core:framework
 
