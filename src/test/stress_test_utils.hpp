@@ -1125,11 +1125,12 @@ public:
         }
         pathToReplace = std::string{"/ovms/bazel-bin"};
         it = ovmsConfig.find(pathToReplace);
-        if (it != std::string::npos) {
+        while (it != std::string::npos) {
             std::string newDir = getGenericFullPathForTmp("/tmp");
             std::filesystem::path resolved_path = std::filesystem::absolute(newDir + "/../bazel-bin").lexically_normal();
             newDir = resolved_path.generic_string();
             ovmsConfig.replace(it, pathToReplace.size(), newDir);
+            it = ovmsConfig.find(pathToReplace);
         }
         configFilePath = directoryPath + "/ovms_config.json";
     }
