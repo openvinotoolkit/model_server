@@ -670,7 +670,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		./run_unit_tests.sh ;\
 		exit_code=$$? ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
-		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 else
@@ -684,12 +684,13 @@ else
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh ;\
-		exit_code=$$? ;\
+		exit_code=$$? ; \
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
-		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 endif
+
 
 run_lib_files_test:
 	docker run --entrypoint bash -v $(realpath tests/file_lists):/test $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ./test/test_release_files.sh ${BAZEL_DEBUG_FLAGS} > file_test.log 2>&1 ; exit_status=$$? ; tail -200 file_test.log ; exit $$exit_status

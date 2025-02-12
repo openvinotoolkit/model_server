@@ -2,6 +2,8 @@ def image_build_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
 def shortCommit = ""
+def agent_name_windows = ""
+def agent_name_linux = ""
 
 pipeline {
     agent {
@@ -12,6 +14,7 @@ pipeline {
           steps {
             script{
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+              agent_name_linux = env.NODE_NAME
             }
             script {
               shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
@@ -53,6 +56,7 @@ pipeline {
               }
               steps {
                 script {
+                    agent_name_windows = env.NODE_NAME
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         windows.cleanup_directories()
@@ -81,29 +85,32 @@ pipeline {
         stage('Build') {
           parallel {
             stage("Build linux") {
+              agent {
+                label "${agent_name_linux}"
+              }
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                     }
             }
-            stage('Build and test windows') {
+            stage('Build windows') {
               agent {
-                label 'win_ovms'
+                label "${agent_name_windows}"
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                      echo sh(script: 'env|sort', returnStdout: true)
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
                           windows.setup_bazel_remote_cache()
                           windows.install_dependencies()
                           windows.clean()
-                          windows.build_and_test()
-                          windows.check_tests()
+                          windows.build()
                         } finally {
-                          windows.archive_artifacts()
+                          windows.archive_build_artifacts()
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
@@ -117,13 +124,26 @@ pipeline {
           when { expression { image_build_needed == "true" } }
           parallel {
             stage("Run unit tests") {
-              steps {
-                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                  archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
-                  archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests.log"
+              agent {
+                label "${agent_name_linux}"
               }
-            }
+              steps {
+              script {
+              println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
+              try {
+                  sh "make run_unit_tests TEST_LLM_PATH=${HOME}/ovms_models/llm_models_ovms/INT8 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+              }
+              finally {
+                  archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
+                  archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
+              }
+              } 
+              }
+            } 
             stage("Internal tests") {
+              agent {
+                label "${agent_name_linux}"
+              }
               steps {
                 sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
@@ -138,7 +158,32 @@ pipeline {
                   }
                 }
               }            
-            }            
+            }
+            stage('Test windows') {
+              agent {
+                label "${agent_name_windows}"
+              }
+              when { expression { win_image_build_needed == "true" } }
+              steps {
+                  script {
+                      def windows = load 'ci/loadWin.groovy'
+                      println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
+                      echo sh(script: 'env|sort', returnStdout: true)
+                      if (windows != null) {
+                        try {
+                          windows.setup_bazel_remote_cache()
+                          windows.install_dependencies()
+                          windows.unit_test()
+                          windows.check_tests()
+                        } finally {
+                          windows.archive_test_artifacts()
+                        }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                      }
+                  }
+              }
+            }           
           }
         }
     }

@@ -59,7 +59,7 @@ def install_dependencies() {
     println "Install dependencies on node: NODE_NAME = ${env.NODE_NAME}"
     def status = bat(returnStatus: true, script: 'windows_install_build_dependencies.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
     if (status != 0) {
-        error "Error: Windows install dependencies failed: ${status}. Check piepeline.log for details."
+        error "Error: Windows install dependencies failed: ${status}. Check pipeline.log for details."
     } else {
         echo "Install dependencies successful."
     }
@@ -69,14 +69,23 @@ def clean() {
     def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + env.JOB_BASE_NAME + ' ' + env.OVMS_CLEAN_EXPUNGE)
 }
 
-def build_and_test(){
-    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME)
-    status = bat(returnStatus: true, script: 'grep -A 4 bazel-bin/src/ovms.exe win_build.log | grep "Build completed successfully"')
+def build(){
+    def status = bat(returnStatus: true, script: 'windows_build.bat ' + env.JOB_BASE_NAME + " //src:ovms_test")
+    status = bat(returnStatus: true, script: 'grep "Build completed successfully" win_build.log"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
     }
+    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
+    if (status_pkg != 0) {
+        error "Error: Windows package failed ${status_pkg}."
+    } else {
+        echo "Windows package created successfully."
+    }
+}
+
+def unit_test(){
     status = bat(returnStatus: true, script: 'windows_test.bat ' + env.JOB_BASE_NAME)
     if (status != 0) {
         error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
@@ -89,27 +98,21 @@ def build_and_test(){
     } else {
         echo "Build successful."
     }
-    def status_pkg = bat(returnStatus: true, script: 'windows_create_package.bat ' + env.JOB_BASE_NAME)
-    if (status_pkg != 0) {
-        error "Error: Windows package failed ${status_pkg}."
-    } else {
-        echo "Windows package created successfully."
-    }
 }
 
 def check_tests(){
-    def status = bat(returnStatus: true, script: 'grep "       OK " win_test.log')
+    def status = bat(returnStatus: true, script: 'grep "       OK " win_test_summary.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test.log for details."
+            error "Error: Windows run test failed ${status}. Expecting passed tests and no passed tests detected. Check win_test_summary.log for details."
     } else {
-        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test.log | wc -l')
-        echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test.log for details."
+        def passed = bat(returnStatus: false, returnStdout: true, script: 'grep "       OK " win_test_summary.log | wc -l')
+        echo "Success: Windows run test passed ${status}. ${passed} passed tests . Check win_test_summary.log for details."
     }
 
-    status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test.log')
+    status = bat(returnStatus: true, script: 'grep "  FAILED  " win_test_summary.log')
     if (status == 0) {
-            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test.log | wc -l')
-            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test.log for details."
+            def failed = bat(returnStatus: false, returnStdout: true, script: 'grep "  FAILED  " win_test_summary.log | wc -l')
+            error "Error: Windows run test failed ${status}. ${failed} failed tests . Check win_test_summary.log for details."
     } else {
         echo "Run test no FAILED detected."
     }
@@ -124,13 +127,18 @@ def check_tests(){
 }
 
 // Post build steps
-def archive_artifacts(){
+def archive_build_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
+}
+
+def archive_test_artifacts(){
+    // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "win_test.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
 }
 
 def setup_bazel_remote_cache(){
