@@ -30,8 +30,8 @@ RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
     tar -zxf openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_* /opt/intel/openvino_2025
+    ln -s /opt/intel/openvino_* /opt/intel/openvino && \
+    ln -s /opt/intel/openvino_* /opt/intel/openvino_2025
 
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
