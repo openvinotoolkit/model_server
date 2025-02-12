@@ -57,10 +57,9 @@ static int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision) {
         return CV_32F;
     case ovms::Precision::FP64:
         return CV_64F;
-        // TODO @atobisze - doesn't work on MP external/ovms/src/tensor_conversion.cpp:55:16: error: 'CV_16F' was not declared in this scope; did you mean 'CV_16S'?
     case ovms::Precision::FP16:
         //  return CV_16F;
-        return -1;  // TODO FIXME Mediapipe 0.10.18 update
+        return -1;
     case ovms::Precision::I16:
         return CV_16S;
     case ovms::Precision::U8:

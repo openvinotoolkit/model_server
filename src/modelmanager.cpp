@@ -668,7 +668,6 @@ Status ModelManager::createCustomLoader(CustomLoaderConfig& loaderConfig) {
         }
         customloaders.add(loaderName, customLoaderIfPtr, handleCL);
 #elif _WIN32
-        // TODO: implement LoadLibrary for windows
         void* handleCL = nullptr;
         if (!handleCL) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot open library:  {} {}", loaderConfig.getLibraryPath(), "e");
@@ -919,7 +918,6 @@ class LoudFileInfoReporter {
 
 public:
     LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
-        // TODO windows
 #ifdef __linux__
         struct stat statTime;
 

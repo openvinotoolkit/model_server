@@ -57,7 +57,6 @@ static const int GIGABYTE = 1024 * 1024 * 1024;
 // so it happens before docker container graceful stop.
 static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
 
-// TODO windows
 #ifdef __linux__
 bool GRPCServerModule::isPortAvailable(uint64_t port) {
     struct sockaddr_in addr;

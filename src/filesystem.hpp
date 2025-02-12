@@ -125,88 +125,30 @@ public:
 
     virtual StatusCode deleteFileFolder(const std::string& path) = 0;
 
-// TODO: Implement Windows version
-#ifdef __linux__
     /**
      * @brief Create a Temp Path
      *
      * @param local_path
      * @return StatusCode
      */
-    static StatusCode createTempPath(std::string* local_path) {
-        if (!local_path) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-        std::string file_template = "/tmp/fileXXXXXX";
-        char* tmp_folder = mkdtemp(const_cast<char*>(file_template.c_str()));
-        if (tmp_folder == nullptr) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create local temp folder: {} {}", file_template, strerror(errno));
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-        fs::permissions(tmp_folder,
-            fs::perms::others_all | fs::perms::group_all,
-            fs::perm_options::remove);
-
-        *local_path = std::string(tmp_folder);
-
-        return StatusCode::OK;
-    }
-#elif _WIN32
-    static StatusCode createTempPath(std::string* local_path) {
-        if (!local_path) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Target path variable for createTempPAth not set.");
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-
-        wchar_t temp_path[MAX_PATH];
-        wchar_t temp_file[MAX_PATH];
-
-        DWORD path_len = GetTempPathW(MAX_PATH, temp_path);
-        if (path_len == 0 || path_len > MAX_PATH) {
-            DWORD error = GetLastError();
-            std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get temp path: {}", message);
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-
-        UINT unique_num = GetTempFileNameW(temp_path, L"file", 0, temp_file);
-        if (unique_num == 0) {
-            DWORD error = GetLastError();
-            std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp file: {}", message);
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-
-        if (!DeleteFileW(temp_file)) {
-            SetLastError(0);
-            DeleteFileW(temp_file);
-            DWORD error = GetLastError();
-            std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to delete temp file: {}", message);
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-
-        if (!CreateDirectoryW(temp_file, NULL)) {
-            SetLastError(0);
-            DeleteFileW(temp_file);
-            DWORD error = GetLastError();
-            std::string message = std::system_category().message(error);
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create temp directory: {}", message);
-            return StatusCode::FILESYSTEM_ERROR;
-        }
-
-        *local_path = fs::path(temp_file).generic_string();
-
-        return StatusCode::OK;
-    }
-#endif
+    static StatusCode createTempPath(std::string* local_path);
 
     static bool isPathEscaped(const std::string& path) {
         std::size_t lhs = path.find("../");
         std::size_t rhs = path.find("/..");
         return (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("/../");
     }
+
+    static bool dirExists(const std::string& path) {
+        if (isPathEscaped(path)) {
+            SPDLOG_ERROR("Path {} escape with .. is forbidden.", path);
+            return false;
+        }
+
+        return std::filesystem::is_directory(path);
+    }
+
+    static std::string findFilePathWithExtension(const std::string& path, const std::string& extension);
 
     static const std::string S3_URL_PREFIX;
 
