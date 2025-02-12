@@ -40,7 +40,7 @@ cc_library(
         "@windows_opencl2//:opencl2",
     ],
     defines = ["OV_GPU_USE_OPENCL_HPP"],
-    # TODO: Windows enable headers
+    # TODO: Include headers when enabling OCL/VAAPI
     # copts = ["-I./"],
     # linkopts = ["-lopenvino"],
 )

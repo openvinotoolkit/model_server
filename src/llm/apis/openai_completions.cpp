@@ -312,7 +312,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // max_tokens: uint; optional
     // Common part checked here, specific parts are checked in parseCompletionsPart and parseChatCompletionsPart
-    // Deprecated for chat completions TODO move to parseCompletionsPart
+    // TODO: Deprecated - this will need to be removed in the future
     it = doc.FindMember("max_tokens");
     if (it != doc.MemberEnd()) {
         if (!it->value.IsUint()) {

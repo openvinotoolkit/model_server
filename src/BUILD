@@ -1581,6 +1581,7 @@ cc_library(
             "libovmslogging",
             "libovmsmodelversioning",
             "libovmsstatus",
+            "libovmsstring_utils",
             "@boringssl//:ssl"],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,

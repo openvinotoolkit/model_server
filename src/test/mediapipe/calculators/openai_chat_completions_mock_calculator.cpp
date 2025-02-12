@@ -131,7 +131,6 @@ public:
 };
 #pragma GCC diagnostic pop
 
-// TODO: Names to be decided
 const std::string OpenAIChatCompletionsMockCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
 const std::string OpenAIChatCompletionsMockCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 const std::string OpenAIChatCompletionsMockCalculator::LOOPBACK_TAG_NAME{"LOOPBACK"};
