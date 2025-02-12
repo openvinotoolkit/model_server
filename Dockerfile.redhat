@@ -253,8 +253,8 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 COPY src/ /ovms/src/
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.0.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.0' > /opt/intel/openvino/python/openvino-2025.0.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.1.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.1' > /opt/intel/openvino/python/openvino-2025.1.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
@@ -285,9 +285,6 @@ ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=0
 COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
 RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
-
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 ARG ovms_metadata_file
 
@@ -351,7 +348,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2025.0"
+LABEL "version"="2025.1"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"

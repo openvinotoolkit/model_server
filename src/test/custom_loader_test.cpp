@@ -607,7 +607,11 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 }
 
 // Functional Validation
-
+/* 
+------------------------------------------------
+AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW TESTS ARE NOT VALID
+NEED TO DECIDE THE FUTURE OF THAT FEATURE
+-------------------------------------------------
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
@@ -1442,5 +1446,6 @@ TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
     ASSERT_EQ(error_status2, StatusCode::OK);
     EXPECT_EQ(json_output2, expected_json_available);
 }
+*/
 
 #pragma GCC diagnostic pop
