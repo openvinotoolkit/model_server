@@ -669,18 +669,6 @@ cc_library(
 load("@pip_deps//:requirements.bzl", "all_requirements")
 
 cc_binary(
-    name = "libsampleloader.so",
-    srcs = [
-	    "example/SampleCustomLoader/sampleCustLoader.cpp",
-	    "customloaderinterface.hpp",
-    ],
-    linkshared = 1,
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-    ],
-)
-
-cc_binary(
     name = "lib_node_mock.so",
     srcs = [
 	    "test/custom_nodes/node_mock.c",

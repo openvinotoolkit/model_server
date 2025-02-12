@@ -259,7 +259,7 @@ ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.0"
+ARG PROJECT_VERSION="2025.1"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
