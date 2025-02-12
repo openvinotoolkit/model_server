@@ -182,7 +182,12 @@ metrics about mediapipe graphs' status.
 
 Here are some exemplary visualisations included in above menitoned grafana dashboard:
 
+- Processing time metric is used to track the time a particular mediapipe graph is opened. In this case it can be used to represent how long it took to process single video.
+
 ![processing_time_distr](assets/processing_time_distr.png)
 ![processing_time](assets/processing_time.png)
+
+- Request latency metric shows the time difference between subsequent requests.
+
 ![request_latency_distr](assets/request_latency_distr.png)
 ![request_latency](assets/request_latency.png)
