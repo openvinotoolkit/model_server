@@ -416,7 +416,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(6)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
