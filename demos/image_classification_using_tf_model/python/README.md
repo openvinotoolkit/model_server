@@ -21,14 +21,14 @@ cd model_server/demos/image_classification_using_tf_model/python
 ## Download the InceptionResNetV2 model
 
 ```console
-mkdir -p model/1
-curl -o model/1 https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
+curl --create-dirs -o model/1 https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
 tar xzf model/1/inception_resnet_v2_2018_04_27.tgz -C model/1
 ```
 
 ## Run Openvino Model Server
 
 ```bash
+chmod -R 755 model
 docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name resnet --port 9000
 ```
 
