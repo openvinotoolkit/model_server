@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM ubuntu:20.04 as base_build
+FROM ubuntu:22.04 as base_build
 
 ARG CLIENT=all
 ENV DEBIAN_FRONTEND=noninteractive 
@@ -37,7 +37,7 @@ RUN apt update && apt install -y --no-install-recommends \
         openjdk-8-jdk\
         openjdk-8-jre-headless \
         pkg-config \
-        python-dev \
+        python3-dev \
         software-properties-common \
         swig \
         unzip \
@@ -102,7 +102,7 @@ COPY src/ /build/src/
 
 RUN bazel build //src:$CLIENT
 
-FROM ubuntu:20.04 as release
+FROM ubuntu:22.04 as release
 ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt update && apt install -y --no-install-recommends \
         libtbb-dev
