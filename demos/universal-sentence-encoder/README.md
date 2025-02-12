@@ -57,7 +57,7 @@ Make sure to:
 on every shell that will start OpenVINO Model Server.
 
 And start Model Server using the following command:
-```bash
+```console
 ovms --model_name usem --model_path universal-sentence-encoder-multilingual/ --plugin_config "{\"NUM_STREAMS\": 1}" --port 9000 --rest_port 8000
 ```
 
@@ -73,12 +73,12 @@ predict_response = prediction_service_stub.Predict(predict_request, 10.0)
 ```
 
 Clone the repo:
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server
 ```
 
 Here is a basic client execution:
-```bash
+```console
 pip install --upgrade pip
 pip install -r model_server/demos/universal-sentence-encoder/requirements.txt
 python model_server/demos/universal-sentence-encoder/send_strings.py --grpc_port 9000 --string "I enjoy taking long walks along the beach with my dog."
