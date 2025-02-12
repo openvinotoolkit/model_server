@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE
 
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG DLDT_PACKAGE_URL
 ARG APT_OV_PACKAGE
-ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+ARG DLDT_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/openvino_toolkit_ubuntu22_2025.0.0.dev20250130_x86_64.tgz
 
 RUN apt update && apt install -y build-essential wget make python3
 
@@ -30,9 +30,9 @@ WORKDIR /
 RUN mkdir -p $TEMP_DIR && cd $TEMP_DIR/ && \
     wget $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
-    tar -zxf l_openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/l_openvino_toolkit* /opt/intel/openvino_2025
+    tar -zxf openvino_toolkit*.tgz -C /opt/intel && \
+    ln -s /opt/intel/openvino_toolkit* /opt/intel/openvino && \
+    ln -s /opt/intel/openvino_toolkit* /opt/intel/openvino_2025
 WORKDIR /workspace
 COPY Makefile ov_extension.cpp CustomReluOp.cpp CustomReluOp.hpp ./
 
