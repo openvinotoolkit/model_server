@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
+#include <stdint.h>
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
@@ -54,6 +55,15 @@ protected:
 
 public:
     static void SetUpTestSuite() {
+#ifdef _WIN32
+        WSADATA wsa_data;
+        auto r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+        if (r != 0) {
+            SPDLOG_ERROR("WSAStartup failed with error: {}", r);
+            ASSERT_TRUE(false);
+            return;
+        }
+#endif  // _WIN32
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
         randomizePort(port);
@@ -67,7 +77,7 @@ public:
             (char*)"DEBUG",
             (char*)"--batch_size",
             (char*)"auto",
-            (char*)"--port",
+            (char*)"--rest_port",
             (char*)port.c_str(),
             nullptr};
         thread = std::make_unique<std::thread>(
@@ -595,7 +605,6 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
 }
 
 TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
-    // Disabled due to issue with gethering RT info
     std::string request = "/v2/models/dummy/versions/1";
     ovms::HttpRequestComponents comp;
 

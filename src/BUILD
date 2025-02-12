@@ -522,6 +522,7 @@ cc_library(
             "libovms_threadsafequeue",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
+            "ovms_capimodule",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -2029,6 +2030,7 @@ cc_test(
     ],
     linkopts = LINKOPTS_ADJUSTED,
     deps = [
+            "@cpp_httplib//:cpp_httplib",
             ":test_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
@@ -2207,6 +2209,19 @@ cc_library(
     deps = [
         "//src/embeddings:embeddings_api",
         "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+cc_library(
+    name = "ovms_capimodule",
+    hdrs = ["capi_frontend/capimodule.hpp"],
+    srcs = ["capi_frontend/capimodule.cpp"],
+    deps = [
+        "libovms_module",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
     ],
     copts = COPTS_TESTS,
     linkopts = [],

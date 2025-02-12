@@ -157,6 +157,14 @@ GRPCServerModule::GRPCServerModule(Server& server) :
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);
+    if (config.port() == 0) {
+        // due to HTTP reusing gRPC we still need to have gRPC module initialized.
+        state = ModuleState::INITIALIZED;
+        SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
+        SPDLOG_INFO("Port was not set. GRPC server will not be started.");
+        return StatusCode::OK;
+    }
+
     std::map<std::string, std::string> channel_arguments;
     auto status = setDefaultGrpcChannelArgs(channel_arguments);
     if (!status.ok()) {
