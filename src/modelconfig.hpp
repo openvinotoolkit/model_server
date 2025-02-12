@@ -292,7 +292,7 @@ public:
          * @return std::string
          * */
     const std::string getPath() const {
-        return getLocalPath() + "/" + std::to_string(version);
+        return getLocalPath() + std::string(1, std::filesystem::path::preferred_separator) + std::to_string(version);
     }
 
     /**

@@ -209,18 +209,18 @@ public:
         std::string currentWorkingDir = std::filesystem::current_path().string();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = std::move(configDirectory);
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + std::string(1, std::filesystem::path::preferred_separator) : rootDirectoryPath = std::move(configDirectory);
         } else {
-            rootDirectoryPath = currentWorkingDir + "/";
+            rootDirectoryPath = currentWorkingDir + std::string(1, std::filesystem::path::preferred_separator);
         }
     }
 
     static std::string appendSlash(const std::string& name) {
-        if (name.empty() || (name.back() == '/')) {
+        if (name.empty() || (name.back() == std::string(1, std::filesystem::path::preferred_separator).back())) {
             return name;
         }
 
-        return (name + "/");
+        return (name + std::string(1, std::filesystem::path::preferred_separator));
     }
 
     static bool isAbsolutePath(const std::string& path) {
