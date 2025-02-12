@@ -1,5 +1,5 @@
-//*****************************************************************************
-// Copyright 2024 Intel Corporation
+//****************************************************************************
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,23 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "../module.hpp"
 
 namespace ovms {
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
-extern const std::string CAPI_MODULE_NAME;
+class Config;
+class Server;
+
+class CAPIModule : public Module {
+    Server& server;
+
+public:
+    CAPIModule(Server& server);
+    ~CAPIModule();
+    Status start(const ovms::Config& config) override;
+    void shutdown() override;
+};
 }  // namespace ovms

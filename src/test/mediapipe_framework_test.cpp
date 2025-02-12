@@ -66,7 +66,7 @@ protected:
     void SetUp() override {
     }
     void TearDown() {
-        if (server.isLive()) {
+        if (server.isLive(CAPI_MODULE_NAME)) {
             server.setShutdownRequest(1);
             t->join();
             server.setShutdownRequest(0);

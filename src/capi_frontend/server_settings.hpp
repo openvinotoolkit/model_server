@@ -21,7 +21,7 @@
 namespace ovms {
 
 struct ServerSettingsImpl {
-    uint32_t grpcPort = 9178;
+    uint32_t grpcPort = 0;
     uint32_t restPort = 0;
     uint32_t grpcWorkers = 1;
     std::string grpcBindAddress = "0.0.0.0";
