@@ -45,7 +45,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\mediapipe\multi_model_graph
 ovms --config_path config.json --port 9000
 ```
 :::
