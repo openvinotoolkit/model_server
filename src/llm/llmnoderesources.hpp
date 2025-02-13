@@ -15,17 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <map>
-#include <memory>
 #include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-#include <openvino/genai/continuous_batching_pipeline.hpp>
-#include <openvino/genai/scheduler_config.hpp>
-#include <openvino/openvino.hpp>
-
 #include "openvino/genai/streamer_base.hpp"
 
 #pragma warning(push)
@@ -35,17 +25,11 @@
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
 
 #include "../logging.hpp"
 #include "../stringutils.hpp"
-#include "src/llm/llm_calculator.pb.h"
-#include "src/python/utils.hpp"
-#include "text_processor.hpp"
+#include "../http_payload.hpp"
+#include "apis/openai_completions.hpp"
 
 // Text streamer implementation copied from GenAI. Use GenAI directly when it's moved to the interface.
 namespace ov {
@@ -122,53 +106,91 @@ public:
 // End of text streamer implementation copy
 
 namespace ovms {
-
-class LLMExecutorWrapper;
+// Some pipelines internals rely on request_id, so for now we provide increasing ID
+static std::atomic<uint64_t> currentRequestId = 0;
 
 class Status;
 
-using plugin_config_t = std::map<std::string, ov::Any>;
+// Basic container with members required by all pipelines
+// Specific pipelines should extend it as needed.
+struct BasicExecutionContext {
+    ovms::HttpPayload payload;
+    Endpoint endpoint;
+    std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
+    std::string inputText;
+    std::string response;
+    std::shared_ptr<ov::genai::TextCallbackStreamer> textStreamer;
+    bool sendLoopbackSignal = false;
+    std::string lastStreamerCallbackOutput;
+};
 
-#pragma GCC visibility push(hidden)
-
-struct LLMNodeResources {
-public:
-    std::shared_ptr<ov::genai::ContinuousBatchingPipeline> cbPipe = nullptr;
-    bool isSpeculativePipeline{false};
+struct LLMNodeProperties {
     std::string modelsPath;
     std::string device;
-    plugin_config_t pluginConfig;
-    ov::genai::SchedulerConfig schedulerConfig;
-    TextProcessor textProcessor;
-    int maxTokensLimit;
-    int bestOfLimit;
+    ov::AnyMap pluginConfig;
+    ov::AnyMap tokenizerPluginConfig;
+    uint32_t maxTokensLimit;
+    uint32_t bestOfLimit;
+};
 
-    static Status initializeLLMNodeResources(LLMNodeResources& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNode, std::string graphPath);
-    static void loadTextProcessor(LLMNodeResources& nodeResources, const std::string& chatTemplateDirectory);
+class LLMNodeResources {
+public:
+    std::shared_ptr<LLMNodeProperties> properties;
 
-    LLMNodeResources(const LLMNodeResources&) = delete;
-    LLMNodeResources& operator=(LLMNodeResources&) = delete;
     LLMNodeResources() = default;
+    LLMNodeResources(LLMNodeResources&&) = default;
+    LLMNodeResources& operator=(LLMNodeResources&&) = default;
+    LLMNodeResources(const LLMNodeResources&) = delete;
+    LLMNodeResources& operator=(const LLMNodeResources&) = delete;
     virtual ~LLMNodeResources() = default;
 
-    virtual void initiateGeneration();
+    // ----- Common implementation for all derived classes
 
-    void notifyExecutorThread();
+    // Loads payload into the execution context
+    absl::Status loadRequest(std::shared_ptr<BasicExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+        if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
+            executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+        } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions") {
+            executionContext->endpoint = Endpoint::COMPLETIONS;
+        } else {
+            return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v3/chat/completions, /v3/completions");
+        }
+        executionContext->payload = payload;
+        return absl::OkStatus();
+    };
 
-private:
-    std::unique_ptr<LLMExecutorWrapper> llmExecutorWrapper;
-    static std::unordered_map<std::string, std::string> prepareLLMNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string basePath);
-    static ov::genai::SchedulerConfig prepareDraftModelSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions);
+    // ----- Interface for derived classes, TODO: add description when completed
 
-public:
-    virtual void initializeContinuousBatchingPipeline(
-        const std::string& basePath,
-        const ov::genai::SchedulerConfig& schedulerConfig,
-        const std::string& device,
-        const plugin_config_t& pluginConfig,
-        const plugin_config_t& tokenizerPluginConfig);
+    // Called in OVMS core hence returning ovms::Status
+    virtual ovms::Status initialize() = 0;
+
+    // All below methods are called from the calculator, hence returning absl::Status
+
+    virtual std::shared_ptr<BasicExecutionContext> createExecutionContext() = 0;
+
+    // Consider merging
+    virtual absl::Status createApiHandler(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+    
+    virtual absl::Status parseRequest(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+    // ---
+
+    // Fill executionContext with data necessary to start the generation
+    virtual absl::Status preparePipelineInput(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+
+    // This method should implement any necessary queueing mechanism or start asynchronous execution.
+    // Execution context in such case may contain handles futures or other objects that will be used to track the execution.
+    // If none of that is necessary, the implementation can simply return OK status.
+    virtual absl::Status schedulePipelineExecution(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+
+    // This method should implement reading the results of the execution and filling the executionContext with the results.
+    // If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
+    // then this method should run entire execution.
+    virtual absl::Status readCompleteExecutionResults(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+    virtual absl::Status readPartialExecutionResults(std::shared_ptr<BasicExecutionContext>& executionContext) = 0;
+
 };
-#pragma GCC visibility pop
-using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 
+using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
 }  // namespace ovms

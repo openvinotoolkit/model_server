@@ -33,7 +33,7 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../llm/llm_executor.hpp"
+#include "../llm/llmnoderesources_initializer.hpp"
 #include "../llm/llmnoderesources.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
@@ -461,8 +461,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-            Status status = LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(i), mgconfig.getBasePath());
+            std::shared_ptr<LLMNodeResources> nodeResources;
+            Status status = initializeLLMNodeResources(nodeResources, config.node(i), mgconfig.getBasePath());
             if (!status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;

@@ -49,10 +49,7 @@ cc_library(
         "//src:libovmsprofiler",
         ":llm_engine",
         ":llmnoderesources",
-        "//src:httppayload",
-        "//src:libhttpclientconnection",
-        ":text_processor",
-        ":openai_completions_api_handler"
+        "//src:httppayload"
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -90,8 +87,11 @@ cc_library(
 
 cc_library(
     name = "llmnoderesources",
-    hdrs = ["llmnoderesources.hpp", "llm_executor.hpp",],
-    srcs = ["llmnoderesources.cpp",],
+    hdrs = ["llmnoderesources.hpp", "llmnoderesources_initializer.hpp", 
+            "continuous_batching_pipeline/node_resources.hpp", 'continuous_batching_pipeline/llm_executor.hpp',
+            "continuous_batching_pipeline/node_resources_initializer.hpp"],
+    srcs = ["llmnoderesources.cpp", "llmnoderesources_initializer.cpp", 
+            "continuous_batching_pipeline/node_resources.cpp", "continuous_batching_pipeline/node_resources_initializer.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -105,6 +105,9 @@ cc_library(
         ":llm_engine",
         "//src/python:utils",
         ":text_processor",
+        ":openai_completions_api_handler",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
     ] + PYBIND_DEPS,
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
