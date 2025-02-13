@@ -209,7 +209,7 @@ public:
         std::string currentWorkingDir = std::filesystem::current_path().string();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir +  getOsSeparator(): rootDirectoryPath = std::move(configDirectory);
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + getOsSeparator() : rootDirectoryPath = std::move(configDirectory);
         } else {
             rootDirectoryPath = currentWorkingDir + getOsSeparator();
         }
