@@ -43,9 +43,9 @@ using ::testing::ElementsAre;
 class PipelineWithInputOutputNameMappedModel : public TestWithTempDir {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
+// #ifdef _WIN32
+//         GTEST_SKIP() << "Test disabled on windows";
+// #endif
         TestWithTempDir::SetUp();
 
         configPath = directoryPath + "/config.json";
@@ -72,6 +72,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -135,6 +136,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -170,6 +172,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -205,6 +208,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -248,6 +252,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -327,6 +332,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
         mappingConfigPath);
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -380,6 +386,7 @@ TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKFSEndpoint) {
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -409,6 +416,7 @@ TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnTfsEndpoint) {
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
+    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
