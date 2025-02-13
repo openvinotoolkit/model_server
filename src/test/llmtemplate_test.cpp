@@ -31,8 +31,8 @@
 #include "../http_payload.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../httpservermodule.hpp"
-#include "../llm/llm_executor.hpp"
-#include "../llm/llmnoderesources.hpp"
+#include "../llm/continuous_batching/servable.hpp"
+#include "../llm/continuous_batching/servable_initializer.hpp"
 #include "../llm/text_processor.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../server.hpp"
@@ -73,23 +73,25 @@ public:
 };
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = "";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     std::string errorOutput = "Expecting value: line 1 column 1 (char 0)";
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -100,15 +102,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
         }
     )";
     std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -118,15 +121,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
             "messages": [{}]
         }
     )";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, "");
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -135,15 +139,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
         }
     )";
     std::string expectedOutput = "How can I help you?";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -152,15 +157,16 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
         }
     )";
     std::string errorOutput = "This servable accepts only single message requests";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
     // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -171,16 +177,17 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -191,16 +198,17 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[3]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -211,7 +219,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
         }
     )";
     std::string errorOutput = "list object has no element 3";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, errorOutput);
 }
 
@@ -221,9 +229,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -234,7 +243,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
         }
     )";
     std::string expectedOutput = "hello";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -244,9 +253,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -258,7 +268,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     )";
     std::string expectedOutput = "hello";
     // Expect no issues with chat template since non string bos token is ignored
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -268,9 +278,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     "eos_token": null
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -282,7 +293,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     )";
     std::string expectedOutput = "hello";
     // Expect no issues with chat template since non string eos token is ignored
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -292,9 +303,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
     "eos_token": "</s>",
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -305,7 +317,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
         }
     )";
     std::string expectedOutput = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -316,9 +328,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
     "chat_template": "{{ \"Hi, \" + messages[0]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -329,7 +342,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
         }
     )";
     std::string expectedOutput = "Hi, HELLO";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -340,9 +353,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
     "chat_template": "{{ \"Hi, \" + messages[3]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -353,7 +367,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
         }
     )";
     std::string expectedOutput = "list object has no element 3";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
@@ -364,9 +378,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
     "chat_template": {}
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -377,7 +392,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
         }
     )";
     std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), false);
     ASSERT_EQ(finalPrompt, expectedError);
 }
 
@@ -391,9 +406,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
 
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->properties->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->properties, servable->properties->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -404,7 +420,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
         }
     )";
     std::string expectedOutput = " Hi, HELLO ";
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->properties->textProcessor, servable->properties->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 

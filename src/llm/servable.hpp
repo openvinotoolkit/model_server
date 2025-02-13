@@ -1,0 +1,220 @@
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "openvino/genai/streamer_base.hpp"
+
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_graph.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+
+#include "../http_payload.hpp"
+#include "apis/openai_completions.hpp"
+#include "text_processor.hpp"
+
+// Text streamer implementation copied from GenAI. Use GenAI directly when it's moved to the interface.
+namespace ov {
+namespace genai {
+class TextCallbackStreamer : public StreamerBase {
+protected:
+    Tokenizer m_tokenizer;
+    std::vector<int64_t> m_tokens_cache;
+    std::vector<int64_t> m_decoded_lengths;
+    size_t m_printed_len = 0;
+
+public:
+    bool put(int64_t token) {
+        std::stringstream res;
+        m_tokens_cache.push_back(token);
+        std::string text = m_tokenizer.decode(m_tokens_cache);
+        m_decoded_lengths.push_back(text.length());
+
+        if (!text.empty() && '\n' == text.back() && text.size() > m_printed_len) {
+            // Flush the cache after the new line symbol
+            res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len};
+            m_tokens_cache.clear();
+            m_decoded_lengths.clear();
+            m_printed_len = 0;
+            return on_finalized_subword_callback(res.str());
+        }
+
+        constexpr size_t delay_n_tokens = 3;
+        // In some cases adding the next token can shorten the text,
+        // e.g. when apostrophe removing regex had worked after adding new tokens.
+        // Printing several last tokens is delayed.
+        if (m_decoded_lengths.size() < delay_n_tokens) {
+            return on_finalized_subword_callback(res.str());
+        }
+        constexpr char replacement[] = "\xef\xbf\xbd";  // MSVC with /utf-8 fails to compile <UNK> directly with newline in string literal error.
+        if (text.size() >= 3 && text.compare(text.size() - 3, 3, replacement) == 0) {
+            m_decoded_lengths[m_decoded_lengths.size() - 1] = -1;
+            // Don't print incomplete text
+            return on_finalized_subword_callback(res.str());
+        }
+        int64_t print_until = m_decoded_lengths[m_decoded_lengths.size() - delay_n_tokens];
+        if (print_until != -1 && print_until > static_cast<int64_t>(m_printed_len)) {
+            // It is possible to have a shorter text after adding new token.
+            // Print to output only if text length is increaesed.
+            res << std::string_view{text.data() + m_printed_len, print_until - m_printed_len} << std::flush;
+            m_printed_len = print_until;
+        }
+
+        return on_finalized_subword_callback(res.str());
+    }
+
+    void end() {
+        std::stringstream res;
+        std::string text = m_tokenizer.decode(m_tokens_cache);
+        if (text.size() <= m_printed_len)
+            return;
+        res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len} << std::flush;
+        m_tokens_cache.clear();
+        m_decoded_lengths.clear();
+        m_printed_len = 0;
+        on_finalized_subword_callback(res.str());
+        return;
+    }
+
+    TextCallbackStreamer(const Tokenizer& tokenizer, std::function<bool(std::string)> callback) {
+        m_tokenizer = tokenizer;
+        on_finalized_subword_callback = callback;
+    }
+
+    std::function<bool(std::string)> on_finalized_subword_callback = [](std::string words) -> bool { return false; };
+};
+}  // namespace genai
+}  // namespace ov
+// End of text streamer implementation copy
+
+namespace ovms {
+// Some pipelines internals rely on request_id, so for now we provide increasing ID
+static std::atomic<uint64_t> currentRequestId = 0;
+
+class Status;
+
+/*
+GenAiServable support.
+
+This header contains the interface for GenAiServable and its properties and execution context.
+All classes in this file should not be instantiated, but rather extended by derived classes.
+
+GenAiServable is an interface for derived classes that implement logic for specific types of pipelines. 
+It uses both GenAiServableProperties and GenAiServableExecutionContext (or rather their extensions) to facilitate implementation.
+
+GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused 
+for every request, in contrary to GenAiServableExecutionContext that is created multiple times during servable lifespan.
+GenAiServableProperties are initialized by servable initializer (see servable+initializer.hpp).
+
+GenAiServableExecutionContext is a container that holds required data throughout request processing.
+It is created by createExecutionContext method of GenAiServable in HttpLLMCalculator, which then uses it when calling GenAiServable methods.
+Instance of this class is created for each request and is passed through multiple methods of GenAiServable according to HttpLLMCalculator::Process implementation.
+Note that GenAiServableExecutionContext pointer is the only parameter most of the GenAiServable methods take.
+*/
+
+struct GenAiServableExecutionContext {
+    // Common API related members
+    ovms::HttpPayload payload;
+    Endpoint endpoint;
+    std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
+    // Single tensor with inputIds for the model. This is considered general for all pipelines,
+    // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
+    ov::Tensor inputIds;
+    // Required for generating output and handle request on the calculator side
+    std::vector<ov::genai::GenerationOutput> generationOutputs;
+    std::string response;
+    std::shared_ptr<ov::genai::TextCallbackStreamer> textStreamer;
+    bool sendLoopbackSignal = false;
+    std::string lastStreamerCallbackOutput;
+};
+
+struct GenAiServableProperties {
+    // General configuration
+    std::string modelsPath;
+    std::string device;
+    ov::AnyMap pluginConfig;
+    ov::AnyMap tokenizerPluginConfig;
+    // Sampling limits
+    uint32_t maxTokensLimit;
+    uint32_t bestOfLimit;
+    bool isSpeculativePipeline;  // sampling is generally common, but maybe we could avoid having this field at all
+    // Text processing utilities
+    ov::genai::Tokenizer tokenizer;
+    TextProcessor textProcessor;
+};
+
+class GenAiServable {
+public:
+    std::shared_ptr<GenAiServableProperties> properties;
+
+    GenAiServable() = default;
+    GenAiServable(GenAiServable&&) = default;
+    GenAiServable& operator=(GenAiServable&&) = default;
+    GenAiServable(const GenAiServable&) = delete;
+    GenAiServable& operator=(const GenAiServable&) = delete;
+    virtual ~GenAiServable() = default;
+
+    // ----- Interface for derived classes, TODO: add description when completed
+
+    // Loads payload into the execution context and sets the endpoint
+    virtual absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
+
+    // Called in OVMS core by initializer
+    virtual ovms::Status initialize() = 0;
+
+    // All below methods are called from the HttpLLMCalculator
+
+    // Creates execution context for the request
+    virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;
+
+    // Load and parse OpenAI request from the HTTP payload
+    virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    // Fill executionContext with data necessary execute
+    virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    // This method should implement any necessary queueing mechanism or start asynchronous execution.
+    // Execution context in such case may contain handles, futures or other objects that will be used to track the execution.
+    // If none of that is necessary, the implementation can simply return OK status.
+    virtual absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
+
+    // ----------- Unary scenario ------------
+    // This method should implement reading the results of the execution and filling the executionContext with the results.
+    // If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
+    // then this method should run entire execution.
+    virtual absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
+
+    virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
+    // ----------- Streaming scenario ------------
+    // This method should implement reading the results of the execution and filling the executionContext with the results.
+    // If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
+    // then this method should run entire execution.
+    virtual absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
+
+    virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+};
+
+using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
+}  // namespace ovms

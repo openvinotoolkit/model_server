@@ -53,9 +53,9 @@ class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
 class PythonNodeResources;
-struct LLMNodeResources;
+struct GenAiServable;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
-using LLMNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<LLMNodeResources>>;
+using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -98,7 +98,7 @@ public:
 
 protected:
     PythonNodeResourcesMap pythonNodeResourcesMap;
-    LLMNodeResourcesMap llmNodeResourcesMap;
+    GenAiServableMap genAiServableMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :

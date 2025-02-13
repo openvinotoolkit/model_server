@@ -15,15 +15,15 @@
 //*****************************************************************************
 #include <string>
 
-#include "../llm/llm_executor.hpp"
-#include "../llm/llmnoderesources.hpp"
+#include "../llm/servable.hpp"
+#include "../llm/servable_initializer.hpp"
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
 
 class TextStreamerTest : public ::testing::Test {
 public:
     static inline ::mediapipe::CalculatorGraphConfig config;
-    static inline std::shared_ptr<ovms::LLMNodeResources> nodeResources = std::make_shared<ovms::LLMNodeResources>();
+    static inline std::shared_ptr<ovms::GenAiServable> servable;
     static inline std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     static inline std::shared_ptr<ov::genai::TextCallbackStreamer> streamer;
     static inline std::string lastTextChunk;
@@ -44,7 +44,7 @@ public:
         std::string adjustedPbtxt = testPbtxt;
         adjustConfigForTargetPlatform(adjustedPbtxt);
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(adjustedPbtxt, &config));
-        ASSERT_EQ(ovms::LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(0), ""), ovms::StatusCode::OK);
+        ASSERT_EQ(ovms::initializeGenAiServable(servable, config.node(0), ""), ovms::StatusCode::OK);
         tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
         auto callback = [](std::string text) {
             lastTextChunk = text;
@@ -53,7 +53,7 @@ public:
         streamer = std::make_shared<ov::genai::TextCallbackStreamer>(*tokenizer, callback);
     }
     static void TearDownTestSuite() {
-        nodeResources.reset();
+        servable.reset();
         py::finalize_interpreter();
     }
     void assertTokensValues(ov::Tensor generatedTokens, std::vector<int64_t> expectedTokens) {

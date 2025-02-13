@@ -47,11 +47,8 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
-        ":llmnoderesources",
-        "//src:httppayload",
-        "//src:libhttpclientconnection",
-        ":text_processor",
-        ":openai_completions_api_handler"
+        ":genai_servables",
+        "//src:httppayload"
     ]+ select({
         "//conditions:default": ["//third_party:genai"],
         "//:not_genai_bin" : [":llm_engine"],
@@ -93,9 +90,10 @@ cc_library(
 )
 
 cc_library(
-    name = "llmnoderesources",
-    hdrs = ["llmnoderesources.hpp", "llm_executor.hpp",],
-    srcs = ["llmnoderesources.cpp",],
+    name = "genai_servables",
+    hdrs = ["servable.hpp", "servable_initializer.hpp", 
+            "continuous_batching/servable.hpp", "continuous_batching/llm_executor.hpp", "continuous_batching/servable_initializer.hpp"],
+    srcs = ["servable.cpp", "servable_initializer.cpp", "continuous_batching/servable.cpp", "continuous_batching/servable_initializer.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -108,6 +106,9 @@ cc_library(
         "llmcalculator_cc_proto",
         "//src/python:utils",
         ":text_processor",
+        ":openai_completions_api_handler",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
     ] + PYBIND_DEPS + select({
         "//conditions:default": ["//third_party:genai"],
         "//:not_genai_bin" : [":llm_engine"],
