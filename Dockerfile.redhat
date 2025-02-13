@@ -42,9 +42,7 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             openssl-devel \
             patch \
             pkg-config \
-            wget \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm && \
+            wget && \
             dnf clean all
 
 ####### Azure SDK needs new boost:
@@ -115,9 +113,7 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             unzip \
             vim \
             xz \
-            python3-devel \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-2020.3-8.el9.x86_64.rpm \
-            https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/tbb-devel-2020.3-8.el9.x86_64.rpm && \
+            python3-devel && \
             dnf clean all
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
