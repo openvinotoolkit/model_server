@@ -88,29 +88,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-static ov::element::Type_t getOvTypeFromMatType(int matType) {
-    switch (matType) {
-    case CV_32F:
-        return ov::element::f32;
-    case CV_64F:
-        return ov::element::f64;
-    case CV_16F:
-        return ov::element::f64;
-    case CV_16S:
-        return ov::element::f16;
-    case CV_8U:
-        return ov::element::u8;
-    case CV_8S:
-        return ov::element::i8;
-    case CV_16U:
-        return ov::element::u16;
-    case CV_32S:
-        return ov::element::i32;
-    default:
-        return ov::element::undefined;
-    }
-}
-
 ov::Tensor load_image_stbi(const std::string& imageBytes) {
     int x = 0, y = 0, channels_in_file = 0;
     constexpr int desired_channels = 3;
