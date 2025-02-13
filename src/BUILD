@@ -2030,6 +2030,7 @@ cc_test(
     ],
     linkopts = LINKOPTS_ADJUSTED,
     deps = [
+            "@cpp_httplib//:cpp_httplib",
             ":test_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
