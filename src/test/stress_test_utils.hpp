@@ -1125,8 +1125,8 @@ public:
             ovmsConfig.replace(it, pathToReplace.size(), modelPath);
         }
 
-        std::string newDir = getGenericFullPathForBazelBin("/ovms/bazel-bin");
-        std::regex regexPattern(R"(/ovms/bazel-bin)");
+        std::string newDir = getGenericFullPathForBazelBin("/ovms/bazel-bin/src");
+        std::regex regexPattern(R"(/ovms/bazel-bin/src)");
         ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
 
         newDir = getGenericFullPathForSrcTest("/ovms/src/test");
