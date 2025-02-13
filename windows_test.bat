@@ -31,7 +31,7 @@ set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 > win_full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
@@ -101,12 +101,14 @@ echo Running: %runTest%
 :: Cut tests log to results
 set regex="\[  .* ms"
 set sed_clean="s/ (.* ms)//g"
-grep -a %regex% win_full_test.log | sed %sed_clean% | tee win_test.log
-if !errorlevel! neq 0 exit /b !errorlevel!
-:exit_build
-echo [INFO] Build finished
+C:\Windows\System32\tar.exe -a -c -f win_test_log.zip win_full_test.log
+grep -a %regex% win_full_test.log | sed %sed_clean% > win_test_summary.log
+grep -a %regex% win_full_test.log | sed %sed_clean% | grep -q " FAILED "
+if !errorlevel! equ 0 goto :exit_build_error
+:exit_build 
+echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0
 :exit_build_error
-echo [ERROR] Build finished with error
+echo [ERROR] Check tests summary in 'win_test_summary.log' and tests logs in 'win_full_test.log'. Rerun failed test with: windows_setupvars.bat and %cd%\bazel-bin\src\ovms_test.exe --gtest_filter='*.*'
 exit /b 1
 endlocal

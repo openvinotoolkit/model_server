@@ -41,21 +41,3 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
-
-alias(
-    name = "boost",
-    actual = select({
-        "//src:windows": "@windows_boost//:boost",
-        "//conditions:default": "@linux_boost//:boost",
-    }),
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "com_github_libevent_libevent",
-    actual = select({
-        "//src:windows": "@com_github_libevent_libevent_linux//:libevent",
-        "//conditions:default": "@com_github_libevent_libevent_windows//:libevent",
-    }),
-    visibility = ["//visibility:public"],
-)
