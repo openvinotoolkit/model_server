@@ -12,7 +12,6 @@ Download both components of the model (xml and bin file) using curl in the `mode
 
 ```console
 curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml -o model/1/age-gender-recognition-retail-0013.bin -o model/1/age-gender-recognition-retail-0013.xml
-
 ```
 
 ## Server Deployment
@@ -59,7 +58,7 @@ Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/
 python age_gender_recognition.py --image_input_path age-gender-recognition-retail-0001.jpg --rest_port 8000
 ```
 Sample Output :
-```bash
+```console
 age-gender-recognition-retail-0001.jpg (1, 3, 62, 62) ; data range: 0 : 239
 {'outputs': {'prob': [[[[0.9874807]], [[0.0125193456]]]], 'age_conv3': [[[[0.25190413]]]]}}
 ```
