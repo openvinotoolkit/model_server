@@ -874,3 +874,9 @@ const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
     adjustConfigForTargetPlatform(input);
     return input;
 }
+
+std::string adjustConfigForTargetPlatformCStr(const char* input) {
+    std::string inputString(input);
+    adjustConfigForTargetPlatform(inputString);
+    return inputString;
+}
