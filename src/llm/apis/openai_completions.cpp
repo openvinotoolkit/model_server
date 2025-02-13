@@ -138,13 +138,12 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
             stbi_image_free(image);
             image = nullptr;
         }
-        bool is_equal(const SharedImageAllocator& other) const noexcept {return this == &other;}
+        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
     };
     return ov::Tensor(
         ov::element::u8,
         ov::Shape{1, size_t(y), size_t(x), size_t(desired_channels)},
-        SharedImageAllocator{image, desired_channels, y, x}
-    );
+        SharedImageAllocator{image, desired_channels, y, x});
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages() {
