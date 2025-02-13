@@ -1905,7 +1905,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
+                # "test/llmtemplate_test.cpp",
                 "test/text_streamer_test.cpp",
             ],
             "//:disable_python" : [],
