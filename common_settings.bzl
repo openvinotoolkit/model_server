@@ -148,7 +148,7 @@ COMMON_STATIC_LIBS_COPTS = select({
                 })
 
 COMMON_STATIC_TEST_COPTS = select({
-                "//conditions:default": [c
+                "//conditions:default": [
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
