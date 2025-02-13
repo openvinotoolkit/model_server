@@ -59,9 +59,6 @@ template <typename Pair,
 class EnsembleFlowBothApiTest : public TestWithTempDir {
 public:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         TestWithTempDir::SetUp();
         // Prepare manager
         config = DUMMY_MODEL_CONFIG;
@@ -4573,7 +4570,10 @@ static const char* pipelineDemultiplexerShapeNotEqualToDemultiplyCount = R"(
 
 TYPED_TEST(EnsembleFlowBothApiTest, DemultiplexerMultipleBatchSizeWithShapeNotEqualToDemultiplyCountNotAllowed) {
     std::string fileToReload = this->directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerShapeNotEqualToDemultiplyCount, fileToReload);
+    std::string ovmsConfig = std::string(pipelineDemultiplexerShapeNotEqualToDemultiplyCount);
+    adjustConfigForTargetPlatform(ovmsConfig);
+
+    createConfigFileWithContent(ovmsConfig, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
@@ -4774,7 +4774,10 @@ static const char* pipelineDemultiplexerShapeEqualToDemultiplyCount = R"(
 
 TYPED_TEST(EnsembleFlowBothApiTest, DemultiplexerMultipleBatchSizeWithShapeEqualToDemultiplyCountAllowed) {
     std::string fileToReload = this->directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineDemultiplexerShapeEqualToDemultiplyCount, fileToReload);
+    std::string ovmsConfig = std::string(pipelineDemultiplexerShapeEqualToDemultiplyCount);
+    adjustConfigForTargetPlatform(ovmsConfig);
+
+    createConfigFileWithContent(ovmsConfig, fileToReload);
     ConstructorEnabledModelManager manager;
 
     auto status = manager.loadConfig(fileToReload);
@@ -4888,7 +4891,10 @@ static const char* pipelineSingleIncrement4DimInputNHWCDynamicBatch = R"(
 
 TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimInputNHWCDynamicBatch) {
     std::string fileToReload = this->directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineSingleIncrement4DimInputNHWCDynamicBatch, fileToReload);
+    std::string ovmsConfig = std::string(pipelineSingleIncrement4DimInputNHWCDynamicBatch);
+    adjustConfigForTargetPlatform(ovmsConfig);
+
+    createConfigFileWithContent(ovmsConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
@@ -5006,7 +5012,10 @@ static const char* pipelineSingleIncrement4DimOutputNHWCDynamicBatch = R"(
 
 TYPED_TEST(EnsembleFlowBothApiTest, ExecuteSingleIncrement4DimOutputNHWCDynamicBatch) {
     std::string fileToReload = this->directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineSingleIncrement4DimOutputNHWCDynamicBatch, fileToReload);
+    std::string ovmsConfig = std::string(pipelineSingleIncrement4DimOutputNHWCDynamicBatch);
+    adjustConfigForTargetPlatform(ovmsConfig);
+
+    createConfigFileWithContent(ovmsConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
@@ -6113,7 +6122,10 @@ TEST_F(EnsembleFlowTestBinaryInput, BinaryInputWithPipelineInputLayoutANYAndDemu
 
 TYPED_TEST(EnsembleFlowBothApiTest, TensorContentInputWithPipelineInputLayoutANYAndDemultiplexer_RequestNhwc) {
     std::string fileToReload = this->directoryPath + "/config.json";
-    createConfigFileWithContent(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer, fileToReload);
+    std::string ovmsConfig = std::string(pipelineWithOnlyDynamicCustomNodeAndDemultiplexer);
+    adjustConfigForTargetPlatform(ovmsConfig);
+
+    createConfigFileWithContent(ovmsConfig, fileToReload);
     ConstructorEnabledModelManager manager;
     std::unique_ptr<Pipeline> pipeline;
 
