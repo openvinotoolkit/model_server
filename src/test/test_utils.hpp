@@ -65,7 +65,8 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
+const std::string& getGenericFullPathForBazelBin(const std::string& linuxPath, bool logChange = true);
 
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);

@@ -1118,31 +1118,21 @@ public:
     }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
+        SPDLOG_ERROR("BEFORE REPLACE \n{}", ovmsConfig);
         std::string pathToReplace{"/ovms/src/test/dummy"};
         auto it = ovmsConfig.find(pathToReplace);
         if (it != std::string::npos) {
             ovmsConfig.replace(it, pathToReplace.size(), modelPath);
         }
-        pathToReplace = std::string{"/ovms/bazel-bin"};
-        it = ovmsConfig.find(pathToReplace);
-        while (it != std::string::npos) {
-            std::string newDir = getGenericFullPathForTmp("/tmp");
-            std::filesystem::path resolved_path = std::filesystem::absolute(newDir + "/../bazel-bin").lexically_normal();
-            newDir = resolved_path.generic_string();
-            ovmsConfig.replace(it, pathToReplace.size(), newDir);
-            it = ovmsConfig.find(pathToReplace);
-        }
-        pathToReplace = std::string{"/ovms/src/test"};
-        it = ovmsConfig.find(pathToReplace);
-        while (it != std::string::npos) {
-            std::string newDir = getGenericFullPathForSrcTest("/ovms/src/test");
-            SPDLOG_ERROR("CCCCCCCCCCCCCCCCC {}", newDir);
-            std::filesystem::path resolved_path = std::filesystem::absolute(newDir).lexically_normal();
-            newDir = resolved_path.generic_string();
-            SPDLOG_ERROR("ABBBBBBBBBBBBBBBBBBBBBBBB {}", newDir);
-            ovmsConfig.replace(it, pathToReplace.size(), newDir);
-            it = ovmsConfig.find(pathToReplace);
-        }
+
+        std::string newDir = getGenericFullPathForBazelBin("/ovms/bazel-bin");
+        std::regex regexPattern(R"(/ovms/bazel-bin)");
+        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
+
+        newDir = getGenericFullPathForSrcTest("/ovms/src/test");
+        std::regex regexPattern2(R"(/ovms/src/test)");
+        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern2, newDir);
+
         configFilePath = directoryPath + "/ovms_config.json";
     }
 
