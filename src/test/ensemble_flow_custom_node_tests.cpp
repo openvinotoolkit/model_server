@@ -18,6 +18,7 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <regex>
 #include <string>
 #include <utility>
 
@@ -61,9 +62,6 @@ using tensorflow::serving::PredictResponse;
 class EnsembleFlowCustomNodePipelineExecutionTest : public TestWithTempDir {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         TestWithTempDir::SetUp();
 
         reporter = std::make_unique<ModelMetricReporter>(&this->metricConfig, &this->registry, "example_pipeline_name", 1);
@@ -71,7 +69,7 @@ protected:
         CustomNodeLibraryManager manager;
         ASSERT_EQ(manager.loadLibrary(
                       this->libraryName,
-                      this->libraryPath),
+                      getGenericFullPathForBazelOut(this->libraryPath)),
             StatusCode::OK);
         ASSERT_EQ(manager.getLibrary(
                       this->libraryName,
@@ -202,9 +200,6 @@ protected:
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, AddSubCustomNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Most basic configuration, just process single add-sub custom node pipeline request
     // input  add-sub  output
     //  O------->O------->O
@@ -275,9 +270,6 @@ protected:
     const int32_t demultiplyCount = 4;  // different ops library has (1,4,10) as output
 
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         EnsembleFlowCustomNodePipelineExecutionTest::SetUp();
         // increasing default nireq == 1 to speed up the tests
         // in multilayered demultiplication we still will have more than
@@ -286,7 +278,7 @@ protected:
         ASSERT_EQ(modelManager.reloadModelWithVersions(config), StatusCode::OK_RELOADED);
         ASSERT_EQ(manager.loadLibrary(
                       differentOpsLibraryName,
-                      differentOpsLibraryPath),
+                      getGenericFullPathForBazelOut(differentOpsLibraryPath)),
             StatusCode::OK);
         ASSERT_EQ(manager.getLibrary(
                       differentOpsLibraryName,
@@ -294,7 +286,7 @@ protected:
             StatusCode::OK);
         ASSERT_EQ(manager.loadLibrary(
                       chooseMaxLibraryName,
-                      chooseMaxLibraryPath),
+                      getGenericFullPathForBazelOut(chooseMaxLibraryPath)),
             StatusCode::OK);
         ASSERT_EQ(manager.getLibrary(
                       chooseMaxLibraryName,
@@ -312,9 +304,6 @@ protected:
 };
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerDummyGathersIntertwinedLevels) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Most basic configuration, just process single add-sub custom node pipeline request
     // input  (differentOps    dummy   chooseMax ) XN    output
     //  O-----(----->O---------->O------->O------>...----->O
@@ -387,9 +376,6 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, MultipleDemultiplexerLevelsThenDummyThenMultipleGathers) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Most basic configuration, just process single add-sub custom node pipeline request
     // input  (differentOps dummy)xN   chooseMax xN    output
     //  O-----(----->O------->O---...----->O---->...----->O
@@ -472,9 +458,6 @@ TEST_F(EnsembleFlowCustomNodeAndDemultiplexerGatherPipelineExecutionTest, Multip
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     constexpr int N = 100;
     constexpr int PARAMETERS_PAIRS_COUNT = 2;
     static_assert(PARAMETERS_PAIRS_COUNT > 0);
@@ -536,9 +519,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SeriesOfCustomNodes) {
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     constexpr int N = 200;
     constexpr int PARAMETERS_PAIRS_COUNT = 5;
     static_assert(PARAMETERS_PAIRS_COUNT > 0);
@@ -605,9 +585,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ParallelCustomNodes) {
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomAndDLNodes) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // input  add-sub1 dummy  add-sub2 output
     //  O------->O------O--------O------>O
     ConstructorEnabledModelManager modelManager;
@@ -695,9 +672,6 @@ struct LibraryWithScalarOutput {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeScalarsAndScalarDLNodeInTheMiddle) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // input    CN       DL       CN     output
     //  O------->O------->O--------O------>O
     //       +const    passthru   +const
@@ -751,9 +725,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, CustomNodeScalarsAndScalarDL
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, DLNodeScalarsAndScalarCustomNodeInTheMiddle) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // input    DL       CN       DL     output
     //  O------->O------->O--------O------>O
     //        passthru   +const   passthru
@@ -824,9 +795,6 @@ struct LibraryFailInExecute {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecution) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryFailInExecute>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
@@ -856,9 +824,6 @@ struct LibraryCorruptedOutputHandle {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorruptedHandle) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryCorruptedOutputHandle>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED);
 }
@@ -888,9 +853,6 @@ struct LibraryCorruptedOutputsNumber {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputsCorruptedNumberOfOutputs) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryCorruptedOutputsNumber>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_OUTPUTS_CORRUPTED_COUNT);
 }
@@ -927,9 +889,6 @@ struct LibraryMissingOutput {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeMissingOutput) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryMissingOutput>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_MISSING_OUTPUT);
 }
@@ -965,17 +924,11 @@ struct LibraryIncorrectOutputPrecision {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidPrecision) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputPrecision>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_PRECISION);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessLibraryWithScalarOutput) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     const std::vector<float> inputValues{3.5f};
     const std::vector<float> expectedOutputValues{inputValues[0] + LibraryWithScalarOutput::libraryScalarNodeAddValue};
     auto inputTensorInfo = std::make_shared<ovms::TensorInfo>(pipelineInputName,
@@ -1042,9 +995,6 @@ struct LibraryIncorrectOutputContentSize {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeOutputInvalidContentSize) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryIncorrectOutputContentSize>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_INVALID_CONTENT_SIZE);
 }
@@ -1083,9 +1033,6 @@ struct LibraryNotInitilizedExecuteCorrectly {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, SuccessInCustomNodeExecutionNotInitialized) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitilizedExecuteCorrectly>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::OK);
 }
@@ -1129,17 +1076,11 @@ struct LibraryNotInitializedFailInExecute {
 };
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeExecutionNotInitialized) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     auto pipeline = this->prepareSingleNodePipelineWithLibraryMock<LibraryNotInitializedFailInExecute>();
     ASSERT_EQ(pipeline->execute(DEFAULT_TEST_CONTEXT), StatusCode::NODE_LIBRARY_EXECUTION_FAILED);
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Nodes
     // request   custom    response
     //  O--------->O---------->O
@@ -1176,9 +1117,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeInitialize) 
 }
 
 TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Nodes
     // request   custom    response
     //  O--------->O---------->O
@@ -1232,9 +1170,6 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, FailInCustomNodeDeinitialize
 class EnsembleFlowCustomNodeFactoryCreateThenExecuteTest : public EnsembleFlowCustomNodePipelineExecutionTest {};
 
 TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactoryCreationWithCustomNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // Nodes
     // request   custom    response
     //  O--------->O---------->O
@@ -1276,9 +1211,6 @@ TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, SimplePipelineFactory
 }
 
 TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, ParallelPipelineFactoryUsageWithCustomNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     //                 Nodes
     //              custom_node_N
     //         v-------->O----------v
@@ -1474,9 +1406,6 @@ struct LibraryAddSubWithInternalManager {
 };
 
 TEST_F(EnsembleFlowCustomNodeFactoryCreateThenExecuteTest, PipelineFactoryCreationAndExecuteWithCustomNodeUsingInternalManager) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     ConstructorEnabledModelManager manager;
     PipelineFactory factory;
 
@@ -1566,7 +1495,13 @@ protected:
     }
 
     void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
-        createConfigFileWithContent(configContent, configJsonFilePath);
+        std::string ovmsConfig = std::string(configContent);
+        
+        std::string newDir = getGenericFullPathForBazelOut("/ovms/bazel-bin/src");
+        std::regex regexPattern(R"(/ovms/bazel-bin/src)");
+        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
+
+        createConfigFileWithContent(ovmsConfig, configJsonFilePath);
         ASSERT_EQ(manager.loadConfig(configJsonFilePath), expectedStatus);
     }
 
@@ -1583,9 +1518,6 @@ protected:
 };
 
 TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, AddSubCustomNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     this->prepareRequest(inputValues);
     this->loadCorrectConfiguration();
@@ -1636,9 +1568,6 @@ static const char* pipelineCustomNodeReferenceMissingLibraryConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceMissingLibraryThenCorrect) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     this->prepareRequest(inputValues);
 
@@ -1700,9 +1629,6 @@ static const char* pipelineCustomNodeReferenceLibraryWithExecutionErrorMissingPa
 })";
 
 TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithExecutionErrorThenCorrect) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     this->prepareRequest(inputValues);
 
@@ -1766,9 +1692,6 @@ static const char* pipelineCustomNodeMissingParametersConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, MissingRequiredNodeParametersThenCorrect) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     this->prepareRequest(inputValues);
 
@@ -1833,9 +1756,6 @@ static const char* pipelineCustomNodeLibraryNotEscapedPathConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeLoadConfigThenExecuteTest, ReferenceLibraryWithRestrictedBasePathThenCorrect) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     this->prepareRequest(inputValues);
 
@@ -1998,9 +1918,6 @@ static std::vector<float> prepareGatherHighestExpectedOutput(std::vector<float> 
 }
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, JustDifferentOpsCustomNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
@@ -2092,9 +2009,6 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummy) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
@@ -2177,9 +2091,6 @@ static const char* pipelineCustomNodeDifferentOperations2OutputsConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNode2OutputsMetadataCheck) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
@@ -2294,9 +2205,6 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
 })";
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximum) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
@@ -2412,9 +2320,6 @@ static const char* pipelineCustomNodeDifferentOperationsThenDummyThenChooseMaxim
 })";
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DifferentOpsCustomNodeThenDummyThenChooseMaximumThenDummyAgain) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};  // add/sub/multiply/divide
@@ -2500,9 +2405,6 @@ static const char* demultiplyThenDummyThenChooseMaximumConfig = R"(
 })";
 
 TEST_F(EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest, DemultiplyThenDummyThenChooseMaximum) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::unique_ptr<Pipeline> pipeline;
     std::vector<float> input(4 * DUMMY_MODEL_OUTPUT_SIZE);
     std::fill(input.begin(), input.end(), 1.0);
@@ -5990,9 +5892,6 @@ template <typename Pair,
 class EnsembleFlowStringInput : public ::testing::Test {
 public:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
     }
 
     RequestType request;
