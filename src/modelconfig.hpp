@@ -29,6 +29,7 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
+#include "filesystem.hpp"
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -292,7 +293,7 @@ public:
          * @return std::string
          * */
     const std::string getPath() const {
-        return getLocalPath() + std::string(1, std::filesystem::path::preferred_separator) + std::to_string(version);
+        return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
     }
 
     /**
