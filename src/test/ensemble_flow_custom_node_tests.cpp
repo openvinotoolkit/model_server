@@ -1496,7 +1496,7 @@ protected:
 
     void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
         std::string ovmsConfig = std::string(configContent);
-        
+
         std::string newDir = getGenericFullPathForBazelOut("/ovms/bazel-bin/src");
         std::regex regexPattern(R"(/ovms/bazel-bin/src)");
         ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
