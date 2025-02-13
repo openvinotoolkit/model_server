@@ -111,32 +111,6 @@ static ov::element::Type_t getOvTypeFromMatType(int matType) {
     }
 }
 
-ov::Tensor load_image_opencv(const std::string& imageBytes) {
-    size_t rows = 1;
-    size_t cols = imageBytes.size();
-    cv::Mat rawData(rows, cols, CV_8UC1, (void*)imageBytes.data());
-    cv::Mat image;
-    try {
-        image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-    } catch (const cv::Exception& e) {
-        throw std::runtime_error{"Error during string to mat conversion"};
-    }
-    std::vector<size_t> shape;
-    shape.push_back(image.rows);
-    shape.push_back(image.cols);
-    shape.push_back(image.channels());
-    auto type = getOvTypeFromMatType(image.depth());
-    if (type == ov::element::undefined) {
-        throw std::runtime_error{"Image type is invalid"};
-    }
-    ov::Tensor tensor(type, shape);
-    if (image.total() * image.elemSize() != tensor.get_size()) {
-        throw std::runtime_error{"Image type is invalid"};
-    }
-    memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
-    return tensor;
-}
-
 ov::Tensor load_image_stbi(const std::string& imageBytes) {
     int x = 0, y = 0, channels_in_file = 0;
     constexpr int desired_channels = 3;
@@ -171,9 +145,6 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
         ov::Shape{1, size_t(y), size_t(x), size_t(desired_channels)},
         SharedImageAllocator{image, desired_channels, y, x}
     );
-    // ov::Tensor tensor(ov::element::u8, ov::Shape{1, size_t(y), size_t(x), size_t(desired_channels)});
-    // memcpy((char*)tensor.data(), image, x*y*desired_channels);
-    // return tensor;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages() {
@@ -235,32 +206,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
-<<<<<<< HEAD
-                            int rows = 1;
-                            int cols = decoded.size();
-                            cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
-                            cv::Mat image;
-                            try {
-                                image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-                            } catch (const cv::Exception&) {
-                                return absl::InvalidArgumentError("Error during string to mat conversion");
-                            }
-                            std::vector<size_t> shape;
-                            shape.push_back(image.rows);
-                            shape.push_back(image.cols);
-                            shape.push_back(image.channels());
-                            auto type = getOvTypeFromMatType(image.depth());
-                            if (type == ov::element::undefined) {
-                                return absl::InvalidArgumentError("Image type is invalid");
-                            }
-                            ov::Tensor tensor(type, shape);
-                            if (image.total() * image.elemSize() != tensor.get_size()) {
-                                return absl::InvalidArgumentError("Image size invalid");
-                            }
-                            memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
-=======
                             ov::Tensor tensor = load_image_stbi(decoded);
->>>>>>> 018ea9fc (multimodal stbi image decoding)
                             request.images.push_back(tensor);
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
