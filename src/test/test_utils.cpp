@@ -755,7 +755,7 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
 
 // Function changes linux docker container path /ovms/bazel-out/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
 // Depending on the ovms_test.exe location after build
-const std::string& getGenericFullPathForBazelBin(const std::string& linuxPath, bool logChange) {
+const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
