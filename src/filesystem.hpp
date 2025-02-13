@@ -270,10 +270,7 @@ public:
         return (md5sum);
     }
 
-    static std::string getOsSeparator() {
-        std::string separator = std::string(1, std::filesystem::path::preferred_separator);
-        return (separator);
-    }
+    static std::string& getOsSeparator();
 
     StatusCode CreateLocalDir(const std::string& path) {
         try {
