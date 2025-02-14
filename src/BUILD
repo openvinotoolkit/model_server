@@ -450,6 +450,7 @@ cc_library(
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
                 # Jinja template processing is done in Python
+                "//src/llm:llm_engine",
                 "//src/llm:llmcalculator",
                 "//src/llm:llmnoderesources",
                 "//src/llm:text_processor",

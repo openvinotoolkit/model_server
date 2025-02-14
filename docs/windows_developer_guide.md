@@ -99,11 +99,6 @@ Download LLMs
 %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 ```
 
-Copy OpenVINO GenAI and tokenizers libs
-```bat
-copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
-```
-
 Change tests configs to windows:
 ```bat
 python windows_change_test_configs.py
