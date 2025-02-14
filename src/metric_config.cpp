@@ -63,6 +63,8 @@ const std::string METRIC_NAME_REQUESTS_REJECTED = "ovms_requests_rejected";
 const std::string METRIC_NAME_GRAPH_ERROR = "ovms_graph_error";
 const std::string METRIC_NAME_PROCESSING_TIME = "ovms_graph_processing_time_us";
 
+const std::string METRIC_NAME_REQUEST_LATENCY = "ovms_graph_request_latency_us";
+
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
