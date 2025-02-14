@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=ubuntu:20.04
-ARG FINAL_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
+ARG FINAL_IMAGE=ubuntu:22.04
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM $BASE_IMAGE as base_build

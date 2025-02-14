@@ -19,7 +19,7 @@ If you're looking for a quick way to try `ovmsclient` out or want to look up how
 
 There are also Dockerfiles available that prepare Docker image with `ovmsclient` installed and ready to use.
 Simply run `docker build` with the Dockerfile of your choice to get the minimal image:
-- [Ubuntu 20.04 based image](Dockerfile.ubuntu)
+- [Ubuntu 22.04 based image](Dockerfile.ubuntu)
 - [UBI 8.8 based image](Dockerfile.redhat)
 
 ```bash

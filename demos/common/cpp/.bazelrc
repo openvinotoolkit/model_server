@@ -39,39 +39,69 @@ build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
 build:nativeopt --copt=-O3
 
-build --action_env PYTHON_BIN_PATH="/usr/bin/python3"
-build --define PYTHON_BIN_PATH=/usr/bin/python3
+# those below are required for XNNPACK build with gcc <12 (ubuntu 22 default is 11)
+build --define=xnn_enable_avxvnniint8=false
+build --define=xnn_enable_avx512fp16=false
+build --define=xnn_enable_avx512amx=false
+build --define xnn_enable_avxvnni=false
+# TODO to check
+build --define=no_cuda=1
 
 build --spawn_strategy=standalone
 build --genrule_strategy=standalone
-
 build --define=grpc_no_ares=true
+
+# Default select settings
+build --define=MEDIAPIPE_DISABLE_GPU=1
+build --define=MEDIAPIPE_DISABLE=0
+build --define=CLOUD_DISABLE=0
+build --define=PYTHON_DISABLE=0
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
 
 build -c opt
+# fixing debug builds with ignore warnings
+build --copt=-O2
 build --copt=-DGRPC_BAZEL_BUILD
-
-# LLVM, MLIR and TF require C++14, we use C++17 in project
-build --cxxopt=-std=c++17
-build --host_cxxopt=-std=c++17
-
-# Security options
-build --cxxopt=-fno-strict-overflow
-build --cxxopt=-fno-delete-null-pointer-checks
-build --cxxopt=-fwrapv
-build --cxxopt=-fstack-protector
-build --cxxopt=-fstack-clash-protection
-build --cxxopt=-Wformat
-build --cxxopt=-Wformat-security
-build --cxxopt=-Werror=format-security
-
 # Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
 # compilation options. It also addresses memory use due to
 # copy-on-write semantics of std::strings of the older ABI.
 build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
+build --enable_platform_specific_config
 build --experimental_repo_remote_exec
-build --force_pic
+build --experimental_cc_shared_library
+build --check_visibility=true
+# Disable leaking LD_LIBRARY_PATH & PATH into build resulting in cache misses
+# and frequent rebuilds
+build --incompatible_strict_action_env
+build --cxxopt=-DOVMS_DUMP_TO_FILE=0
+build --remote_upload_local_results=true
 
+build:avx_win --copt=/arch=AVX
+build:avx2_win --copt=/arch=AVX2
+
+# Linux settings #######################################################################################################
+# LLVM, MLIR and TF require C++14, we use C++17 in project
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+
+# For Tensorflow building only
+build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
+build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
+
+build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
+# Security options ######################################################################################################
+# TODO: Add equivalent windows flag
+build:linux --cxxopt=-fno-strict-overflow
+build:linux --cxxopt=-fno-delete-null-pointer-checks
+build:linux --cxxopt=-fwrapv
+build:linux --cxxopt=-fstack-protector
+build:linux --cxxopt=-fstack-clash-protection
+build:linux --cxxopt=-Wformat
+build:linux --cxxopt=-Wformat-security
+build:linux --cxxopt=-Werror=format-security
+
+# TODO: Add equivalent windows flag
+build:linux --force_pic

@@ -53,6 +53,7 @@ $ curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model
 
 ```bash
 $ mkdir cache
+$ chmod -R 755 model
 $ docker run -p 9000:9000 -d -u $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v ${PWD}/model/fdsample:/model:ro -v ${PWD}/cache:/opt/cache:rw openvino/model_server:latest-gpu --model_name model --model_path /model --target_device GPU --port 9000
 ```
 
