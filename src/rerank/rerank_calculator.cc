@@ -20,7 +20,7 @@
 #include <utility>
 
 #pragma warning(push)
-#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005 4456)
 #include "absl/strings/escaping.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -64,7 +64,7 @@ class RerankCalculator : public CalculatorBase {
     int64_t sep_token{0};
     int64_t pad_token{0};
 
-    int64_t max_position_embeddings{512};
+    uint64_t max_position_embeddings{512};
 
     size_t max_allowed_chunks{0};  // Read from options in ::Open()
 
@@ -115,14 +115,14 @@ public:
                 this->max_position_embeddings = options.max_position_embeddings();
                 SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_position_embeddings: {}", this->max_position_embeddings);
             } else {
-                auto it = rerank_session->getModelConfig().find("max_position_embeddings");
-                if (it != rerank_session->getModelConfig().end()) {
-                    this->max_position_embeddings = it->second.as<int64_t>();
+                auto maxPositionEmbeddingsIt = rerank_session->getModelConfig().find("max_position_embeddings");
+                if (maxPositionEmbeddingsIt != rerank_session->getModelConfig().end()) {
+                    this->max_position_embeddings = maxPositionEmbeddingsIt->second.as<int64_t>();
                     SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings: {}", this->max_position_embeddings);
                 } else {
-                    auto it = rerank_session->getModelConfig().find("max_trained_positions");
-                    if (it != rerank_session->getModelConfig().end()) {
-                        this->max_position_embeddings = it->second.as<int64_t>();
+                    auto maxTrainedPositionsIt = rerank_session->getModelConfig().find("max_trained_positions");
+                    if (maxTrainedPositionsIt != rerank_session->getModelConfig().end()) {
+                        this->max_position_embeddings = maxTrainedPositionsIt->second.as<int64_t>();
                         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model max_position_embeddings (inherited from max_trained_positions): {}", this->max_position_embeddings);
                     } else {
                         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Model missing max_position_embeddings and max_trained_positions in config, using default value: {}", this->max_position_embeddings);

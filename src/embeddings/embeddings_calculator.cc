@@ -17,7 +17,7 @@
 #include <unordered_map>
 
 #pragma warning(push)
-#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005 4456)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -239,7 +239,7 @@ public:
                     foundMatchinEmbeddingOutput = true;
                     outputNameToSet = name;
                     break;
-                } catch (std::exception& e) {
+                } catch (std::exception&) {
                     LOG(ERROR) << "Failed to get 3rd dimension of output" << outputNameToSet;
                     return absl::InternalError(absl::StrCat("Failed to get 3rd dimension of output: ", outputNameToSet));
                 }
