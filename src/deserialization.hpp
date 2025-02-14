@@ -380,7 +380,7 @@ std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::T
     do {                                                                   \
         if (!tensor) {                                                     \
             status = StatusCode::OV_UNSUPPORTED_DESERIALIZATION_PRECISION; \
-            SPDLOG_DEBUG(status.string());                                 \
+            SPDLOG_DEBUG("{}", status.string());                           \
             return status;                                                 \
         }                                                                  \
     } while (0)

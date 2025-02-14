@@ -488,7 +488,7 @@ Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, 
         errorMsg += keyword;
         errorMsg += " Key: ";
         errorMsg += key;
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, errorMsg);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "{}", errorMsg);
         return detailedError ? Status(StatusCode::JSON_INVALID, std::move(errorMsg)) : StatusCode::JSON_INVALID;
     }
 

@@ -58,7 +58,7 @@ static Status serializePrecision(
     case ovms::Precision::CUSTOM:
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
     }
@@ -103,7 +103,7 @@ static Status serializePrecision(
     case ovms::Precision::BIN:
     default: {
         Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-        SPDLOG_ERROR(status.string());
+        SPDLOG_ERROR("{}", status.string());
         return status;
     }
     }

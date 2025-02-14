@@ -565,7 +565,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddInput(OVMS_InferenceRequest* req
             ss << shape[i];
         }
         ss << "]";
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -595,7 +595,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestInputSetData(OVMS_InferenceRequest*
            << " bufferSize: " << bufferSize
            << " bufferType: " << bufferType
            << " deviceId: " << deviceId;
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -630,7 +630,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestAddOutput(OVMS_InferenceRequest* re
             ss << shape[i];
         }
         ss << "]";
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -659,7 +659,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceRequestOutputSetData(OVMS_InferenceRequest
            << " bufferSize: " << bufferSize
            << " bufferType: " << bufferType
            << " deviceId: " << deviceId;
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -828,7 +828,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceResponseOutput(OVMS_InferenceResponse* res
         ss << "]"
            << " bufferType: " << *bufferType
            << " deviceId: " << *deviceId;
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -1312,7 +1312,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServableMetadataInput(OVMS_ServableMetadata* servab
             ss << (*shapeMax)[i];
         }
         ss << "]";
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }
@@ -1370,7 +1370,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServableMetadataOutput(OVMS_ServableMetadata* serva
             ss << (*shapeMax)[i];
         }
         ss << "]";
-        SPDLOG_TRACE(ss.str());
+        SPDLOG_TRACE("{}", ss.str());
     }
     return nullptr;
 }

@@ -250,7 +250,7 @@ ModelServiceImpl::ModelServiceImpl(ovms::Server& ovmsServer) :
     modelManager(dynamic_cast<const ServableManagerModule*>(ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()) {
     if (nullptr == ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME)) {
         const char* message = "Tried to create model service impl without servable manager module";
-        SPDLOG_ERROR(message);
+        SPDLOG_ERROR("{}", message);
         throw std::logic_error(message);
     }
 }

@@ -158,12 +158,12 @@ static bool hasOutputWithName(std::shared_ptr<ov::Model>& model, const std::stri
 static Status validateConfigurationAgainstNetwork(const ModelConfig& config, std::shared_ptr<ov::Model>& model) {
     if (config.isShapeAnonymousFixed() && model->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_SHAPE_NOT_ALLOWED;
-        SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "{}", status.string());
         return status;
     }
     if (config.getLayout().isSet() && model->inputs().size() > 1) {
         Status status = StatusCode::ANONYMOUS_FIXED_LAYOUT_NOT_ALLOWED;
-        SPDLOG_LOGGER_WARN(modelmanager_logger, status.string());
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "{}", status.string());
         return status;
     }
     for (const auto& [name, _] : config.getShapes()) {

@@ -122,7 +122,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
            << " Expected: " << tensorInfo.getPrecisionAsString()
            << "; Actual: " << toString(ovElementTypeToOvmsPrecision(tensor.get_element_type()));
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
         return Status(StatusCode::INVALID_PRECISION, details);
     }
 
@@ -136,7 +136,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
            << " Expected: " << tensorInfo.getShape().toString()
            << "; Actual: " << shapeToString(dims);
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
         return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, details);
     }
     const auto batchIndex = tensorInfo.getLayout().getBatchIndex();
@@ -149,7 +149,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
                << " Expected: " << tensorInfo.getShape().toString()
                << "; Actual: " << shapeToString(dims);
             const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
         return StatusCode::OK;
@@ -162,7 +162,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
            << " Batch position outside of shape dimensions: " << tensorInfo.getShape().toString()
            << "; layout: " << tensorInfo.getLayout();
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
         return Status(StatusCode::INVALID_BATCH_DIMENSION, details);
     }
     if (!tensorInfo.getShape()[batchIndex.value()].match(dims[batchIndex.value()])) {
@@ -174,7 +174,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
                << " Expected: " << tensorInfo.getShape()[batchIndex.value()].toString()
                << "; Actual: " << dims[batchIndex.value()];
             const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
             return Status(StatusCode::INVALID_BATCH_SIZE, details);
         } else {
             // Otherwise whole shape is incorrect
@@ -183,7 +183,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
                << " Expected: " << tensorInfo.getShape().toString()
                << "; Actual: " << shapeToString(dims);
             const std::string details = ss.str();
-            SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+            SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
             return Status(StatusCode::INVALID_SHAPE, details);
         }
     }
@@ -194,7 +194,7 @@ Status DLNodeSession::validate(const ov::Tensor& tensor, const TensorInfo& tenso
            << " Expected: " << tensorInfo.getShape().toString()
            << "; Actual: " << shapeToString(dims);
         const std::string details = ss.str();
-        SPDLOG_LOGGER_DEBUG(dag_executor_logger, details);
+        SPDLOG_LOGGER_DEBUG(dag_executor_logger, "{}", details);
         return Status(StatusCode::INVALID_SHAPE, details);
     }
     return StatusCode::OK;
