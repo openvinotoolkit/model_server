@@ -69,7 +69,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -133,7 +133,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalInputNameFailsC
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -169,7 +169,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReferingToOriginalOutputNameFails
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -205,7 +205,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -249,7 +249,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReferToMappedNamesAnd
 TEST_F(PipelineWithInputOutputNameMappedModel, SuccessfullyReloadPipelineAfterAddingModelMapping) {
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -329,7 +329,7 @@ TEST_F(PipelineWithInputOutputNameMappedModel, ReloadPipelineAfterRemovalOfModel
         mappingConfigPath);
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -383,7 +383,7 @@ TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnKFSEndpoint) {
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
@@ -413,7 +413,7 @@ TEST_F(ModelWithInputOutputNameMappedModel, GetModelMetadataOnTfsEndpoint) {
 
     // Load models
     auto modelConfig = DUMMY_MODEL_CONFIG;
-    modelConfig.setPluginConfig(plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+    adjustConfigToAllowModelFileRemovalWhenLoaded(modelConfig);
     modelConfig.setBasePath(getGenericFullPathForSrcTest(modelPath));
     ASSERT_EQ(managerWithDummyModel.reloadModelWithVersions(modelConfig), StatusCode::OK_RELOADED);
 
