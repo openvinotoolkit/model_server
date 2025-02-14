@@ -49,25 +49,31 @@ def _impl(repository_ctx):
     
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
+    core = "core_tokenizers"
+    icudt = "icudt70"
+    icuuc = "icuuc70"
+    tokenizers = "openvino_tokenizers"
+    lib_name = "openvino_genai"
+
     if _is_windows(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
-        out_lib_dir = "runtime/lib/Release"
-        lib_name = "openvino_genai"
-        out_libs = "out_static_libs = [\"{lib_name}.lib\"]".format(lib_name=lib_name)
+        out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
+        out_lib_dir = "out_lib_dir = \"runtime/lib/Release\""
+        out_static = "out_static_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{core}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
-        "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1",
-        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "runtime/bin/Release",
         "WIN32": "True",
         "X86_64": "True"
         """
     else:
-        out_lib_dir = "runtime/lib/intel64"
-        lib_name = "libopenvino_genai"
-        out_libs = "out_shared_libs = [\"{lib_name}.so.2500\"]".format(lib_name=lib_name)
+        out_dll_dir_win = ""
+        out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
+        out_static = ""
+        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{icudt}.so\", \"lib{icuuc}.so\", \"lib{tokenizers}.so\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
-        "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
@@ -126,15 +132,18 @@ cmake(
         "https_proxy": "{https_proxy}",
     }},
     lib_source = ":all_srcs",
-    out_lib_dir = "{out_lib_dir}",
     out_include_dir = "runtime/include",
+    {out_lib_dir},
     {out_libs},
+    {out_static}
+    {out_dll_dir_win}
     tags = ["requires-network"],
     visibility = ["//visibility:public"],
     lib_name = "{lib_name}",
     deps = [
         "@ovms//third_party:openvino",
-    ]
+    ],
+    alwayslink = 1,
 )
 
 cc_library(
@@ -144,10 +153,11 @@ cc_library(
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
-                                                            out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries))
+                                                            out_dll_dir_win=out_dll_dir_win, out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,

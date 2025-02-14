@@ -34,6 +34,7 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: TODO: Add dependency on openvino DLLs
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
