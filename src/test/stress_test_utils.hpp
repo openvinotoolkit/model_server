@@ -1118,7 +1118,6 @@ public:
     }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
-        SPDLOG_ERROR("BEFORE REPLACE \n{}", ovmsConfig);
         std::string pathToReplace{"/ovms/src/test/dummy"};
         auto it = ovmsConfig.find(pathToReplace);
         if (it != std::string::npos) {

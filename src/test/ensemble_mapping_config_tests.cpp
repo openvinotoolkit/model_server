@@ -43,9 +43,6 @@ using ::testing::ElementsAre;
 class PipelineWithInputOutputNameMappedModel : public TestWithTempDir {
 protected:
     void SetUp() override {
-        // #ifdef _WIN32
-        //         GTEST_SKIP() << "Test disabled on windows";
-        // #endif
         TestWithTempDir::SetUp();
 
         configPath = directoryPath + "/config.json";
