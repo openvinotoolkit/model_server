@@ -65,6 +65,7 @@ def deleteOldDirectories() {
         return
     }
 
+    // Check if directory was created more than 14 days ago
     def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
 
     println existing_prs_string
@@ -74,7 +75,6 @@ def deleteOldDirectories() {
     for (int i = 0; i < existing_prs.size(); i++) {
         // Check for empty output, Part of output contains the command that was run
         if ( existing_prs[i] == null || existing_prs[i].allWhitespace || existing_prs[i].toLowerCase().contains("grep")) { continue }
-        // Check if directory was created more than 14 days ago
         def pathToDelete = "C:\\" + existing_prs[i]
         // Sanity check not to delete anything else
         if (!pathToDelete.contains("C:\\PR-")) {
