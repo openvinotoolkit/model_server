@@ -883,7 +883,7 @@ std::string adjustConfigForTargetPlatformCStr(const char* input) {
 
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig) {
 #ifdef _WIN32
-    modelConfig.setPluginConfig(ovms::plugin_config_t(plugin_config_t({{"ENABLE_MMAP", "NO"}})));
+    modelConfig.setPluginConfig(ovms::plugin_config_t({{"ENABLE_MMAP", "NO"}}));
 #endif
     // on linux we can remove files from disk even if mmap is enabled
 }
