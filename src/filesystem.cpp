@@ -116,7 +116,7 @@ std::string FileSystem::findFilePathWithExtension(const std::string& path, const
     return std::string();
 }
 
-std::string& FileSystem::getOsSeparator() {
+const std::string& FileSystem::getOsSeparator() {
     static std::string separator = std::string(1, std::filesystem::path::preferred_separator);
     return separator;
 }
