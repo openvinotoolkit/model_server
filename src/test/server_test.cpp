@@ -459,7 +459,7 @@ TEST(Server, CAPIAliveGrpcNotHttpNot) {
     server.setShutdownRequest(0);
 }
 TEST(Server, CAPIAliveGrpcNotHttpYes) {
-    GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon"; // TODO @dkalinow to enable drogon tests
+    GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon";  // TODO @dkalinow to enable drogon tests
     std::string port = "9000";
     randomizePort(port);
     char* argv[] = {
