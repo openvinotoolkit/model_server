@@ -1367,7 +1367,7 @@ TEST_F(ModelManager, HandlingInvalidLastVersion) {
     ovms::ModelConfig config;
     config.setBasePath(getGenericFullPathForTmp("/tmp/" + modelDirectory.name));
     config.setName(modelDirectory.name);
-    config.setPluginConfig(ovms::plugin_config_t{{"ENABLE_MMAP", "NO"}});
+    adjustConfigToAllowModelFileRemovalWhenLoaded(config);
     config.setNireq(1);
     ConstructorEnabledModelManager manager;
     manager.setWaitForModelLoadedTimeoutMs(50);

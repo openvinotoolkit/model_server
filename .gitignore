@@ -34,3 +34,5 @@ out
 .user.bazelrc
 *.log
 *.errors.txt
+tmp/
+*.zip

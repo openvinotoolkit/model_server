@@ -38,7 +38,7 @@ TEST(NodeLibraryManagerTest, UnSuccessfullLibraryLoading) {
 TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
     CustomNodeLibraryManager manager;
     NodeLibrary library;
-    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
     status = manager.getLibrary("random_name", library);
     ASSERT_EQ(status, StatusCode::OK);
@@ -58,39 +58,39 @@ TEST(NodeLibraryManagerTest, SuccessfullLibraryLoadingAndExecution) {
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicateNameAndBasePath) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_ALREADY_LOADED);
 }
 
 TEST(NodeLibraryManagerTest, LibraryReloadingDuplicateNameAndDifferentBasePath) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_add_sub.so"));
+    status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_add_sub.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingDuplicatePath) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("library_A", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    auto status = manager.loadLibrary("library_A", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     ASSERT_EQ(status, StatusCode::OK);
-    status = manager.loadLibrary("library_B", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    status = manager.loadLibrary("library_B", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
 TEST(NodeLibraryManagerTest, LibraryLoadingMissingImplementation) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
     EXPECT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
 }
 
 TEST(NodeLibraryManagerTest, TryLoadingCorruptedLibraryNextLoadCorrectLibrary) {
     CustomNodeLibraryManager manager;
-    auto status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
+    auto status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_missing_implementation.so"));
     ASSERT_EQ(status, StatusCode::NODE_LIBRARY_LOAD_FAILED_SYM);
-    status = manager.loadLibrary("random_name", getGenericFullPathForBin("/ovms/bazel-bin/src/lib_node_mock.so"));
+    status = manager.loadLibrary("random_name", getGenericFullPathForBazelOut("/ovms/bazel-bin/src/lib_node_mock.so"));
     EXPECT_EQ(status, StatusCode::OK);
 }
 
