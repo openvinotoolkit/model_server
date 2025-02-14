@@ -1,6 +1,8 @@
 // Check if we can delete c:\PR-XXXX only if jenkins workspace does not exists for the PR, thus commit was merged or removed.
 def cleanup_directories() {
     println "Cleaning pr-xxxx directories from node: NODE_NAME = ${env.NODE_NAME}"
+    // First delete directories older than 14 days
+    deleteOldDirectories()
     def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
     def status = bat(returnStatus: true, script: command)
     if ( status != 0) {
@@ -11,7 +13,7 @@ def cleanup_directories() {
     println existing_workspace_string
     def existing_workspace = existing_workspace_string.split(/\n/)
 
-    command = 'ls c:\\ | grep -oE "(pr-[0-9]*)$"'
+    command = 'ls c:\\ | grep -oE "(PR-[0-9]*)$"'
     status = bat(returnStatus: true, script: command)
     if ( status != 0) {
         println "No PR-XXXX detected for cleanup."
@@ -38,9 +40,9 @@ def cleanup_directories() {
             }
         }
         if (!found) {
-            def pathToDelete = "c:\\" + existing_prs[i]
+            def pathToDelete = "C:\\" + existing_prs[i]
             // Sanity check not to delete anything else
-            if (!pathToDelete.contains("c:\\pr-")) {
+            if (!pathToDelete.contains("C:\\PR-")) {
                 error "Error: trying to delete a directory that is not expected: " + pathToDelete
             } else {
                 println "Deleting: " + pathToDelete
@@ -59,7 +61,41 @@ def get_short_bazel_path() {
     if (env.JOB_BASE_NAME.contains("release"))
         return "rel"
     else
-        return env.JOB_BASE_NAME
+        return env.JOB_BASE_NAME.toUpperCase()
+}
+
+def deleteOldDirectories() {
+    command = 'forfiles /P c:\\ /D -14 | grep -oE "(PR-[0-9]*)"'
+    status = bat(returnStatus: true, script: command)
+    if ( status != 0) {
+        println "No PR-XXXX older than 14 days for cleanup."
+        return
+    }
+
+    // Check if directory was created more than 14 days ago
+    def existing_prs_string = bat(returnStatus: false, returnStdout: true, script: command)
+
+    println existing_prs_string
+
+    def existing_prs = existing_prs_string.split(/\n/)
+
+    for (int i = 0; i < existing_prs.size(); i++) {
+        // Check for empty output, Part of output contains the command that was run
+        if ( existing_prs[i] == null || existing_prs[i].allWhitespace || existing_prs[i].toLowerCase().contains("grep")) { continue }
+        def pathToDelete = "C:\\" + existing_prs[i]
+        // Sanity check not to delete anything else
+        if (!pathToDelete.contains("C:\\PR-")) {
+            error "Error: trying to delete a directory that is not expected: " + pathToDelete
+        } else {
+            println "Deleting: " + pathToDelete
+            status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
+            if (status != 0) {
+                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+            } else {
+                echo "Deleting directory ${pathToDelete} successful."
+            }
+        }
+    }
 }
 
 def install_dependencies() {

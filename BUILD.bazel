@@ -51,7 +51,7 @@ cc_library(
                 "@aws-sdk-cpp//:aws-sdk-cpp_cmake",
                 "@azure//:storage",
                 "@cpprest//:sdk",
-                "//third_party:boost",
+                "@boost//:boost",
                 "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",],
             "//:disable_cloud": []
             })
