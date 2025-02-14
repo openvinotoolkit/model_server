@@ -48,6 +48,7 @@
 #include <unistd.h>
 #endif
 
+#include "capi_frontend/capimodule.hpp"
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
@@ -191,15 +192,22 @@ bool Server::isReady() const {
     return true;
 }
 
-bool Server::isLive() const {
-    // we might want at some time start REST only/ or respond with true only if both servers started if both are requested to start
-    // This is to be resolved especially if we implement REST API for Kserver & potentially switch to check for starting specific module
+bool Server::isLive(const std::string& moduleName) const {
     std::shared_lock lock(modulesMtx);
-    auto it = modules.find(GRPC_SERVER_MODULE_NAME);
-    if (it == modules.end())
+    if (modules.size() == 0) {
         return false;
-    if (ModuleState::INITIALIZED != it->second->getState())
+    }
+    if (moduleName.empty()) {
+        // this is for C-API. GRPC & HTTP have its own modules, there doesn't seemt to be need to create C-API module
+        return true;
+    }
+    auto it = modules.find(moduleName);
+    if (it == modules.end()) {
         return false;
+    }
+    if (ModuleState::INITIALIZED != it->second->getState()) {
+        return false;
+    }
     return true;
 }
 
@@ -244,6 +252,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
 #endif
     if (name == METRICS_MODULE_NAME)
         return std::make_unique<MetricModule>();
+    if (name == CAPI_MODULE_NAME)
+        return std::make_unique<CAPIModule>(*this);
     return nullptr;
 }
 
@@ -275,6 +285,8 @@ Status Server::startModules(ovms::Config& config) {
     // due to dependency of modules on each other during runtime
     // To avoid unnecessary runtime calls in eg. prediction we have different order
     // of modules creation than start
+    // CAPI module is required for MP to work
+    // CAPI should start after SERVABLE is added
     // HTTP depends on GRPC, SERVABLE, METRICS
     // GRPC depends on SERVABLE
     // SERVABLE depends on metrics, python
@@ -301,6 +313,8 @@ Status Server::startModules(ovms::Config& config) {
     // we need servable module during GRPC/HTTP requests so create it here
     // but start it later to quickly respond with liveness probe
     INSERT_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
+    INSERT_MODULE(CAPI_MODULE_NAME, it);
+    START_MODULE(it);
     INSERT_MODULE(GRPC_SERVER_MODULE_NAME, it);
     START_MODULE(it);
     // if we ever decide not to start GRPC module then we need to implement HTTP responses without using grpc implementations
@@ -404,10 +418,12 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
             SPDLOG_ERROR("Cannot start OVMS - server is already starting");
             return StatusCode::SERVER_ALREADY_STARTING;
         }
-        if (this->isLive()) {
+        std::unique_lock lockModules(modulesMtx);  // TODO @atobisze consider general isLive? Or C-API module
+        if (!modules.empty()) {
             SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;
         }
+        lockModules.unlock();
         auto& config = ovms::Config::instance();
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;

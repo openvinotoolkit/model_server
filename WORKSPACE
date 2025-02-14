@@ -569,3 +569,9 @@ git_repository(
     tag = "v3.11.3",
 )
 
+git_repository(
+    name = "cpp_httplib",
+    remote = "https://github.com/yhirose/cpp-httplib/",
+    tag = "v0.18.7",
+    build_file = "@//third_party/cpp-httplib:BUILD"
+)
