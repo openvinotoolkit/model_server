@@ -124,7 +124,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "35f260aab6a9073961a558a93cbc4aec5360d517",
+    commit = "01357bc3f74b712064cfbdaa9269e1e5027076eb",
 )
 
 http_archive(
@@ -427,7 +427,7 @@ new_git_repository(
     name = "model_api",
     remote = "https:///github.com/openvinotoolkit/model_api/",
     build_file = "@_model-api//:BUILD",
-    commit = "7d329650c1370476836f433b23ac990ff3d4b8d7",
+    commit = "060f65856cdb6334b050e47c88a83c1e3d0e083c",
 )
 
 local_repository(
