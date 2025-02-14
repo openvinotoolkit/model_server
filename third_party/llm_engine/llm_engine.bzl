@@ -72,7 +72,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{icudt}.so\", \"lib{icuuc}.so\", \"lib{tokenizers}.so\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{tokenizers}.so\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
