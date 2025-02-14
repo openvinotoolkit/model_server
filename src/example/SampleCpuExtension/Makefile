@@ -18,7 +18,7 @@ OPENVINO_PATH ?= /opt/intel/openvino_2025
 
 all: $(eval SHELL:=/bin/bash)
 	/usr/bin/g++ --version
-	. $(OPENVINO_PATH)/setupvars.sh && /usr/bin/g++ -std=gnu++11 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
+	. $(OPENVINO_PATH)/setupvars.sh && /usr/bin/g++ -std=gnu++17 -fPIC -shared ov_extension.cpp CustomReluOp.cpp \
 		-I $(OPENVINO_PATH)/runtime/include/ie \
 		-I $(OPENVINO_PATH)/runtime/include \
 		-o libcustom_relu_cpu_extension.so

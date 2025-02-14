@@ -1,12 +1,12 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index da39b5c..d3fa72b 100644
+index ee1cb70f..0555500c 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -81,15 +81,15 @@ endif()
+@@ -88,15 +88,15 @@ endif()
 
  add_subdirectory(thirdparty)
  add_subdirectory(src)
--if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples")
+-if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples" AND ENABLE_SAMPLES)
 -    add_subdirectory(samples)
 -endif()
 -if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tools/continuous_batching")
@@ -15,7 +15,7 @@ index da39b5c..d3fa72b 100644
 -if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tests/cpp")
 -    add_subdirectory(tests/cpp)
 -endif()
-+#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples")
++#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/samples" AND ENABLE_SAMPLES)
 +#    add_subdirectory(samples)
 +#endif()
 +#if(EXISTS "${OpenVINOGenAI_SOURCE_DIR}/tools/continuous_batching")
