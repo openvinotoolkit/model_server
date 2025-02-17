@@ -113,7 +113,8 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             unzip \
             vim \
             xz \
-            python3-devel && \
+            python3-devel \ 
+            libicu-devel && \
             dnf clean all
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
