@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "7998955b94f32f626482499849bf838adb82b46f", # / Feb 12
+        commit = "b395127b973ac1276c8c028c9889447ebb68ed5b", # / Feb 14
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -70,7 +70,8 @@ def _impl(repository_ctx):
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
-        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
+        "ENABLE_SYSTEM_ICU": "True",
         """
 
     # Note we need to escape '{/}' by doubling them due to call to format
