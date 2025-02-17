@@ -209,18 +209,18 @@ public:
         std::string currentWorkingDir = std::filesystem::current_path().string();
         if (givenPath.size() > 1 && givenPath.find_last_of("/\\") != std::string::npos) {
             auto configDirectory = givenPath.substr(0, givenPath.find_last_of("/\\") + 1);
-            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + "/" : rootDirectoryPath = std::move(configDirectory);
+            configDirectory.empty() ? rootDirectoryPath = currentWorkingDir + getOsSeparator() : rootDirectoryPath = std::move(configDirectory);
         } else {
-            rootDirectoryPath = currentWorkingDir + "/";
+            rootDirectoryPath = currentWorkingDir + getOsSeparator();
         }
     }
 
     static std::string appendSlash(const std::string& name) {
-        if (name.empty() || (name.back() == '/')) {
+        if (name.empty() || (name.back() == getOsSeparator().back())) {
             return name;
         }
 
-        return (name + "/");
+        return (name + getOsSeparator());
     }
 
     static bool isAbsolutePath(const std::string& path) {
@@ -269,6 +269,8 @@ public:
 #pragma GCC diagnostic pop
         return (md5sum);
     }
+
+    static const std::string& getOsSeparator();
 
     StatusCode CreateLocalDir(const std::string& path) {
         try {
