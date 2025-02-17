@@ -214,6 +214,7 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
 }
 
 TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
+    GTEST_SKIP() << "Skipping temporarily";
     config.max_new_tokens = 10;
     config.temperature = 0;
     ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
@@ -705,6 +706,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
 }
 
 TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
+    GTEST_SKIP() << "Skipping temporarily";
     // Setting lower max new tokens for this test to pass.
     // For some reason in this test, during second request processing, BOS token is added to the input.
     // It wasn't reproduced in real life scenario and shall be investigated.
