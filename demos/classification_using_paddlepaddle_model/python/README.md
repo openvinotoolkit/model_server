@@ -42,7 +42,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\classification_using_paddlepaddle_model\python
 ovms --port 9000 --model_path model --model_name mobilenet --shape "(1,3,-1,-1)"
 ```
 :::
@@ -59,7 +58,7 @@ python classification_using_paddlepaddle_model.py --grpc_port 9000 --image_input
 ```
 Exemplary result of running the demo:
 
-```bash
+```console
 probability: 0.74 => Labrador_retriever
 probability: 0.05 => Staffordshire_bullterrier
 probability: 0.05 => flat-coated_retriever

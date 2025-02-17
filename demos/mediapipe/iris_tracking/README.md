@@ -43,7 +43,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\mediapipe\iris_tracking
 ovms --config_path config_iris.json --port 9000
 ```
 :::

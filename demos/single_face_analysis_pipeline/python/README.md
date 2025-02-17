@@ -69,7 +69,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\single_face_analysis_pipeline\python
 copy config.json workspace
 ovms --config_path workspace/config.json --port 9001
 ```
