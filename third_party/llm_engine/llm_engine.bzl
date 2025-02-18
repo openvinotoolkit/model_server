@@ -59,8 +59,8 @@ def _impl(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
         out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
         out_lib_dir = "out_lib_dir = \"runtime/lib/Release\""
-        out_static = "out_static_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
-        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{core}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{core}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"],".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1",
@@ -72,7 +72,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{tokenizers}.so\"]".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{tokenizers}.so\"],".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
@@ -134,7 +134,7 @@ cmake(
     lib_source = ":all_srcs",
     out_include_dir = "runtime/include",
     {out_lib_dir},
-    {out_libs},
+    {out_libs}
     {out_static}
     {out_dll_dir_win}
     tags = ["requires-network"],
@@ -147,6 +147,10 @@ cmake(
 
 cc_library(
     name = "llm_engine",
+    linkstatic = 1,
+    data = [
+            ":llm_engine_cmake",
+    ],
     deps = [
         "@ovms//third_party:openvino",
         ":llm_engine_cmake",
@@ -159,5 +163,5 @@ cc_library(
 
 llm_engine_repository = repository_rule(
     implementation = _impl,
-    local=False,
+    local=True,
 )
