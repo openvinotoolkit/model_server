@@ -753,9 +753,9 @@ const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bo
     return getPathFromMap(linuxPath, linuxPath);
 }
 
-// Function changes linux docker container path /ovms/bazel-bin/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
+// Function changes linux docker container path /ovms/bazel-out/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
 // Depending on the ovms_test.exe location after build
-const std::string& getGenericFullPathForBin(const std::string& linuxPath, bool logChange) {
+const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange) {
 #ifdef __linux__
     return getPathFromMap(linuxPath, linuxPath);
 #elif _WIN32
@@ -873,4 +873,17 @@ void adjustConfigForTargetPlatform(std::string& input) {
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
     adjustConfigForTargetPlatform(input);
     return input;
+}
+
+std::string adjustConfigForTargetPlatformCStr(const char* input) {
+    std::string inputString(input);
+    adjustConfigForTargetPlatform(inputString);
+    return inputString;
+}
+
+void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig) {
+#ifdef _WIN32
+    modelConfig.setPluginConfig(ovms::plugin_config_t({{"ENABLE_MMAP", "NO"}}));
+#endif
+    // on linux we can remove files from disk even if mmap is enabled
 }

@@ -1118,11 +1118,20 @@ public:
     }
     void SetUpConfig(const std::string& configContent) {
         ovmsConfig = configContent;
-        const std::string modelPathToReplace{"/ovms/src/test/dummy"};
-        auto it = ovmsConfig.find(modelPathToReplace);
+        std::string pathToReplace{"/ovms/src/test/dummy"};
+        auto it = ovmsConfig.find(pathToReplace);
         if (it != std::string::npos) {
-            ovmsConfig.replace(it, modelPathToReplace.size(), modelPath);
+            ovmsConfig.replace(it, pathToReplace.size(), modelPath);
         }
+
+        std::string newDir = getGenericFullPathForBazelOut("/ovms/bazel-bin/src");
+        std::regex regexPattern(R"(/ovms/bazel-bin/src)");
+        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
+
+        newDir = getGenericFullPathForSrcTest("/ovms/src/test");
+        std::regex regexPattern2(R"(/ovms/src/test)");
+        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern2, newDir);
+
         configFilePath = directoryPath + "/ovms_config.json";
     }
 
