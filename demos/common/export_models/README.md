@@ -22,6 +22,7 @@ positional arguments:
 For every use case subcommand there is adjusted list of parameters:
 
 ```console
+python export_model.py text_generation --help
 usage: export_model.py text_generation [-h]
                                        [--model_repository_path MODEL_REPOSITORY_PATH]
                                        --source_model SOURCE_MODEL
