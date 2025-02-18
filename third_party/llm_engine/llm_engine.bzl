@@ -49,12 +49,11 @@ def _impl(repository_ctx):
     
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
-    core = "core_tokenizers"
-    icudt = "icudt70"
-    icuuc = "icuuc70"
-    tokenizers = "openvino_tokenizers"
-
     if _is_windows(repository_ctx):
+        core = "core_tokenizers"
+        icudt = "icudt70"
+        icuuc = "icuuc70"
+        tokenizers = "openvino_tokenizers"
         lib_name = "openvino_genai"
         OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
         out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
