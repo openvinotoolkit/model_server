@@ -252,6 +252,10 @@ COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classi
 
 COPY src/ /ovms/src/
 
+# Sample CPU Extension
+WORKDIR /ovms/src/example/SampleCpuExtension/
+RUN make
+
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
     mkdir -p /opt/intel/openvino/python/openvino-2025.1.dist-info && \
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.1' > /opt/intel/openvino/python/openvino-2025.1.dist-info/METADATA
