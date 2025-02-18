@@ -145,7 +145,6 @@ cmake(
     deps = [
         "@ovms//third_party:openvino",
     ],
-    alwayslink = 1,
 )
 
 cc_library(
@@ -155,7 +154,6 @@ cc_library(
         ":llm_engine_cmake",
     ],
     visibility = ["//visibility:public"],
-    alwayslink = 1,
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
