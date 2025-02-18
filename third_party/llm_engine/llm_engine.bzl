@@ -53,7 +53,6 @@ def _impl(repository_ctx):
     icudt = "icudt70"
     icuuc = "icuuc70"
     tokenizers = "openvino_tokenizers"
-    lib_name = "openvino_genai"
 
     if _is_windows(repository_ctx):
         OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
@@ -69,11 +68,13 @@ def _impl(repository_ctx):
         "X86_64": "True"
         """
     else:
+        lib_name = "libopenvino_genai"
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"lib{lib_name}.so.2500\", \"lib{core}.so\", \"lib{tokenizers}.so\"],".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2500\"],".format(lib_name=lib_name)
         cache_entries = """
+        "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib"
