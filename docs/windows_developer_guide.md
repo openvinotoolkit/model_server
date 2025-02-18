@@ -89,7 +89,7 @@ cd c:\git\model_server
 windows_setupvars.bat
 ```
 
-Reuild unit tests:
+Rebuild unit tests:
 ```bat
 bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
 ```
