@@ -58,7 +58,7 @@ using namespace ovms;
 /* 
 ------------------------------------------------
 AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW CONFIGURATIONS ARE NOT USED
-NEED TO DECIDE THE FUTURE OF THAT FEATURE
+REMOVE THIS ENTIRE FILE ONCE THE FEATURE IS REMOVED
 -------------------------------------------------
 
 namespace {
@@ -622,7 +622,7 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 /* 
 ------------------------------------------------
 AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW TESTS ARE NOT VALID
-NEED TO DECIDE THE FUTURE OF THAT FEATURE
+REMOVE THIS ENTIRE FILE ONCE THE FEATURE IS REMOVED
 -------------------------------------------------
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
 #ifdef _WIN32

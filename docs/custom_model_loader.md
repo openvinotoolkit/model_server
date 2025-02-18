@@ -1,5 +1,7 @@
 ## Custom Model Loader {#ovms_docs_custom_loader}
 
+### IMPORTANT: THIS FEATURE IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE RELEASES 
+
 Before loading the models directly from files, some extra processing or checking may be required. Typical examples are loading encrypted files or checking for model license, and other. In such cases, this custom loader interface allows users to write their own custom model loader based on the predefined interface and load the same as a dynamic library. 
 
 This document gives details on adding custom loader configuration, custom loader interface, and other details. 
