@@ -144,15 +144,11 @@ cmake(
     lib_name = "{lib_name}",
     deps = [
         "@ovms//third_party:openvino",
-    ],
+    ]
 )
 
 cc_library(
     name = "llm_engine",
-    linkstatic = 1,
-    data = [
-            ":llm_engine_cmake",
-    ],
     deps = [
         "@ovms//third_party:openvino",
         ":llm_engine_cmake",
