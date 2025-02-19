@@ -25,9 +25,6 @@ ARG KLOCWORK_LTOKEN=/ovms/ltoken
 RUN http_proxy=${HTTP_PROXY} yum install -y glibc.i686 libgcc.x86_64 libgcc.i686 redhat-lsb-core.i686
 ADD ./kwbuildtools /tmp/kwbuildtools
 
-WORKDIR /example_cpp_client/cpp
-RUN bazel build --config=linux @org_tensorflow//tensorflow/core:framework
-
 RUN /tmp/kwbuildtools/bin/kwinject --output /tmp/out.out bazel build --config=linux //src:all
 
 WORKDIR /ovms/src

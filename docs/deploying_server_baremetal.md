@@ -152,6 +152,10 @@ curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_mode
 curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
 ```
 
+For linux run:
+```bash
+chmod -R 755 models
+```
 Start the server:
 ```console
 ovms --model_name resnet --model_path models/resnet50

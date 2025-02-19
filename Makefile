@@ -27,7 +27,7 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
-STYLE_CHECK_DIRS := src demos/common/cpp/src demos/image_classification/cpp demos/benchmark/cpp
+STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"

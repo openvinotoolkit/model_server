@@ -29,9 +29,6 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu22)
 	BASE_OS_TAG=22.04
   endif
-  ifeq ($(BASE_OS),ubuntu20)
-	BASE_OS_TAG=20.04
-  endif
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
   DIST_OS=ubuntu
 endif
