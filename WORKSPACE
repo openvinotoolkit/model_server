@@ -569,3 +569,11 @@ git_repository(
     tag = "v3.11.3",
 )
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "stb",
+    init_submodules = True,
+    branch = "master",
+    remote = "https://github.com/nitronoid/rules_stb"
+)
