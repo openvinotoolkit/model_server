@@ -197,10 +197,6 @@ bool Server::isLive(const std::string& moduleName) const {
     if (modules.size() == 0) {
         return false;
     }
-    if (moduleName.empty()) {
-        // this is for C-API. GRPC & HTTP have its own modules, there doesn't seemt to be need to create C-API module
-        return true;
-    }
     auto it = modules.find(moduleName);
     if (it == modules.end()) {
         return false;
@@ -418,7 +414,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
             SPDLOG_ERROR("Cannot start OVMS - server is already starting");
             return StatusCode::SERVER_ALREADY_STARTING;
         }
-        std::unique_lock lockModules(modulesMtx);  // TODO @atobisze consider general isLive? Or C-API module
+        std::unique_lock lockModules(modulesMtx);
         if (!modules.empty()) {
             SPDLOG_ERROR("Cannot start OVMS - server is already live");
             return StatusCode::SERVER_ALREADY_STARTED;

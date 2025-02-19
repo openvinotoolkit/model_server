@@ -493,4 +493,4 @@ TEST(Server, CAPIAliveGrpcNotHttpYes) {
     server.setShutdownRequest(1);
     t.join();
     server.setShutdownRequest(0);
-}  // TODO
+}

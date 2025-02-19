@@ -55,15 +55,6 @@ protected:
 
 public:
     static void SetUpTestSuite() {
-#ifdef _WIN32
-        /*WSADATA wsa_data;
-        auto r = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-        if (r != 0) {
-            SPDLOG_ERROR("WSAStartup failed with error: {}", r);
-            ASSERT_TRUE(false);
-            return;
-        }*/
-#endif  // _WIN32
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
         randomizePort(port);

@@ -51,7 +51,6 @@ cmake(
     cache_entries = {},
     lib_source = ":all_srcs",
     out_lib_dir = "{lib_path}",
-    # linking order
     out_static_libs = [],
     tags = ["requires-network"],
     alwayslink = False,
@@ -67,8 +66,6 @@ cc_library(
         "",
     ],
     copts = [],
-    #strip_prefix= "cpp_httplib",
-    #deps = ["cpp-httplib_cmake"],
     defines = [],
     visibility = ["//visibility:public"],
 )

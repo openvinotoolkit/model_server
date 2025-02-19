@@ -54,8 +54,6 @@ cc_library(
             # Contains submodule (trantor) patches generated using:
             # git --no-pager diff --no-color --submodule=diff
             "@//third_party/drogon:ovms_drogon_trantor.patch",
-            #"@//third_party/drogon:ovms_debug.patch",
-            #"@//third_party/drogon:ovms_trantor_add.patch",
         ],
         patch_args = ["-p1"],
     )
