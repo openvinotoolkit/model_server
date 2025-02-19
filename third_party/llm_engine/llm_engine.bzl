@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "b395127b973ac1276c8c028c9889447ebb68ed5b", # / Feb 14
+        remote = "https://github.com/dkalinowski/openvino.genai",
+        commit = "59285e4ff10e27b6530ba15aec0ae58a07da7a13", # Feb 14 fork with a fix for speculative decoding
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
