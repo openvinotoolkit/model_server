@@ -842,7 +842,6 @@ TEST_F(MetricFlowTest, RestV3Unary) {
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_ACCEPTED, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
     // checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_REQUESTS_REJECTED, "dummy_gpt", "REST", "Unary", "V3", numberOfRejectedRequests);
     checkMediapipeRequestsCounter(server.collect(), METRIC_NAME_RESPONSES, "dummy_gpt", "REST", "Unary", "V3", numberOfAcceptedRequests * 2);
-
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_PROCESSING_TIME + std::string{"_count{method=\"Unary\",name=\""} + "dummy_gpt" + std::string{"\"} "} + std::to_string(numberOfAcceptedRequests * 2)));
 }
 #endif

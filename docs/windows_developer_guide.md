@@ -89,7 +89,7 @@ cd c:\git\model_server
 windows_setupvars.bat
 ```
 
-Reuild unit tests:
+Rebuild unit tests:
 ```bat
 bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
 ```
@@ -97,11 +97,6 @@ bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR
 Download LLMs
 ```bat
 %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
-```
-
-Copy OpenVINO GenAI and tokenizers libs
-```bat
-copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll %cd%\bazel-bin\src\
 ```
 
 Change tests configs to windows:
