@@ -27,6 +27,14 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_import(
+    name = "genai_lib",
+    hdrs = [],
+    interface_library = "lib/intel64/Release/openvino_genai.lib",
+    shared_library = "bin/intel64/Release/openvino_genai.dll",
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "genai",
     srcs = glob([
@@ -37,8 +45,8 @@ cc_library(
         #"bin\\intel64\\Release\\core_tokenizers.dll",
     ]),
     visibility = ["//visibility:public"],
-    interface_library = "lib\\intel64\\Release\\openvino_genai.lib",",
     deps = [
+        ":genai_lib",
         ":genai_headers",
     ],
 )
