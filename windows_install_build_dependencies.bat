@@ -168,7 +168,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to GenAi in ovms WORKSPACE file
 if "!output_user_root!" neq "opt" (
-    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
