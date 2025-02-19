@@ -51,9 +51,12 @@ using testing::UnorderedElementsAre;
 using grpc::Channel;
 using grpc::ClientContext;
 
+const std::string portOldDefault{"9178"};
+const std::string typicalRestDefault{"9179"};
+
 struct Configuration {
     std::string address = "localhost";
-    std::string port = "9178";
+    std::string port = portOldDefault;
 };
 
 class ServingClient {
@@ -185,7 +188,7 @@ static void requestRestServerAlive(const char* httpPort, httplib::StatusCode sta
 
 TEST(Server, ServerNotAliveBeforeStart) {
     // here we should fail to connect before starting server
-    requestServerAlive("9178", grpc::StatusCode::UNAVAILABLE, false);
+    requestServerAlive(portOldDefault.c_str(), grpc::StatusCode::UNAVAILABLE, false);
 }
 
 using ovms::Config;
@@ -424,8 +427,6 @@ TEST(Server, grpcArguments) {
     t.join();
     server.setShutdownRequest(0);
 }
-const std::string portOldDefault{"9178"};
-const std::string typicalRestDefault{"9179"};
 TEST(Server, CAPIAliveGrpcNotHttpNot) {
     char* argv[] = {
         (char*)"OpenVINO Model Server",
