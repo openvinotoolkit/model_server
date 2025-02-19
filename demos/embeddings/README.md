@@ -35,7 +35,10 @@ python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 -
 ```
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+
 You should have a model folder like below:
+
 ```
 tree models
 models
