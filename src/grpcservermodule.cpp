@@ -76,7 +76,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
-#else  //  __linux__
+#else  //  not __linux__
 
 struct WSAStartupCleanupGuard {
     ~WSAStartupCleanupGuard() {
