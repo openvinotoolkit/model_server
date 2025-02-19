@@ -34,7 +34,7 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
+copy C:\%output_user_root%\genai\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy pyovms module
@@ -62,22 +62,23 @@ if !errorlevel! neq 0 (
     echo Error during Python dependencies for LLM installation. The package will not be fully functional.
 )
 
-copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
+copy C:\%output_user_root%\genai\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Copy from bazel-out if the genai is from sources
 copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy %cd%\bazel-out\x64_windows-opt\bin\src\icuuc70.dll dist\windows\ovms
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icuuc70.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
 if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
+    copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
@@ -90,7 +91,9 @@ md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
+copy C:\%output_user_root%\genai\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\%output_user_root%\genai\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
