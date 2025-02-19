@@ -72,7 +72,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so.2510\"]".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2510\"],".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
