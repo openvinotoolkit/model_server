@@ -26,7 +26,7 @@ IF "%~1"=="" (
 )
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
-set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set "openvino_dir=!BAZEL_SHORT_PATH!/genai/runtime/cmake"
 
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"

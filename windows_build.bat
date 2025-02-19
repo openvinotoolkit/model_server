@@ -26,7 +26,7 @@ IF "%~1"=="" (
 )
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
-set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set "openvino_dir=!BAZEL_SHORT_PATH!/genai/runtime/cmake"
 
 
 :: bazelBuildArgs is added to ovms --version output so please pay attention what you add here
