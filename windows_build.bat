@@ -67,7 +67,7 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
-set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
+set "openvinoBatch=call !BAZEL_SHORT_PATH!\genai\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
