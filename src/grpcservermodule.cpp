@@ -77,18 +77,29 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     return true;
 }
 #else
+
+struct WSAStartupCleanupGuard {
+    ~WSAStartupCleanupGuard() {
+        WSACleanup();
+    }
+};
+struct SocketOpenCloseGuard {
+    SOCKET socket;
+    SocketOpenCloseGuard(SOCKET socket) : socket(socket) {}
+    ~SocketOpenCloseGuard(SOCKET socket) {
+        closesocket(socket);
+    }
 bool GRPCServerModule::isPortAvailable(uint64_t port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         SPDLOG_ERROR("WSAStartup error.");
         return false;
     }
-
+    WSAStartupCleanupGuard wsaGuard;
     // Create a socket
     this->sock = socket(AF_INET, SOCK_STREAM, 0);
     if (this->sock == INVALID_SOCKET) {
         SPDLOG_ERROR("INVALID_SOCKET error.");
-        WSACleanup();
         return false;
     }
 
@@ -98,13 +109,11 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
 #pragma warning(disable : 4996)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
+    SocketOpenCloseGuard socketGuard(this->port);
     if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
-        closesocket(this->sock);
-        WSACleanup();
         return false;
     }
-
     return true;
 }
 #endif
@@ -249,11 +258,6 @@ void GRPCServerModule::shutdown() {
         server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
-
-#ifdef _WIN32
-    closesocket(this->sock);
-    WSACleanup();
-#endif
 
     servers.clear();
     state = ModuleState::SHUTDOWN;
