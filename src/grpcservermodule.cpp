@@ -86,7 +86,7 @@ struct WSAStartupCleanupGuard {
 struct SocketOpenCloseGuard {
     SOCKET socket;
     SocketOpenCloseGuard(SOCKET socket) : socket(socket) {}
-    ~SocketOpenCloseGuard(SOCKET socket) {
+    ~SocketOpenCloseGuard() {
         closesocket(socket);
     }
 bool GRPCServerModule::isPortAvailable(uint64_t port) {
