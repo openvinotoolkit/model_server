@@ -245,11 +245,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_goog
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-# Copy example clients into build image for static analysis
-WORKDIR /example_cpp_client
-COPY demos/common/cpp /example_cpp_client/cpp
-COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
-
 COPY src/ /ovms/src/
 
 # Sample CPU Extension
