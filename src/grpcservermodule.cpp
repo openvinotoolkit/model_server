@@ -76,7 +76,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
-#else //  __linux__
+#else  //  __linux__
 
 struct WSAStartupCleanupGuard {
     ~WSAStartupCleanupGuard() {
@@ -85,7 +85,8 @@ struct WSAStartupCleanupGuard {
 };
 struct SocketOpenCloseGuard {
     SOCKET socket;
-    SocketOpenCloseGuard(SOCKET socket) : socket(socket) {}
+    SocketOpenCloseGuard(SOCKET socket) :
+        socket(socket) {}
     ~SocketOpenCloseGuard() {
         closesocket(socket);
     }
@@ -117,7 +118,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     }
     return true;
 }
-#endif // not __linux__
+#endif  //  not __linux__
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
     uint16_t cores = getCoreCount();
