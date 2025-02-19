@@ -38,7 +38,6 @@ CAPIModule::CAPIModule(Server& server) :
 Status CAPIModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", CAPI_MODULE_NAME);
-    SPDLOG_INFO("{} starting", (void*)&server);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", CAPI_MODULE_NAME);
     return StatusCode::OK;
