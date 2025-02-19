@@ -522,7 +522,7 @@ cc_library(
             "libovms_threadsafequeue",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
-            "ovms_capimodule",
+            "capimodule",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -2214,7 +2214,7 @@ cc_library(
     linkopts = [],
 )
 cc_library(
-    name = "ovms_capimodule",
+    name = "capimodule",
     hdrs = ["capi_frontend/capimodule.hpp"],
     srcs = ["capi_frontend/capimodule.cpp"],
     deps = [
