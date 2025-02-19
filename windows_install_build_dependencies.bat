@@ -122,6 +122,56 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: GENAI - reinstalled per build trigger
+set "genai_dir=openvino_genai_windows_2025.1.0.0.dev20250217_x86_64"
+set "genai_ver=openvino_genai_windows_2025.1.0.0.dev20250217_x86_64.zip"
+set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.1.0.0.dev20250217/"
+
+set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
+set "genai_workspace=C:\\\\opt\\\\genai\\\\runtime"
+set "genai_new_workspace=C:\\%output_user_root%\\genai\\runtime"
+
+echo [INFO] Installing GenAI: %genai_dir% ...
+:: Download OpenVINO
+IF /I EXIST %genai_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %genai_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %genai_zip% )
+    
+) ELSE (
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract GenAi
+IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%genai_zip%" -C %BAZEL_SHORT_PATH%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%genai_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%genai_zip%" -C %BAZEL_SHORT_PATH%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Create GenAi link - always to make sure it points to latest version
+IF /I EXIST %BAZEL_SHORT_PATH%\genai (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\genai
+)
+mklink /d %BAZEL_SHORT_PATH%\genai %BAZEL_SHORT_PATH%\%genai_dir%
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+:: Replace path to GenAi in ovms WORKSPACE file
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenVINO - reinstalled per build trigger
