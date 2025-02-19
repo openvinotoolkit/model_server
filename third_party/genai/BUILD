@@ -17,17 +17,14 @@
 package(
     default_visibility = ["//visibility:public"],
 )
-#/openvino/src/plugins/intel_gpu/include/va/va.h
+#TODO
 
 cc_library(
     name = "genai",
     srcs = glob([
-        "lib/intel64/libopenvino.so"
+        ""
     ]),
-    strip_include_prefix = "include/ie",
     visibility = ["//visibility:public"],
     deps = [
-        "@linux_openvino//:ngraph",
-        "@linux_openvino//:openvino_new_headers",
     ],
 )
