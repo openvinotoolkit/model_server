@@ -20,42 +20,12 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 visibility = ["//visibility:public"]
 
-config_setting(
-    name = "dbg",
-    values = {"compilation_mode": "dbg"},
-)
-
-config_setting(
-    name = "opt",
-    values = {"compilation_mode": "opt"},
-)
-
 filegroup(
     name = "all_srcs",
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
-build_release = {"CMAKE_BUILD_TYPE": "Release"}
-build_debug = {"CMAKE_BUILD_TYPE": "Debug"}
-cmake(
-    name = "cpp-httplib_cmake",
-    build_args = [
-        "--verbose",
-        "--",  # <- Pass remaining options to the native tool.
-        # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant parallel compilation support
-        "VERBOSE=1",
-        "-j 8",
-    ],
-    cache_entries = {},
-    lib_source = ":all_srcs",
-    out_lib_dir = "{lib_path}",
-    out_static_libs = [],
-    tags = ["requires-network"],
-    alwayslink = False,
-    visibility = ["//visibility:public"],
-)
 cc_library(
     name = "cpp_httplib",
     srcs = [],
