@@ -22,6 +22,7 @@
 #include "../filesystem.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
+#include "test_utils.hpp"
 
 using testing::ElementsAre;
 
@@ -230,7 +231,7 @@ TEST(OVUtils, ValidatePluginConfigurationAllowEnableMmap) {
     ov::Core ieCore;
     ovms::ModelConfig config;
     config.setTargetDevice("CPU");
-    config.setPluginConfig({{"ENABLE_MMAP", "NO"}, {"NUM_STREAMS", "1"}});
+    adjustConfigToAllowModelFileRemovalWhenLoaded(config);
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     auto status = ovms::validatePluginConfiguration(pluginConfig, "CPU", ieCore);
     EXPECT_TRUE(status.ok());

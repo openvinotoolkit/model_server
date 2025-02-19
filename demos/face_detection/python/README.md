@@ -91,7 +91,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
-cd demos\face_detection\python
 ovms --model_path model --model_name face-detection --port 9000  --shape auto
 ```
 :::
