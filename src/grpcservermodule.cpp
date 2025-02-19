@@ -76,7 +76,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
-#else
+#else //  __linux__
 
 struct WSAStartupCleanupGuard {
     ~WSAStartupCleanupGuard() {
@@ -89,6 +89,7 @@ struct SocketOpenCloseGuard {
     ~SocketOpenCloseGuard() {
         closesocket(socket);
     }
+};
 bool GRPCServerModule::isPortAvailable(uint64_t port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -109,14 +110,14 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
 #pragma warning(disable : 4996)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
-    SocketOpenCloseGuard socketGuard(this->port);
+    SocketOpenCloseGuard socketGuard(this->sock);
     if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
         return false;
     }
     return true;
 }
-#endif
+#endif // not __linux__
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
     uint16_t cores = getCoreCount();
