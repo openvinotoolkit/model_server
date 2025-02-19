@@ -11,6 +11,7 @@ pip3 install -r ../requirements.txt
 ## Model incrementing an input tensor
 
 ```bash
+rm -rf /tmp/increment
 python increment.py
 ```
 
@@ -37,18 +38,19 @@ The given SavedModel SignatureDef contains the following output(s):
 Generate OpenVINO IR model format using model optimizer in a docker container:
 
 ```bash
-docker run -it -v /tmp/increment/1:/model openvino/ubuntu20_dev:2024.6.0 mo --saved_model_dir /model/ --batch 1 --output_dir /model/
+docker run -it -u 0 -v /tmp/increment/1:/model openvino/ubuntu20_dev:2024.6.0 mo --saved_model_dir /model/ --batch 1 --output_dir /model/
 
 ```
 
 # Model calculating index with max value for the sum of two inputs
 
 ```bash
+rm -rf /tmp/argmax
 python argmax_sum.py --input_size 1000 --export_dir /tmp/argmax/1
 ```
 
 ```bash
-saved_model_cli show --dir /tmp/argmax/  --tag_set serve --signature_def serving_default
+saved_model_cli show --dir /tmp/argmax/1  --tag_set serve --signature_def serving_default
   inputs['in1'] tensor_info:
       dtype: DT_FLOAT
       shape: (-1, 1000)
@@ -68,6 +70,6 @@ The given SavedModel SignatureDef contains the following output(s):
 Generate OpenVINO IR model format using model optimizer in a docker container:
 
 ```bash
-docker run -it -v /tmp/argmax:/model openvino/ubuntu20_dev:2024.6.0 mo --saved_model_dir /model/ --batch 1 --output_dir /model/
+docker run -it -u 0 -v /tmp/argmax/1:/model openvino/ubuntu20_dev:2024.6.0 mo --saved_model_dir /model/ --batch 1 --output_dir /model/
 
 ```
