@@ -3,7 +3,6 @@ custom_nodes
 libazurestorage.so
 libazurestorage.so.7->libazurestorage.so
 libazurestorage.so.7.5->libazurestorage.so
-libcore_tokenizers.so
 libcpprest.so
 libcpprest.so.2.10->libcpprest.so
 libface_detection_cc_proto.so

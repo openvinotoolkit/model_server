@@ -93,7 +93,6 @@ whitelisted_dynamic_libraries = {
 libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so',
-        'libcore_tokenizers.so',
         'libcpprest.so',
         'libface_detection_cc_proto.so',
         'libface_detection_options_registry.so',

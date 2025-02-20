@@ -128,8 +128,6 @@ cmake(
         }}),
     env = {{
         "OpenVINO_DIR": "{OpenVINO_DIR}",
-        "HTTP_PROXY": "{http_proxy}",
-        "HTTPS_PROXY": "{https_proxy}",
         "http_proxy": "{http_proxy}",
         "https_proxy": "{https_proxy}",
     }},
