@@ -186,9 +186,9 @@ WORKDIR $TEMP_DIR
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
     wget -nv $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
-    tar -zxf ./*openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino_2025
+    tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2025
 
 # update oneTBB
 RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
@@ -208,12 +208,6 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-
-ARG ov_tokenizers_branch=master
-# hadolint ignore=DL3003
-RUN git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
-WORKDIR /openvino_tokenizers/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}"  && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
