@@ -42,7 +42,7 @@ fi
 #===================================================================================================
 # OpenCV installation
 
-if [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ]  || [ "$os" == "ubuntu20.04" ] ; then
+if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ] ; then
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*

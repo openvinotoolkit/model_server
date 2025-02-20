@@ -76,19 +76,32 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     close(s);
     return true;
 }
-#else
+#else  //  not __linux__
+
+struct WSAStartupCleanupGuard {
+    ~WSAStartupCleanupGuard() {
+        WSACleanup();
+    }
+};
+struct SocketOpenCloseGuard {
+    SOCKET socket;
+    SocketOpenCloseGuard(SOCKET socket) :
+        socket(socket) {}
+    ~SocketOpenCloseGuard() {
+        closesocket(socket);
+    }
+};
 bool GRPCServerModule::isPortAvailable(uint64_t port) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         SPDLOG_ERROR("WSAStartup error.");
         return false;
     }
-
+    WSAStartupCleanupGuard wsaGuard;
     // Create a socket
     this->sock = socket(AF_INET, SOCK_STREAM, 0);
     if (this->sock == INVALID_SOCKET) {
         SPDLOG_ERROR("INVALID_SOCKET error.");
-        WSACleanup();
         return false;
     }
 
@@ -98,16 +111,14 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
 #pragma warning(disable : 4996)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
+    SocketOpenCloseGuard socketGuard(this->sock);
     if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
-        closesocket(this->sock);
-        WSACleanup();
         return false;
     }
-
     return true;
 }
-#endif
+#endif  //  not __linux__
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
     uint16_t cores = getCoreCount();
@@ -157,6 +168,14 @@ GRPCServerModule::GRPCServerModule(Server& server) :
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);
+    if (config.port() == 0) {
+        // due to HTTP reusing gRPC we still need to have gRPC module initialized.
+        state = ModuleState::INITIALIZED;
+        SPDLOG_INFO("{} started", GRPC_SERVER_MODULE_NAME);
+        SPDLOG_INFO("Port was not set. GRPC server will not be started.");
+        return StatusCode::OK;
+    }
+
     std::map<std::string, std::string> channel_arguments;
     auto status = setDefaultGrpcChannelArgs(channel_arguments);
     if (!status.ok()) {
@@ -241,11 +260,6 @@ void GRPCServerModule::shutdown() {
         server->Shutdown(serverDeadline);
         SPDLOG_INFO("Shutdown gRPC server");
     }
-
-#ifdef _WIN32
-    closesocket(this->sock);
-    WSACleanup();
-#endif
 
     servers.clear();
     state = ModuleState::SHUTDOWN;

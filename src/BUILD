@@ -522,6 +522,7 @@ cc_library(
             "libovms_threadsafequeue",
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
+            "capimodule",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -667,18 +668,6 @@ cc_library(
 )
 
 load("@pip_deps//:requirements.bzl", "all_requirements")
-
-cc_binary(
-    name = "libsampleloader.so",
-    srcs = [
-	    "example/SampleCustomLoader/sampleCustLoader.cpp",
-	    "customloaderinterface.hpp",
-    ],
-    linkshared = 1,
-    deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
-    ],
-)
 
 cc_binary(
     name = "lib_node_mock.so",
@@ -2012,7 +2001,6 @@ cc_test(
         "test/summator/1/summator.bin",
         "test/scalar/1/saved_model.xml",
         "test/scalar/1/saved_model.bin",
-        "//src:libsampleloader.so",
         "//src:lib_node_mock.so",
         "//src:lib_node_missing_implementation.so",
         "//src:lib_node_add_sub.so",
@@ -2029,6 +2017,7 @@ cc_test(
     ],
     linkopts = LINKOPTS_ADJUSTED,
     deps = [
+            "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
@@ -2207,6 +2196,19 @@ cc_library(
     deps = [
         "//src/embeddings:embeddings_api",
         "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+cc_library(
+    name = "capimodule",
+    hdrs = ["capi_frontend/capimodule.hpp"],
+    srcs = ["capi_frontend/capimodule.cpp"],
+    deps = [
+        "libovms_module",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
     ],
     copts = COPTS_TESTS,
     linkopts = [],

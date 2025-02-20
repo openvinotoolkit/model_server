@@ -19,7 +19,7 @@ make NODES=horizontal_ocr
 ```
 It will compile the library inside a docker container and save the results in `lib/<OS>/` folder.
 
-You can also select base OS between RH 8.5 (redhat) and Ubuntu 20.04 (ubuntu) by setting `BASE_OS` environment variable.
+You can also select base OS between RH 8.10 (redhat) and Ubuntu 22.04 (ubuntu) by setting `BASE_OS` environment variable.
 ```bash
 make BASE_OS=redhat NODES=horizontal_ocr
 ```

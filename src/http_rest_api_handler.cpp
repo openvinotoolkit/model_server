@@ -221,7 +221,7 @@ Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestCompone
 }
 
 Status HttpRestApiHandler::processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
-    bool isLive = this->ovmsServer.isLive();
+    bool isLive = this->ovmsServer.isLive(HTTP_SERVER_MODULE_NAME);
     SPDLOG_DEBUG("Requested Server liveness state: {}", isLive);
     if (isLive) {
         return StatusCode::OK;

@@ -113,7 +113,8 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             unzip \
             vim \
             xz \
-            python3-devel && \
+            python3-devel \ 
+            libicu-devel && \
             dnf clean all
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
@@ -157,7 +158,6 @@ ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
-# Build OpenVINO and nGraph (OV dependency) with D_GLIBCXX_USE_CXX11_ABI=0 or 1
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
@@ -165,8 +165,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip3 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
-RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_PYTHON=ON -DENABLE_INTEL_NPU=OFF -DENABLE_SAMPLES=0 -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses "  ..
-RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DNGRAPH_USE_CXX_ABI=1 -DCMAKE_CXX_FLAGS=" -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=parentheses " ..
+RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"PYTHON_DISABLE=1"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_PYTHON=ON -DENABLE_INTEL_NPU=OFF -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses "  ..
+RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " ..
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make --jobs=$JOBS
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -245,11 +245,6 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_goog
 # hadolint ignore=DL3059
 RUN cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
 
-# Copy example clients into build image for static analysis
-WORKDIR /example_cpp_client
-COPY demos/common/cpp /example_cpp_client/cpp
-COPY demos/benchmark/cpp/synthetic_client_async_benchmark.cpp demos/image_classification/cpp/*.cpp /example_cpp_client/cpp/src/
-
 COPY src/ /ovms/src/
 
 # Sample CPU Extension
@@ -257,13 +252,13 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.0.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.0' > /opt/intel/openvino/python/openvino-2025.0.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.1.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.1' > /opt/intel/openvino/python/openvino-2025.1.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.0"
+ARG PROJECT_VERSION="2025.1"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
@@ -289,9 +284,6 @@ ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=0
 COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
 RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
-
-# hadolint ignore=DL3059
-RUN bazel build --jobs=$JOBS ${debug_bazel_flags} //src:libsampleloader.so
 
 ARG ovms_metadata_file
 
@@ -355,7 +347,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2025.0"
+LABEL "version"="2025.1"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"

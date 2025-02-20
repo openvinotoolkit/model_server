@@ -55,6 +55,12 @@ using testing::UnorderedElementsAre;
 
 using namespace ovms;
 
+/* 
+------------------------------------------------
+AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW CONFIGURATIONS ARE NOT USED
+REMOVE THIS ENTIRE FILE ONCE THE FEATURE IS REMOVED
+-------------------------------------------------
+
 namespace {
 
 // Custom Loader Config Keys
@@ -310,6 +316,8 @@ const char* expected_json_loading_error = R"({
 
 }  // namespace
 
+*/
+
 class TestCustomLoader : public ::testing::Test {
 public:
     void SetUp() {
@@ -328,6 +336,10 @@ public:
     }
     void TearDown() {
         // Create config file with an empty config & reload
+        const char* empty_config = R"({
+          "custom_loader_config_list":[],
+          "model_config_list":[]
+        })";
         std::string configStr = empty_config;
         std::string fileToReload = cl_models_path + "/cl_config.json";
         createConfigFileWithContent(configStr, fileToReload);
@@ -607,7 +619,11 @@ TEST_F(TestCustomLoader, CustomLoaderConfigMultiplePropertiesInCustomLoaderOptio
 }
 
 // Functional Validation
-
+/* 
+------------------------------------------------
+AFTER SAMPLE CUSTOM LOADER REMOVAL BELOW TESTS ARE NOT VALID
+REMOVE THIS ENTIRE FILE ONCE THE FEATURE IS REMOVED
+-------------------------------------------------
 TEST_F(TestCustomLoader, CustomLoaderPrediction) {
 #ifdef _WIN32
     GTEST_SKIP() << "Test disabled on windows";
@@ -1442,5 +1458,6 @@ TEST_F(TestCustomLoader, CustomLoaderLoadBlackListedModel) {
     ASSERT_EQ(error_status2, StatusCode::OK);
     EXPECT_EQ(json_output2, expected_json_available);
 }
+*/
 
 #pragma GCC diagnostic pop

@@ -42,7 +42,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "Show binary version")
             ("port",
                 "gRPC server port",
-                cxxopts::value<uint32_t>()->default_value("9178"),
+                cxxopts::value<uint32_t>()->default_value("0"),
                 "PORT")
             ("grpc_bind_address",
                 "Network interface address to bind to for the gRPC API",
