@@ -174,56 +174,6 @@ if "!output_user_root!" neq "opt" (
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: OpenVINO - reinstalled per build trigger
-set "openvino_dir=openvino_toolkit_windows_2025.0.0.dev20250130_x86_64"
-set "openvino_ver=openvino_toolkit_windows_2025.0.0.dev20250130_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/"
-
-set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
-set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
-
-echo [INFO] Installing OpenVino: %openvino_dir% ...
-:: Download OpenVINO
-IF /I EXIST %openvino_zip% (
-    if %expunge% EQU 1 (
-        del /S /Q %openvino_zip%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %openvino_zip% )
-    
-) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Extract OpenVINO
-IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%openvino_dir% )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Create OpenVINO link - always to make sure it points to latest version
-IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
-    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
-)
-mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
-if !errorlevel! neq 0 exit /b !errorlevel!
-
-:: Replace path to openvino in ovms WORKSPACE file
-if "!output_user_root!" neq "opt" (
-    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-echo [INFO] OpenVino installed: %BAZEL_SHORT_PATH%\%openvino_dir%
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
