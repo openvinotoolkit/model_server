@@ -141,14 +141,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                         if (!entry.HasMember("type") || !entry["type"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - content object type missing");
                         }
-                        auto type = entry["type"].GetString();
-                        if (type == std::string("text")) {
+                        auto entryType = entry["type"].GetString();
+                        if (entryType == std::string("text")) {
                             if (!entry.HasMember("text") || !entry["text"].IsString()) {
                                 return absl::InvalidArgumentError("Invalid message structure - content text missing");
                             }
                             contentText = entry["text"];
                             continue;
-                        } else if (type == std::string("image_url")) {
+                        } else if (entryType == std::string("image_url")) {
                             if (!entry.HasMember("image_url") || !entry["image_url"].IsObject()) {
                                 return absl::InvalidArgumentError("Invalid message structure - content image_url missing");
                             }
@@ -613,7 +613,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         writer.Int(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
         writer.String("logprobs");
-        if (this->request.logprobschat || this->request.logprobs > 0) {
+        if (this->request.logprobschat || this->request.logprobs) {
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
                 writer.StartObject();  // {
                 writer.String("content");

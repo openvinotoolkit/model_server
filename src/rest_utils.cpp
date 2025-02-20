@@ -28,7 +28,7 @@
 #include <spdlog/spdlog.h>
 
 #pragma warning(push)
-#pragma warning(disable : 6001 4324 6385 6386 6011)
+#pragma warning(disable : 6001 4324 6385 6386 6011 4457 6308 6387 6246)
 #include "absl/strings/escaping.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
