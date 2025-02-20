@@ -183,7 +183,7 @@ OVMS_Status* OVMS_ServerSettingsNew(OVMS_ServerSettings** settings);
 void OVMS_ServerSettingsDelete(OVMS_ServerSettings* settings);
 
 // Set the gRPC port of starting OVMS. Equivalent of using --port parameter from OVMS CLI.
-// If not set server will start with gRPC port set to 9178.
+// If not set server will not start gRPC server.
 //
 // \param settings The server settings object to be set
 // \param grpc_port The value to be set

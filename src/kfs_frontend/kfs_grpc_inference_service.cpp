@@ -93,7 +93,7 @@ const std::string PLATFORM = "OpenVINO";
     (void)context;
     (void)request;
     (void)response;
-    bool isLive = this->ovmsServer.isLive();
+    bool isLive = this->ovmsServer.isLive(GRPC_SERVER_MODULE_NAME);
     SPDLOG_DEBUG("Requested Server liveness state: {}", isLive);
     response->set_live(isLive);
     return grpc::Status::OK;
