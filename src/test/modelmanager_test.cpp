@@ -1107,9 +1107,13 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
     ASSERT_EQ(modelManager.getResourcesSize(), 0);
 
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).WillRepeatedly(testing::Invoke([this, &waitForSignalThatCleanerCycleCanContinue, &signalMainThreadThatCleanerCycleFinished]() {
+        SPDLOG_ERROR("ER");
         signalMainThreadThatCleanerCycleFinished();
+        SPDLOG_ERROR("ER");
         waitForSignalThatCleanerCycleCanContinue();
+        SPDLOG_ERROR("ER");
         this->mockedFunctorResourcesCleaner.ovms::FunctorResourcesCleaner::cleanup();  // fall back to actual work
+        SPDLOG_ERROR("ER");
     }));
 
     // Reset mocked wrapper deinitializeSum
@@ -1138,30 +1142,56 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
             int* number = static_cast<int*>(ptr);
             return *number;
         });
+        SPDLOG_ERROR("ER");
 
         modelManager.addResourceToCleaner(ptr1);
+        SPDLOG_ERROR("ER");
+
         modelManager.addResourceToCleaner(ptr2);
+        SPDLOG_ERROR("ER");
+
         modelManager.addResourceToCleaner(std::move(ptr3));
+        SPDLOG_ERROR("ER");
+
         ASSERT_EQ(modelManager.getResourcesSize(), 3);
+        SPDLOG_ERROR("ER");
 
         signalCleanerThatNextCycleCanContinue();  // signal after one of the resource lifetime is ended (ptr3)
+        SPDLOG_ERROR("ER");
+
         waitForCleanerCycleFinishSignal();
+        SPDLOG_ERROR("ER");
+
 
         ASSERT_EQ(modelManager.getResourcesSize(), 2);
         ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
+        SPDLOG_ERROR("ER");
+
     }
+    SPDLOG_ERROR("ER");
 
     signalCleanerThatNextCycleCanContinue();  // signals after scope of all resources end
+    SPDLOG_ERROR("ER");
+
     waitForCleanerCycleFinishSignal();
+    SPDLOG_ERROR("ER");
+
 
     ASSERT_EQ(modelManager.getResourcesSize(), 0);
     ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
 
     cleanerExitTrigger.set_value();
+    SPDLOG_ERROR("ER");
+
     signalCleanerThatNextCycleCanContinue();  // Just to unlock so cleaner exit trigger can take effect
+    SPDLOG_ERROR("ER");
 
     if (t.joinable()) {
+        SPDLOG_ERROR("ER");
+
         t.join();
+        SPDLOG_ERROR("ER");
+
     }
 }
 
