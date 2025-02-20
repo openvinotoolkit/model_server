@@ -91,7 +91,7 @@ windows_setupvars.bat
 
 Rebuild unit tests:
 ```bat
-bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
+bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\genai/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
 ```
 
 Download LLMs

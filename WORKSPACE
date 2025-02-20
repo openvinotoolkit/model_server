@@ -254,7 +254,19 @@ new_local_repository(
 new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
-    path = "C:\\opt\\openvino\\runtime",
+    path = "C:\\opt\\genai\\runtime",
+)
+
+new_local_repository(
+    name = "windows_genai",
+    build_file = "@//third_party/genai:genai_windows.BUILD",
+    path = "C:\\opt\\genai\\runtime",
+)
+
+new_local_repository(
+    name = "linux_genai",
+    build_file = "@//third_party/genai:BUILD",
+    path = "/opt/intel/genai/runtime",
 )
 
 new_local_repository(

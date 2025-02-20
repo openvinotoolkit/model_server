@@ -35,6 +35,17 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
+        name = "genai_bin",
+        define_values = {
+            "GENAI_BIN": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_genai_bin",
+        negate = ":genai_bin",
+    )
+    native.config_setting(
         name = "enable_drogon",
         define_values = {
             "USE_DROGON": "1",
