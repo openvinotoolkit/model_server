@@ -71,7 +71,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
     // Should never happen
     if (drogon::app().isRunning()) {
         SPDLOG_ERROR("Drogon is already running");
-        throw 42;
+        throw std::runtime_error("Cannot start Drogon twice");
     }
 
     pool->Schedule(

@@ -159,7 +159,7 @@ bool Config::validate() {
     }
 
     // port and rest_port cannot be the same
-    if (port() == restPort()) {
+    if ((port() == restPort()) && (port() != 0)) {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
         return false;
     }

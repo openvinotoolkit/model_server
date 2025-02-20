@@ -22,4 +22,5 @@ const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
 const std::string PYTHON_INTERPRETER_MODULE_NAME = "PythonInterpreterModule";
+const std::string CAPI_MODULE_NAME = "C-APIModule";
 }  // namespace ovms
