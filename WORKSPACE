@@ -568,7 +568,7 @@ git_repository(
     remote = "https://github.com/nlohmann/json/",
     tag = "v3.11.3",
 )
-# for unit tests
+# for rest client in unit tests (server_test.cpp)
 git_repository(
     name = "cpp_httplib",
     remote = "https://github.com/yhirose/cpp-httplib/",
