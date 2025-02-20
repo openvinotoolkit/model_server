@@ -50,7 +50,6 @@ def _impl(repository_ctx):
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
 
     if _is_windows(repository_ctx):
-        core = "core_tokenizers"
         icudt = "icudt70"
         icuuc = "icuuc70"
         tokenizers = "openvino_tokenizers"
@@ -59,7 +58,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
         out_lib_dir = "out_lib_dir = \"runtime/lib/Release\""
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
-        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{core}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"],".format(lib_name=lib_name, core=core, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"],".format(lib_name=lib_name, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1",
