@@ -266,7 +266,7 @@ new_local_repository(
 new_local_repository(
     name = "linux_genai",
     build_file = "@//third_party/genai:BUILD",
-    path = "/opt/intel/genai/runtime",
+    path = "/opt/intel/openvino/runtime",
 )
 
 new_local_repository(
