@@ -40,6 +40,7 @@
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
+#include "../module_names.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../prediction_service.hpp"
 #include "../profiler.hpp"
@@ -111,7 +112,13 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerLive(OVMS_Server* serverPtr, bool* isLive) {
     }
     SPDLOG_DEBUG("Processing C-API server liveness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
-    *isLive = server.isLive();
+    *isLive = server.isLive(ovms::CAPI_MODULE_NAME);
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API requesting server: " << (void*)serverPtr
+           << " liveness: " << *isLive;
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 DLL_PUBLIC OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) {
@@ -121,6 +128,12 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerReady(OVMS_Server* serverPtr, bool* isReady) 
     SPDLOG_DEBUG("Processing C-API server readiness request");
     ovms::Server& server = *reinterpret_cast<ovms::Server*>(serverPtr);
     *isReady = server.isReady();
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        std::stringstream ss;
+        ss << "C-API requesting server: " << (void*)serverPtr
+           << " readiness: " << *isReady;
+        SPDLOG_TRACE(ss.str());
+    }
     return nullptr;
 }
 DLL_PUBLIC OVMS_Status* OVMS_StatusCode(OVMS_Status* status,
@@ -893,7 +906,7 @@ enum : uint32_t {
 #pragma warning(push)
 #pragma warning(disable : 4190)  // TODO verify
 static Status getModelManager(Server& server, ModelManager** modelManager) {
-    if (!server.isLive()) {
+    if (!server.isLive(ovms::CAPI_MODULE_NAME)) {
         return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
     }
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);

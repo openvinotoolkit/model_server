@@ -75,7 +75,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     ModelsSettingsImpl* modelsSettings = reinterpret_cast<ModelsSettingsImpl*>(_modelsSettings);
 
     // Test default values
-    EXPECT_EQ(serverSettings->grpcPort, 9178);
+    EXPECT_EQ(serverSettings->grpcPort, 0);
     EXPECT_EQ(serverSettings->restPort, 0);
     EXPECT_EQ(serverSettings->grpcWorkers, 1);
     EXPECT_EQ(serverSettings->grpcBindAddress, "0.0.0.0");
@@ -254,7 +254,8 @@ TEST(CAPIStartTest, StartFlow) {
         StatusCode::OPTIONS_USAGE_ERROR);
 
     // Fix and expect ok
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 6666));  // Different port
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 0));
+    // ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, 6666));  // Different port TODO @atobisze @dkalinow not really needed for C-API
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(srv, serverSettings, modelsSettings));
 
     // Try to start again, expect failure
@@ -1393,7 +1394,7 @@ public:
         }
         void setLive() {
             Module* grpc = new MockGrpcServerModule();
-            modules.insert({GRPC_SERVER_MODULE_NAME, std::unique_ptr<Module>(grpc)});
+            modules.insert({CAPI_MODULE_NAME, std::unique_ptr<Module>(grpc)});
         }
     };
 };

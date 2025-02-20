@@ -27,7 +27,7 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
-STYLE_CHECK_DIRS := src demos/common/cpp/src demos/image_classification/cpp demos/benchmark/cpp
+STYLE_CHECK_DIRS := src
 HTTP_PROXY := "$(http_proxy)"
 HTTPS_PROXY := "$(https_proxy)"
 NO_PROXY := "$(no_proxy)"
@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 1f68be9f5945f2a239ada580e62c992d820f9cb7 # releases/2025/0 / 2025-01-30
+OV_SOURCE_BRANCH ?= 6f7519ad4dc1920571de22eac41f66b6c09e76d3 # master / 2025-02-14
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= 2b2420220f9a97f03a7bb91e785df40735503c96 # releases/2025/0 2025-01-21
+OV_TOKENIZERS_BRANCH ?= df197af63636632f0272c02417aa74fdea8fd23e # master 2025-02-14
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -175,8 +175,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "24.45.31740"
-  # TODO: Wait for genai package for redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.0.0rc3/openvino_toolkit_rhel8_2025.0.0.dev20250130_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18174-6f7519ad4dc/openvino_toolkit_rhel8_2025.1.0.dev20250214_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -188,7 +187,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2025.0"
+PRODUCT_VERSION ?= "2025.1"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)

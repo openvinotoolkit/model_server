@@ -123,7 +123,7 @@ IF /I EXIST %bash_path% (
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: GENAI - reinstalled per build trigger
+::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 set "genai_dir=openvino_genai_windows_2025.1.0.0.dev20250217_x86_64"
 set "genai_ver=openvino_genai_windows_2025.1.0.0.dev20250217_x86_64.zip"
 set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.1.0.0.dev20250217/"
@@ -133,7 +133,7 @@ set "genai_workspace=C:\\\\opt\\\\genai\\\\runtime"
 set "genai_new_workspace=C:\\%output_user_root%\\genai\\runtime"
 
 echo [INFO] Installing GenAI: %genai_dir% ...
-:: Download OpenVINO
+:: Download GenAi
 IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
