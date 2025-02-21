@@ -1079,9 +1079,8 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
     std::mutex mx[2];
     std::mutex singleSignalMutex;
     std::condition_variable cv[2];
-    
-    std::atomic<int> waitingCount{0};
 
+    std::atomic<int> waitingCount{0};
 
     auto waitForCleanerCycleFinishSignal = [&mx, &cv]() {
         std::unique_lock<std::mutex> lock(mx[1]);
@@ -1093,7 +1092,7 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         SPDLOG_INFO("Signaling the cleaner thread that next cycle can start");
         std::unique_lock<std::mutex> lock(singleSignalMutex);
         while (waitingCount.load() == 0) {
-            std::this_thread::yield(); // Spin-wait until someone is waiting
+            std::this_thread::yield();  // Spin-wait until someone is waiting
         }
         cv[0].notify_one();
         --waitingCount;
