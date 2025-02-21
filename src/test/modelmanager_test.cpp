@@ -1076,11 +1076,12 @@ public:
 };
 
 TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
-#ifdef _WIN32
-//    GTEST_SKIP() << "Test disabled on windows [SPORADIC]";
-#endif
     std::mutex mx[2];
+    std::mutex singleSignalMutex;
     std::condition_variable cv[2];
+    
+    std::atomic<int> waitingCount{0};
+
 
     auto waitForCleanerCycleFinishSignal = [&mx, &cv]() {
         std::unique_lock<std::mutex> lock(mx[1]);
@@ -1088,40 +1089,37 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         cv[1].wait(lock);
     };
 
-    auto signalCleanerThatNextCycleCanContinue = [&cv]() {
+    auto signalCleanerThatNextCycleCanContinue = [&cv, &waitingCount, &singleSignalMutex]() {
         SPDLOG_INFO("Signaling the cleaner thread that next cycle can start");
+        std::unique_lock<std::mutex> lock(singleSignalMutex);
+        while (waitingCount.load() == 0) {
+            std::this_thread::yield(); // Spin-wait until someone is waiting
+        }
         cv[0].notify_one();
+        --waitingCount;
     };
 
-    auto waitForSignalThatCleanerCycleCanContinue = [&mx, &cv]() {
+    auto waitForSignalThatCleanerCycleCanContinue = [&mx, &cv, &waitingCount]() {
         std::unique_lock<std::mutex> lock(mx[0]);
         SPDLOG_INFO("Waiting for signal that cleaner cycle can continue");
+        ++waitingCount;
         cv[0].wait(lock);
     };
-
     auto signalMainThreadThatCleanerCycleFinished = [&cv]() {
         SPDLOG_INFO("Signaling the main thread that the cleaner cycle finished");
         cv[1].notify_one();
     };
-
     ASSERT_EQ(modelManager.getResourcesSize(), 0);
-
     EXPECT_CALL(mockedFunctorResourcesCleaner, cleanup()).WillRepeatedly(testing::Invoke([this, &waitForSignalThatCleanerCycleCanContinue, &signalMainThreadThatCleanerCycleFinished]() {
-        SPDLOG_ERROR("ER");
         signalMainThreadThatCleanerCycleFinished();
-        SPDLOG_ERROR("ER");
         waitForSignalThatCleanerCycleCanContinue();
-        SPDLOG_ERROR("ER");
         this->mockedFunctorResourcesCleaner.ovms::FunctorResourcesCleaner::cleanup();  // fall back to actual work
-        SPDLOG_ERROR("ER");
     }));
 
     // Reset mocked wrapper deinitializeSum
     CNLIMWrapperMock::deinitializeSum = 0;
-
     uint32_t resourcesIntervalMiliseconds = 20;
     uint32_t sequenceIntervalMiliseconds = 60000;
-
     std::thread t(ovms::cleanerRoutine, resourcesIntervalMiliseconds, std::ref(mockedFunctorResourcesCleaner), sequenceIntervalMiliseconds, std::ref(mockedFunctorSequenceCleaner), std::ref(exitSignal));
 
     waitForCleanerCycleFinishSignal();
@@ -1142,56 +1140,25 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
             int* number = static_cast<int*>(ptr);
             return *number;
         });
-        SPDLOG_ERROR("ER");
-
         modelManager.addResourceToCleaner(ptr1);
-        SPDLOG_ERROR("ER");
-
         modelManager.addResourceToCleaner(ptr2);
-        SPDLOG_ERROR("ER");
-
         modelManager.addResourceToCleaner(std::move(ptr3));
-        SPDLOG_ERROR("ER");
-
         ASSERT_EQ(modelManager.getResourcesSize(), 3);
-        SPDLOG_ERROR("ER");
-
         signalCleanerThatNextCycleCanContinue();  // signal after one of the resource lifetime is ended (ptr3)
-        SPDLOG_ERROR("ER");
-
         waitForCleanerCycleFinishSignal();
-        SPDLOG_ERROR("ER");
-
-
         ASSERT_EQ(modelManager.getResourcesSize(), 2);
         ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, num3);
-        SPDLOG_ERROR("ER");
-
     }
-    SPDLOG_ERROR("ER");
-
     signalCleanerThatNextCycleCanContinue();  // signals after scope of all resources end
-    SPDLOG_ERROR("ER");
-
     waitForCleanerCycleFinishSignal();
-    SPDLOG_ERROR("ER");
-
 
     ASSERT_EQ(modelManager.getResourcesSize(), 0);
     ASSERT_EQ(CNLIMWrapperMock::deinitializeSum, (num1 + num2 + num3));
 
     cleanerExitTrigger.set_value();
-    SPDLOG_ERROR("ER");
-
     signalCleanerThatNextCycleCanContinue();  // Just to unlock so cleaner exit trigger can take effect
-    SPDLOG_ERROR("ER");
-
     if (t.joinable()) {
-        SPDLOG_ERROR("ER");
-
         t.join();
-        SPDLOG_ERROR("ER");
-
     }
 }
 
