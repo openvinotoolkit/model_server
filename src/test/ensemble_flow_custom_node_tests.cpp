@@ -1819,9 +1819,9 @@ static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
 class EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
+// #ifdef _WIN32
+//         GTEST_SKIP() << "Test disabled on windows";
+// #endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }

@@ -912,7 +912,7 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
 class MediapipeFlowTwoOutputsDagTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json"));
+        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json");
     }
 };
 
