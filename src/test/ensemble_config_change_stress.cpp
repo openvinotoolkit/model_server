@@ -200,9 +200,10 @@ TEST_F(ConfigChangeStressTest, DISABLED_GetMetricsDuringLoad) {
 TEST_F(StressPipelineConfigChanges, RemoveDefaultVersionDuringPredictLoad) {
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK,
         StatusCode::PIPELINE_DEFINITION_NOT_LOADED_YET,  // we hit when all config changes finish to propagate
-        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,    // we hit default version which is unloaded already but default is not changed yet
         StatusCode::MODEL_VERSION_MISSING};              // there is no default version since all are either not loaded properly or retired
-    std::set<StatusCode> allowedLoadResults = {};
+    std::set<StatusCode> allowedLoadResults = {
+        StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE,  // we hit default version which is unloaded already but default is not changed yet
+    };
     // we need whole config reload since there is no other way to dispose
     // all model versions different than removing model from config
     bool performWholeConfigReload = true;
