@@ -55,6 +55,12 @@ pipeline {
                     sh 'make sdl-check'
                 }
             }
+            stage('Client test') {
+                when { expression { client_test_needed == "true" } }
+                steps {
+                    sh "make test_client_lib"
+                }
+            }
             stage('Cleanup node') {
               agent {
                 label 'win_ovms'
@@ -73,15 +79,6 @@ pipeline {
             }
           }
         }
-
-
-        stage('Client test') {
-          when { expression { client_test_needed == "true" } }
-          steps {
-                sh "make test_client_lib"
-              }
-        }
-
         stage('Build') {
           parallel {
             stage("Build linux") {
