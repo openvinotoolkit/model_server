@@ -43,11 +43,16 @@ pipeline {
             }
           }
         }
-        stage('Style and clean') {
+        stage('Style, SDL and clean') {
           parallel {
             stage('Style check') {
                 steps {
                   sh 'make style'
+                }
+            }
+            stage('Sdl check') {
+                steps {
+                    sh 'make sdl-check'
                 }
             }
             stage('Cleanup node') {
@@ -69,11 +74,6 @@ pipeline {
           }
         }
 
-        stage('Sdl check') {
-            steps {
-                sh 'make sdl-check'
-            }
-        }
 
         stage('Client test') {
           when { expression { client_test_needed == "true" } }
