@@ -912,14 +912,11 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
 class MediapipeFlowTwoOutputsDagTest : public MediapipeFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json");
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json"));
     }
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
-#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
