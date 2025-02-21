@@ -21,7 +21,7 @@ cd model_server/demos/image_classification_using_tf_model/python
 ## Download the InceptionResNetV2 model
 
 ```console
-curl -l --create-dirs -o model/1 https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
+curl --create-dirs -o model/1/inception_resnet_v2_2018_04_27.tgz https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
 tar xzf model/1/inception_resnet_v2_2018_04_27.tgz -C model/1
 ```
 
