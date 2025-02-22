@@ -19,7 +19,8 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/r
 mkdir models
 python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-7B --weight-format int4 --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
 ```
-
+**Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+ 
 3. Deploy:
 
 :::{dropdown} With Docker
