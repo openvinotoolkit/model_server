@@ -275,7 +275,7 @@ pip install mteb
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
-``json
+```json
 {
   "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
   "task_name": "Banking77Classification",
