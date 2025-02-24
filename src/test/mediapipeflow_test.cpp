@@ -917,9 +917,6 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
-#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 

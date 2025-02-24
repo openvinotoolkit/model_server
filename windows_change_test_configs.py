@@ -36,27 +36,35 @@ def main():
         replace_back = True
         start_dir = os.path.dirname(os.path.realpath(__file__)) + "\\src\\test\\"
         windows_path = start_dir
+        windows_bazel_bin_path = os.path.dirname(os.path.realpath(__file__)) + "\\bazel-bin\\"
         print('Setting cwd\\src\\test start search dir: ' + start_dir)
     elif len(sys.argv) == 1:
         start_dir = os.path.dirname(os.path.realpath(__file__)) + "\\src\\test\\"
         windows_path = start_dir
+        windows_bazel_bin_path = os.path.dirname(os.path.realpath(__file__)) + "\\bazel-bin\\"
         print('Setting cwd\\src\\test start search dir: ' + start_dir)
     else:
         print("[ERROR] Wrong number of parameters.")
         exit()
             
     linux_path = "/ovms/src/test/"
+    linux_path_bazel_bin = "/ovms/bazel-bin/"
     
     print("Replacing back set to: " + str(replace_back))
 
     # Change c:\something\else to c:\\something\\else for json parser compatybility
     windows_path = windows_path.replace("\\","\\\\")
+    windows_bazel_bin_path = windows_bazel_bin_path.replace("\\","\\\\")
     if replace_back:
         tmp_path = windows_path
         windows_path = linux_path
         linux_path = tmp_path
+        tmp_path = windows_bazel_bin_path
+        windows_bazel_bin_path = linux_path_bazel_bin
+        linux_path_bazel_bin = tmp_path
 
-    print("Replace string: {} with: {} ".format(linux_path, windows_path))
+    print("Replace string: {} with: {} \nand\n {} with {}".format(
+        linux_path, windows_path, linux_path_bazel_bin, windows_bazel_bin_path))
 
     extension = '.json'  # replace with your desired extension
     files_with_extension = []
@@ -79,6 +87,7 @@ def main():
     for file in files_with_extension:
         try:
             replace_string_in_file(file, linux_path, windows_path)
+            replace_string_in_file(file, linux_path_bazel_bin, windows_bazel_bin_path)
         except Exception as e:
             print(f"Error parsing file {file}: {e} - changes were not applied")
 
