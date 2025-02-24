@@ -123,7 +123,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             rm -rf /var/lib/apt/lists/* && \
     python3 -m pip install "numpy<2.0.0" --no-cache-dir  && \
     python3 -m pip install "Jinja2==3.1.4" --no-cache-dir && \
-    python3 -m pip install "nanobind==2.4.0" --no-cache-dir
+    python3 -m pip install "nanobind==2.4.0" --no-cache-dir && \
+    python3 -m pip install "typing_extensions" --no-cache-dir
 
 RUN apt-get update; apt-get install -y --no-install-recommends libxml2 && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
