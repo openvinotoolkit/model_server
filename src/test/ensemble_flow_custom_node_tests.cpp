@@ -1495,13 +1495,7 @@ protected:
     }
 
     void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
-        std::string ovmsConfig = std::string(configContent);
-
-        std::string newDir = getGenericFullPathForBazelOut("/ovms/bazel-bin/src");
-        std::regex regexPattern(R"(/ovms/bazel-bin/src)");
-        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
-
-        createConfigFileWithContent(ovmsConfig, configJsonFilePath);
+        createConfigFileWithContent(adjustConfigForTargetPlatformCStr(configContent), configJsonFilePath);
         ASSERT_EQ(manager.loadConfig(configJsonFilePath), expectedStatus);
     }
 
@@ -1819,9 +1813,6 @@ static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
 class EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-// #ifdef _WIN32
-//         GTEST_SKIP() << "Test disabled on windows";
-// #endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
@@ -4405,9 +4396,9 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGat
 class EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
+// #ifdef _WIN32
+//         GTEST_SKIP() << "Test disabled on windows";
+// #endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
