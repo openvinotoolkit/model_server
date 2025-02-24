@@ -1079,7 +1079,6 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
     std::mutex mx[2];
     std::mutex singleSignalMutex;
     std::condition_variable cv[2];
-
     std::atomic<int> waitingCount{0};
 
     auto waitForCleanerCycleFinishSignal = [&mx, &cv]() {
@@ -1087,7 +1086,6 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         SPDLOG_INFO("Waiting for cleaner to signal that cleanup cycle is finished");
         cv[1].wait(lock);
     };
-
     auto signalCleanerThatNextCycleCanContinue = [&cv, &waitingCount, &singleSignalMutex]() {
         SPDLOG_INFO("Signaling the cleaner thread that next cycle can start");
         std::unique_lock<std::mutex> lock(singleSignalMutex);
@@ -1097,7 +1095,6 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         cv[0].notify_one();
         --waitingCount;
     };
-
     auto waitForSignalThatCleanerCycleCanContinue = [&mx, &cv, &waitingCount]() {
         std::unique_lock<std::mutex> lock(mx[0]);
         SPDLOG_INFO("Waiting for signal that cleaner cycle can continue");
@@ -1114,7 +1111,6 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         waitForSignalThatCleanerCycleCanContinue();
         this->mockedFunctorResourcesCleaner.ovms::FunctorResourcesCleaner::cleanup();  // fall back to actual work
     }));
-
     // Reset mocked wrapper deinitializeSum
     CNLIMWrapperMock::deinitializeSum = 0;
     uint32_t resourcesIntervalMiliseconds = 20;
@@ -1143,6 +1139,7 @@ TEST_F(ModelManagerCleanerThread, ManagerCleanerShouldCleanupResources) {
         modelManager.addResourceToCleaner(ptr2);
         modelManager.addResourceToCleaner(std::move(ptr3));
         ASSERT_EQ(modelManager.getResourcesSize(), 3);
+
         signalCleanerThatNextCycleCanContinue();  // signal after one of the resource lifetime is ended (ptr3)
         waitForCleanerCycleFinishSignal();
         ASSERT_EQ(modelManager.getResourcesSize(), 2);
