@@ -2,7 +2,7 @@
 
 OpenVINO Model Server allows extending the REST API interface to support arbitrary input format and execute arbitrary pipeline implemented as a MediaPipe graph.
 
-The client makes a call to http://<server>:<port>/v3/... URL and post a JSON payload. The request is dispatched to the graph based on the `model` field in the JSON content.
+The client makes a call to http://server:port/v3/... URL and post a JSON payload. The request is dispatched to the graph based on the `model` field in the JSON content.
 
 It supports both the unary calls with a single response per request and streams which return a series of responses per request.
 
