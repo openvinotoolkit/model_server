@@ -48,11 +48,11 @@ def _impl(repository_ctx):
         https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
     
     OpenVINO_DIR = repository_ctx.os.environ.get("OpenVINO_DIR", "")
+    tokenizers = "openvino_tokenizers"
 
     if _is_windows(repository_ctx):
         icudt = "icudt70"
         icuuc = "icuuc70"
-        tokenizers = "openvino_tokenizers"
         lib_name = "openvino_genai"
         OpenVINO_DIR = OpenVINO_DIR.replace("\\", "\\\\").replace("/", "\\\\")
         out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
@@ -71,7 +71,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so.2510\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2510\", \"lib{tokenizers}.so\"],".format(lib_name=lib_name, tokenizers=tokenizers)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
