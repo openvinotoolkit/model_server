@@ -104,7 +104,7 @@ static ov::element::Type_t getOvTypeFromMatType(int matType) {
     case CV_32S:
         return ov::element::i32;
     default:
-        return ov::element::undefined;
+        return ov::element::dynamic;
     }
 }
 
@@ -181,7 +181,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             shape.push_back(image.cols);
                             shape.push_back(image.channels());
                             auto type = getOvTypeFromMatType(image.depth());
-                            if (type == ov::element::undefined) {
+                            if (type == ov::element::dynamic) {
                                 return absl::InvalidArgumentError("Image type is invalid");
                             }
                             ov::Tensor tensor(type, shape);
