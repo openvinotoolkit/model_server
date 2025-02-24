@@ -47,13 +47,15 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
-        ":llm_engine",
         ":llmnoderesources",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         ":text_processor",
         ":openai_completions_api_handler"
-    ],
+    ]+ select({
+        "//conditions:default": ["//third_party:genai"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -78,10 +80,12 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
-        ":llm_engine",
         "//src:libovmsprofiler",
         "//third_party:opencv",
-    ],
+    ] + select({
+        "//conditions:default": ["//third_party:genai"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
@@ -102,10 +106,12 @@ cc_library(
         "//src:libovmsmediapipe_utils",
         "//src:libovmsprofiler",
         "llmcalculator_cc_proto",
-        ":llm_engine",
         "//src/python:utils",
         ":text_processor",
-    ] + PYBIND_DEPS,
+    ] + PYBIND_DEPS + select({
+        "//conditions:default": ["//third_party:genai"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,

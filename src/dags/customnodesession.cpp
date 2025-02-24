@@ -97,7 +97,7 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
     TensorResourcesGuard tensorResourcesGuard(tensor, library, customNodeLibraryInternalManager);
 
     auto precision = ovmsPrecisionToIE2Precision(toInferenceEnginePrecision(tensor->precision));
-    if (precision == ov::element::Type_t::undefined) {
+    if (precision == ov::element::Type_t::dynamic) {
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision:{} from custom node tensor: {}",
             this->getName(),
             this->getSessionKey(),
