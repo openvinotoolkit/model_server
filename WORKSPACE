@@ -124,7 +124,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "c6339cffeebc257b0d2c555e18f58b1c8e650d6d",
+    commit = "38305cd967ed09e959c6d8e127240ac211a18a28",
 )
 
 http_archive(
