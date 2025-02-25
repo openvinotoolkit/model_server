@@ -160,10 +160,10 @@ IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Create GenAi link - always to make sure it points to latest version
-IF /I EXIST %BAZEL_SHORT_PATH%\genai (
-    rmdir /S /Q %BAZEL_SHORT_PATH%\genai
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-mklink /d %BAZEL_SHORT_PATH%\genai %BAZEL_SHORT_PATH%\%genai_dir%
+mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Replace path to GenAi in ovms WORKSPACE file
