@@ -158,7 +158,7 @@ chmod -R 755 models
 ```
 Start the server:
 ```console
-ovms --model_name resnet --model_path models/resnet50
+ovms --port 9000 --model_name resnet --model_path models/resnet50
 ```
 
 or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.
