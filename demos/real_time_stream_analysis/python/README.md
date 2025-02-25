@@ -177,10 +177,10 @@ Such use case with the unary calls with a horizontal text analysis can be follow
 Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
 visualisation of metrics using grafana.
 
-In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visialize 
+In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visualize 
 metrics about mediapipe graphs' status.
 
-Here are some exemplary visualisations included in above menitoned grafana dashboard:
+Here are some exemplary visualisations included in above mentioned grafana dashboard:
 
 - Processing time metric is used to track the time a particular mediapipe graph is opened. In this case it can be used to represent how long it took to process single video.
 
