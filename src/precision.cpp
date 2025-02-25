@@ -101,7 +101,7 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
         {Precision::U1, ov::element::Type_t::u1},
         {Precision::BOOL, ov::element::Type_t::boolean},
         {Precision::BF16, ov::element::Type_t::bf16},
-        {Precision::UNDEFINED, ov::element::Type_t::undefined},
+        {Precision::UNDEFINED, ov::element::Type_t::dynamic},
         {Precision::DYNAMIC, ov::element::Type_t::dynamic},
         {Precision::STRING, ov::element::Type_t::string}
         //    {Precision::MIXED, ov::element::Type_t::MIXED},
@@ -111,7 +111,7 @@ ov::element::Type_t ovmsPrecisionToIE2Precision(Precision precision) {
     };
     auto it = precisionMap.find(precision);
     if (it == precisionMap.end()) {
-        return ov::element::Type_t::undefined;
+        return ov::element::Type_t::dynamic;
     }
     return it->second;
 }
@@ -134,8 +134,7 @@ Precision ovElementTypeToOvmsPrecision(ov::element::Type_t type) {
         {ov::element::Type_t::u4, Precision::U4},
         {ov::element::Type_t::u1, Precision::U1},
         {ov::element::Type_t::string, Precision::STRING},
-        {ov::element::Type_t::undefined, Precision::UNDEFINED},
-        {ov::element::Type_t::dynamic, Precision::DYNAMIC},
+        {ov::element::Type_t::dynamic, Precision::UNDEFINED},
         //    {ov::element::Type_t::???, Precision::MIXED},
         //    {ov::element::Type_t::???, Precision::Q78},
         //    {ov::element::Type_t::???, Precision::BIN},

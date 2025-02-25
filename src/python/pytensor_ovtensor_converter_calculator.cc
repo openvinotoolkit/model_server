@@ -182,7 +182,7 @@ public:
                     auto& inputTensor = cc->Inputs().Tag(OVMS_PY_TENSOR_TAG_NAME).Get<PyObjectWrapper<py::object>>();
                     pythonBackend.validateOvmsPyTensor(inputTensor.getObject());
                     const auto precision = ovmsPrecisionToIE2Precision(fromKfsString(inputTensor.getProperty<std::string>("datatype")));
-                    if (precision == ov::element::Type_t::undefined) {
+                    if (precision == ov::element::Type_t::dynamic) {
                         return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
                                << "Undefined precision in input python tensor: " << inputTensor.getProperty<std::string>("datatype");
                     }

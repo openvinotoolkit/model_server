@@ -250,6 +250,7 @@ build:windows --action_env OpenCV_DIR="c:/opt/opencv"
 
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.11
 build:windows --define=USE_DROGON=1
+build:windows --define=GENAI_USE_BINARY=1
 
 # Tests settings ############################################################################################################################
 # sometimes failed logs exceed this threshold
