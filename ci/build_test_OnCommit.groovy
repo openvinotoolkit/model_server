@@ -43,41 +43,21 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
-          parallel {
-            stage('Style check') {
-                steps {
-                  sh 'make style'
-                }
+        stage('Style check') {
+            steps {
+               sh 'make style'
             }
-            stage('Sdl check') {
-                steps {
-                    sh 'make sdl-check'
-                }
+        }
+        stage('Sdl check') {
+            steps {
+                sh 'make sdl-check'
             }
-            stage('Client test') {
-                when { expression { client_test_needed == "true" } }
-                steps {
-                    sh "make test_client_lib"
-                }
-            }
-            stage('Cleanup node') {
-              agent {
-                label 'win_ovms'
+        }
+        stage('Client test') {
+          when { expression { client_test_needed == "true" } }
+          steps {
+                sh "make test_client_lib"
               }
-              steps {
-                script {
-                    agent_name_windows = env.NODE_NAME
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        windows.cleanup_directories()
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
-                    }
-                }
-              }
-            }
-          }
         }
         stage('Build') {
           parallel {
