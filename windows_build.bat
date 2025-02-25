@@ -26,7 +26,7 @@ IF "%~1"=="" (
 )
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
-set "openvino_dir=!BAZEL_SHORT_PATH!/genai/runtime/cmake"
+set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
 
 :: bazelBuildArgs is added to ovms --version output so please pay attention what you add here
@@ -67,7 +67,7 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
-set "openvinoBatch=call !BAZEL_SHORT_PATH!\genai\setupvars.bat"
+set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
