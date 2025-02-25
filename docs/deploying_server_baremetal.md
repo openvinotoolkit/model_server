@@ -1,14 +1,14 @@
 ## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22, RHEL8 or Windows 11.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself:
@@ -17,7 +17,7 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1
+make docker_build PYTHON_DISABLE=1 
 # Unpack the package
 tar -xzvf dist/ubuntu22/ovms.tar.gz
 ```
@@ -44,8 +44,8 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :sync: ubuntu-24-04
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
-tar -xzvf ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
+tar -xzvf ovms_ubuntu24.tar.gz
 ```
 or build it yourself:
 ```{code} sh
@@ -53,9 +53,9 @@ or build it yourself:
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0
+make docker_build PYTHON_DISABLE=1 RUN_TESTS=0 BASE_OS=ubuntu24
 # Unpack the package
-tar -xzvf dist/ubuntu22/ovms.tar.gz
+tar -xzvf dist/ubuntu24/ovms.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -81,7 +81,7 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :sync: rhel-9.4
 Download precompiled package:
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself:
