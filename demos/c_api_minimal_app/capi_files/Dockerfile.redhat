@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi:8.10
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
 FROM $BASE_IMAGE as base_build
 SHELL ["/bin/bash", "-c"]
 RUN yum install -y xz git shadow-utils make gcc gcc-c++
@@ -29,11 +29,11 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10 as release
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4 as release
 SHELL ["/bin/bash", "-c"]
 
 RUN microdnf upgrade -y
-RUN microdnf install shadow-utils make gcc gcc-c++ wget; \
+RUN microdnf install -y shadow-utils make gcc gcc-c++ wget; \
         cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
         groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
         useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
