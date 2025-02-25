@@ -26,7 +26,7 @@ RUN python3 -m pip install --no-cache -r requirements.txt
 
 ENV TF_CPP_MIN_LOG_LEVEL=2
 
-RUN mkdir -p /ovms_benchmark_client
+RUN mkdir /ovms_benchmark_client
 COPY main.py /ovms_benchmark_client
 COPY client.py /ovms_benchmark_client
 COPY client_tfs.py /ovms_benchmark_client
@@ -36,7 +36,7 @@ COPY db_exporter.py /ovms_benchmark_client
 COPY __init__.py /ovms_benchmark_client
 COPY entrypoint.sh /
 
-RUN mkdir -p /haproxy
+RUN mkdir /haproxy
 COPY haproxy.cfg /haproxy
 EXPOSE 11888
 
