@@ -20,7 +20,7 @@
 #include <string>
 
 #pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"

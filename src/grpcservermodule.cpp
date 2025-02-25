@@ -228,7 +228,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     if (!isPortAvailable(config.port())) {
         std::stringstream ss;
         ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port()) << " - port is busy";
-        auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+        status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
         SPDLOG_ERROR(status.string());
         return status;
     }
@@ -237,7 +237,7 @@ Status GRPCServerModule::start(const ovms::Config& config) {
         if (server == nullptr) {
             std::stringstream ss;
             ss << "at " << config.grpcBindAddress() << ":" << std::to_string(config.port());
-            auto status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
+            status = Status(StatusCode::FAILED_TO_START_GRPC_SERVER, ss.str());
             SPDLOG_ERROR(status.string());
             return status;
         }

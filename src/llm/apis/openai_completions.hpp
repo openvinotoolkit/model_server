@@ -149,7 +149,7 @@ struct OpenAIChatCompletionsRequest {
             config.presence_penalty = presencePenalty.value();
         config.do_sample = config.temperature > 0.0f && config.num_beams == 1;
 
-        if (logprobschat || logprobs > 0)
+        if (logprobschat || logprobs)
             config.logprobs = 1;
         // Speculative decoding specific
         if (numAssistantTokens.has_value())

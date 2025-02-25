@@ -29,7 +29,7 @@
 #include "../status.hpp"
 #include "../timer.hpp"
 #pragma warning(push)
-#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005)
+#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -52,7 +52,8 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
 }
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message, isSuccess)  \
-    {                                                                    \
+    _Pragma("warning(push)")                                             \
+        _Pragma("warning(disable : 4456 6246)") {                        \
         auto status = code;                                              \
         if (!status.ok()) {                                              \
             std::stringstream ss;                                        \
@@ -67,7 +68,8 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
         } else {                                                         \
             isSuccess = true;                                            \
         }                                                                \
-    }
+    }                                                                    \
+    _Pragma("warning(pop)")
 
 class MediapipeGraphExecutor {
     const std::string name;
