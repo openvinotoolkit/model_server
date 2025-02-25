@@ -271,7 +271,7 @@ Difference score with HF AutoModel: 0.024787274668209857
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb
+pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
