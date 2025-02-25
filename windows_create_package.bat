@@ -62,15 +62,25 @@ if !errorlevel! neq 0 (
     echo Error during Python dependencies for LLM installation. The package will not be fully functional.
 )
 
-:: Below includes OpenVINO tokenizers
-:: TODO Better manage dependency declaration with llm_engine & bazel
-copy %cd%\bazel-out\x64_windows-opt\bin\external\llm_engine\copy_openvino_genai\openvino_genai\runtime\bin\Release\*.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Copy from bazel-out if the genai is from sources
 copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icuuc70.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+:: Old package had core_tokenizers
+if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
+    copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -82,6 +92,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
