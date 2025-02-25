@@ -202,4 +202,26 @@ std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::cre
     }
     return protoStorage->add_raw_output_contents();
 }
+
+template <> // TODO @Atobisze for other type outputgetter
+Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent) {
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+}
+template Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
 }  // namespace ovms

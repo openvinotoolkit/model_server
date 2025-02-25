@@ -40,26 +40,7 @@ public:
 template <>
 class RequestTensorExtractor<KFSRequest, KFSTensorInputProto, ExtractChoice::EXTRACT_INPUT> {
 public:
-    static Status extract(const KFSRequest& request, const std::string& name, const KFSTensorInputProto** tensor, size_t* bufferId) {
-        if (bufferId == nullptr) {
-            return StatusCode::INTERNAL_ERROR;
-        }
-        size_t id = 0;
-        auto it = request.inputs().begin();
-        while (it != request.inputs().end()) {
-            if (it->name() == name) {
-                break;
-            }
-            ++it;
-            ++id;
-        }
-        if (it == request.inputs().end()) {
-            return StatusCode::NONEXISTENT_TENSOR;
-        }
-        *bufferId = id;
-        *tensor = &(*it);
-        return StatusCode::OK;
-    }
+    static Status extract(const KFSRequest& request, const std::string& name, const KFSTensorInputProto** tensor, size_t* bufferId);
 };
 
 /**

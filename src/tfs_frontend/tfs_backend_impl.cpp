@@ -29,8 +29,12 @@
 #include "../statefulrequestprocessor.hpp"
 #include "../status.hpp"
 #include "serialization.hpp"
+#include "../serialization_common.hpp"
 #include "deserialization.hpp"
 #include "validation.hpp"
+#include "../deserialization_common.hpp"
+#include "../requesttensorextractor.hpp"
+#include "tfs_request_utils.hpp"
 
 namespace ovms {
 #pragma GCC diagnostic push
@@ -41,4 +45,7 @@ OVMS_InferenceRequestCompletionCallback_t getCallback(const TFSPredictRequest* r
 } // TODO check if this exact impl is used @atobisze
 #pragma GCC diagnostic pop
 template Status infer<TFSPredictRequest, TFSPredictResponse>(ModelInstance& instance, const TFSPredictRequest*, TFSPredictResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
+template class RequestTensorExtractor<TFSPredictRequest, TFSInputTensorType, ExtractChoice::EXTRACT_INPUT>;
 }  // namespace ovms
+template class ovms::RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ovms::ExtractChoice::EXTRACT_INPUT>;
+class ovms::RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ovms::ExtractChoice::EXTRACT_INPUT>;

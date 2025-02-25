@@ -38,23 +38,6 @@ Status serializePredictResponse(
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
-    const ::KFSRequest* request,
-    ::KFSResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {
-    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
-}
-Status serializeTensorToTensorProtoRaw(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
-    std::string* rawOutputContents,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
     ::KFSResponse* response,
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent = true) {
@@ -82,4 +65,23 @@ Status serializePredictResponse(
     }
     return status;
 }
+
+template <> // TODO @Atobisze for other type outputgetter
+Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
+
+Status serializeTensorToTensorProtoRaw(
+    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
+    std::string* rawOutputContents,
+    const std::shared_ptr<const TensorInfo>& servableOutput,
+    ov::Tensor& tensor);
+
+
 }  // namespace ovms

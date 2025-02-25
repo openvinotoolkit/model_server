@@ -41,4 +41,6 @@ OVMS_InferenceRequestCompletionCallback_t getCallback(const KFSRequest* request)
 } // TODO check if this exact impl is used @atobisze
 #pragma GCC diagnostic pop
 template Status infer<KFSRequest, KFSResponse>(ModelInstance& instance, const KFSRequest*, KFSResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
+using TensorMap = std::unordered_map<std::string, ov::Tensor>;
+template class RequestTensorExtractor<KFSRequest, KFSTensorInputProto, ExtractChoice::EXTRACT_INPUT>;
 }  // namespace ovms

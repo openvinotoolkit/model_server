@@ -230,6 +230,56 @@ Status RequestValidator<RequestType, InputTensorType, choice, InputIterator, Sha
     SPDLOG_DEBUG("[servable name: {} version: {}] Missing tensor with specific name - {}", servableName, servableVersion, details);
     return Status(code, details);
 }
+
+template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
+Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& tensorInfo, const std::optional<size_t>& batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
+    const auto& shape = tensorInfo.getShape();
+    bool mismatch = false;
+    RequestShapeInfo<InputTensorType, ShapeType> rsi(proto);
+    if (batchingMode == AUTO) {  // Skip batch dimension
+        if (!batchSizeIndex.has_value()) {
+            SPDLOG_ERROR("Batching AUTO enabled but batch size is missing");
+            return StatusCode::INTERNAL_ERROR;
+        }
+        for (size_t i = 0; i < batchSizeIndex.value(); i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
+                mismatch = true;
+                break;
+            }
+        }
+        for (size_t i = batchSizeIndex.value() + 1; i < rsi.getShapeSize(); i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
+                mismatch = true;
+                break;
+            }
+        }
+    } else {  // Do not skip batch dimension
+        for (size_t i = 0; i < rsi.getShapeSize(); i++) {
+            if (!shape[i].match(static_cast<dimension_value_t>(rsi.getDim(i)))) {
+                mismatch = true;
+                break;
+            }
+        }
+    }
+    if (!mismatch) {
+        return StatusCode::OK;
+    }
+    if (shapeMode == AUTO) {
+        finalStatus = StatusCode::RESHAPE_REQUIRED;
+        return StatusCode::OK;
+    } else {
+        std::stringstream ss;
+        ss << "Expected: " << tensorInfo.getShape().toString()
+           << "; Actual: " << tensorShapeToString(rsi.getShape())
+           << "; input name: " << getCurrentlyValidatedTensorName();
+        const std::string details = ss.str();
+        SPDLOG_DEBUG("[servable name: {} version: {}] Invalid shape - {}", servableName, servableVersion, details);
+        return Status(StatusCode::INVALID_SHAPE, details);
+    }
+    return StatusCode::OK;
+}
+
+
 #define RETURN_IF_ERR(X)   \
     {                      \
         auto status = (X); \
@@ -329,8 +379,6 @@ static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>&
     expectedBufferSize *= itemsize;
     return true;
 }
-Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
-
-
+// TODO FIXME remove Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
 }  // namespace request_validation_utils
 }  // namespace ovms

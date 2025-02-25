@@ -15,9 +15,9 @@
 //*****************************************************************************
 #include "requestprocessor.hpp"
 
-#include "status.hpp"
 
 namespace ovms {
+/*
 template <typename RequestType, typename ResponseType>
 RequestProcessor<RequestType, ResponseType>::RequestProcessor() = default;
 template <typename RequestType, typename ResponseType>
@@ -32,4 +32,5 @@ template <typename RequestType, typename ResponseType>
 Status RequestProcessor<RequestType, ResponseType>::postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
 template <typename RequestType, typename ResponseType>
 Status RequestProcessor<RequestType, ResponseType>::release() { return StatusCode::OK; }
+*/
 }  // namespace ovms

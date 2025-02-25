@@ -36,7 +36,7 @@ Status serializePredictResponse(
     const tensorflow::serving::PredictRequest* request,
     tensorflow::serving::PredictResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
+    bool useSharedOutputContent) {  // does not apply for TFS frontend
     return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
 

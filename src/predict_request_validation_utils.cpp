@@ -18,7 +18,7 @@
 #include "precision.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+//#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 #include <algorithm>
 #include <limits>
@@ -29,39 +29,23 @@
 
 #include <spdlog/spdlog.h>
 
-#include "capi_frontend/buffer.hpp"
+/*#include "capi_frontend/buffer.hpp"
 #include "capi_frontend/capi_utils.hpp"
 #include "capi_frontend/inferencerequest.hpp"
 #include "capi_frontend/inferencetensor.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
-#include "modelconfig.hpp"
+*/
+//#include "modelconfig.hpp"
 //#include "prediction_service_utils.hpp"
-#include "profiler.hpp"
+//#include "profiler.hpp"
 #include "status.hpp"
-#include "tfs_frontend/tfs_utils.hpp"
+//#include "tfs_frontend/tfs_utils.hpp"
 
 // TODO @atobisze to remove whole file
 namespace ovms {
 namespace request_validation_utils {
-Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth) {
-    if (inputBatchSize <= 0) {
-        return StatusCode::INVALID_BATCH_SIZE;
-    }
-    if (inputWidth > std::numeric_limits<size_t>::max() / inputBatchSize) {
-        return StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED;
-    }
-    size_t expectedTensorSize = inputBatchSize * inputWidth;
-    if (expectedTensorSize > MAX_2D_STRING_ARRAY_SIZE) {
-        std::stringstream ss;
-        ss << "; actual " << expectedTensorSize / (1024 * 1024) << "MB (max 1GB)";
-        const std::string details = ss.str();
-        SPDLOG_DEBUG(details);
-        return Status(StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, details);
-    }
-    return StatusCode::OK;
-}
-
+/*
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::checkShapeMismatch(const InputTensorType& proto, const ovms::TensorInfo& tensorInfo, const std::optional<size_t>& batchSizeIndex, Status& finalStatus, Mode batchingMode, Mode shapeMode) const {
     const auto& shape = tensorInfo.getShape();
@@ -109,6 +93,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
     return StatusCode::OK;
 }
+*/
 
 /*static size_t getStringInputWidth(const KFSTensorInputProto& src) {
     size_t maxStringLength = 0;

@@ -18,6 +18,7 @@
 #include "buffer.hpp"
 #include "../itensorfactory.hpp"
 #include "../logging.hpp"
+#include "../tensor_conversion.hpp"
 
 namespace ovms {
 ov::Tensor makeTensor(const InferenceTensor& requestInput,
@@ -51,4 +52,8 @@ template <>
 Status getTensor(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor) {
     return request.getInput(name.c_str(), tensor);
 }
+// enforce template instantiation for linking
+//template Status convertStringRequestToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
+//template Status convertStringRequestToOVTensor2D<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
+//template Status convertNativeFileFormatRequestTensorToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
 }  // namespace ovms

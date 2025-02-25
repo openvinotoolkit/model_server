@@ -303,7 +303,7 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
         instance.getName(), instance.getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
 
     timer.start(SERIALIZE);
-    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
+    OutputGetter<ov::InferRequest> outputGetter(inferRequest);
     status = serializePredictResponse(outputGetter, instance.getName(), instance.getVersion(), instance.getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())

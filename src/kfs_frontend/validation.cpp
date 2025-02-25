@@ -22,6 +22,7 @@
 #include <sstream>
 #include <string>
 
+#include "../tensor_conversion_common.hpp"
 #include "kfs_utils.hpp"
 #include "../precision.hpp"
 #include "../predict_request_validation_utils.hpp"
@@ -251,4 +252,45 @@ Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const
     return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
 }
 }  // namespace request_validation_utils
+/*Status validateTensor(const TensorInfo& tensorInfo,
+    const ::KFSRequest::InferInputTensor& src,
+    const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
+    bool rawInputsContentsUsed = (buffer != nullptr);
+    auto status = tensor_conversion::validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo.getShape().size() == 4 ||
+                              (tensorInfo.isInfluencedByDemultiplexer() && tensorInfo.getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : getNumberOfInputs(buffer);
+    if (tensor_conversion::checkBatchSizeMismatch(tensorInfo, batchSize)) {
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo.getMappedName(),
+            tensorInfo.getBatchSize().has_value() ? tensorInfo.getBatchSize().value().toString() : std::string{"none"},
+            src.contents().bytes_contents_size());
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    if (!rawInputsContentsUsed) {
+        for (size_t i = 0; i < batchSize; i++) {
+            if (src.contents().bytes_contents(i).size() <= 0) {
+                SPDLOG_DEBUG("Tensor: {} {}th image of the batch is empty.", src.name(), i);
+                return StatusCode::BYTES_CONTENTS_EMPTY;
+            }
+        }
+    } else {
+        if (buffer->size() <= 0) {
+            SPDLOG_DEBUG("Tensor: {} raw_inputs_contents is empty", src.name());
+            return StatusCode::BYTES_CONTENTS_EMPTY;
+        }
+    }
+
+    return StatusCode::OK;
+}*/
 }  // namespace ovms

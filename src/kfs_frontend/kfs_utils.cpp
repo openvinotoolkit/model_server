@@ -26,6 +26,8 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
+#include "../tensor_conversion_common.hpp"
+
 
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
@@ -240,5 +242,76 @@ size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expect
     default:
         return 0;
     }
+}
+Status validateTensor(const TensorInfo& tensorInfo,
+    const ::KFSRequest::InferInputTensor& src,
+    const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
+    bool rawInputsContentsUsed = (buffer != nullptr);
+    auto status = tensor_conversion::validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo.getShape().size() == 4 ||
+                              (tensorInfo.isInfluencedByDemultiplexer() && tensorInfo.getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    size_t batchSize = !rawInputsContentsUsed ? src.contents().bytes_contents_size() : tensor_conversion::getNumberOfInputs(buffer);
+    if (tensor_conversion::checkBatchSizeMismatch(tensorInfo, batchSize)) {
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo.getMappedName(),
+            tensorInfo.getBatchSize().has_value() ? tensorInfo.getBatchSize().value().toString() : std::string{"none"},
+            src.contents().bytes_contents_size());
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    if (!rawInputsContentsUsed) {
+        for (size_t i = 0; i < batchSize; i++) {
+            if (src.contents().bytes_contents(i).size() <= 0) {
+                SPDLOG_DEBUG("Tensor: {} {}th image of the batch is empty.", src.name(), i);
+                return StatusCode::BYTES_CONTENTS_EMPTY;
+            }
+        }
+    } else {
+        if (buffer->size() <= 0) {
+            SPDLOG_DEBUG("Tensor: {} raw_inputs_contents is empty", src.name());
+            return StatusCode::BYTES_CONTENTS_EMPTY;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+const std::string& getBinaryInput(const ::KFSRequest::InferInputTensor& tensor, size_t i) {
+    return tensor.contents().bytes_contents(i);
+}
+int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor) {
+    return tensor.contents().bytes_contents_size();
+}
+
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer) {
+    std::vector<uint32_t> stringSizes;
+    uint32_t totalStringsLength = 0;
+    while (totalStringsLength + stringSizes.size() * sizeof(uint32_t) + sizeof(uint32_t) <= buffer->size()) {
+        uint32_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + totalStringsLength + stringSizes.size() * sizeof(uint32_t)));
+        stringSizes.push_back(inputSize);
+        totalStringsLength += inputSize;
+    }
+    size_t batchSize = stringSizes.size();
+    if ((totalStringsLength + batchSize * sizeof(uint32_t)) != buffer->size()) {
+        SPDLOG_DEBUG("Input string format conversion failed");
+        return StatusCode::INVALID_STRING_INPUT;
+    }
+    tensor = ov::Tensor(ov::element::Type_t::string, ov::Shape{batchSize});
+    std::string* data = tensor.data<std::string>();
+    size_t tensorStringsOffset = 0;
+    for (size_t i = 0; i < stringSizes.size(); i++) {
+        data[i].assign(reinterpret_cast<const char*>(buffer->data() + (i + 1) * sizeof(uint32_t) + tensorStringsOffset), stringSizes[i]);
+        tensorStringsOffset += stringSizes[i];
+    }
+    return StatusCode::OK;
 }
 }  // namespace ovms

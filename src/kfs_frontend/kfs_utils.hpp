@@ -60,4 +60,13 @@ void setStringPrecision(KFSTensorOutputProto& proto);
  */
 Status validateRequestCoherencyKFS(const KFSRequest& request, const std::string servableName, model_version_t servableVersion);
 size_t getElementsCount(const KFSTensorInputProto& proto, ovms::Precision expectedPrecision);
+int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
+class TensorInfo;
+Status validateTensor(const TensorInfo& tensorInfo,
+    const ::KFSRequest::InferInputTensor& src,
+    const std::string* buffer);
+
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
+const std::string& getBinaryInput(const ::KFSRequest::InferInputTensor& tensor, size_t i);
+int getBinaryInputsSize(const ::KFSRequest::InferInputTensor& tensor);
 }  // namespace ovms

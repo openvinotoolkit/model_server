@@ -20,6 +20,7 @@
 
 #include <openvino/openvino.hpp>
 
+#include "tfs_utils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -39,19 +40,6 @@ Status serializeTensorToTensorProto(
     tensorflow::TensorProto& responseOutput,
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
-
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
-    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
-}
 
 template <typename T>
 Status serializePredictResponse(
@@ -79,4 +67,16 @@ Status serializePredictResponse(
     }
     return status;
 }
+
+template <>
+Status serializePredictResponse<ov::InferRequest, TFSPredictRequest, TFSPredictResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
+
 }  // namespace ovms

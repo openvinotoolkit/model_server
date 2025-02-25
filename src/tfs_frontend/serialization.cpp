@@ -14,12 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 #include "serialization.hpp"
+#include "../serialization_common.hpp"
 
 #include "../logging.hpp"
 #include "../precision.hpp"
 #include "../status.hpp"
+#include "tfs_utils.hpp" // @atobisze must be before lower
 #include "../tensor_conversion.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 
 namespace ovms {
 
@@ -123,4 +124,27 @@ tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tens
     OVMS_PROFILE_FUNCTION();
     return (*protoStorage->mutable_outputs())[name];
 }
+
+template <>
+Status serializePredictResponse<ov::InferRequest, TFSPredictRequest, TFSPredictResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent) {  // does not apply for TFS frontend
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+}
+template Status serializePredictResponse<ov::InferRequest, TFSPredictRequest, TFSPredictResponse>(
+    OutputGetter<ov::InferRequest>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const TFSPredictRequest* request,
+    TFSPredictResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
+
 }  // namespace ovms

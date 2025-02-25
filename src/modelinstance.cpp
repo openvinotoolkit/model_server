@@ -40,6 +40,7 @@
 
 //#include "capi_frontend/inferencerequest.hpp"
 //#include "capi_frontend/inferenceresponse.hpp"
+#include "anonymous_input_name.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"

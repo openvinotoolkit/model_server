@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include "anonymous_input_name.hpp"
 #include <string>
 
 namespace ovms {
-const std::string ANONYMOUS_INPUT_NAME = "ANONYMOUS_INPUT_NAME";
+const std::string ANONYMOUS_INPUT_NAME{"ANONYMOUS_INPUT_NAME"};
 }  // namespace ovms

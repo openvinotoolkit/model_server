@@ -35,7 +35,6 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
     std::optional<uint64_t> sequenceId;
 
     StatefulRequestProcessor(SequenceManager& sequenceManager) : sequenceManager(sequenceManager) {}
-    Status extractRequestParameters(const RequestType* request) override;
     Status prepare() override {
         sequenceManagerLock = std::make_unique<std::unique_lock<std::mutex>>(sequenceManager.getMutex());
         auto status = sequenceManager.processRequestedSpec(sequenceProcessingSpec);
@@ -68,7 +67,9 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
         }
         return StatusCode::OK;
     }
-    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override;
-    Status release() override;
+    // TODO @atobisze force check status
+    Status extractRequestParameters(const RequestType* request) override { return StatusCode::NOT_IMPLEMENTED;};
+    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override { return StatusCode::NOT_IMPLEMENTED;};
+    Status release() override { return StatusCode::NOT_IMPLEMENTED;};
 };
 }  // namespace ovms

@@ -33,28 +33,7 @@
 namespace ovms {
 namespace request_validation_utils {
 const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
-static Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width) { // TODO @atobisze make not static this comes from KFS - may need to move there
-    size_t offset = 0;
-    size_t tmpBatchSize = 0;
-    size_t tmpMaxStringLength = 0;
-    while (offset + sizeof(uint32_t) <= buffer.size()) {
-        size_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer.data() + offset));
-        tmpMaxStringLength = std::max(tmpMaxStringLength, inputSize);
-        offset += (sizeof(uint32_t) + inputSize);
-        tmpBatchSize++;
-    }
-    if (offset > buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Buffer exceeded by {} bytes", offset - buffer.size());
-        return StatusCode::INVALID_INPUT_FORMAT;
-    } else if (offset < buffer.size()) {
-        SPDLOG_DEBUG("Raw input contents invalid format. Every input need to be preceded by four bytes of its size. Unprocessed {} bytes", buffer.size() - offset);
-        return StatusCode::INVALID_INPUT_FORMAT;
-    }
-    batchSize = tmpBatchSize;
-    width = tmpMaxStringLength + 1;
-    return StatusCode::OK;
-}
-
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width); // TODO @atobisze make not static this comes from KFS - may need to move there
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
 Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name);
 }  // namespace request_validation_utils

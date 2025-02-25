@@ -21,7 +21,6 @@
 #include "../ovms.h"  // NOLINT
 #include "../precision.hpp"
 #include "../shape.hpp"
-#include "../status.hpp" // TODO move impl @atobisze
 
 namespace ovms {
 class InferenceRequest;
@@ -32,12 +31,22 @@ class Status;
 template<>
 std::string tensorShapeToString(const signed_shape_t& tensorShape);
 
-OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
+OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
+
 size_t DataTypeToByteSize(OVMS_DataType datatype);
 
-Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 const std::string& getRequestServableName(const ovms::InferenceRequest& request);
-bool requiresPreProcessing(const InferenceTensor& tensor);
+
 std::string& createOrGetString(InferenceTensor& proto, int index);
+
+bool requiresPreProcessing(const InferenceTensor& tensor);
+
+int getBinaryInputsSize(const InferenceTensor& tensor);
+const std::string& getBinaryInput(const InferenceTensor& tensor, size_t i);
+Status validateTensor(const TensorInfo& tensorInfo,
+    const InferenceTensor& src,
+    const std::string* buffer);
+
+Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 }  // namespace ovms

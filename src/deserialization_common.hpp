@@ -112,4 +112,9 @@ static std::tuple<ovms::Status, const typename RequestTraits<RequestType>::Tenso
 
 template <typename Request, typename Tensor>
 Status getTensor(const Request& request, const std::string& name, const Tensor tensor);
+
+template <typename TensorType>
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const TensorType&, ov::Tensor& tensor, const std::string* buffer) {
+    return StatusCode::NOT_IMPLEMENTED;
+}
 }  // namespace ovms
