@@ -22,7 +22,12 @@ For example, download ResNet50 model to follow the guide below:
 ```console
 curl -L -o model/1/model.tar.gz https://www.kaggle.com/api/v1/models/tensorflow/resnet-50/tensorFlow2/classification/1/download --create-dirs
 tar -xzf model/1/model.tar.gz -C model/1/
+```
+
+For Linux:
+```bash
 rm model/1/model.tar.gz
+chmod 775 -R model/
 ```
 
 ## Starting Model Server with Intel GPU
@@ -49,7 +54,7 @@ docker run --rm -it  --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/rende
 GPU device can be used also on Windows hosts with Windows Subsystem for Linux 2 (WSL2). In such scenario, there are needed extra docker parameters. See the command below.
 Use device `/dev/dxg` instead of `/dev/dri` and mount the volume `/usr/lib/wsl`:
 
-```bash
+```
 docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(id -u):$(id -g) \
 -v ${PWD}/model:/opt/model -p 9000:9000 openvino/model_server:latest-gpu \
 --model_path /opt/model --model_name resnet --port 9000 --target_device GPU
@@ -220,5 +225,4 @@ In the example above, there will be 200ms timeout to wait for filling the batch 
 The same deployment with a binary package can be completed with a command:
 ```console
 ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"AUTO_BATCH_TIMEOUT\": 200}" --target_device "BATCH:CPU(16)"
-```
 ```
