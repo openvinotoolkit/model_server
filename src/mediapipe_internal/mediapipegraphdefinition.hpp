@@ -53,7 +53,7 @@ class MediapipeGraphExecutor;
 class Status;
 class PythonBackend;
 class PythonNodeResources;
-struct GenAiServable;
+class GenAiServable;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 
