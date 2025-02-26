@@ -27,8 +27,13 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6262)
+#include "stb_image.h"  // NOLINT
+#pragma warning(pop)
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
@@ -85,27 +90,39 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-static ov::element::Type_t getOvTypeFromMatType(int matType) {
-    switch (matType) {
-    case CV_32F:
-        return ov::element::f32;
-    case CV_64F:
-        return ov::element::f64;
-    case CV_16F:
-        return ov::element::f64;
-    case CV_16S:
-        return ov::element::f16;
-    case CV_8U:
-        return ov::element::u8;
-    case CV_8S:
-        return ov::element::i8;
-    case CV_16U:
-        return ov::element::u16;
-    case CV_32S:
-        return ov::element::i32;
-    default:
-        return ov::element::dynamic;
+ov::Tensor load_image_stbi(const std::string& imageBytes) {
+    int x = 0, y = 0, channels_in_file = 0;
+    constexpr int desired_channels = 3;
+    unsigned char* image = stbi_load_from_memory(
+        (const unsigned char*)imageBytes.data(), imageBytes.size(),
+        &x, &y, &channels_in_file, desired_channels);
+    if (!image) {
+        std::stringstream error_message;
+        error_message << "Failed to load the image";
+        throw std::runtime_error{error_message.str()};
     }
+    struct SharedImageAllocator {
+        unsigned char* image;
+        int channels, height, width;
+        void* allocate(size_t bytes, size_t) const {
+            if (image && channels * height * width == bytes) {
+                return image;
+            }
+            throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
+        }
+        void deallocate(void*, size_t bytes, size_t) {
+            if (channels * height * width != bytes) {
+                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
+            }
+            stbi_image_free(image);
+            image = nullptr;
+        }
+        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
+    };
+    return ov::Tensor(
+        ov::element::u8,
+        ov::Shape{1, size_t(y), size_t(x), size_t(desired_channels)},
+        SharedImageAllocator{image, desired_channels, y, x});
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages() {
@@ -167,28 +184,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
-                            int rows = 1;
-                            int cols = decoded.size();
-                            cv::Mat rawData(rows, cols, CV_8UC1, (void*)decoded.data());
-                            cv::Mat image;
-                            try {
-                                image = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-                            } catch (const cv::Exception&) {
-                                return absl::InvalidArgumentError("Error during string to mat conversion");
-                            }
-                            std::vector<size_t> shape;
-                            shape.push_back(image.rows);
-                            shape.push_back(image.cols);
-                            shape.push_back(image.channels());
-                            auto type = getOvTypeFromMatType(image.depth());
-                            if (type == ov::element::dynamic) {
-                                return absl::InvalidArgumentError("Image type is invalid");
-                            }
-                            ov::Tensor tensor(type, shape);
-                            if (image.total() * image.elemSize() != tensor.get_size()) {
-                                return absl::InvalidArgumentError("Image size invalid");
-                            }
-                            memcpy((char*)tensor.data(), (char*)image.data, image.total() * image.elemSize());
+                            ov::Tensor tensor = load_image_stbi(decoded);
                             request.images.push_back(tensor);
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");

@@ -587,3 +587,18 @@ git_repository(
     tag = "v0.18.7",
     build_file = "@//third_party/cpp-httplib:BUILD"
 )
+
+new_git_repository(
+    name = "stb",
+    remote = "https://github.com/nothings/stb",
+    branch = "master",
+    build_file_content = """
+cc_library(
+    name = "image",
+    hdrs = ["stb_image.h"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
+)
