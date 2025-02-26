@@ -70,15 +70,6 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
     cbExecutionContext->payload.client->registerDisconnectionCallback([genHandle = cbExecutionContext->generationHandle]() {
         genHandle->stop();
     });
-
-    cbExecutionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-    auto callback = [& lastStreamerCallbackOutput = cbExecutionContext->lastStreamerCallbackOutput](std::string text) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
-        lastStreamerCallbackOutput = text;
-        return false;
-    };
-
-    cbExecutionContext->textStreamer = std::make_shared<ov::genai::TextCallbackStreamer>(properties->pipeline->get_tokenizer(), callback);
     notifyExecutorThread();
 
     return absl::OkStatus();

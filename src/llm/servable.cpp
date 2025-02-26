@@ -63,7 +63,23 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    return executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    if (!status.ok()) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
+        return status;
+    }
+
+    if (executionContext->apiHandler->isStream()) {
+        executionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
+        auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
+            lastStreamerCallbackOutput = text;
+            return false;
+        };
+
+        executionContext->textStreamer = std::make_shared<ov::genai::TextCallbackStreamer>(getProperties()->tokenizer, callback);
+    }
+    return absl::OkStatus();
 }
 
 absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {

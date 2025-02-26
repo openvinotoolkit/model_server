@@ -188,6 +188,7 @@ public:
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
     Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
+    Additionally it initializes text streamer for streaming requests.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
