@@ -117,9 +117,9 @@ Wait for the model to load. You can check the status with a simple command below
 ```bash
 curl -i http://localhost:8000/v2/models/Alibaba-NLP%2Fgte-large-en-v1.5/ready
 HTTP/1.1 200 OK
-Content-Type: application/json
-Date: Sat, 09 Nov 2024 23:19:27 GMT
-Content-Length: 0
+content-length: 0
+content-type: application/json; charset=utf-8
+content-type: application/json
 ```
 
 ## Client code
