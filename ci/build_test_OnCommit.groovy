@@ -43,42 +43,25 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
-          parallel {
-            stage('Style check') {
-                steps {
-                  sh 'make style'
-                }
+        stage('Style check') {
+            steps {
+               sh 'make style'
             }
-            stage('Sdl check') {
-                steps {
-                    sh 'make sdl-check'
-                }
-            }
-            stage('Client test') {
-                when { expression { client_test_needed == "true" } }
-                steps {
-                    sh "make test_client_lib"
-                }
-            }
-            stage('Cleanup node') {
-              agent {
-                label 'win_ovms'
-              }
-              steps {
-                script {
-                    agent_name_windows = env.NODE_NAME
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        windows.cleanup_directories()
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
-                    }
-                }
-              }
-            }
-          }
         }
+
+        stage('Sdl check') {
+            steps {
+                sh 'make sdl-check'
+            }
+        }
+
+        stage('Client test') {
+          when { expression { client_test_needed == "true" } }
+          steps {
+                sh "make test_client_lib"
+              }
+        }
+
         stage('Build') {
           parallel {
             stage("Build linux") {
@@ -93,11 +76,12 @@ pipeline {
             }
             stage('Build windows') {
               agent {
-                label "${agent_name_windows}"
+                label 'win_ovms'
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                      agent_name_windows = env.NODE_NAME
                       echo sh(script: 'env|sort', returnStdout: true)
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
