@@ -22,6 +22,10 @@ For example, download ResNet50 model to follow the guide below:
 ```console
 curl -L -o model/1/model.tar.gz https://www.kaggle.com/api/v1/models/tensorflow/resnet-50/tensorFlow2/classification/1/download --create-dirs
 tar -xzf model/1/model.tar.gz -C model/1/
+```
+
+For Linux:
+```bash
 rm model/1/model.tar.gz
 chmod 775 -R model/
 ```
