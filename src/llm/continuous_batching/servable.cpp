@@ -40,7 +40,6 @@
 namespace ovms {
 
 void ContinuousBatchingServable::notifyExecutorThread() {
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(this->properties);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Notifying executor thread");
     if (properties->llmExecutorWrapper == nullptr) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMExecutorWrapper is not initialized");
@@ -50,22 +49,15 @@ void ContinuousBatchingServable::notifyExecutorThread() {
 }
 
 // Node resources interface start
-
-ovms::Status ContinuousBatchingServable::initialize() {
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(this->properties);
-    if (properties->pipeline == nullptr) {
-        throw std::logic_error("Cannot initiate generation with uninitialized pipeline");
-    }
-    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
-    return ovms::StatusCode::OK;
-}
-
 std::shared_ptr<GenAiServableExecutionContext> ContinuousBatchingServable::createExecutionContext() {
     return std::make_shared<ContinuousBatchingServableExecutionContext>();
 }
 
+std::shared_ptr<GenAiServableProperties> ContinuousBatchingServable::getProperties() {
+    return properties;
+}
+
 absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(this->properties);
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();

@@ -30,7 +30,7 @@
 namespace ovms {
 class Status;
 class GenAiServable;
-class GenAiServableProperties;
+struct GenAiServableProperties;
 
 class GenAiServableInitializer {
     std::string basePath;

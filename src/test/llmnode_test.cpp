@@ -2950,7 +2950,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(properties->schedulerConfig.cache_size, 8);
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
@@ -3001,7 +3001,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 98);
     ASSERT_EQ(properties->schedulerConfig.cache_size, 1);
@@ -3092,7 +3092,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     ASSERT_EQ(properties->pluginConfig.size(), 2);
     ASSERT_EQ(properties->pluginConfig.count("PERFORMANCE_HINT"), 1);
@@ -3147,7 +3147,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 1024);
     ASSERT_EQ(properties->schedulerConfig.cache_size, 1);

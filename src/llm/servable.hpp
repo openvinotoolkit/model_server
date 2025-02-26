@@ -112,8 +112,6 @@ namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
-class Status;
-
 /*
 GenAiServable support.
 
@@ -125,7 +123,7 @@ It uses both GenAiServableProperties and GenAiServableExecutionContext (or rathe
 
 GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused 
 for every request, in contrary to GenAiServableExecutionContext that is created multiple times during servable lifespan.
-GenAiServableProperties are initialized by servable initializer (see servable+initializer.hpp).
+GenAiServableProperties are initialized by servable initializer (see servable_initializer.hpp).
 
 GenAiServableExecutionContext is a container that holds required data throughout request processing.
 It is created by createExecutionContext method of GenAiServable in HttpLLMCalculator, which then uses it when calling GenAiServable methods.
@@ -166,8 +164,6 @@ struct GenAiServableProperties {
 
 class GenAiServable {
 public:
-    std::shared_ptr<GenAiServableProperties> properties;
-
     GenAiServable() = default;
     GenAiServable(GenAiServable&&) = default;
     GenAiServable& operator=(GenAiServable&&) = default;
@@ -175,42 +171,60 @@ public:
     GenAiServable& operator=(const GenAiServable&) = delete;
     virtual ~GenAiServable() = default;
 
-    // ----- Interface for derived classes, TODO: add description when completed
+    // ----- Interface for derived classes -----
 
-    // Loads payload into the execution context and sets the endpoint
+    /*
+    loadRequest method implementation MUST fill executionContext payload and endpoint fields.
+    Base implementation does that and makes sure URI matches either chat/completions or completions endpoint.
+    */
     virtual absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
-
-    // Called in OVMS core by initializer
-    virtual ovms::Status initialize() = 0;
-
-    // All below methods are called from the HttpLLMCalculator
 
     // Creates execution context for the request
     virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;
 
-    // Load and parse OpenAI request from the HTTP payload
+    // Returns properties of the servable
+    virtual std::shared_ptr<GenAiServableProperties> getProperties() = 0;
+
+    /*
+    parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
+    Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
+    */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
-    // Fill executionContext with data necessary execute
+    /*
+    prepareInputs method implementation MUST fill executionContext inputIds field.
+    Base implementation applies chat template to the payload body and encodes it with tokenizer.
+    */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
-    // This method should implement any necessary queueing mechanism or start asynchronous execution.
-    // Execution context in such case may contain handles, futures or other objects that will be used to track the execution.
-    // If none of that is necessary, the implementation can simply return OK status.
+    /*
+    scheduleExecution method should implement any necessary queueing mechanism or start asynchronous execution.
+    Execution context in such case may contain handles, futures or other objects that will be used to track the execution.
+    If none of that is necessary, the implementation can simply return OK status.
+    Implementation should fill executionContext with data required by the read methods.
+    */
     virtual absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
 
     // ----------- Unary scenario ------------
-    // This method should implement reading the results of the execution and filling the executionContext with the results.
-    // If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
-    // then this method should run entire execution.
+
+    /*
+    readCompleteExecutionResults method should implement reading the results of the execution in a unary request scenario.
+    If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
+    then this method should run entire execution.
+    Implementation MUST fill executionContext generationOutputs field.
+    */
     virtual absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
 
     virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     // ----------- Streaming scenario ------------
-    // This method should implement reading the results of the execution and filling the executionContext with the results.
-    // If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
-    // then this method should run entire execution.
+
+    /*
+    readPartialExecutionResults method should implement reading the results of the execution in a streaming request scenario.
+    If interacting with the pipeline is not asynchronous and does not require any queuing (schedulePipelineExecution implementation is essenatially void),
+    then this method should run entire execution.
+    Implementation MUST fill executionContext generationOutputs field.
+    */
     virtual absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
 
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);

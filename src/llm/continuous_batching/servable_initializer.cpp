@@ -22,11 +22,6 @@
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
-#include "../../json_parser.hpp"
-#include "../../logging.hpp"
-#include "../../status.hpp"
-#include "servable.hpp"
-
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005)
 #pragma GCC diagnostic push
@@ -35,9 +30,13 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../../json_parser.hpp"
+#include "../../logging.hpp"
 #include "../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../status.hpp"
+#include "llm_executor.hpp"
+#include "servable.hpp"
 #include "servable_initializer.hpp"
-#include "src/llm/text_processor.hpp"
 
 namespace ovms {
 
@@ -71,7 +70,7 @@ Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared
     }
 
     servable = std::make_shared<ContinuousBatchingServable>();
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     properties->modelsPath = getBasePath();
 
     properties->schedulerConfig.max_num_batched_tokens = mainPipelineConfig.max_num_batched_tokens();
@@ -124,6 +123,7 @@ Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared
     properties->maxTokensLimit = mainPipelineConfig.max_tokens_limit();
     properties->bestOfLimit = mainPipelineConfig.best_of_limit();
 
+    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
     return StatusCode::OK;
 }
 
@@ -134,7 +134,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     servable = std::make_shared<ContinuousBatchingServable>();
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->properties);
+    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     properties->modelsPath = getBasePath();
 
@@ -190,6 +190,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     properties->bestOfLimit = nodeOptions.best_of_limit();
 
+    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
     return StatusCode::OK;
 }
 

@@ -170,8 +170,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             return status;
         }
     }
-
-    return servable->initialize();
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

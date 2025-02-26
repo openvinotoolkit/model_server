@@ -61,9 +61,9 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
         executionContext->endpoint,
         std::chrono::system_clock::now(),
-        properties->tokenizer);
+        getProperties()->tokenizer);
 
-    return executionContext->apiHandler->parseRequest(properties->maxTokensLimit, properties->bestOfLimit, properties->isSpeculativePipeline);
+    return executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
 }
 
 absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
@@ -77,9 +77,9 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     case Endpoint::CHAT_COMPLETIONS: {
         bool success;
         if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-            success = TextProcessor::applyChatTemplate(properties->textProcessor, properties->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
         } else {
-            success = TextProcessor::applyChatTemplate(properties->textProcessor, properties->modelsPath, executionContext->payload.body, inputText);
+            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
         }
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
@@ -95,7 +95,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
-    executionContext->inputIds = properties->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
+    executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 

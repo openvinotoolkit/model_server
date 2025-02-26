@@ -26,8 +26,6 @@ namespace ovms {
 
 class LLMExecutorWrapper;
 
-class Status;
-
 struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
     ov::genai::GenerationHandle generationHandle;
 };
@@ -39,6 +37,8 @@ struct ContinuousBatchingServableProperties : public GenAiServableProperties {
 };
 
 class ContinuousBatchingServable : public GenAiServable {
+    std::shared_ptr<ContinuousBatchingServableProperties> properties;
+
 protected:
     void notifyExecutorThread();
 
@@ -48,8 +48,8 @@ public:
     }
 
     // Interface methods
-    ovms::Status initialize() override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
+    std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
