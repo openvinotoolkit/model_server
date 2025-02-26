@@ -28,7 +28,7 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/facebook/opt-125m",
+          models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
           cache_size: 1
           draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
         }

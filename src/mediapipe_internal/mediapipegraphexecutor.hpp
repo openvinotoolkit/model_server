@@ -79,7 +79,7 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> outputNames;
 
     PythonNodeResourcesMap pythonNodeResourcesMap;
-    LLMNodeResourcesMap llmNodeResourcesMap;
+    GenAiServableMap llmNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
@@ -96,7 +96,7 @@ public:
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
-        const LLMNodeResourcesMap& llmNodeResourcesMap,
+        const GenAiServableMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
@@ -132,7 +132,7 @@ public:
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
@@ -276,7 +276,7 @@ public:
 #if (PYTHON_DISABLE == 0)
                 inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                        .At(STARTING_TIMESTAMP);
-                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
             }
 

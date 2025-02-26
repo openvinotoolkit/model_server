@@ -1041,9 +1041,9 @@ public:
     }
 #endif
 
-    ovms::LLMNodeResources* getLLMNodeResources(const std::string& nodeName) {
-        auto it = this->llmNodeResourcesMap.find(nodeName);
-        if (it == std::end(llmNodeResourcesMap)) {
+    ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
+        auto it = this->genAiServableMap.find(nodeName);
+        if (it == std::end(genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1054,7 +1054,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::LLMNodeResourcesMap& getLLMNodeResourcesMap() { return this->llmNodeResourcesMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

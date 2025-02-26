@@ -451,7 +451,7 @@ cc_library(
                 "//src/python:libovmspythonmodule",
                 # Jinja template processing is done in Python
                 "//src/llm:llmcalculator",
-                "//src/llm:llmnoderesources",
+                "//src/llm:genai_servables",
                 "//src/llm:text_processor",
             ],
             "//:disable_python": []
@@ -2038,7 +2038,7 @@ cc_test(
                     ],
             })  + select({
             "//conditions:default": [
-                "//src/llm:llmnoderesources",
+                "//src/llm:genai_servables",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
