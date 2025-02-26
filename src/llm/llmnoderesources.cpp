@@ -90,9 +90,9 @@ void LLMNodeResources::loadTextProcessor(LLMNodeResources& nodeResources, const 
                 f = open(templates_directory + "/tokenizer_config.json")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
-                bos_token = bos_token if isinstance(bos_token, str) else ""  # tokenizer_config.json allows for different types than string
+                bos_token = "" if bos_token is None else bos_token  # tokenizer_config.json allows for string and null
                 eos_token = data.get("eos_token", "")
-                eos_token = eos_token if isinstance(eos_token, str) else ""  # tokenizer_config.json allows for different types than string
+                eos_token = "" if eos_token is None else eos_token  # tokenizer_config.json allows for string and null
                 chat_template = data.get("chat_template", default_chat_template)
 
             if template is None:
