@@ -4,7 +4,7 @@
 ## Creating models repository for all the endpoints
 
 ```console
-git clone https://github.com/openvinotoolkit/model_server
+git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
 

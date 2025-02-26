@@ -190,7 +190,7 @@ It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on dual Intel(R) Xeon(R) CPU Max 9480.
 ```console
-git clone https://github.com/openvinotoolkit/model_server
+git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 pushd .
 cd model_server/demos/benchmark/embeddings/
 pip install -r requirements.txt
