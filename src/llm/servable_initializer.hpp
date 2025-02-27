@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,11 @@ public:
         return basePath;
     }
     static void loadTextProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    /*
+    initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
+    It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure
+    and fill both common and servable specific properties required for the servable to implement its interface.
+    */
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
 

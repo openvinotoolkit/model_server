@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -187,8 +187,9 @@ public:
 
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
+    For streaming requests, it MUST initialize textStreamer and lastStreamerCallbackOutput fields of executionContext.
     Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
-    Additionally it initializes text streamer for streaming requests.
+    Additionally it initializes textStreamer and lastStreamerCallbackOutput for streaming requests.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
@@ -216,6 +217,11 @@ public:
     */
     virtual absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
 
+    /*
+    prepareCompleteResponse method should implement preparing the response for unary request scenario from executionContext generationOutputs.
+    Implementation MUST fill executionContext response field.
+    Base implementation serializes the response using apiHandler.
+    */
     virtual absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     // ----------- Streaming scenario ------------
@@ -228,6 +234,13 @@ public:
     */
     virtual absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) = 0;
 
+    /*
+    preparePartialResponse method should implement preparing the response for streaming request scenario from executionContext generationOutputs.
+    This method also handles loopback (keep processing when stream is not finished or end otherwise). Depending on generated tokens, response might be empty string.
+    In such case, calculator will not send it down the graph.
+    Implementation MUST fill executionContext response and sendLoopbackSignal fields.
+    Base implementation uses textStreamer to create text chunk, attempts to serialize it, and sets sendLoopbackSignal according to generation status.
+    */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 };
 
