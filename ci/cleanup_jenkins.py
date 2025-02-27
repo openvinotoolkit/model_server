@@ -33,11 +33,10 @@ def get_sorted_folders(path, pattern):
     folders.sort(key=lambda f: f.stat().st_mtime, reverse=False)
     return folders
 
-def main(no_dry_run=False):
+def main(no_dry_run=False, min_free_space_gb=50):
     drive = 'C:\\'
     workspace_path = 'C:\\'
     pattern = r'PR-[0-9]'
-    min_free_space_gb = 50
     sorted_folders = get_sorted_folders(workspace_path, pattern)
     for oldest_folder in sorted_folders:
         if get_free_space_gb(drive) > min_free_space_gb:
@@ -60,9 +59,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Cleanup directories script.")
     parser.add_argument('--no-dry-run', action='store_true', help="Delete the folders instead of just listing.")
+    parser.add_argument('--min-free-space-gb', type=int, default=50, help="Minimum free space in GB to maintain.")
     args = parser.parse_args()
 
     if not args.no_dry_run:
         print("Dry run mode enabled. No folders will be deleted.")
-    main(no_dry_run=args.no_dry_run)
+    main(no_dry_run=args.no_dry_run, min_free_space_gb=args.min_free_space_gb)
 

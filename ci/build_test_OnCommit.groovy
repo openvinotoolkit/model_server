@@ -43,25 +43,35 @@ pipeline {
             }
           }
         }
-        stage('Style check') {
-            steps {
-               sh 'make style'
-            }
-        }
-
-        stage('Sdl check') {
-            steps {
-                sh 'make sdl-check'
-            }
-        }
-
-        stage('Client test') {
-          when { expression { client_test_needed == "true" } }
-          steps {
-                sh "make test_client_lib"
+        stage('Style, SDL and clean') {
+          parallel {
+            stage('Style check') {
+              agent {
+                label "${agent_name_linux}"
               }
+              steps {
+                sh 'make style'
+              }
+            }
+            stage('Sdl check') {
+              agent {
+                label "${agent_name_linux}"
+              }
+              steps {
+                  sh 'make sdl-check'
+              }
+            }
+          }
         }
-
+        stage('Client test') {
+              agent {
+                label "${agent_name_linux}"
+              }
+              when { expression { client_test_needed == "true" } }
+              steps {
+                    sh "make test_client_lib"
+                  }
+            }
         stage('Build') {
           parallel {
             stage("Build linux") {
