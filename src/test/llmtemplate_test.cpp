@@ -278,9 +278,10 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosDict) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    LLMNodeResources nodeResources;
-    nodeResources.modelsPath = directoryPath;
-    LLMNodeResources::loadTextProcessor(nodeResources, nodeResources.modelsPath);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->getProperties()->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -292,7 +293,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosDict) {
     )";
     std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
     // Expect no issues with chat template since non string bos token is ignored
-    ASSERT_EQ(TextProcessor::applyChatTemplate(nodeResources.textProcessor, nodeResources.modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->getProperties()->textProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedError);
 }
 
