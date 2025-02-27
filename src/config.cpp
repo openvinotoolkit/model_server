@@ -157,10 +157,14 @@ bool Config::validate() {
         std::cerr << "grpc_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         return false;
     }
-
     // port and rest_port cannot be the same
     if ((port() == restPort()) && (port() != 0)) {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
+        return false;
+    }
+    // both ports cannot be unset
+    if ((restPort() == 0) && (port() == 0)) {
+        std::cerr << "port and rest_port cannot both be unset" << std::endl;
         return false;
     }
 
