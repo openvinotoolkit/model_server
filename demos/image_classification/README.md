@@ -7,7 +7,6 @@ hidden:
 ---
 
 ovms_demo_image_classification
-ovms_demo_image_classification_cpp
 ovms_demo_image_classification_go
 ```
 
@@ -15,11 +14,6 @@ ovms_demo_image_classification_go
 | Demo | Description |
 |---|---|
 |[Image Classification](python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-
-## C++
-| Demo | Description |
-|---|---|
-|[Image Classification](cpp/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
 
 ## Go
 | Demo | Description |
