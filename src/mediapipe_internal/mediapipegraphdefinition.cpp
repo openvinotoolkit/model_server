@@ -33,8 +33,8 @@
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "../llm/llm_executor.hpp"
-#include "../llm/llmnoderesources.hpp"
+#include "../llm/servable.hpp"
+#include "../llm/servable_initializer.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
 #include "../serialization.hpp"
@@ -122,7 +122,7 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
-    if (!this->llmNodeResourcesMap.empty()) {
+    if (!this->genAiServableMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -257,7 +257,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get());
     return status;
 }
 
@@ -332,13 +332,13 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     }
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
-    this->llmNodeResourcesMap.clear();
+    this->genAiServableMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->pythonNodeResourcesMap.clear();
-    this->llmNodeResourcesMap.clear();
+    this->genAiServableMap.clear();
     this->status.handle(RetireEvent());
 }
 
@@ -447,7 +447,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
-            ResourcesCleaningGuard<LLMNodeResourcesMap> llmResourcesCleaningGuard(this->llmNodeResourcesMap);
+            ResourcesCleaningGuard<GenAiServableMap> genAiServablesCleaningGuard(this->genAiServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node missing options in graph: {}. ", this->name);
                 return StatusCode::LLM_NODE_MISSING_OPTIONS;
@@ -457,18 +457,18 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
-            if (this->llmNodeResourcesMap.find(nodeName) != this->llmNodeResourcesMap.end()) {
+            if (this->genAiServableMap.find(nodeName) != this->genAiServableMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            std::shared_ptr<LLMNodeResources> nodeResources = std::make_shared<LLMNodeResources>();
-            Status status = LLMNodeResources::initializeLLMNodeResources(*nodeResources, config.node(i), mgconfig.getBasePath());
+            std::shared_ptr<GenAiServable> servable;
+            Status status = initializeGenAiServable(servable, config.node(i), mgconfig.getBasePath());
             if (!status.ok()) {
                 SPDLOG_ERROR("Failed to process LLM node graph {}", this->name);
                 return status;
             }
-            this->llmNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<LLMNodeResources>>(nodeName, std::move(nodeResources)));
-            llmResourcesCleaningGuard.disableCleaning();
+            this->genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
+            genAiServablesCleaningGuard.disableCleaning();
         }
 #endif
     }
