@@ -6,18 +6,19 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubu
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
-or build it yourself:
+or build it yourself to add python support:
 ```{code} sh
 # Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
+git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 
+# set PYTHON_DISABLE=1 to disable python execution support
+make docker_build PYTHON_DISABLE=0
 # Unpack the package
 tar -xzvf dist/ubuntu22/ovms.tar.gz
 ```
@@ -42,18 +43,19 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu24.tar.gz
 ```
-or build it yourself:
+or build it yourself to add python support:
 ```{code} sh
 # Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
+git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0 BASE_OS=ubuntu24
+# set PYTHON_DISABLE=1 to disable python execution node support
+make docker_build PYTHON_DISABLE=0 BASE_OS=ubuntu24
 # Unpack the package
 tar -xzvf dist/ubuntu24/ovms.tar.gz
 ```
@@ -69,7 +71,7 @@ export PATH=$PATH;${PWD}/ovms/bin
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install libpython3.10
+sudo apt -y install libpython3.12
 ```
 
 Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
@@ -79,18 +81,19 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :::
 :::{tab-item} RHEL 9.4
 :sync: rhel-9.4
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-or build it yourself:
+or build it yourself to add python support:
 ```{code} sh
 # Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
+git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=redhat PYTHON_DISABLE=1 RUN_TESTS=0
+# set PYTHON_DISABLE=1 to disable python execution node support
+make docker_build BASE_OS=redhat PYTHON_DISABLE=0
 # Unpack the package
 tar -xzvf dist/redhat/ovms.tar.gz
 ```

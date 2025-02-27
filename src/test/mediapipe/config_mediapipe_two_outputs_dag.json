@@ -3,7 +3,7 @@
     "custom_node_library_config_list": [
         {
             "name": "lib_perform_different_operations",
-            "base_path": "/ovms/bazel-bin/src/lib_node_perform_different_operations.so"
+            "base_path": "/ovms/bazel-bin//src/lib_node_perform_different_operations.so"
         }
     ],
     "pipeline_config_list": [

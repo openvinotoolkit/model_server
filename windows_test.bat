@@ -29,7 +29,7 @@ set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
 set "bazelBuildArgs=--config=windows --action_env OpenVINO_DIR=%openvino_dir%"
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log"
+set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 > win_full_test.log"
 
@@ -78,8 +78,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Start bazel build test
-%buildTestCommand%
-if !errorlevel! neq 0 exit /b !errorlevel!
+%buildTestCommand% > win_build_test.log 2>&1
+set "bazelExitCode=!errorlevel!"
+:: Output the log to the console
+type win_build_test.log
+:: Check the exit code and exit if it's not 0
+if !bazelExitCode! neq 0 exit /b !bazelExitCode!
+
 
 :: Change tests configs to windows paths
 %changeConfigsCmd%
