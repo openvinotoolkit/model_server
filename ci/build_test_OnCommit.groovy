@@ -61,9 +61,7 @@ pipeline {
                   sh 'make sdl-check'
               }
             }
-          }
-        }
-        stage('Client test') {
+            stage('Client test') {
               agent {
                 label "${agent_name_linux}"
               }
@@ -72,6 +70,8 @@ pipeline {
                     sh "make test_client_lib"
                   }
             }
+          }
+        }
         stage('Build') {
           parallel {
             stage("Build linux") {
