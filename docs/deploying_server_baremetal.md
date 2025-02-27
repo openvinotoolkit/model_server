@@ -29,7 +29,7 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -66,7 +66,7 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -104,7 +104,7 @@ sudo yum install compat-openssl11.x86_64
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -124,7 +124,7 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl <url_to_be_provided>
+curl https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
