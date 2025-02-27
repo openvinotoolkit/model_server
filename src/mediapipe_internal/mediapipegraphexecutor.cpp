@@ -42,7 +42,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> inputNames,
     std::vector<std::string> outputNames,
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
-    const LLMNodeResourcesMap& llmNodeResourcesMap,
+    const GenAiServableMap& llmNodeResourcesMap,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),

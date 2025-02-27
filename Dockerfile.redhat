@@ -314,7 +314,7 @@ RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/s
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
-    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
+    make -f MakefileCapi c CAPI_FLAGS="${CAPI_FLAGS}"
 
 RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so'  -exec cp -v {} /ovms_release/lib/ \;
 
