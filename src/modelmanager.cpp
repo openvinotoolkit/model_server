@@ -457,7 +457,7 @@ static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string&
 
     try {
         for (const auto& mediapipeGraphConfig : itrp2->value.GetArray()) {
-            if(!mediapipeGraphConfig["config"].HasMember("graph_path")) {
+            if (!mediapipeGraphConfig["config"].HasMember("graph_path")) {
                 // Skip single model config section
                 continue;
             }
@@ -475,7 +475,6 @@ static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string&
     } catch (...) {
         SPDLOG_ERROR("Failed to process mediapipe graph config.");
     }
-
 
     return StatusCode::OK;
 }
@@ -772,12 +771,12 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         ModelConfig modelConfig;
         modelConfig.setRootDirectoryPath(rootDirectoryPath);
         // Skip mediapipe graph config
-        if(configs["config"].HasMember("graph_path")) {
+        if (configs["config"].HasMember("graph_path")) {
             // Skip mediapipe graph config section
             continue;
         }
         auto status = modelConfig.parseNode(configs["config"]);
- 
+
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing model: {} config failed due to error: {}", modelConfig.getName(), status.string());

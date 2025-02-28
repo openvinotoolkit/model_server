@@ -2875,7 +2875,7 @@ protected:
 
         auto start = std::chrono::high_resolution_clock::now();
         while (!isMpReady(servableName) &&
-            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
         const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);

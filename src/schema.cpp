@@ -391,7 +391,7 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			}
 		},)" +
 #if (MEDIAPIPE_DISABLE == 0)
-				R"("mediapipe_config_list": {
+                                         R"("mediapipe_config_list": {
 		"type": "array",
 		"items": {
 			"$ref": "#/definitions/mediapipe_config"
