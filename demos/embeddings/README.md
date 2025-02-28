@@ -35,7 +35,10 @@ python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 -
 ```
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+
 You should have a model folder like below:
+
 ```
 tree models
 models
@@ -114,9 +117,9 @@ Wait for the model to load. You can check the status with a simple command below
 ```bash
 curl -i http://localhost:8000/v2/models/Alibaba-NLP%2Fgte-large-en-v1.5/ready
 HTTP/1.1 200 OK
-Content-Type: application/json
-Date: Sat, 09 Nov 2024 23:19:27 GMT
-Content-Length: 0
+content-length: 0
+content-type: application/json; charset=utf-8
+content-type: application/json
 ```
 
 ## Client code
@@ -268,11 +271,11 @@ Difference score with HF AutoModel: 0.024787274668209857
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb
+pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
 python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
-``json
+```json
 {
   "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
   "task_name": "Banking77Classification",

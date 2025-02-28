@@ -32,6 +32,7 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 ```console
 python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models 
 ```
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 You should have a model folder like below:
 ```

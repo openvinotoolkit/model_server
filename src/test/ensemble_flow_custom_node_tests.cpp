@@ -1495,13 +1495,7 @@ protected:
     }
 
     void loadConfiguration(const char* configContent, Status expectedStatus = StatusCode::OK) {
-        std::string ovmsConfig = std::string(configContent);
-
-        std::string newDir = getGenericFullPathForBazelOut("/ovms/bazel-bin/src");
-        std::regex regexPattern(R"(/ovms/bazel-bin/src)");
-        ovmsConfig = std::regex_replace(ovmsConfig, regexPattern, newDir);
-
-        createConfigFileWithContent(ovmsConfig, configJsonFilePath);
+        createConfigFileWithContent(adjustConfigForTargetPlatformCStr(configContent), configJsonFilePath);
         ASSERT_EQ(manager.loadConfig(configJsonFilePath), expectedStatus);
     }
 
@@ -1819,9 +1813,6 @@ static const char* pipelineCustomNodeDifferentOperationsConfig = R"(
 class EnsembleFlowCustomNodeAndDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }
@@ -2457,13 +2448,13 @@ struct LibraryParamControlledMetadata {
         const char* end = str;
         for (; *end != '\0'; ++end) {
             if ((end - str) > MAX) {
-                EXPECT_TRUE(false);
+                EXPECT_TRUE(false) << *end;
             }
         }
         const char* end2 = prefix;
         for (; *end2 != '\0'; ++end2) {
-            if ((end2 - str) > MAX) {
-                EXPECT_TRUE(false);
+            if ((end2 - prefix) > MAX) {
+                EXPECT_TRUE(false) << *end2;
             }
         }
         size_t strLen = std::strlen(str);
@@ -2552,9 +2543,6 @@ struct LibraryParamControlledMetadata {
 class EnsembleConfigurationValidationWithCustomNode : public ::testing::Test {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         mockedLibrary = createLibraryMock<LibraryParamControlledMetadata>();
         ASSERT_TRUE(mockedLibrary.isValid());
     }
@@ -4408,9 +4396,6 @@ TEST_F(EnsembleConfigurationValidationWithDemultiplexer, DemultiplexerWithoutGat
 class EnsembleFlowCustomNodeAndDynamicDemultiplexerLoadConfigThenExecuteTest : public EnsembleFlowCustomNodeLoadConfigThenExecuteTest {
 protected:
     void SetUp() override {
-#ifdef _WIN32
-        GTEST_SKIP() << "Test disabled on windows";
-#endif
         EnsembleFlowCustomNodeLoadConfigThenExecuteTest::SetUp();
         configJsonFilePath = directoryPath + "/ovms_config_file.json";
     }

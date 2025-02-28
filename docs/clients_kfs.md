@@ -344,7 +344,7 @@ image_data = []
 with open("image_path", 'rb') as f:
     image_data.append(f.read())
 inputs = []
-inputs.append(grpcclient.InferInput('input_name', 1, "BYTES"))
+inputs.append(grpcclient.InferInput('input_name', [1], "BYTES"))
 nmpy = np.array(image_data , dtype=np.object_)
 inputs[0].set_data_from_numpy(nmpy)
 
@@ -371,7 +371,7 @@ image_data = []
 with open("image_path", 'rb') as f:
     image_data.append(f.read())
 inputs = []
-inputs.append(httpclient.InferInput('input_name', 1, "BYTES"))
+inputs.append(httpclient.InferInput('input_name', [1], "BYTES"))
 nmpy = np.array(image_data , dtype=np.object_)
 inputs[0].set_data_from_numpy(nmpy)
 
