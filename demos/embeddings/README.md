@@ -180,7 +180,7 @@ embedding_from_string2 = np.array(embedding_responses.data[1].embedding)
 cos_sim = np.dot(embedding_from_string1, embedding_from_string2)/(np.linalg.norm(embedding_from_string1)*np.linalg.norm(embedding_from_string2))
 print("Similarity score as cos_sim", cos_sim)' >> openai_client.py
 
-python3 openai_client.py
+python openai_client.py
 ```
 It will report results like `Similarity score as cos_sim 0.97654650115054`.
 
