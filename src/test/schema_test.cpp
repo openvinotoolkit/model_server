@@ -1988,13 +1988,13 @@ TEST(SchemaTest, MediapipeConfigInModelConfigPositive) {
     const char* mediapipeConfigPositive = R"(
     {
         "model_config_list": [
+        {
             "config": {
-                {
-                    "name": "dummy_model",
-                    "graph_path": "dummy_path"
-                }
+                "name": "dummy",
+                "graph_path": "dummy_path"
             }
-        ],
+        }
+    ]
     })";
 
     rapidjson::Document configDoc;

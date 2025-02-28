@@ -194,7 +194,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 					"minimum": 0
 				},
 				"graph_path": {
-                 	"type": "string"
+					"type": "string"
 				},
 				"subconfig": {
 					"type": "string"
@@ -389,14 +389,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			"items": {
 				"$ref": "#/definitions/pipeline_config"
 			}
-        },)" +
+		},)" +
 #if (MEDIAPIPE_DISABLE == 0)
-                                         R"("mediapipe_config_list": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/mediapipe_config"
-      }
-    },)" +
+				R"("mediapipe_config_list": {
+		"type": "array",
+		"items": {
+			"$ref": "#/definitions/mediapipe_config"
+		}
+	},)" +
 #endif
                                          R"("custom_node_library_config_list": {
 			"type": "array",

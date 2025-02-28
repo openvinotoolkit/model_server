@@ -2935,11 +2935,10 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
             }
         },
         {"config": {
-            {
             "name": "mediapipeLongLoading",
             "graph_path": "/ovms/src/test/mediapipe/negative/graph_long_loading.pbtxt"
             }
-        },
+        }
     ]
 }
 )";
