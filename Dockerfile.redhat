@@ -17,6 +17,7 @@
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
 ARG PKG_IMAGE=pkg
 ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
+ARG BUILD_IMAGE=build
 
 FROM $BASE_IMAGE as base_build
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
@@ -297,7 +298,6 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-ARG BUILD_IMAGE=build
 FROM $BUILD_IMAGE as capi-build
 # C api shared library
 ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
