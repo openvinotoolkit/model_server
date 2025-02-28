@@ -139,10 +139,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
+        // Add new message to chat history
+        request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
             if (member->value.IsString()) {
+                // Add new field to the last message in history
+                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -192,6 +196,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                         }
                     }
                     member->value = contentText;
+                    // Add new field to the last message in history
+                    request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 } else {
                     return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
@@ -212,6 +218,10 @@ const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
 }
 const std::vector<ov::Tensor> OpenAIChatCompletionsHandler::getImages() const {
     return request.images;
+}
+
+const ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() const {
+    return request.chatHistory;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t maxTokensLimit) {

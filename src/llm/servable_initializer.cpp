@@ -32,9 +32,10 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
+#include "continuous_batching/servable.hpp"
 #include "continuous_batching/servable_initializer.hpp"
-#include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "visual_language_model/servable.hpp"
 
 namespace ovms {
 
@@ -146,12 +147,26 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     Status status;
     if (nodeOptions.has_models_path()) {  // Stable initialization
         if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::CONTINUOUS_BATCHING) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
+            servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
             }
+        } else if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VISUAL_LANGUAGE_MODEL) {
+            // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
+            // therefore we can use CB servable initializer to initialize VLM servable
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model servable");
+            ContinuousBatchingServableInitializer cbServableInitializer;
+            servable = std::make_shared<VisualLanguageModelServable>();
+            status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
+
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
             return StatusCode::INTERNAL_ERROR;
@@ -159,6 +174,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     } else {
         if (nodeOptions.has_continuous_batching_pipeline_config()) {  // Experimental initialization
             ContinuousBatchingServableInitializer cbServableInitializer;
+            servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initializeExperimental(servable, nodeOptions, graphPath);
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
