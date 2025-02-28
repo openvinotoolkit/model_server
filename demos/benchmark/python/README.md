@@ -69,7 +69,7 @@ To check available options use `-h`, `--help` switches:
   docker run benchmark_client --help
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py --help
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --help
 usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
                [-p GRPC_PORT] [-r REST_PORT] [-l] [-b [BS ...]]
                [-s [SHAPE ...]] [-d [DATA ...]] [-j] [-m MODEL_NAME]
@@ -96,7 +96,7 @@ The version can be checked by using `--internal_version` switch as follows:
   docker run benchmark_client --internal_version
 
   Client 2.7
-  NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py --internal_version
+  NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py --internal_version
   2.7
 ```
 
@@ -108,7 +108,7 @@ form `-l` is available):
 docker run --network host benchmark_client -a localhost -r 8000 --list_models
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py -a localhost -r 8000 --list_models
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 --list_models
           XW worker: Finished execution. If you want to run inference remove --list_models.
           XI worker: try to send request to endpoint: http://localhost:8000/v1/config
           XI worker: received status code is 200.
@@ -126,7 +126,7 @@ of an application instance. For example:
 docker run --network host benchmark_client -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet50-binary-0001 -p 9000 -i id
           XW id: Finished execution. If you want to run inference remove --list_models.
           XI id: try to send request to endpoint: http://localhost:8000/v1/config
           XI id: received status code is 200.
@@ -161,7 +161,7 @@ will be generated as follows (remember to add `--print_all` to show metrics in s
 docker run --network host benchmark_client -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
 
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet50-binary-0001 -p 9000 -n 8 --report_warmup --print_all
           XI worker: request for metadata of model resnet50-binary-0001...
           XI worker: Metadata for model resnet50-binary-0001 is downloaded...
           XI worker: set version of model resnet50-binary-0001: 1
@@ -302,7 +302,7 @@ To generate request with specified shape, it is necessary to set input shape exp
 ```bash
 docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -n 8 -s 1 3 300 300 --print_all
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -n 8 -s 1 3 300 300 --print_all
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -n 8 -s 1 3 300 300 --print_all
           XI worker: request for metadata of model face-detection-retail-0005...
           XI worker: Metadata for model face-detection-retail-0005 is downloaded...
           XI worker: set version of model face-detection-retail-0005: 1
@@ -339,7 +339,7 @@ Sample output log with results summary:
 
 ```
 Client 2.7
-NO_PROXY=localhost no_proxy=localhost python /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
+NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -s 2 3 300 300 -t 20 -u 2 -w 10 -ps
           XI worker: start workload...
 
 ### Benchmark Parameters ###
