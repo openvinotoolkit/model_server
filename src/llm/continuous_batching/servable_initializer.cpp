@@ -68,8 +68,6 @@ Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared
     if (!status.ok()) {
         return status;
     }
-
-    servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     properties->modelsPath = getBasePath();
 
@@ -132,8 +130,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (!status.ok()) {
         return status;
     }
-
-    servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
     properties->modelsPath = getBasePath();

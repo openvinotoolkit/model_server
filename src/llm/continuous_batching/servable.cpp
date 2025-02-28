@@ -48,6 +48,13 @@ void ContinuousBatchingServable::notifyExecutorThread() {
     properties->llmExecutorWrapper->notifyNewRequestArrived();
 }
 
+absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
+    executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
+        executionContext->inputIds,
+        executionContext->apiHandler->createGenerationConfig());
+    return absl::OkStatus();
+}
+
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> ContinuousBatchingServable::createExecutionContext() {
     return std::make_shared<ContinuousBatchingServableExecutionContext>();
@@ -63,9 +70,10 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
         return absl::CancelledError();
     }
 
-    cbExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        cbExecutionContext->inputIds,
-        cbExecutionContext->apiHandler->createGenerationConfig());
+    auto status = addRequestToPipeline(cbExecutionContext);
+    if (!status.ok()) {
+        return status;
+    }
 
     cbExecutionContext->payload.client->registerDisconnectionCallback([genHandle = cbExecutionContext->generationHandle]() {
         genHandle->stop();
