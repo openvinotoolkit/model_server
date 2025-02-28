@@ -24,7 +24,7 @@
 #pragma warning(pop)
 
 #pragma warning(push)
-#pragma warning(disable : 4309 4005 6001 6011 6326 6385 6246 6386 6326 6011 4005)
+#pragma warning(disable : 4309 4005 6001 6011 6326 6385 6246 6386 6326 6011 4005 4456)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"

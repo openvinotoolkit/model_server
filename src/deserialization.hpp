@@ -23,7 +23,7 @@
 #include <openvino/openvino.hpp>
 
 #pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wall"
@@ -46,12 +46,14 @@
 
 namespace ovms {
 
-#define RETURN_IF_ERR(X)   \
-    {                      \
-        auto status = (X); \
-        if (!status.ok())  \
-            return status; \
-    }
+#define RETURN_IF_ERR(X)                          \
+    _Pragma("warning(push)")                      \
+        _Pragma("warning(disable : 4456 6246)") { \
+        auto status = (X);                        \
+        if (!status.ok())                         \
+            return status;                        \
+    }                                             \
+    _Pragma("warning(pop)")
 
 class IOVTensorFactory;
 
@@ -168,7 +170,8 @@ public:
         }
     }
 };
-
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>  // TODO separate for different choice
@@ -185,6 +188,7 @@ std::tuple<ovms::Status, const typename RequestTraits<::TFSPredictRequest>::Tens
     return std::make_tuple(Status(StatusCode::OK), &requestInputItr->second, nullptr);
 }
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 //////
 //
 // Move to kfs
@@ -276,6 +280,8 @@ public:
 };
 
 // due to header included in many places function below is not used in all cpp files ...
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>  // TODO separate for different choice
@@ -350,6 +356,8 @@ public:
 };
 
 // due to header included in many places function below is not used in all cpp files ...
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>  // TODO separate for different choice
@@ -375,6 +383,7 @@ std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::T
     return std::make_tuple(Status(StatusCode::OK), requestTensorPtr, nullptr);
 }
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 #define RETURN_IF_EMPTY_TENSOR()                                           \
     do {                                                                   \
@@ -420,8 +429,8 @@ static Status deserializePredictRequest(
     ov::Tensor tensor;
     for (const auto& [name, tensorInfo] : inputMap) {
         try {
-            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
-            if (!status.ok() || !requestInputItr) {
+            auto [getTensorPtrStatus, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
+            if (!getTensorPtrStatus.ok() || !requestInputItr) {
                 SPDLOG_ERROR("Failed to deserialize request. Validation of request failed");
                 return Status(StatusCode::INTERNAL_ERROR, "Failed to deserialize request");
             }
@@ -458,8 +467,8 @@ static Status deserializePredictRequest(
     }
     for (const auto& [name, tensorInfo] : outputMap) {
         try {
-            auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_OUTPUT);
-            if (!status.ok() || !requestInputItr) {
+            auto [getTensorPtrStatus, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_OUTPUT);
+            if (!getTensorPtrStatus.ok() || !requestInputItr) {
                 // TODO impose limits on what can be processed in deserialization on output eg. no binary handling
                 SPDLOG_TRACE("Skipping output name:{}", name);
                 // TODO possibly we could have passed here filtered output map

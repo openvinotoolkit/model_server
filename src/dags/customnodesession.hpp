@@ -107,16 +107,16 @@ public:
         Status status = StatusCode::OK;
         for (int i = 0; i < outputTensorsCount; i++) {
             ov::Tensor resultTensor;
-            auto result = this->createTensor(&outputTensors[i], resultTensor, library, customNodeLibraryInternalManager);
+            auto creationResult = this->createTensor(&outputTensors[i], resultTensor, library, customNodeLibraryInternalManager);
             if (outputTensors[i].name == nullptr) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed tensor conversion - missing output name", getName(), getSessionKey());
                 status = StatusCode::NODE_LIBRARY_OUTPUT_MISSING_NAME;
                 continue;
             }
-            if (!result.ok()) {
+            if (!creationResult.ok()) {
                 SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; failed to convert {}: to tensor", getName(), getSessionKey(), outputTensors[i].name);
                 if (status.ok()) {
-                    status = std::move(result);
+                    status = std::move(creationResult);
                 }
                 continue;
             }

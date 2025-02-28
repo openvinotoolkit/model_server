@@ -1100,14 +1100,14 @@ void ModelManager::retireModelsRemovedFromConfigFile(const std::set<std::string>
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Retiring all versions of model: {}", modelName);
             try {
                 models.at(modelName)->retireAllVersions();
-            } catch (const std::out_of_range& e) {
+            } catch (const std::out_of_range&) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to retire all versions of model: {}", modelName);
             }
         } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Cleaning up all versions of model: {}", modelName);
             try {
                 models.at(modelName)->cleanupAllVersions();
-            } catch (const std::out_of_range& e) {
+            } catch (const std::out_of_range&) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Unknown error occurred when tried to clean up all versions of model: {}", modelName);
             }
         }
@@ -1430,9 +1430,9 @@ Status ModelManager::readAvailableVersions(std::shared_ptr<FileSystem>& fs, cons
                 continue;
             }
             versions.push_back(version);
-        } catch (const std::invalid_argument& e) {
+        } catch (const std::invalid_argument&) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Expected version directory name to be in number format. Got: {}", entry);
-        } catch (const std::out_of_range& e) {
+        } catch (const std::out_of_range&) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Directory name is out of range for supported version format. Got: {}", entry);
         }
     }
@@ -1461,7 +1461,6 @@ Status ModelManager::addModelVersions(std::shared_ptr<ovms::Model>& model, std::
 }
 
 Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed) {
-    Status status = StatusCode::OK;
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Reloading model versions");
     try {
         auto status = model->reloadVersions(versionsToReload, config, fs, *ieCore, versionsFailed);
@@ -1476,7 +1475,7 @@ Status ModelManager::reloadModelVersions(std::shared_ptr<ovms::Model>& model, st
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Exception occurred while reloading model: {};", e.what());
     }
 
-    return status;
+    return StatusCode::OK;
 }
 
 Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
@@ -1565,9 +1564,9 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     }
 
     if (versionsToReload->size() > 0) {
-        auto status = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
-        if (!status.ok()) {
-            blocking_status = std::move(status);
+        auto reloadStatus = reloadModelVersions(model, fs, config, versionsToReload, versionsFailed);
+        if (!reloadStatus.ok()) {
+            blocking_status = std::move(reloadStatus);
         }
     }
 
@@ -1585,7 +1584,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     std::copy_if(versionsToRetire->begin(), versionsToRetire->end(), std::back_inserter(*versionsToCleanup), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); });
     versionsToRetire->erase(std::remove_if(versionsToRetire->begin(), versionsToRetire->end(), [&](auto& version) { return allFailedVersions.find(version) != allFailedVersions.end(); }), versionsToRetire->end());
     if (versionsToRetire->size() > 0) {
-        auto status = model->retireVersions(versionsToRetire);
+        status = model->retireVersions(versionsToRetire);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while unloading model: {}; versions; error: {}",
                 config.getName(),
@@ -1594,7 +1593,7 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
         }
     }
     if (versionsToCleanup->size() > 0) {
-        auto status = model->cleanupFailedLoad(versionsToCleanup);
+        status = model->cleanupFailedLoad(versionsToCleanup);
         if (!status.ok()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error occurred while cleaning up model that failed to load: {}; versions; error: {}",
                 config.getName(),
