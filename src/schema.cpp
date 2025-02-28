@@ -181,7 +181,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 	"properties": {
 		"config": {
 			"type": "object",
-			"required": ["name", "base_path"],
+			"required": ["name"],
 			"properties": {
 				"name": {
 					"type": "string"
@@ -192,6 +192,12 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 				"batch_size": {
 					"type": ["integer", "string"],
 					"minimum": 0
+				},
+				"graph_path": {
+                 	"type": "string"
+				},
+				"subconfig": {
+					"type": "string"
 				},
 				"model_version_policy": {
 	"$ref": "#/definitions/model_version_policy"
