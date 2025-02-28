@@ -124,7 +124,7 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
