@@ -51,11 +51,11 @@ static StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& c
     return StatusCode::OK;
 }
 
-void Model::subscribe(PipelineDefinition& pd) {
+void Model::subscribe(NotifyReceiver& pd) {
     subscriptionManager.subscribe(pd);
 }
 
-void Model::unsubscribe(PipelineDefinition& pd) {
+void Model::unsubscribe(NotifyReceiver& pd) {
     subscriptionManager.unsubscribe(pd);
 }
 

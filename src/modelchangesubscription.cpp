@@ -18,10 +18,11 @@
 #include <exception>
 #include <sstream>
 
-#include "dags/pipelinedefinition.hpp"
+#include "logging.hpp"
+#include "notifyreceiver.hpp"
 
 namespace ovms {
-void ModelChangeSubscription::subscribe(PipelineDefinition& pd) {
+void ModelChangeSubscription::subscribe(NotifyReceiver& pd) {
     SPDLOG_INFO("Subscription to {} from {}", ownerName, pd.getName());
     if (subscriptions.find(pd.getName()) != subscriptions.end()) {
         std::stringstream ss;
@@ -33,7 +34,7 @@ void ModelChangeSubscription::subscribe(PipelineDefinition& pd) {
     subscriptions.insert({pd.getName(), pd});
 }
 
-void ModelChangeSubscription::unsubscribe(PipelineDefinition& pd) {
+void ModelChangeSubscription::unsubscribe(NotifyReceiver& pd) {
     SPDLOG_INFO("Subscription to {} from {} removed", ownerName, pd.getName());
     auto numberOfErased = subscriptions.erase(pd.getName());
     if (0 == numberOfErased) {
@@ -51,7 +52,7 @@ void ModelChangeSubscription::notifySubscribers() {
     }
     SPDLOG_INFO("Notified subscribers of: {}", ownerName);
     for (auto& [pipelineName, pipelineDefinition] : subscriptions) {
-        pipelineDefinition.notifyUsedModelChanged(ownerName);
+        pipelineDefinition.receiveNotification(ownerName);
     }
 }
 }  // namespace ovms

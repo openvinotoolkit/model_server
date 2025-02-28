@@ -25,6 +25,8 @@
 #pragma GCC diagnostic pop
 #include "capi_frontend/inferencerequest.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "extractchoice.hpp"
+#include "requesttensorextractor.hpp"
 #include "logging.hpp"
 #include "shape.hpp"
 #include "status.hpp"
@@ -32,43 +34,16 @@
 namespace ovms {
 class InferenceRequest;
 
+template <typename RequestType>
+std::optional<Dimension> getRequestBatchSize(const RequestType* request, const size_t batchSizeIndex);
+template <typename RequestType>
+std::map<std::string, shape_t> getRequestShapes(const RequestType* request);
 std::optional<Dimension> getRequestBatchSize(const ::KFSRequest* request, const size_t batchSizeIndex);
+template <typename RequestType>
 std::map<std::string, shape_t> getRequestShapes(const ::KFSRequest* request);
 
 std::optional<Dimension> getRequestBatchSize(const tensorflow::serving::PredictRequest* request, const size_t batchSizeIndex);
 std::map<std::string, shape_t> getRequestShapes(const tensorflow::serving::PredictRequest* request);
-
-std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
-std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
-
-enum class ExtractChoice {
-    EXTRACT_INPUT,
-    EXTRACT_OUTPUT,
-};
-
-template <typename Request, typename InputTensorType, ExtractChoice choice>
-class RequestTensorExtractor {
-public:
-    static Status extract(const Request& request, const std::string& name, const InputTensorType** tensor, size_t* bufferId = nullptr);
-};
-
-template <>
-class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_OUTPUT> {
-public:
-    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor, size_t* bufferId = nullptr) {
-        SPDLOG_TRACE("Extracting output: {}", name);
-        return request.getOutput(name.c_str(), tensor);
-    }
-};
-
-template <>
-class RequestTensorExtractor<InferenceRequest, InferenceTensor, ExtractChoice::EXTRACT_INPUT> {
-public:
-    static Status extract(const InferenceRequest& request, const std::string& name, const InferenceTensor** tensor, size_t* bufferId = nullptr) {
-        SPDLOG_TRACE("Extracting input: {}", name);
-        return request.getInput(name.c_str(), tensor);
-    }
-};
 
 template <>
 class RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ExtractChoice::EXTRACT_OUTPUT> {
