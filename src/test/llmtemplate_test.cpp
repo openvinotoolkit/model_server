@@ -272,6 +272,31 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     ASSERT_EQ(finalPrompt, expectedOutput);
 }
 
+TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosDict) {
+    std::string tokenizerJson = R"({
+    "bos_token": {"bos" : "INVALID"},
+    "eos_token": "</s>"
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->getProperties()->modelsPath = directoryPath;
+    GenAiServableInitializer::loadTextProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}]
+        }
+    )";
+    std::string expectedError = "Error: Chat template not loaded correctly, so it cannot be applied";
+    // Expect no issues with chat template since non string bos token is ignored
+    ASSERT_EQ(TextProcessor::applyChatTemplate(servable->getProperties()->textProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, expectedError);
+}
+
 TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     std::string tokenizerJson = R"({
     "bos_token": "</s>",
