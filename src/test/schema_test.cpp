@@ -1973,7 +1973,8 @@ TEST(SchemaTest, MediapipeConfigPositive) {
         "mediapipe_config_list": [
         {
             "name": "dummy_model",
-            "graph_path": "dummy_path"
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base"
         }
         ]
     })";

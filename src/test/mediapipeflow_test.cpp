@@ -2844,7 +2844,7 @@ protected:
 
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
     // 2nd thread as soon as sees that 1st MP graph is ready executest inference
-    void executeFlow(std::string& configContent) {
+    void executeFlow(std::string& configContent,const std::string& waitForServable = "mediapipeDummy") {
         std::string configFilePath = directoryPath + "/config.json";
         adjustConfigForTargetPlatform(configContent);
         createConfigFileWithContent(configContent, configFilePath);
@@ -2874,7 +2874,7 @@ protected:
         request.mutable_model_name()->assign(servableName);
 
         auto start = std::chrono::high_resolution_clock::now();
-        while (!isMpReady(servableName) &&
+        while (!isMpReady(waitForServable) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
             std::this_thread::sleep_for(std::chrono::microseconds(100));
         }
@@ -2931,14 +2931,75 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
         },
         {"config": {
             "name":"mediapipeDummy",
-            "graph_path": "/ovms/src/test/mediapipe/graphdummyadapterfull.pbtxt"
+            "base_path":"/ovms/src/test/mediapipe/",
+            "graph_path": "graphdummyadapterfull.pbtxt"
             }
         },
         {"config": {
             "name": "mediapipeLongLoading",
-            "graph_path": "/ovms/src/test/mediapipe/negative/graph_long_loading.pbtxt"
+            "base_path":"/ovms/src/test/mediapipe/negative",
+            "graph_path": "graph_long_loading.pbtxt"
             }
         }
+    ]
+}
+)";
+
+    executeFlow(configContent);
+}
+
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfigFastLoading) {
+    std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {"config": {
+            "name":"mediapipeDummy",
+            "base_path":"/ovms/src/test/mediapipe/",
+            "graph_path": "graphdummyadapterfull.pbtxt"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name": "mediapipeLongLoading",
+        "base_path":"/ovms/src/test/mediapipe/negative",
+        "graph_path": "graph_long_loading.pbtxt"
+    }
+    ]
+}
+)";
+
+    std::string longGraph = "mediapipeLongLoading";
+    executeFlow(configContent, longGraph);
+}
+
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfigLongLoading) {
+    std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {"config": {
+            "name": "mediapipeLongLoading",
+            "base_path":"/ovms/src/test/mediapipe/negative",
+            "graph_path": "graph_long_loading.pbtxt"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeDummy",
+        "base_path":"/ovms/src/test/mediapipe/",
+        "graph_path": "graphdummyadapterfull.pbtxt"
+    }
     ]
 }
 )";

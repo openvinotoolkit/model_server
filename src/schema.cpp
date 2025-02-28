@@ -181,7 +181,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 	"properties": {
 		"config": {
 			"type": "object",
-			"required": ["name"],
+			"required": ["name", "base_path"],
 			"properties": {
 				"name": {
 					"type": "string"
