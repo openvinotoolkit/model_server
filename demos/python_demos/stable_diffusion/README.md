@@ -27,7 +27,7 @@ Download the models using `download_model.py` script:
 ```bash
 cd demos/python_demos/stable_diffusion
 pip install -r requirements.txt
-python3 download_model.py
+python download_model.py
 ```
 
 The models will appear in `./model` directory.
@@ -63,7 +63,7 @@ pip install -r client_requirements.txt
 
 Run client script:
 ```bash
-python3 client_unary.py --url localhost:9000 --prompt "Zebras in space"
+python client_unary.py --url localhost:9000 --prompt "Zebras in space"
 Generated image output.png
 Total response time: 18.39 s
 ```
@@ -93,7 +93,7 @@ It will pass the GPU device to the container and set the correct group security 
 
 Run client script:
 ```bash
-python3 client_stream.py --url localhost:9000 --prompt "Zebras in space"
+python client_stream.py --url localhost:9000 --prompt "Zebras in space"
 Executing pipeline
 Generated final image image26.png
 Transition saved to image.mp4

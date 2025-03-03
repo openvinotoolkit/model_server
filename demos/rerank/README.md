@@ -137,7 +137,7 @@ responses = client.rerank(query="hello",documents=["welcome","farewell"], model=
 for response in responses.results:
     print(f"index {response.index}, relevance_score {response.relevance_score}")' > rerank_client.py
 
-python3 rerank_client.py 
+python rerank_client.py
 ```
 It will return response similar to:
 ```

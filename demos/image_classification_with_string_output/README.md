@@ -11,7 +11,7 @@ This is a very handy functionality because it allows us to export the model with
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/image_classification_with_string_output
 pip install -r requirements.txt
-python3 download_model.py
+python download_model.py
 rm model/1/fingerprint.pb
 
 tree model
@@ -46,7 +46,7 @@ ovms --model_name mobile_net --model_path model/ --rest_port 8000
 ## Send request
 Use example client to send requests containing images via KServ REST API:
 ```console
-python3 image_classification_with_string_output.py --http_port 8000
+python image_classification_with_string_output.py --http_port 8000
 ```
 Request may be sent also using other APIs (KServ GRPC, TFS). In this sections you can find short code samples how to do this:
 - [TensorFlow Serving API](../../docs/clients_tfs.md)

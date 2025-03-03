@@ -143,7 +143,7 @@ openvino/model_server:latest --model_name resnet-binary --model_path /models/res
 	make venv
 	source .venv/bin/activate
 	pip3 install -r demos/common/python/requirements.txt
-	python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
+	python tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
 	--iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 --input_name 0 --output_name 1463 --grpc_port 9178
 	```
 

@@ -104,7 +104,7 @@ Now you can create a directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 vehicles_analysis_pipeline.py --pipeline_name multiple_vehicle_recognition --grpc_port 9000 --image_input_path ../../common/static/images/cars/road1.jpg --vehicle_images_output_name vehicle_images --vehicle_images_save_path ./results --image_width 512 --image_height 512 --input_image_layout NHWC
+python vehicles_analysis_pipeline.py --pipeline_name multiple_vehicle_recognition --grpc_port 9000 --image_input_path ../../common/static/images/cars/road1.jpg --vehicle_images_output_name vehicle_images --vehicle_images_save_path ./results --image_width 512 --image_height 512 --input_image_layout NHWC
 Output: name[types]
     numpy => shape[(37, 1, 4)] data[float32]
 Output: name[vehicle_coordinates]

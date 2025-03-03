@@ -46,7 +46,7 @@ The `onnx_model_demo.py` script can run inference both with and without performi
 
 Run the client with preprocessing:
 ```bash
-python3 onnx_model_demo.py --service_url localhost:9001 --run_preprocessing
+python onnx_model_demo.py --service_url localhost:9001 --run_preprocessing
 Running with preprocessing on client side
 ../../common/static/images/bee.jpeg (1, 3, 224, 224) ; data range: -2.117904 : 2.64
 Class is with highest score: 309
@@ -81,7 +81,7 @@ The `onnx_model_demo.py` script can run inference both with and without performi
 
 Run the client without preprocessing:
 ```bash
-python3 onnx_model_demo.py --service_url localhost:9001
+python onnx_model_demo.py --service_url localhost:9001
 Running without preprocessing on client side
 Class is with highest score: 309
 Detected class name: bee
