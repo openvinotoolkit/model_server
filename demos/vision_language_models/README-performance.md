@@ -28,7 +28,7 @@ export VLLM_CPU_OMP_THREADS_BIND=0-55
 ```
 
 ```bash
-vllm serve llava-hf/llava-1.5-7b-hf --chat-template examples/template_llava.jinja --port 11828
+vllm serve llava-hf/llava-1.5-7b-hf --chat-template examples/template_llava.jinja --port 11828 --limit-mm-per-prompt image=32
 ```
 
 
