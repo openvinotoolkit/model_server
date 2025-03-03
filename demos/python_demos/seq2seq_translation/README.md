@@ -88,7 +88,7 @@ pip3 install -r requirements.txt
 ```
 Run the client script
 ```bash
-python3 client.py --url localhost:9000
+python client.py --url localhost:9000
 ```
 
 Expected output:

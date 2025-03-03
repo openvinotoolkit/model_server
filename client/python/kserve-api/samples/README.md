@@ -71,7 +71,7 @@ Once you finish above steps, you are ready to run the samples.
 - Command
 
 ```Bash
-python3 ./grpc_server_live.py --help
+python ./grpc_server_live.py --help
 usage: grpc_server_live.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
 
 Sends request via KServe gRPC API to check if server is alive.
@@ -88,7 +88,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./grpc_server_live.py --grpc_port 9000 --grpc_address localhost
+python ./grpc_server_live.py --grpc_port 9000 --grpc_address localhost
 Server Live: True
 ```
 
@@ -97,7 +97,7 @@ Server Live: True
 - Command
 
 ```Bash
-python3 ./grpc_server_ready.py --help
+python ./grpc_server_ready.py --help
 usage: grpc_server_ready.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
 
 Sends request via KServe gRPC API to check if server is ready.
@@ -114,7 +114,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
+python ./grpc_server_ready.py --grpc_port 9000 --grpc_address localhost
 Server Ready: True
 ```
 
@@ -123,7 +123,7 @@ Server Ready: True
 - Command
 
 ```Bash
-python3 ./grpc_server_metadata.py --help
+python ./grpc_server_metadata.py --help
 usage: grpc_server_metadata.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT]
 
 Sends request via KServe gRPC API to get server metadata.
@@ -139,7 +139,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./grpc_server_metadata.py --grpc_port 9000 --grpc_address localhost
+python ./grpc_server_metadata.py --grpc_port 9000 --grpc_address localhost
 name: "OpenVINO Model Server"
 version: "2022.2.c290da85"
 ```
@@ -149,7 +149,7 @@ version: "2022.2.c290da85"
 - Command
 
 ```Bash
-python3 ./grpc_model_ready.py --help
+python ./grpc_model_ready.py --help
 usage: grpc_model_ready.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--model_name MODEL_NAME] [--model_version MODEL_VERSION]
 
 Sends requests via KServe gRPC API to check if model is ready for inference.
@@ -169,7 +169,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_name resnet
+python ./grpc_model_ready.py --grpc_port 9000 --grpc_address localhost --model_name resnet
 Model Ready: True
 ```
 
@@ -178,7 +178,7 @@ Model Ready: True
 - Command
 
 ```Bash
-python3 ./grpc_model_metadata.py --help
+python ./grpc_model_metadata.py --help
 usage: grpc_model_metadata.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--model_name MODEL_NAME] [--model_version MODEL_VERSION]
 
 Sends requests via KServe gRPC API to get model metadata
@@ -198,7 +198,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./grpc_model_metadata.py --grpc_port 9000 --grpc_address localhost --model_name resnet
+python ./grpc_model_metadata.py --grpc_port 9000 --grpc_address localhost --model_name resnet
 model metadata:
 name: "resnet"
 versions: "1"
@@ -224,7 +224,7 @@ outputs {
 - Command
 
 ```Bash
-python3 grpc_infer_resnet.py --help
+python grpc_infer_resnet.py --help
 usage: grpc_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS]
                             [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
@@ -272,7 +272,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -328,7 +328,7 @@ Classification accuracy: 100.00
 - Command
 
 ```Bash
-python3 grpc_infer_binary_resnet.py --help
+python grpc_infer_binary_resnet.py --help
 usage: grpc_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
                                    [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME] [--tls]
 
@@ -358,7 +358,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
+python grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 27.09 ms; speed 36.92 fps
@@ -410,7 +410,7 @@ Classification accuracy: 100.00
 - Command
 
 ```Bash
-python3 grpc_async_infer_resnet.py --help
+python grpc_async_infer_resnet.py --help
 usage: grpc_async_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] [--input_name INPUT_NAME]
                                   [--output_name OUTPUT_NAME] [--transpose_input {False,True}] [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
                                   [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY] [--timeout TIMEOUT]
@@ -458,7 +458,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+python grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -498,7 +498,7 @@ Classification accuracy: 100.00
 - Command
 
 ```Bash
-python3 ./http_server_live.py --help
+python ./http_server_live.py --help
 usage: http_server_live.py [-h] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT]
 
 Sends request via KServe HTTP API to check if server is alive.
@@ -514,7 +514,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_server_live.py --http_port 8000 --http_address localhost
+python ./http_server_live.py --http_port 8000 --http_address localhost
 Server Live: True
 ```
 
@@ -523,7 +523,7 @@ Server Live: True
 - Command
 
 ```Bash
-python3 ./http_server_ready.py --help
+python ./http_server_ready.py --help
 usage: http_server_ready.py [-h] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT]
 
 Sends request via KServe HTTP API to check if server is ready.
@@ -540,7 +540,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_server_ready.py --http_port 8000 --http_address localhost
+python ./http_server_ready.py --http_port 8000 --http_address localhost
 Server Ready: True
 ```
 
@@ -549,7 +549,7 @@ Server Ready: True
 - Command
 
 ```Bash
-python3 ./http_server_metadata.py --help
+python ./http_server_metadata.py --help
 usage: http_server_metadata.py [-h] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT]
 
 Sends request via KServe HTTP API to get server metadata.
@@ -565,7 +565,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
+python ./http_server_metadata.py --http_port 8000 --http_address localhost
 {'name': 'OpenVINO Model Server', 'version': '2022.2.c290da85'}
 ```
 
@@ -574,7 +574,7 @@ python3 ./http_server_metadata.py --http_port 8000 --http_address localhost
 - Command
 
 ```Bash
-python3 ./http_model_ready.py --help
+python ./http_model_ready.py --help
 usage: http_model_ready.py [-h] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--model_name MODEL_NAME] [--model_version MODEL_VERSION]
 
 Sends request via KServe HTTP API to check if model is ready.
@@ -594,7 +594,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_model_ready.py --http_port 8000 --http_address localhost --model_name resnet
+python ./http_model_ready.py --http_port 8000 --http_address localhost --model_name resnet
 Model Ready: True
 ```
 
@@ -603,7 +603,7 @@ Model Ready: True
 - Command
 
 ```Bash
-python3 ./http_model_metadata.py --help
+python ./http_model_metadata.py --help
 usage: http_model_metadata.py [-h] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--model_name MODEL_NAME] [--model_version MODEL_VERSION]
 
 Sends request via KServe HTTP API to get model metadata.
@@ -623,7 +623,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_model_metadata.py --http_port 8000 --http_address localhost --model_name resnet
+python ./http_model_metadata.py --http_port 8000 --http_address localhost --model_name resnet
 {'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': '0', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': '1463', 'datatype': 'FP32', 'shape': [1, 1000]}]}
 ```
 
@@ -632,7 +632,7 @@ python3 ./http_model_metadata.py --http_port 8000 --http_address localhost --mod
 - Command
 
 ```Bash
-python3 ./http_infer_resnet.py --help
+python ./http_infer_resnet.py --help
 usage: http_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS]
                             [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--transpose_input {False,True}]
                             [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
@@ -681,7 +681,7 @@ optional arguments:
 - Usage Example #1 - Input data placed in JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -735,7 +735,7 @@ Classification accuracy: 100.00
 - Usage Example #2 - Input data placed as binary, outside JSON object.
 
 ```Bash
-python3 ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -791,7 +791,7 @@ Classification accuracy: 100.00
 - Command
 
 ```Bash
-python3 ./http_infer_binary_resnet.py --help
+python ./http_infer_binary_resnet.py --help
 usage: http_infer_binary_resnet.py [-h] [--images_list IMAGES_LIST] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--batchsize BATCHSIZE]
                                    [--model_name MODEL_NAME] [--pipeline_name PIPELINE_NAME] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
 
@@ -827,7 +827,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
+python ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 38.61 ms; speed 25.90 fps
@@ -878,7 +878,7 @@ Classification accuracy: 100.00
 - Command
 
 ```Bash
- python3 http_async_infer_resnet.py --help
+ python http_async_infer_resnet.py --help
 usage: http_async_infer_resnet.py [-h] --images_numpy_path IMAGES_NUMPY_PATH [--labels_numpy_path LABELS_NUMPY_PATH] [--http_address HTTP_ADDRESS] [--http_port HTTP_PORT] [--input_name INPUT_NAME]
                                   [--output_name OUTPUT_NAME] [--transpose_input {False,True}] [--transpose_method {nchw2nhwc,nhwc2nchw}] [--iterations ITERATIONS] [--batchsize BATCHSIZE] [--model_name MODEL_NAME]
                                   [--pipeline_name PIPELINE_NAME] [--dag-batch-size-auto] [--binary_data] [--tls] [--server_cert SERVER_CERT] [--client_cert CLIENT_CERT] [--client_key CLIENT_KEY]
@@ -926,7 +926,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python3 http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+python http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet

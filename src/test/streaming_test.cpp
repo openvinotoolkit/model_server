@@ -312,6 +312,7 @@ static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, fl
     };
 }
 
+#if (PYTHON_DISABLE == 0)
 static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, std::promise<void>& signalPromise) {
     return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, std::nullopt);
@@ -320,6 +321,7 @@ static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::s
         return true;
     };
 }
+#endif
 
 static auto SendError(const std::string& expectedMessage) {
     return [expectedMessage](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
