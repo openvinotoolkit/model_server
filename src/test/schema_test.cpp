@@ -1992,7 +1992,7 @@ TEST(SchemaTest, MediapipeConfigInModelConfigPositive) {
         {
             "config": {
                 "name": "dummy",
-                "base_path": "dummy_path"
+                "base_path": "dummy_path",
                 "graph_path": "dummy_path.pbtxt"
             }
         }
