@@ -95,7 +95,7 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
     constexpr int desiredChannels = 3;
     unsigned char* image = stbi_load_from_memory(
         (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, channelsInFile, desiredChannels);
+        &x, &y, &channelsInFile, desiredChannels);
     if (!image) {
         std::stringstream errorMessage;
         errorMessage << "Failed to load the image";
