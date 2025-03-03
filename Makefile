@@ -54,7 +54,7 @@ BASE_OS_TAG_UBUNTU ?= 22.04
 BASE_OS_TAG_REDHAT ?= 9.4
 
 INSTALL_RPMS_FROM_URL ?=
-
+BUILD_IMAGE ?= build
 CHECK_COVERAGE ?=0
 RUN_TESTS ?= 0
 BUILD_TESTS ?= 0
@@ -372,7 +372,7 @@ endif
 targz_package:
 	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
-		--build-arg BUILD_IMAGE=build \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		-t $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG) \
 		--target=pkg && \
 	rm -vrf dist/$(OS) && mkdir -p dist/$(OS) && \
@@ -439,6 +439,7 @@ ifeq ($(USE_BUILDX),true)
 endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg GPU=$(GPU) \
 		--build-arg NPU=$(NPU) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
