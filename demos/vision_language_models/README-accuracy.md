@@ -31,6 +31,8 @@ export VLLM_CPU_OMP_THREADS_BIND=0-55
 vllm serve llava-hf/llava-1.5-7b-hf --chat-template examples/template_llava.jinja --port 11828 --limit-mm-per-prompt image=32
 ```
 
+> NOTE: vLLM by default limits max 1 image. Dataset contains examples with more than 1 image in a request. Use `--limit-mm-per-prompt image=32` to allow more images.
+
 
 ## Launch lmms-eval
 
@@ -66,8 +68,6 @@ python -m lmms_eval \
 ```
 
 It will launch 250 multi modal requests per task (500 in total) 
-
-> NOTE: `llava-hf/llava-1.5-7b-h` does not support more than 1 image. Dataset contains such examples. Those will fail.
 
 ### 5. Results
 
