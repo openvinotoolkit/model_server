@@ -449,33 +449,6 @@ static Status parseMediapipeConfig(rapidjson::Document& configJson, std::string&
         }
     }
 
-    // Parsing model_config_list for mediapipe graphs
-    const auto itrp2 = configJson.FindMember("model_config_list");
-    if (itrp2 == configJson.MemberEnd() || !itrp2->value.IsArray()) {
-        return StatusCode::OK;
-    }
-
-    try {
-        for (const auto& mediapipeGraphConfig : itrp2->value.GetArray()) {
-            if (!mediapipeGraphConfig["config"].HasMember("graph_path")) {
-                // Skip single model config section
-                continue;
-            }
-            MediapipeGraphConfig config;
-            config.setRootDirectoryPath(rootDirectoryPath);
-            auto status = config.parseNode(mediapipeGraphConfig["config"]);
-            if (status != StatusCode::OK) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Parsing graph config failed");
-                return status;
-            }
-            mediapipesInConfigFile.push_back(config);
-        }
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Failed to process mediapipe graph config:{}", e.what());
-    } catch (...) {
-        SPDLOG_ERROR("Failed to process mediapipe graph config.");
-    }
-
     return StatusCode::OK;
 }
 #endif
@@ -764,18 +737,33 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     }
 }
 
-Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath) {
+#if (MEDIAPIPE_DISABLE == 1)
+Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+                                std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath {
+#else
+Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+                                std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
+                                std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+#endif
     Status firstErrorStatus = StatusCode::OK;
 
     for (const auto& configs : modelsConfigList->value.GetArray()) {
         ModelConfig modelConfig;
         modelConfig.setRootDirectoryPath(rootDirectoryPath);
-        // Skip mediapipe graph config
-        if (configs["config"].HasMember("graph_path")) {
-            // Skip mediapipe graph config section
+
+        // Check if config is for mediapipe graph
+        MediapipeGraphConfig mpConfig;
+        mpConfig.setRootDirectoryPath(rootDirectoryPath);
+        auto status = mpConfig.parseNode(configs["config"]);
+
+        std::ifstream ifs(mpConfig.getGraphPath());
+        if (ifs.is_open()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}",mpConfig.getGraphName(), mpConfig.getGraphPath());
+            mediapipesInConfigFile.push_back(mpConfig);
             continue;
         }
-        auto status = modelConfig.parseNode(configs["config"]);
+
+        status = modelConfig.parseNode(configs["config"]);
 
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -848,13 +836,14 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::set<std::string> modelsInConfigFile;
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
-    auto status = loadModels(itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, this->rootDirectoryPath);
+    auto status = loadModels(itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, this->rootDirectoryPath, mediapipesInConfigFile);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading main OVMS config models failed.");
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
     }
 
 #if (MEDIAPIPE_DISABLE == 0)
+    std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
     for (auto& mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
         rapidjson::Document mediapipeConfigJson;
@@ -884,7 +873,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
         }
         std::string subconfigRootDirectoryPath;
         FileSystem::setRootDirectoryPath(subconfigRootDirectoryPath, subconfigPath);
-        status = loadModels(mediapipeItr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, subconfigRootDirectoryPath);
+        status = loadModels(mediapipeItr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, subconfigRootDirectoryPath, subdirectoryMediapipesInConfigFile);
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading Mediapipe {} models from subconfig {} failed.", mediapipeConfig.getGraphName(), subconfigPath);

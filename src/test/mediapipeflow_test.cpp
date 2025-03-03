@@ -2840,6 +2840,7 @@ protected:
         }
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
+        std::promise<void>().swap(unblockLoading2ndGraph);
     }
 
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
@@ -2886,7 +2887,13 @@ protected:
         }
         KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-        unblockLoading2ndGraph.set_value();
+        try {
+            unblockLoading2ndGraph.set_value();
+        } catch (const std::future_error& e) {
+            // Case where we already set the value before execute.
+            ASSERT_EQ(e.code(), std::future_errc::promise_already_satisfied);
+        }
+
         size_t dummysInTheGraph = 1;
         checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, servableName);
         this->stopServer();
@@ -2973,9 +2980,10 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     ]
 }
 )";
+    // Set value here to avoid deadlock when long loading is loaded first
+    unblockLoading2ndGraph.set_value();
 
-    std::string longGraph = "mediapipeLongLoading";
-    executeFlow(configContent, longGraph);
+    executeFlow(configContent);
 }
 
 TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfigLongLoading) {
