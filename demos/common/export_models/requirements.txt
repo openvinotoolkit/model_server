@@ -9,3 +9,5 @@ sentence_transformers==3.1.1
 openai 
 transformers<4.48
 einops
+torchvision==0.21.0
+timm==1.0.15
