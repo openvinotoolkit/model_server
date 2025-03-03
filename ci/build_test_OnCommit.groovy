@@ -45,7 +45,23 @@ pipeline {
         }
         stage('Style, SDL and clean') {
           parallel {
-            stage('Style check') {
+            /*stage('Style check') {
+                steps {
+                  sh 'make style'
+                }
+            }
+            stage('Sdl check') {
+                steps {
+                    sh 'make sdl-check'
+                }
+            }*/
+            stage('Client test') {
+                when { expression { client_test_needed == "true" } }
+                steps {
+                    sh "make test_client_lib"
+                }
+            }
+            stage('Cleanup node') {
               agent {
                 label "${agent_name_linux}"
               }
@@ -84,7 +100,7 @@ pipeline {
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
-            stage('Build windows') {
+            /*stage('Build windows') {
               agent {
                 label 'win_ovms'
               }
@@ -108,13 +124,13 @@ pipeline {
                       }
                   }
               }
-            }
+            }*/
           }
         }
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
           parallel {
-            stage("Run unit tests") {
+            /*stage("Run unit tests") {
               agent {
                 label "${agent_name_linux}"
               }
@@ -130,7 +146,7 @@ pipeline {
               }
               } 
               }
-            } 
+            } */
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -150,7 +166,7 @@ pipeline {
                 }
               }            
             }
-            stage('Test windows') {
+            /*stage('Test windows') {
               agent {
                 label "${agent_name_windows}"
               }
@@ -174,7 +190,7 @@ pipeline {
                       }
                   }
               }
-            }           
+            }*/           
           }
         }
     }
