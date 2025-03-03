@@ -742,8 +742,8 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
                                 std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath {
 #else
 Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
-                                std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
-                                std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
+    std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
 #endif
     Status firstErrorStatus = StatusCode::OK;
 
@@ -758,7 +758,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
 
         std::ifstream ifs(mpConfig.getGraphPath());
         if (ifs.is_open()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}",mpConfig.getGraphName(), mpConfig.getGraphPath());
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
             mediapipesInConfigFile.push_back(mpConfig);
             continue;
         }

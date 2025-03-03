@@ -2845,7 +2845,7 @@ protected:
 
     // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
     // 2nd thread as soon as sees that 1st MP graph is ready executest inference
-    void executeFlow(std::string& configContent,const std::string& waitForServable = "mediapipeDummy") {
+    void executeFlow(std::string& configContent, const std::string& waitForServable = "mediapipeDummy") {
         std::string configFilePath = directoryPath + "/config.json";
         adjustConfigForTargetPlatform(configContent);
         createConfigFileWithContent(configContent, configFilePath);
