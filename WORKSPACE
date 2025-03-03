@@ -591,7 +591,7 @@ git_repository(
 new_git_repository(
     name = "stb",
     remote = "https://github.com/nothings/stb",
-    branch = "master",
+    commit = "5c205738c191bcb0abc65c4febfa9bd25ff35234",
     build_file_content = """
 cc_library(
     name = "image",
