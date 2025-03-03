@@ -17,7 +17,7 @@
 #include <string>
 
 #pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4005)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"

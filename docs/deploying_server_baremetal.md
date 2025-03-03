@@ -1,14 +1,14 @@
 ## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22, RHEL8 or Windows 11.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package (without python support):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or build it yourself to add python support:
@@ -29,7 +29,7 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -55,7 +55,7 @@ git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
 cd model_server
 # Build docker images (the binary is one of the artifacts)
 # set PYTHON_DISABLE=1 to disable python execution node support
-make docker_build PYTHON_DISABLE=0
+make docker_build PYTHON_DISABLE=0 BASE_OS=ubuntu24
 # Unpack the package
 tar -xzvf dist/ubuntu24/ovms.tar.gz
 ```
@@ -66,7 +66,7 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -83,7 +83,7 @@ pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 :sync: rhel-9.4
 Download precompiled package (without python support):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or build it yourself to add python support:
@@ -104,7 +104,7 @@ sudo yum install compat-openssl11.x86_64
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
 In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
 ```{code} sh
@@ -124,7 +124,7 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl <url_to_be_provided>
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
@@ -161,7 +161,7 @@ chmod -R 755 models
 ```
 Start the server:
 ```console
-ovms --model_name resnet --model_path models/resnet50
+ovms --port 9000 --model_name resnet --model_path models/resnet50
 ```
 
 or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.
