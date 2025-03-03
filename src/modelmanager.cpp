@@ -761,6 +761,8 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}",mpConfig.getGraphName(), mpConfig.getGraphPath());
             mediapipesInConfigFile.push_back(mpConfig);
             continue;
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}",mpConfig.getGraphName(), mpConfig.getGraphPath());
         }
 
         status = modelConfig.parseNode(configs["config"]);
