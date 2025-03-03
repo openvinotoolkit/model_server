@@ -95,7 +95,7 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
     constexpr int desiredChannels = 3;
     unsigned char* image = stbi_load_from_memory(
         (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y,  channelsInFile, desiredChannels);
+        &x, &y, channelsInFile, desiredChannels);
     if (!image) {
         std::stringstream errorMessage;
         errorMessage << "Failed to load the image";
@@ -114,9 +114,9 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
             if (channels * height * width != bytes) {
                 throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
             }
-            if(image != nullptr){
+            if (image != nullptr) {
                 stbi_image_free(image);
-                image = nullptr;   
+                image = nullptr;
             }
         }
         bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
