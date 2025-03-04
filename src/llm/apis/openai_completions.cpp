@@ -33,8 +33,7 @@
 #pragma warning(push)
 #pragma warning(disable : 6262)
 #include "stb_image.h"  // NOLINT
-#pragma warning(pop)
-#pragma warning(push)
+#pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
