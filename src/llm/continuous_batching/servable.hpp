@@ -37,15 +37,18 @@ struct ContinuousBatchingServableProperties : public GenAiServableProperties {
 };
 
 class ContinuousBatchingServable : public GenAiServable {
-    std::shared_ptr<ContinuousBatchingServableProperties> properties;
-
 protected:
+    std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
 
 public:
     ContinuousBatchingServable() {
         properties = std::make_shared<ContinuousBatchingServableProperties>();
     }
+
+    // addRequestToPipeline implementation can be specific for different servables with Continuous Batching engine
+    // This method is used in scheduleExecution and MUST fill generationHandle in executionContext
+    virtual absl::Status addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
     // Interface methods
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
