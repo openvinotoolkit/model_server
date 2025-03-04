@@ -159,7 +159,8 @@ MediaPipe servables configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
 Both models and graphs can be defined in section `model_config_list`.
 In this case `name` and `base_path` parameters are required and `graph_path` parameter is optional for custom `graph.pbtxt` names.
-Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+
+Here is an example `config.json` file that defines two MediaPipe graphs. One with custom `graph_path` and one default:
 ```json
 {
     "model_config_list": [
