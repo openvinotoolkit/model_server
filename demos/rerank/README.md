@@ -6,6 +6,8 @@
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
+**(Optional) Client**: Python with pip
+
 ## Model preparation
 
 Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.

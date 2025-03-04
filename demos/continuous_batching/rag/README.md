@@ -4,9 +4,8 @@
 ## Creating models repository for all the endpoints
 
 ```console
-git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
-cd model_server/demos/common/export_models
-pip install -q -r requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
 
 mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models 
