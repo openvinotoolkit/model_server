@@ -739,7 +739,7 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
 
 #if (MEDIAPIPE_DISABLE == 1)
 Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
-                                std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath {
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath) {
 #else
 Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
     std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath,
@@ -751,21 +751,25 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         ModelConfig modelConfig;
         modelConfig.setRootDirectoryPath(rootDirectoryPath);
 
+#if (MEDIAPIPE_DISABLE == 0)
         // Check if config is for mediapipe graph
         MediapipeGraphConfig mpConfig;
         mpConfig.setRootDirectoryPath(rootDirectoryPath);
-        auto status = mpConfig.parseNode(configs["config"]);
-
-        std::ifstream ifs(mpConfig.getGraphPath());
-        if (ifs.is_open()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
-            mediapipesInConfigFile.push_back(mpConfig);
-            continue;
+        auto mpStatus = mpConfig.parseNode(configs["config"]);
+        if (!mpStatus.ok()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
         } else {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+            std::ifstream ifs(mpConfig.getGraphPath());
+            if (ifs.is_open()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+                mediapipesInConfigFile.push_back(mpConfig);
+                continue;
+            } else {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+            }
         }
-
-        status = modelConfig.parseNode(configs["config"]);
+#endif
+        auto status = modelConfig.parseNode(configs["config"]);
 
         if (!status.ok()) {
             IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(StatusCode::MODEL_CONFIG_INVALID);
@@ -838,7 +842,11 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     std::set<std::string> modelsInConfigFile;
     std::set<std::string> modelsWithInvalidConfig;
     std::unordered_map<std::string, ModelConfig> newModelConfigs;
+#if (MEDIAPIPE_DISABLE == 0)
     auto status = loadModels(itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, this->rootDirectoryPath, mediapipesInConfigFile);
+#else
+    auto status = loadModels(itr, gatedModelConfigs, modelsInConfigFile, modelsWithInvalidConfig, newModelConfigs, this->rootDirectoryPath);
+#endif
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Loading main OVMS config models failed.");
         IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
