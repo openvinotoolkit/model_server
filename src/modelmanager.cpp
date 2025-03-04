@@ -752,7 +752,7 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         modelConfig.setRootDirectoryPath(rootDirectoryPath);
 
 #if (MEDIAPIPE_DISABLE == 0)
-        // Check if config is for mediapipe graph
+        // Check if config is present for mediapipe graph
         MediapipeGraphConfig mpConfig;
         mpConfig.setRootDirectoryPath(rootDirectoryPath);
         auto mpStatus = mpConfig.parseNode(configs["config"]);
