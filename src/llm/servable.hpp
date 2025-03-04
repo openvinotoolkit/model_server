@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "openvino/genai/streamer_base.hpp"
+#include "openvino/genai/text_streamer.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005)
@@ -33,80 +33,6 @@
 #include "../http_payload.hpp"
 #include "apis/openai_completions.hpp"
 #include "text_processor.hpp"
-
-// Text streamer implementation copied from GenAI. Use GenAI directly when it's moved to the interface.
-namespace ov {
-namespace genai {
-class TextCallbackStreamer : public StreamerBase {
-protected:
-    Tokenizer m_tokenizer;
-    std::vector<int64_t> m_tokens_cache;
-    std::vector<int64_t> m_decoded_lengths;
-    size_t m_printed_len = 0;
-
-public:
-    bool put(int64_t token) {
-        std::stringstream res;
-        m_tokens_cache.push_back(token);
-        std::string text = m_tokenizer.decode(m_tokens_cache);
-        m_decoded_lengths.push_back(text.length());
-
-        if (!text.empty() && '\n' == text.back() && text.size() > m_printed_len) {
-            // Flush the cache after the new line symbol
-            res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len};
-            m_tokens_cache.clear();
-            m_decoded_lengths.clear();
-            m_printed_len = 0;
-            return on_finalized_subword_callback(res.str());
-        }
-
-        constexpr size_t delay_n_tokens = 3;
-        // In some cases adding the next token can shorten the text,
-        // e.g. when apostrophe removing regex had worked after adding new tokens.
-        // Printing several last tokens is delayed.
-        if (m_decoded_lengths.size() < delay_n_tokens) {
-            return on_finalized_subword_callback(res.str());
-        }
-        constexpr char replacement[] = "\xef\xbf\xbd";  // MSVC with /utf-8 fails to compile <UNK> directly with newline in string literal error.
-        if (text.size() >= 3 && text.compare(text.size() - 3, 3, replacement) == 0) {
-            m_decoded_lengths[m_decoded_lengths.size() - 1] = -1;
-            // Don't print incomplete text
-            return on_finalized_subword_callback(res.str());
-        }
-        int64_t print_until = m_decoded_lengths[m_decoded_lengths.size() - delay_n_tokens];
-        if (print_until != -1 && print_until > static_cast<int64_t>(m_printed_len)) {
-            // It is possible to have a shorter text after adding new token.
-            // Print to output only if text length is increaesed.
-            res << std::string_view{text.data() + m_printed_len, print_until - m_printed_len} << std::flush;
-            m_printed_len = print_until;
-        }
-
-        return on_finalized_subword_callback(res.str());
-    }
-
-    void end() {
-        std::stringstream res;
-        std::string text = m_tokenizer.decode(m_tokens_cache);
-        if (text.size() <= m_printed_len)
-            return;
-        res << std::string_view{text.data() + m_printed_len, text.size() - m_printed_len} << std::flush;
-        m_tokens_cache.clear();
-        m_decoded_lengths.clear();
-        m_printed_len = 0;
-        on_finalized_subword_callback(res.str());
-        return;
-    }
-
-    TextCallbackStreamer(const Tokenizer& tokenizer, std::function<bool(std::string)> callback) {
-        m_tokenizer = tokenizer;
-        on_finalized_subword_callback = callback;
-    }
-
-    std::function<bool(std::string)> on_finalized_subword_callback = [](std::string words) -> bool { return false; };
-};
-}  // namespace genai
-}  // namespace ov
-// End of text streamer implementation copy
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -142,7 +68,7 @@ struct GenAiServableExecutionContext {
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::string response;
-    std::shared_ptr<ov::genai::TextCallbackStreamer> textStreamer;
+    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
 };

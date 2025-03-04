@@ -77,7 +77,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             return false;
         };
 
-        executionContext->textStreamer = std::make_shared<ov::genai::TextCallbackStreamer>(getProperties()->tokenizer, callback);
+        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
     return absl::OkStatus();
 }
@@ -134,7 +134,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     // so such change should be done in GenAI first
     std::stringstream ss;
     for (const auto& token : generationOutput.generated_ids) {
-        executionContext->textStreamer->put(token);
+        executionContext->textStreamer->write(token);
         ss << executionContext->lastStreamerCallbackOutput;
     }
     std::string lastTextChunk = ss.str();
