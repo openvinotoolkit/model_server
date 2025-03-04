@@ -187,8 +187,7 @@ In case the `mediapipe_graph_name` above, ovms will search for the graph name `c
 This will load the `mediapipe_graph_name` servable from `/custom/path/to/pbtxt/custom_name_for.pbtxt` path.
 
 Graphs can also be configured in the `mediapipe_config_list` section.
-When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy.
-Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+When using legacy field, `base_path` can be omitted. It will be deduced from `config.json` location.
 ```json
 {
     "model_config_list": [],
