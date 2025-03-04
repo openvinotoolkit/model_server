@@ -157,10 +157,37 @@ Here is example of the `subconfig.json`:
 ### Starting OpenVINO Model Server with Mediapipe servables
 MediaPipe servables configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
-While models are defined in section `model_config_list`, graphs are configured in
-the `mediapipe_config_list` section.
+Both models and graphs can be defined in section `model_config_list`.
+In this case `name` and `base_path` parameters are required and `graph_path` parameter is optional for custom `graph.pbtxt` names.
+Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+```json
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "mediapipe_graph_name",
+                "base_path":"/custom/path/to/pbtxt",
+                "graph_path": "custom_name_for.pbtxt"
+            }
+        },
+        {
+            "config": {
+                "name": "mediapipe_graph_name_for_default_name",
+                "base_path":"/custom/path/to/pbtxt"
+            }
+        }
+    ]
+}
+```
+In case the `mediapipe_graph_name_for_default_name` above, ovms will search for the default graph name `graph.pbtxt` in the `/custom/path/to/pbtxt` directory.
+This will load the `mediapipe_graph_name_for_default_name` servable from `/custom/path/to/pbtxt/graph.pbtxt` path.
 
-When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+In case the `mediapipe_graph_name` above, ovms will search for the graph name `custom_name_for.pbtxt` in the `/custom/path/to/pbtxt` directory.
+This will load the `mediapipe_graph_name` servable from `/custom/path/to/pbtxt/custom_name_for.pbtxt` path.
+
+Graphs can also be configured inthe `mediapipe_config_list` section.
+When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy.
+Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
 ```json
 {
     "model_config_list": [],
