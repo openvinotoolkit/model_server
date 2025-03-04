@@ -2944,7 +2944,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     executeFlow(configContent);
 }
 
-TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfig) {
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfig) {
     std::string configContent = R"(
 {
     "model_config_list": [
@@ -2972,7 +2972,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     executeFlow(configContent);
 }
 
-TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfigFastLoading) {
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfigFastLoading) {
     std::string configContent = R"(
 {
     "model_config_list": [
@@ -3003,7 +3003,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     executeFlow(configContent);
 }
 
-TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfigLongLoading) {
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfigLongLoading) {
     std::string configContent = R"(
 {
     "model_config_list": [
