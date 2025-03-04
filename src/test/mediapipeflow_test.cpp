@@ -2944,7 +2944,7 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
     executeFlow(configContent);
 }
 
-TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGgraphInModelConfig) {
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfig) {
     std::string configContent = R"(
 {
     "model_config_list": [
