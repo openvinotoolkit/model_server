@@ -59,9 +59,8 @@ void serializeStringContentFrom2DU8(std::string* content, ov::Tensor& tensor) {
         content->append((char*)tensor.data() + i * maxStringLen, strLen);
     }
 }
-
 template <>
-Status OutputGetter<ov::InferRequest>::get(const std::string& name, ov::Tensor& tensor) {
+Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
     OVMS_PROFILE_FUNCTION();
     try {
         OV_LOGGER("ov::InferRequest: {}, outputSource.get_tensor({})", reinterpret_cast<void*>(&outputSource), name);
@@ -73,7 +72,6 @@ Status OutputGetter<ov::InferRequest>::get(const std::string& name, ov::Tensor& 
     }
     return StatusCode::OK;
 }
-
 const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {
     return tensorInfo.getName();
 }
@@ -82,5 +80,5 @@ const std::string& getOutputMapKeyName(const std::string& first, const TensorInf
     return first;
 }
 // force instantiation
-template class ovms::OutputGetter<ov::InferRequest&>;
+template class OutputGetter<ov::InferRequest&>;
 }  // namespace ovms

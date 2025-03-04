@@ -67,8 +67,8 @@ Status serializePredictResponse(
 }
 
 template <> // TODO @Atobisze for other type outputgetter
-Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
-    OutputGetter<ov::InferRequest>& outputGetter,
+Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
@@ -82,6 +82,4 @@ Status serializeTensorToTensorProtoRaw(
     std::string* rawOutputContents,
     const std::shared_ptr<const TensorInfo>& servableOutput,
     ov::Tensor& tensor);
-
-
 }  // namespace ovms

@@ -45,4 +45,8 @@ bool useSharedOutputContentFn(const InferenceRequest* request) {
     // does not apply for C-API frontend
     return false;
 }
+template<>
+OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest& request) {
+    return request.getResponseCompleteCallback();
+}
 }  // namespace ovms

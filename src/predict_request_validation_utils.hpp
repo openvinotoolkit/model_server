@@ -33,7 +33,10 @@
 namespace inference{
 class KFSRequest;
 }
+namespace tensorflow::serving {
 class TFSRequestType;
+}
+
 namespace ovms {
 
 template<typename RequestShapeType>
@@ -288,7 +291,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::validate() {
-    if ((std::is_same<RequestType, ::inference::KFSRequest>::value || std::is_same<RequestType, TFSRequestType>::value) && choice == ValidationChoice::OUTPUT) {
+    if ((std::is_same<RequestType, ::inference::KFSRequest>::value || std::is_same<RequestType, ::tensorflow::serving::TFSRequestType>::value) && choice == ValidationChoice::OUTPUT) {
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;

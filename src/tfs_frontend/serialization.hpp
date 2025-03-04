@@ -69,8 +69,8 @@ Status serializePredictResponse(
 }
 
 template <>
-Status serializePredictResponse<ov::InferRequest, TFSPredictRequest, TFSPredictResponse>(
-    OutputGetter<ov::InferRequest>& outputGetter,
+Status serializePredictResponse<ov::InferRequest&, TFSPredictRequest, TFSPredictResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,

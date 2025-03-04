@@ -37,13 +37,7 @@
 namespace ovms {
 //const Status ModelInstance::validate(const InferenceRequest* request);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-template <>
-OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest* request) {
-    return request->getResponseCompleteCallback();
-} // TODO check if this exact impl is used @atobisze
-#pragma GCC diagnostic pop
 template Status modelInferAsync<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template Status infer<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
+template class OutputGetter<ov::InferRequest>;
 }  // namespace ovms

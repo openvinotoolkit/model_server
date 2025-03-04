@@ -32,7 +32,10 @@
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/inferencetensor.hpp"
-#include "../serialization.hpp"
+#include "../tfs_frontend/serialization.hpp"
+#include "../kfs_frontend/serialization.hpp"
+#include "../capi_frontend/serialization.hpp"
+//#include "../serialization.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
@@ -47,6 +50,10 @@ using testing::_;
 using testing::ElementsAre;
 using testing::NiceMock;
 using testing::Throw;
+
+KFSRequest* KFSRequestNULL{nullptr};
+TFSPredictRequest* TFSRequestNULL{nullptr};
+ovms::InferenceRequest* CAPIRequestNULL{nullptr};
 
 const std::vector<ovms::Precision> SUPPORTED_OUTPUT_PRECISIONS{
     // ovms::Precision::UNDEFINED,
@@ -515,7 +522,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, KFSRequestNULL, &response, getTensorInfoName);
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(DUMMY_MODEL_OUTPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
@@ -540,7 +547,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseS
     ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName, true);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, KFSRequestNULL, &response, getTensorInfoName, true);
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
@@ -566,7 +573,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithshar
     ov::Tensor tensor(tensorInfo->getOvPrecision(), ov::Shape{1, 10});
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName, false);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, KFSRequestNULL, &response, getTensorInfoName, false);
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(DUMMY_MODEL_INPUT_NAME, response.outputs(0).name());
     EXPECT_EQ("FP32", response.outputs(0).datatype());
@@ -624,7 +631,7 @@ TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecis
     std::memcpy(tensor.data(), data, tensor.get_byte_size());
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, nullptr, &response, getTensorInfoName);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
@@ -646,7 +653,7 @@ TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape)
     std::memcpy(tensor.data(), data, tensor.get_byte_size());
     inferRequest.set_tensor(DUMMY_MODEL_OUTPUT_NAME, tensor);
     OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
-    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, &response, getTensorInfoName);
+    auto status = serializePredictResponse(outputGetter, UNUSED_NAME, UNUSED_VERSION, tenMap, nullptr, &response, getTensorInfoName);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
@@ -674,6 +681,7 @@ TEST_P(SerializeCAPITensorPositive, SerializeTensorShouldSucceedForPrecision) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
+        nullptr,
         &response,
         getTensorInfoName);
     EXPECT_TRUE(status.ok())
@@ -703,6 +711,7 @@ TEST_P(SerializeCAPITensorNegative, SerializeTensorShouldFailForPrecision) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
+        nullptr,
         &response,
         getTensorInfoName);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)
@@ -733,6 +742,7 @@ TEST_F(CAPISerialization, ValidSerialization) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
+        nullptr,
         &response,
         getTensorInfoName);
     ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
@@ -755,13 +765,17 @@ TEST_F(CAPISerialization, ValidSerialization) {
     EXPECT_EQ(std::memcmp(tensor.data(), buffer->data(), sizeof(float) * NUMBER_OF_ELEMENTS), 0);
 }
 
-template <typename T>
+
+template <typename Pair,
+    typename RequestType = typename Pair::first_type,
+    typename ResponseType = typename Pair::second_type>
 class SerializeString : public ::testing::Test {
 public:
-    T response;
+    ResponseType response;
+    RequestType request;
 };
 
-using MyTypes = ::testing::Types<TFPredictResponse, ::KFSResponse>;
+using MyTypes = ::testing::Types<TFSInterface, KFSInterface>;
 TYPED_TEST_SUITE(SerializeString, MyTypes);
 
 // Serialization to string due to suffix _string in mapping
@@ -782,6 +796,7 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
                   UNUSED_NAME,
                   UNUSED_VERSION,
                   infos,
+                  &this->request,
                   &this->response,
                   getTensorInfoName,
                   useSharedOutputContent),
@@ -807,6 +822,7 @@ TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
                   UNUSED_NAME,
                   UNUSED_VERSION,
                   infos,
+                  &this->request,
                   &this->response,
                   getTensorInfoName,
                   useSharedOutputContent),
@@ -814,3 +830,4 @@ TYPED_TEST(SerializeString, Valid_2D_U8_NonString) {
     bool checkRaw = false;  // raw not supported
     checkIncrement4DimResponse("out", data, this->response, std::vector<size_t>{3, 11}, checkRaw);
 }
+template class ovms::OutputGetter<ov::InferRequest&>;

@@ -18,9 +18,12 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <iostream>
 
+#include "ovms.h"
 #include "extractchoice.hpp"
-
+// TODO @atobisze this is request interface to be implementend by backend
+// do we need more headers or just one? For now keeping it in here
 namespace ovms {
 class Status;
 template <typename Request, typename InputTensorType, ExtractChoice choice>
@@ -28,4 +31,12 @@ class RequestTensorExtractor {
 public:
     static Status extract(const Request& request, const std::string& name, const InputTensorType** tensor, size_t* bufferId = nullptr);
 };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function";
+template <typename RequestType>
+inline OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
+        std::cout << "EERERERERERERE" << std::endl;
+    return nullptr;
+}
+#pragma GCC diagnostic pop
 }  // namespace ovms

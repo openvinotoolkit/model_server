@@ -204,8 +204,8 @@ std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::cre
 }
 
 template <> // TODO @Atobisze for other type outputgetter
-Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
-    OutputGetter<ov::InferRequest>& outputGetter,
+Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
@@ -215,8 +215,8 @@ Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
     bool useSharedOutputContent) {
     return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
-template Status serializePredictResponse<ov::InferRequest, KFSRequest, KFSResponse>(
-    OutputGetter<ov::InferRequest>& outputGetter,
+template Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
     const tensor_map_t& outputMap,
