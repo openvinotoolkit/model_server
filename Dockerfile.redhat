@@ -98,6 +98,7 @@ ARG BASE_IMAGE
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
+ARG VERBOSE_LOGS=OFF
 
 # hadolint ignore=DL3041
 RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
