@@ -216,6 +216,7 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
     }
     return StatusCode::OK;
 }
+// TODO @atobisze rename to modelInfer to be clear it is for model
 template <typename RequestType, typename ResponseType>
 Status infer(ModelInstance& instance, const RequestType* requestProto,
     ResponseType* responseProto,
@@ -303,7 +304,7 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
         instance.getName(), instance.getVersion(), executingInferId, timer.elapsed<microseconds>(PREDICTION) / 1000);
 
     timer.start(SERIALIZE);
-    OutputGetter<ov::InferRequest> outputGetter(inferRequest);
+    OutputGetter<ov::InferRequest&> outputGetter(inferRequest);
     status = serializePredictResponse(outputGetter, instance.getName(), instance.getVersion(), instance.getOutputsInfo(), requestProto, responseProto, getTensorInfoName, useSharedOutputContentFn(requestProto));
     timer.stop(SERIALIZE);
     if (!status.ok())

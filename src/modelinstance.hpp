@@ -655,8 +655,6 @@ public:
     virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);*/
     virtual const std::set<std::string>& getOptionalInputNames();
 };
-template <typename RequestType>
-static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
-    return nullptr;
-}
+//template <typename RequestType>
+//static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request);
 }  // namespace ovms

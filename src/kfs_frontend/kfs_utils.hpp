@@ -39,6 +39,7 @@ using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterat
 using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
 namespace ovms {
 class Status;
+
 std::string tensorShapeToString(const KFSShapeType& tensorShape);
 
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& s);

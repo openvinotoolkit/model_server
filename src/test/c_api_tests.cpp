@@ -24,8 +24,18 @@
 
 #include <gtest/gtest.h>
 
+#include "../capi_frontend/capi_request_utils.hpp"
+#include "../deserialization_main.hpp"
+#include "../inference_executor.hpp"
+#include "../capi_frontend/capi_utils.hpp"
+#include "../capi_frontend/serialization.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
+#include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/capi_validation.hpp"
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
+#include "../capi_frontend/capi_dag_utils.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
@@ -1989,7 +1999,7 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     auto unblockSignal = callbackStruct.signal.get_future();
     request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
     instance.setOutputsInfo(outputInfo);
-    auto status = instance.inferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(&request, unloadGuard);
+    auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     unblockSignal.get();
     std::this_thread::sleep_for(std::chrono::seconds(1));

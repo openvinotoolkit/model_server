@@ -55,6 +55,11 @@
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
 
+
+#include "../capi_frontend/capi_validation.hpp"
+#include "../kfs_frontend/validation.hpp"
+#include "../tfs_frontend/validation.hpp"
+
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
 #endif
@@ -751,6 +756,18 @@ public:
     }
     const ovms::Status mockValidate(const ovms::InferenceRequest* request) {
         return validate(request);
+    }
+    template<typename RequestType>
+    ovms::Status validate(const RequestType* request) {
+        return ovms::request_validation_utils::validate(
+            *request,
+            this->getInputsInfo(),
+            this->getOutputsInfo(),
+            this->getName(),
+            this->getVersion(),
+            this->getOptionalInputNames(),
+            this->getModelConfig().getBatchingMode(),
+            this->getModelConfig().getShapes());
     }
 };
 

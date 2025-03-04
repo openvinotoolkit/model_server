@@ -1426,8 +1426,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void*
 
 // TODO @atobisze use from dags?
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;
+namespace ovms{
 template
-Status ovms::serializePredictResponse(
+Status serializePredictResponse(
     OutputGetter<const TensorMap&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
@@ -1437,7 +1438,7 @@ Status ovms::serializePredictResponse(
     bool useSharedOutputContent);
 
 template
-Status ovms::serializePredictResponse(
+Status serializePredictResponse(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
@@ -1447,6 +1448,8 @@ Status ovms::serializePredictResponse(
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent);
 
+//template class OutputGetter<ov::InferRequest&>;
+}
 #ifdef __cplusplus
 }
 #endif
