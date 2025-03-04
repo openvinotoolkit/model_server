@@ -40,7 +40,7 @@ docker build . -t benchmark_client
 First of all, download a model and create an appropriate directory tree. For example, for resnet50 binary model from Intel's Open Model Zoo:
 
 ```bash
-mkdir -p workspace/resnet50-binary-0001/1
+mkdir workspace workspace/resnet50-binary-0001 workspace/resnet50-binary-0001/1
 cd workspace/resnet50-binary-0001/1
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
