@@ -11,16 +11,10 @@ Download precompiled package (without python support):
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
-or build it yourself to add python support:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-# set PYTHON_DISABLE=1 to disable python execution support
-make docker_build PYTHON_DISABLE=0
-# Unpack the package
-tar -xzvf dist/ubuntu22/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22_python_on.tar.gz
+tar -xzvf ovms_ubuntu22_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -31,13 +25,10 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
-```
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
@@ -48,16 +39,10 @@ Download precompiled package (without python support):
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu24.tar.gz
 ```
-or build it yourself to add python support:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-# set PYTHON_DISABLE=1 to disable python execution node support
-make docker_build PYTHON_DISABLE=0 BASE_OS=ubuntu24
-# Unpack the package
-tar -xzvf dist/ubuntu24/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24_python_on.tar.gz
+tar -xzvf ovms_ubuntu24_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -68,14 +53,10 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.12
-```
-
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
@@ -86,16 +67,10 @@ Download precompiled package (without python support):
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-or build it yourself to add python support:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone -b releases/2025/0 https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-# set PYTHON_DISABLE=1 to disable python execution node support
-make docker_build BASE_OS=redhat PYTHON_DISABLE=0
-# Unpack the package
-tar -xzvf dist/redhat/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat_python_on.tar.gz
+tar -xzvf ovms_redhat_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -106,14 +81,10 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
-```
-
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
