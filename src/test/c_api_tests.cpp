@@ -1415,14 +1415,15 @@ TEST_F(CAPIStateIntegration, LiveReadyFromMalformedConfig) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    bool isReady;
-    bool isLive;
+    bool isReady = true;
+    bool isLive = true;
     OVMS_ServerLive(server, &isLive);
     ASSERT_TRUE(!isLive);
     OVMS_ServerReady(server, &isReady);
     ASSERT_TRUE(!isReady);
     createConfigFileWithContent("{", configFilePath);
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings), StatusCode::JSON_INVALID);
     OVMS_ServerLive(server, &isLive);
     ASSERT_TRUE(isLive);
@@ -1450,6 +1451,7 @@ TEST_F(CAPIStateIntegration, LiveReadyFromConfig) {
     ASSERT_TRUE(!isReady);
     std::filesystem::copy(getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfig.json"), configFilePath, std::filesystem::copy_options::recursive);
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, configFilePath.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, 5555));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(server, serverSettings, modelsSettings));
     OVMS_ServerLive(server, &isLive);
     ASSERT_TRUE(isLive);
@@ -1474,6 +1476,7 @@ TEST_F(CAPIStateIntegration, Config) {
         OVMS_ServerSettingsNew(&serverSettings));
     ovms::ServerSettingsImpl* directPtrServerSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(serverSettings);
     directPtrServerSettings->filesystemPollWaitMilliseconds = 20;  // mock 20ms config.json polling to make the test shorter
+    directPtrServerSettings->grpcPort = 5555;                      // need to set to sth
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(
         OVMS_ModelsSettingsNew(&modelsSettings));

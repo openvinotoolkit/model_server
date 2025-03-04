@@ -35,6 +35,7 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
+#include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 
 using ovms::ModelManager;
@@ -425,36 +426,14 @@ TEST(Server, grpcArguments) {
     server.setShutdownRequest(0);
 }
 TEST(Server, CAPIAliveGrpcNotHttpNot) {
-    char* argv[] = {
-        (char*)"OpenVINO Model Server",
-        (char*)"--model_name",
-        (char*)"dummy",
-        (char*)"--model_path",
-        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
-        nullptr};
-
-    ovms::Server& server = ovms::Server::instance();
-    bool isLive = true;
-    auto* cserver = reinterpret_cast<OVMS_Server*>(&server);
-    OVMS_ServerLive(cserver, &isLive);
-    ASSERT_TRUE(!isLive);
-    std::thread t([&argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(5, argv));
-    });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-    }
-    isLive = false;
+    ServerGuard serverGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json").c_str());
+    OVMS_Server* cserver = serverGuard.server;
+    bool isLive = false;
     OVMS_ServerLive(cserver, &isLive);
     ASSERT_TRUE(isLive);
     // GRPC is initialized before Servable ManagerModule
     requestServerAlive(portOldDefault.c_str(), grpc::StatusCode::UNAVAILABLE, false);
     requestRestServerAlive(typicalRestDefault.c_str(), httplib::StatusCode::NotFound_404, false);
-
-    server.setShutdownRequest(1);
-    t.join();
-    server.setShutdownRequest(0);
 }
 TEST(Server, CAPIAliveGrpcNotHttpYes) {
     GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon";  // TODO @dkalinow to enable drogon tests

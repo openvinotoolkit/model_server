@@ -72,8 +72,10 @@ public:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name"};
-        int arg_count = 5;
+        std::string port{"9000"};
+        randomizePort(port);
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--port", (char*)port.c_str()};
+        int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
 
         // Prepare manager

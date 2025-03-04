@@ -149,7 +149,7 @@ TEST_F(OvmsConfigDeathTest, negativeMissingPathAndName) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use config_path or model_path");
 }
 
-TEST_F(OvmsConfigDeathTest, metricMissingPort) {
+TEST_F(OvmsConfigDeathTest, metricMissingRestPort) {
     char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_enable"};
     int arg_count = 6;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port setting is missing, metrics are enabled on rest port");
@@ -159,12 +159,6 @@ TEST_F(OvmsConfigDeathTest, metricEnableMissing) {
     char* n_argv[] = {"ovms", "--model_path", "/path/to/model", "--model_name", "some_name", "--metrics_list", "metric1,metric2"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "metrics_enable setting is missing, required when metrics_list is provided");
-}
-
-TEST_F(OvmsConfigDeathTest, metricEnablingInCli) {
-    char* n_argv[] = {"ovms", "--config_path", "/path/to/config", "--metrics_enable"};
-    int arg_count = 4;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port setting is missing, metrics are enabled on rest port");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingName) {
@@ -185,8 +179,14 @@ TEST_F(OvmsConfigDeathTest, negativeSamePorts) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot");
 }
 
+TEST_F(OvmsConfigDeathTest, negativeRestPortGrpcPortBothNotSet) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1"};
+    int arg_count = 3;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot");
+}
+
 TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8080", "--rest_workers", "100001"};
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "100001"};
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
 }
@@ -274,36 +274,36 @@ TEST_F(OvmsConfigDeathTest, negativeGrpcWorkersMax) {
 }
 
 TEST_F(OvmsConfigDeathTest, cpuExtensionMissingPath) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir"};
-    int arg_count = 7;
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--cpu_extension", "/wrong/dir", "--port", "9178"};
+    int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "File path provided as an --cpu_extension parameter does not exist in the filesystem");
 }
 
 TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG"};
-    int arg_count = 7;
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--log_level", "WRONG", "--port", "9178"};
+    int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
 }
 
 TEST_F(OvmsConfigDeathTest, lowLatencyUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--low_latency_transformation"};
-    int arg_count = 6;
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--low_latency_transformation", "--port", "9178"};
+    int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
 }
 
 TEST_F(OvmsConfigDeathTest, maxSequenceNumberUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--max_sequence_number", "325"};
-    int arg_count = 7;
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--max_sequence_number", "325", "--port", "9178"};
+    int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
 }
 
 TEST_F(OvmsConfigDeathTest, idleSequenceCleanupUsedForNonStateful) {
-    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--idle_sequence_cleanup"};
-    int arg_count = 6;
+    char* n_argv[] = {"ovms", "--model_path", "/path1", "--model_name", "model", "--idle_sequence_cleanup", "--port", "9178"};
+    int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "require setting stateful flag for the model");
 }
 
-TEST_F(OvmsConfigDeathTest, negativeUint64Max) {
+TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range from 0 to 65535");

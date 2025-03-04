@@ -367,9 +367,9 @@ public:
             (char*)configPath.c_str(),
             (char*)"--cpu_extension",
             (char*)extensionPath,
-            (char*)"--port ",
+            (char*)"--port",
             (char*)port.c_str()};
-        int argc = 5;
+        int argc = 7;
         t.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
