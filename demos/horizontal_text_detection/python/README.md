@@ -40,15 +40,15 @@ pip3 install -r requirements.txt
 
 Start the client
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000
 ```
 You can also change the camera ID:
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source 0
 ```
 Or choose to work with video file as well:
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --video_source ~/video.mp4
 ```
 Example output:
 ```bash
@@ -157,15 +157,15 @@ pip3 install -r requirements.txt
 
 Start the client
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr
 ```
 You can also change the camera ID:
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source 0
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source 0
 ```
 Or choose to work with video file as well:
 ```bash
-python3 horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source ~/video.mp4
+python horizontal_text_detection.py --grpc_address localhost --grpc_port 9000 --use_case ocr --video_source ~/video.mp4
 ```
 Example output:
 ```bash

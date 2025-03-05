@@ -122,7 +122,7 @@ Now you can create a directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 multi_faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ../../common/static/images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
+python multi_faces_analysis_pipeline.py --pipeline_name find_face_images --grpc_port 9000 --image_input_path ../../common/static/images/people/people1.jpeg --face_images_output_name face_images --face_images_save_path ./results --image_width 600 --image_height 400 --input_image_layout NHWC
 Output: name[emotions]
     numpy => shape[(10, 1, 5, 1, 1)] data[float32]
 Output: name[ages]

@@ -49,6 +49,18 @@ enum : unsigned int {
 };
 }  // namespace
 
+void DrogonHttpServer::dispatch(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+    try {
+        this->dispatcher(req, std::move(callback));
+    } catch (...) {
+        SPDLOG_DEBUG("Exception caught in REST request handler");
+        auto resp = drogon::HttpResponse::newHttpResponse();
+        resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+        resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
+        callback(resp);
+    }
+}
+
 Status DrogonHttpServer::startAcceptingRequests() {
     SPDLOG_DEBUG("DrogonHttpServer::startAcceptingRequests()");
 
@@ -56,15 +68,19 @@ Status DrogonHttpServer::startAcceptingRequests() {
     drogon::app().disableSigtermHandling();
 
     drogon::app().setDefaultHandler([this](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-        // No separate pool for unary requests, they are handled by drogon's listener threads
-        try {
-            this->dispatcher(req, std::move(callback));
-        } catch (...) {
-            SPDLOG_DEBUG("Exception caught in REST request handler");
-            auto resp = drogon::HttpResponse::newHttpResponse();
-            resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-            resp->setStatusCode(drogon::HttpStatusCode::k500InternalServerError);
-            callback(resp);
+        bool isTextGeneration = req->path().find("/completions") != std::string::npos;
+
+        // Here we need to schedule the request to the separate thread pool
+        // in order to use disconnection callback of drogon.
+        if (isTextGeneration) {
+            this->pool->Schedule([this, req, callback = std::move(callback)]() mutable {
+                SPDLOG_DEBUG("Request URI {} dispatched to streaming thread pool", req->path());
+                this->dispatch(req, std::move(callback));
+            });
+        } else {
+            // No separate pool for unary single model requests, they are handled by drogon's listener threads
+            SPDLOG_DEBUG("Request URI working in drogon thread pool", req->path());
+            this->dispatch(req, std::move(callback));
         }
     });
 

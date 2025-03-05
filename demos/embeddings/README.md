@@ -17,8 +17,8 @@ That ensures faster initialization time, better performance and lower memory con
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -180,7 +180,7 @@ embedding_from_string2 = np.array(embedding_responses.data[1].embedding)
 cos_sim = np.dot(embedding_from_string1, embedding_from_string2)/(np.linalg.norm(embedding_from_string1)*np.linalg.norm(embedding_from_string2))
 print("Similarity score as cos_sim", cos_sim)' >> openai_client.py
 
-python3 openai_client.py
+python openai_client.py
 ```
 It will report results like `Similarity score as cos_sim 0.97654650115054`.
 

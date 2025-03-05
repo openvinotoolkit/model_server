@@ -144,9 +144,9 @@ Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std
     if (!model_version_str.empty()) {
         try {
             model_version = std::stoll(model_version_str.c_str());
-        } catch (std::out_of_range const& ex) {
+        } catch (std::out_of_range const&) {
             return StatusCode::MODEL_VERSION_MISSING;
-        } catch (std::exception& e) {
+        } catch (std::exception&) {
             SPDLOG_DEBUG("Couldn't parse model version {}", model_version_str);
             return StatusCode::REST_COULD_NOT_PARSE_VERSION;
         }
@@ -362,7 +362,7 @@ static std::set<std::string> getRequestedBinaryOutputsNames(::KFSRequest& grpc_r
     std::set<std::string> binaryOutputs;
     bool byDefaultBinaryOutpuRequested = false;
     for (auto& parameter : grpc_request.parameters()) {
-        if (parameter.second.parameter_choice_case(), inference::InferParameter::ParameterChoiceCase::kBoolParam) {
+        if (parameter.second.parameter_choice_case() == inference::InferParameter::ParameterChoiceCase::kBoolParam) {
             if (parameter.first == "binary_data_output") {
                 byDefaultBinaryOutpuRequested = parameter.second.bool_param();
                 break;
@@ -856,9 +856,7 @@ Status HttpRestApiHandler::processPredictRequest(
     std::string modelVersionLog = modelVersion.has_value() ? std::to_string(modelVersion.value()) : DEFAULT_VERSION;
     SPDLOG_DEBUG("Processing REST request for model: {}; version: {}",
         modelName, modelVersionLog);
-#pragma warning(push)
-#pragma warning(disable : 6001 4701)
-    Order requestOrder;
+    Order requestOrder = Order::UNKNOWN;
     tensorflow::serving::PredictResponse responseProto;
     Status status;
 
@@ -876,7 +874,6 @@ Status HttpRestApiHandler::processPredictRequest(
     if (!status.ok())
         return status;
     status = makeJsonFromPredictResponse(responseProto, response, requestOrder);
-#pragma warning(pop)
     if (!status.ok())
         return status;
 

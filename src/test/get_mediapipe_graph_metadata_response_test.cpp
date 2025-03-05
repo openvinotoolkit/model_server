@@ -176,8 +176,10 @@ public:
     std::string cl_model_2_path;
 
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
-        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)modelPath.data(), (char*)"--model_name", (char*)modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
-        int arg_count = 7;
+        std::string port{"9000"};
+        randomizePort(port);
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)modelPath.data(), (char*)"--model_name", (char*)modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
+        int arg_count = 9;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
 
@@ -240,6 +242,15 @@ public:
     }
 };
 
+class TestEnabledConfig : public ovms::Config {
+public:
+    TestEnabledConfig() :
+        Config() {
+        std::string port{"9000"};
+        randomizePort(port);
+        this->serverSettings.grpcPort = std::stoul(port);
+    }
+};
 TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     // Create config file with an empty config & reload
     std::string configStr = dummy_config;
@@ -263,7 +274,7 @@ TEST_F(TestImplGetModelStatus, NegativeKfsGetModelStatus) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     SetUpSingleModel(cl_models_path, "dummy");
-    auto& config = ovms::Config::instance();
+    TestEnabledConfig config;
     auto retCode = server.startModules(config);
     EXPECT_TRUE(retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);

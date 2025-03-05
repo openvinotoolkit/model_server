@@ -38,6 +38,8 @@
 #include "status.hpp"
 
 #if (USE_DROGON == 0)
+#pragma warning(push)
+#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -48,6 +50,7 @@
 
 #include "net_http_async_writer_impl.hpp"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 #else
 #include <drogon/drogon.h>
 
@@ -219,11 +222,11 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         }
         if (!status.ok() && output.empty()) {
             rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            writer.StartObject();
-            writer.String("error");
-            writer.String(status.string().c_str());
-            writer.EndObject();
+            rapidjson::Writer<rapidjson::StringBuffer> errorWriter(buffer);
+            errorWriter.StartObject();
+            errorWriter.String("error");
+            errorWriter.String(status.string().c_str());
+            errorWriter.EndObject();
             output = buffer.GetString();
         }
         auto resp = drogon::HttpResponse::newHttpResponse();

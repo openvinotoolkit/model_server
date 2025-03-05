@@ -141,7 +141,7 @@ static bool hasInputWithName(std::shared_ptr<ov::Model>& model, const std::strin
     try {
         model->input(name);
         return true;
-    } catch (ov::Exception& e) {
+    } catch (ov::Exception&) {
         return false;
     }
 }
@@ -150,7 +150,7 @@ static bool hasOutputWithName(std::shared_ptr<ov::Model>& model, const std::stri
     try {
         model->output(name);
         return true;
-    } catch (ov::Exception& e) {
+    } catch (ov::Exception&) {
         return false;
     }
 }
@@ -362,7 +362,7 @@ static Status applyLayoutConfiguration(const ModelConfig& config, std::shared_pt
     try {
         OV_LOGGER("preproc: {}, ov::Model = ov::preprocess::PrePostProcessor::build()", reinterpret_cast<void*>(&preproc));
         model = preproc.build();
-    } catch (std::exception& e) {
+    } catch (std::exception&) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot change layout");
         return StatusCode::MODEL_NOT_LOADED;
     }
@@ -469,7 +469,6 @@ Status ModelInstance::loadTensors(const ModelConfig& config, bool needsToApplyLa
 Status ModelInstance::gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes) {
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
-        std::string name;
         try {
             OV_LOGGER("ov::Output<ov::Node> input: {}, input.get_any_name()", reinterpret_cast<const void*>(&input));
             std::string name = input.get_any_name();

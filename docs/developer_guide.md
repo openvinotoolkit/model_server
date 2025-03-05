@@ -143,7 +143,7 @@ openvino/model_server:latest --model_name resnet-binary --model_path /models/res
 	make venv
 	source .venv/bin/activate
 	pip3 install -r demos/common/python/requirements.txt
-	python3 tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
+	python tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
 	--iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 --input_name 0 --output_name 1463 --grpc_port 9178
 	```
 
@@ -344,7 +344,7 @@ Debugging options are available. Click on the required option :
 	bazel build --config=mp_on_py_on //src:ovms -c dbg
 	```
 	```bash
-	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models
+	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178
 	```
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
@@ -389,7 +389,7 @@ bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
 ```bash
-bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json
+bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json --port 9178
 ```
 
 5. During app exit, the trace info will be saved into `trace.json`.
@@ -409,7 +409,7 @@ make docker_build MINITRACE=ON
 mkdir traces
 chmod -R 777 traces
 
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json --port 9178
 ```
 
 3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.

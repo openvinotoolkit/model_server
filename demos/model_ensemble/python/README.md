@@ -152,7 +152,7 @@ Check accuracy of the pipeline by running the client in another terminal:
 cd ../../../client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate && pip3 install -r requirements.txt
-python3 grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
+python grpc_predict_resnet.py --pipeline_name image_classification_pipeline --images_numpy_path ../../imgs.npy \
     --labels_numpy_path ../../lbs.npy --grpc_port 9100 --input_name image --output_name label --transpose_input True --transpose_method nchw2nhwc --iterations 10
 Image data range: 0.0 : 255.0
 Start processing:
@@ -231,7 +231,7 @@ docker logs <container_id>
 
 We can use the same gRPC/REST example client as we use for requesting model metadata. The only difference is we specify pipeline name instead of the model name.
 ```bash
-python3 grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
+python grpc_get_model_metadata.py --grpc_port 9100 --model_name image_classification_pipeline
 Getting model metadata for model: image_classification_pipeline
 Inputs metadata:
         Input name: image; shape: [1, 224, 224, 3]; dtype: DT_FLOAT

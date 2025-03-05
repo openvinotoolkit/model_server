@@ -15,8 +15,8 @@ That ensures faster initialization time, better performance and lower memory con
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -137,7 +137,7 @@ responses = client.rerank(query="hello",documents=["welcome","farewell"], model=
 for response in responses.results:
     print(f"index {response.index}, relevance_score {response.relevance_score}")' > rerank_client.py
 
-python3 rerank_client.py 
+python rerank_client.py
 ```
 It will return response similar to:
 ```

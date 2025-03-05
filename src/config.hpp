@@ -43,6 +43,7 @@ private:
          */
     const std::string empty;
 
+protected:
     ModelsSettingsImpl modelsSettings;
     ServerSettingsImpl serverSettings;
 

@@ -86,7 +86,7 @@ docker build ../../common/stream_client/ -t rtsp_client
 
 Client parameters:
 ```console
-python3 client.py --help
+python client.py --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
@@ -119,7 +119,7 @@ options:
 #### Reading from the local camera and visualization on the screen
 
 ```
-python3 client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
+python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
 The parameter `--input_stream 0 ` indicates the camera ID `0`.
@@ -129,7 +129,7 @@ The parameter `--input_stream 0 ` indicates the camera ID `0`.
 
 ```console
 curl -L "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920" -o video.mp4 
-python3 client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
+python client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
 ```
 
 
@@ -169,7 +169,7 @@ ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://local
 
 While the RTSP stream is active, run the client to read it and send the output stream
 ```console
-python3 client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8554/channel1' --output_stream 'rtsp://localhost:8554/channel2'
+python client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:8554/channel1' --output_stream 'rtsp://localhost:8554/channel2'
 ```
 
 The results can be examined with ffplay utility which reads and display the altered content.
@@ -197,10 +197,10 @@ Such use case with the unary calls with a horizontal text analysis can be follow
 Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
 visualisation of metrics using grafana.
 
-In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visialize 
+In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visualize 
 metrics about mediapipe graphs' status.
 
-Here are some exemplary visualisations included in above menitoned grafana dashboard:
+Here are some exemplary visualisations included in above mentioned grafana dashboard:
 
 - Processing time metric is used to track the time a particular mediapipe graph is opened. In this case it can be used to represent how long it took to process single video.
 

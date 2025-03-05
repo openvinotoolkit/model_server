@@ -77,12 +77,12 @@ Output:
 ### Using with video file and camera
 
 Set `camera` count to `1` with `-c 1` and provide path to the video file with `-f` parameter.
-```console
+```
 python person_vehicle_bike_detection.py -n person-vehicle-detection -l data -o detection_out -d 1024 -c 1 -f sample-videos/person-bicycle-car-detection.mp4 -i localhost -p 9000
 ```
 
 Console logs:
-```console
+```
 [$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
 [$(levelname)s ] Camera0 fps: 7, Inf fps: 7, dropped fps: 0
 [$(levelname)s ] Video1 fps: 7, Inf fps: 7, dropped fps: 0
