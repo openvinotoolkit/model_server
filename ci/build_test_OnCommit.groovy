@@ -103,12 +103,13 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          windows_success = "True"
                           /*
                           if (${env.BRANCH_NAME} == "main") {
                             build job: "ovms/store_ovms_windows_artifacts"
                           }
                           */
-                          build job: "ovms/store_ovms_windows_artifacts", wait: false
+                          // build job: "ovms/store_ovms_windows_artifacts", wait: false
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
@@ -137,7 +138,8 @@ pipeline {
               }
               } 
               }
-            } 
+            }
+            /*
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -157,6 +159,7 @@ pipeline {
                 }
               }            
             }
+
             stage('Test windows') {
               agent {
                 label "${agent_name_windows}"
@@ -181,8 +184,20 @@ pipeline {
                       }
                   }
               }
-            }           
+            }
+            */
           }
+        }
+    }
+    post {
+        always {
+            script {
+                if (windows_success == "True") {    // env.BRANCH_NAME == "main" &&
+                    build job: "ovms/store_ovms_windows_artifacts"
+                } else {
+                    echo "Not a main branch, skipping artifacts job trigger."
+                }
+            }
         }
     }
 }
