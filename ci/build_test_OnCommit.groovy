@@ -182,11 +182,13 @@ pipeline {
     }
     post {
         always {
-            script {
-                if (windows_success == "True") { // env.BRANCH_NAME == "main" &&
-                    bat(returnStatus:true, script: "copy C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip Z:\\ovms-windows-main-latest.zip")
-                } else {
-                    echo "Not a main branch, skipping copying artifacts."
+            node("${agent_name_windows}") {
+                script {
+                    if (windows_success == "True") { // env.BRANCH_NAME == "main" &&
+                        bat(returnStatus:true, script: "copy C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip Z:\\ovms-windows-main-latest.zip")
+                    } else {
+                        echo "Not a main branch, skipping copying artifacts."
+                    }
                 }
             }
         }
