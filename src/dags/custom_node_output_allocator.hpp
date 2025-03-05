@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <stddef.h>
+
 #include "../custom_node_interface.h"  // NOLINT
 #include "node_library.hpp"
 
