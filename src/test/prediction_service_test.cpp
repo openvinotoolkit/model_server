@@ -43,7 +43,6 @@
 #include "tfs_frontend/tfs_request_utils.hpp"
 #include "../inference_executor.hpp"
 
-
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../capi_frontend/inferencerequest.hpp"

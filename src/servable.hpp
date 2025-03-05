@@ -27,18 +27,22 @@ class Servable {
     // ModelVersionStatus status; // TODO PipelineDefinitionStatus @atobisze
 private:
     tensor_map_t inputsInfo;
+
 protected:
     tensor_map_t outputsInfo;
+
 private:
 public:
-    Servable(const std::string& name, model_version_t version) : name(name), version(version) {};
+    Servable(const std::string& name, model_version_t version) :
+        name(name),
+        version(version){};
     virtual ~Servable() = default;
 
-    virtual const std::string& getName() const { // TODO virtual @atobisze
+    virtual const std::string& getName() const {  // TODO virtual @atobisze
         return name;
     }
 
-    virtual model_version_t getVersion() const { // TODO virtual @atobisze
+    virtual model_version_t getVersion() const {  // TODO virtual @atobisze
         return version;
     }
 

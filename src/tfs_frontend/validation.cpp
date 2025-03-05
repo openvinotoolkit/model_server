@@ -131,7 +131,7 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
     }
     return StatusCode::OK;
 }
-template<>
+template <>
 size_t getStringInputWidth(const tensorflow::TensorProto& src) {
     size_t maxStringLength = 0;
     for (const auto& str : src.string_val()) {
@@ -139,7 +139,7 @@ size_t getStringInputWidth(const tensorflow::TensorProto& src) {
     }
     return maxStringLength + 1;
 }
-template<>
+template <>
 int64_t getStringBatchSize(const tensorflow::TensorProto& src) {
     return src.string_val_size();
 }
@@ -236,12 +236,12 @@ Status RequestValidator<TFSRequestType, TFSInputTensorType, ValidationChoice::IN
     }
     return StatusCode::OK;
 }
-template<>
+template <>
 bool dataInRawInputContents(const TFSRequestType& request) {
     return false;
 }
 
-template<>
+template <>
 const std::string* getRawInputContents(const TFSRequestType& request, size_t bufferId) {
     SPDLOG_DEBUG("Raw input contents is not supported for TFS API");
     throw std::runtime_error("Raw input contents used in TFSflow.");

@@ -232,7 +232,6 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
 
     } else {
         requestProcessor = std::make_unique<RequestProcessor<RequestType, ResponseType>>();
-
     }
     auto status = requestProcessor->extractRequestParameters(requestProto);
     if (!status.ok())

@@ -35,15 +35,14 @@ namespace ovms {
 template <>
 OVMS_InferenceRequestCompletionCallback_t getCallback(const KFSRequest* request) {
     return request->getResponseCompleteCallback();
-} // TODO check if this exact impl is used @atobisze
+}  // TODO check if this exact impl is used @atobisze
 #pragma GCC diagnostic pop
 template Status modelInferAsync<KFSRequest, KFSResponse>(ModelInstance& instance, const KFSRequest*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template Status infer<KFSRequest, KFSResponse>(ModelInstance& instance, const KFSRequest*, KFSResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 
 // TODO @atobisze use from dags?
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;
-template
-Status ovms::serializePredictResponse<const TensorMap&>(
+template Status ovms::serializePredictResponse<const TensorMap&>(
     OutputGetter<const TensorMap&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
@@ -52,8 +51,7 @@ Status ovms::serializePredictResponse<const TensorMap&>(
     outputNameChooser_t outputNameChooser,
     bool useSharedOutputContent);
 
-template
-Status ovms::serializePredictResponse<ov::InferRequest&>(
+template Status ovms::serializePredictResponse<ov::InferRequest&>(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,
     model_version_t servableVersion,
@@ -61,7 +59,7 @@ Status ovms::serializePredictResponse<ov::InferRequest&>(
     const KFSRequest* request,
     KFSResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent); // TODO move to serialziation.cpp
+    bool useSharedOutputContent);  // TODO move to serialziation.cpp
 template Status serializePredictResponse<KFSRequest, KFSResponse, ov::InferRequest&>(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,

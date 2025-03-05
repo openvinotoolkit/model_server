@@ -135,7 +135,7 @@ public:
 
     void notifyUsedModelChanged(const std::string& ownerDetails) {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
-    } // TODO @atobisze dispose
+    }  // TODO @atobisze dispose
     void receiveNotification(const std::string& ownerDetails) override {
         this->status.handle(UsedModelChangedEvent(ownerDetails));
     }

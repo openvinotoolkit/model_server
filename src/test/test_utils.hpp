@@ -55,7 +55,6 @@
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
 
-
 #include "../capi_frontend/capi_validation.hpp"
 #include "../kfs_frontend/validation.hpp"
 #include "../tfs_frontend/validation.hpp"
@@ -757,7 +756,7 @@ public:
     const ovms::Status mockValidate(const ovms::InferenceRequest* request) {
         return validate(request);
     }
-    template<typename RequestType>
+    template <typename RequestType>
     ovms::Status validate(const RequestType* request) {
         return ovms::request_validation_utils::validate(
             *request,

@@ -30,7 +30,7 @@
 #include "tensorinfo.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 
-namespace inference{
+namespace inference {
 class ModelInferRequest;
 }
 namespace tensorflow::serving {
@@ -39,8 +39,9 @@ class PredictRequest;
 
 namespace ovms {
 
-template<typename RequestShapeType>
-std::string tensorShapeToString(const RequestShapeType& tensorShape) { throw 42;}
+// TODO @atobisze should it be template?
+template <typename RequestShapeType>
+std::string tensorShapeToString(const RequestShapeType& tensorShape) { throw 42; }
 
 namespace request_validation_utils {
 enum class ValidationChoice {
@@ -48,15 +49,15 @@ enum class ValidationChoice {
     OUTPUT,
 };
 
-template<typename RequestType>
+template <typename RequestType>
 bool dataInRawInputContents(RequestType& request);
 
-template<typename RequestType>
+template <typename RequestType>
 const std::string* getRawInputContents(const RequestType& request, size_t bufferId);
 
-template<typename RequestTensorType>
+template <typename RequestTensorType>
 int64_t getStringBatchSize(const RequestTensorType& tensor);
-template<typename RequestTensorType>
+template <typename RequestTensorType>
 size_t getStringInputWidth(const RequestTensorType& tensor);
 
 template <typename RequestTensorType, typename RequestTensorShapeType>
@@ -281,7 +282,6 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
     return StatusCode::OK;
 }
-
 
 #define RETURN_IF_ERR(X)   \
     {                      \

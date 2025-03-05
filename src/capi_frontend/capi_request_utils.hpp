@@ -22,7 +22,7 @@
 #include "inferencerequest.hpp"
 #include "../shape.hpp"
 #include "../logging.hpp"
-#include "../status.hpp" // TODO move impl @atobisze
+#include "../status.hpp"  // TODO move impl @atobisze
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"
 namespace ovms {
@@ -34,9 +34,9 @@ class Status;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 inline OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest* request) {
-        SPDLOG_ERROR("ER");
+    SPDLOG_ERROR("ER");
     return request->getResponseCompleteCallback();
-} // TODO check if this exact impl is used @atobisze
+}  // TODO check if this exact impl is used @atobisze
 #pragma GCC diagnostic pop
 
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);

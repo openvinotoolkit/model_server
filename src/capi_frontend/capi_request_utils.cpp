@@ -22,7 +22,7 @@
 #include "inferencerequest.hpp"
 #include "../shape.hpp"
 #include "../logging.hpp"
-#include "../status.hpp" // TODO move impl @atobisze
+#include "../status.hpp"
 
 namespace ovms {
 class InferenceRequest;
@@ -45,7 +45,7 @@ bool useSharedOutputContentFn(const InferenceRequest* request) {
     // does not apply for C-API frontend
     return false;
 }
-template<>
+template <>
 OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequest& request) {
     return request.getResponseCompleteCallback();
 }

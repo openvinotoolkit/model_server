@@ -30,7 +30,7 @@
 namespace ovms {
 namespace request_validation_utils {
 //const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
-Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width) { // TODO @atobisze make not static this comes from KFS - may need to move there
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width) {  // TODO @atobisze make not static this comes from KFS - may need to move there
     size_t offset = 0;
     size_t tmpBatchSize = 0;
     size_t tmpMaxStringLength = 0;

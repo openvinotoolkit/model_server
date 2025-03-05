@@ -28,7 +28,7 @@ class InferenceResponse;
 class InferenceTensor;
 class Status;
 
-template<>
+template <>
 std::string tensorShapeToString(const signed_shape_t& tensorShape);
 
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);

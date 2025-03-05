@@ -19,7 +19,7 @@
 #include "../logging.hpp"
 #include "../precision.hpp"
 #include "../status.hpp"
-#include "tfs_utils.hpp" // @atobisze must be before lower
+#include "tfs_utils.hpp"  // @atobisze must be before lower
 #include "../tensor_conversion.hpp"
 
 namespace ovms {

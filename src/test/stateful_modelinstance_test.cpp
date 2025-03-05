@@ -229,14 +229,14 @@ public:
         if (!status.ok())
             return status;
         status = ovms::request_validation_utils::validate(
-                *requestProto,
-                this->getInputsInfo(),
-                this->getOutputsInfo(),
-                this->getName(),
-                this->getVersion(),
-                this->getOptionalInputNames(),
-                this->getModelConfig().getBatchingMode(),
-                this->getModelConfig().getShapes());
+            *requestProto,
+            this->getInputsInfo(),
+            this->getOutputsInfo(),
+            this->getName(),
+            this->getVersion(),
+            this->getOptionalInputNames(),
+            this->getModelConfig().getBatchingMode(),
+            this->getModelConfig().getShapes());
         if (!status.ok())
             return status;
 
@@ -270,7 +270,7 @@ public:
         bool isPipeline = false;
         std::unordered_map<int, std::shared_ptr<ovms::IOVTensorFactory>> factories;
         factories.emplace(OVMS_BUFFERTYPE_CPU, std::make_shared<ovms::RegularOVTensorFactory>());
-        status = ovms::deserializePredictRequest<ovms::ConcreteTensorProtoDeserializator, ovms::InputSink<ov::InferRequest&>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, factories);
+        status = ovms::deserializePredictRequest < ovms::ConcreteTensorProtoDeserializator, ovms::InputSink<ov::InferRequest&>(*requestProto, getInputsInfo(), getOutputsInfo(), inputSink, isPipeline, factories);
         if (!status.ok())
             return status;
         timer.stop(DESERIALIZE);

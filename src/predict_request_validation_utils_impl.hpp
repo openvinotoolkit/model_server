@@ -32,8 +32,8 @@
 
 namespace ovms {
 namespace request_validation_utils {
-const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;  // 1GB
-Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width); // TODO @atobisze make not static this comes from KFS - may need to move there
+const size_t MAX_2D_STRING_ARRAY_SIZE = 1024 * 1024 * 1024 * 1;                                             // 1GB
+Status getRawInputContentsBatchSizeAndWidth(const std::string& buffer, int32_t& batchSize, size_t& width);  // TODO @atobisze make not static this comes from KFS - may need to move there
 Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
 Mode getShapeMode(const shapes_info_map_t& shapeInfo, const std::string& name);
 }  // namespace request_validation_utils

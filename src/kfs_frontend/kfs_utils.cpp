@@ -28,7 +28,6 @@
 #include "../tensorinfo.hpp"
 #include "../tensor_conversion_common.hpp"
 
-
 namespace ovms {
 Precision KFSPrecisionToOvmsPrecision(const KFSDataType& datatype) {
     static std::unordered_map<KFSDataType, Precision> precisionMap{

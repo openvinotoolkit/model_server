@@ -27,4 +27,4 @@ Status convertStringRequestToOVTensor2D(
     }
     return StatusCode::OK;
 }
-} // namespace ovms
+}  // namespace ovms

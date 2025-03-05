@@ -35,7 +35,6 @@ public:
 #pragma GCC diagnostic ignored "-Wunused-function";
 template <typename RequestType>
 inline OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
-        std::cout << "EERERERERERERE" << std::endl;
     return nullptr;
 }
 #pragma GCC diagnostic pop

@@ -66,7 +66,7 @@ Status serializePredictResponse(
     return status;
 }
 
-template <> // TODO @Atobisze for other type outputgetter
+template <>  // TODO @Atobisze for other type outputgetter
 Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,

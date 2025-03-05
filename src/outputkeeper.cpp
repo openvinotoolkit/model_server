@@ -18,24 +18,24 @@
 #include "logging.hpp"
 
 namespace ovms {
-        OutputKeeper::OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo) :
-        request(request) {
-        for (auto [name, _] : outputsInfo) {
-            OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), name);
-            try {
-                ov::Tensor tensor = request.get_tensor(name);
-                OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
-                outputs.emplace(std::make_pair(name, std::move(tensor)));
-                OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(name)));
-            } catch (std::exception& e) {
-                SPDLOG_DEBUG("Resetting output:{}; for this model  is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData. Error:", name, e.what());
-            }
+OutputKeeper::OutputKeeper(ov::InferRequest& request, const tensor_map_t& outputsInfo) :
+    request(request) {
+    for (auto [name, _] : outputsInfo) {
+        OV_LOGGER("ov::InferRequest: {}, request.get_tensor({})", reinterpret_cast<void*>(&request), name);
+        try {
+            ov::Tensor tensor = request.get_tensor(name);
+            OV_LOGGER("ov::Tensor(): {}", reinterpret_cast<void*>(&tensor));
+            outputs.emplace(std::make_pair(name, std::move(tensor)));
+            OV_LOGGER("ov::Tensor(ov::Tensor&&): {}", reinterpret_cast<void*>(&outputs.at(name)));
+        } catch (std::exception& e) {
+            SPDLOG_DEBUG("Resetting output:{}; for this model  is not supported. Check C-API documentation for OVMS_InferenceRequestOutputSetData. Error:", name, e.what());
         }
     }
-        OutputKeeper::~OutputKeeper() {
-        for (auto [name, v] : outputs) {
-            OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), name, reinterpret_cast<void*>(&v));
-            request.set_tensor(name, v);
-        }
+}
+OutputKeeper::~OutputKeeper() {
+    for (auto [name, v] : outputs) {
+        OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, {})", reinterpret_cast<void*>(&request), name, reinterpret_cast<void*>(&v));
+        request.set_tensor(name, v);
     }
+}
 }  // namespace ovms

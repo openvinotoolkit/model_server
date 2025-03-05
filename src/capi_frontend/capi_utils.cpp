@@ -54,7 +54,7 @@ size_t DataTypeToByteSize(OVMS_DataType datatype) {
     return it->second;
 }
 
-template<>
+template <>
 std::string tensorShapeToString(const signed_shape_t& shape) {
     return shapeToString(shape);
 }
@@ -174,14 +174,16 @@ bool requiresPreProcessing(const InferenceTensor& tensor) {
     return false;
 }
 int getBinaryInputsSize(const InferenceTensor& tensor) {
-    throw std::runtime_error("Not implemented");;
+    throw std::runtime_error("Not implemented");
+    ;
 }
 const std::string& getBinaryInput(const InferenceTensor& tensor, size_t i) {
-    throw std::runtime_error("Not implemented");;
+    throw std::runtime_error("Not implemented");
+    ;
 }
 Status validateTensor(const TensorInfo& tensorInfo,
     const InferenceTensor& src,
     const std::string* buffer) {
-        return StatusCode::NOT_IMPLEMENTED;
+    return StatusCode::NOT_IMPLEMENTED;
 }
 }  // namespace ovms

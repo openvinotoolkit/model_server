@@ -128,7 +128,6 @@ cv::Mat convertStringToMat(const std::string& image) {
     }
 }
 
-
 Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision) {
     OVMS_PROFILE_FUNCTION();
     int type = getMatTypeFromTensorPrecision(requestedPrecision);

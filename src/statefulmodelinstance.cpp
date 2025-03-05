@@ -72,7 +72,8 @@ const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow
         return StatusCode::OK;
     }
     return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
-}*/ // TODO @atobisze
+}*/
+// TODO @atobisze
 
 Status StatefulModelInstance::loadModel(const ModelConfig& config) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);

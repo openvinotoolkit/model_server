@@ -22,7 +22,6 @@
 #include <sstream>
 #include <string>
 
-
 #include "buffer.hpp"
 #include "capi_utils.hpp"
 #include "inferencerequest.hpp"
@@ -299,12 +298,12 @@ Status RequestValidator<ovms::InferenceRequest, InferenceTensor, ValidationChoic
     return validateCapiTensorPrecision(tensorInfo, tensor, getCurrentlyValidatedTensorName(), servableName, servableVersion, ValidationChoice::OUTPUT);
 }
 
-template<>
+template <>
 bool dataInRawInputContents(const ovms::InferenceRequest& request) {
     return false;
 }
 
-template<>
+template <>
 const std::string* getRawInputContents(const ovms::InferenceRequest& request, size_t bufferId) {
     SPDLOG_DEBUG("Raw input contents is not supported for C-API");
     throw std::runtime_error("Raw input contents used in C-API flow.");

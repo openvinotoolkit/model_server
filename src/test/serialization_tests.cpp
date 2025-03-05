@@ -670,7 +670,6 @@ Status OutputGetter<MockedTensorProvider&>::get(const std::string& name, ov::Ten
     return StatusCode::OK;
 }
 
-
 namespace ovms {
 template <>
 Status serializePredictResponse<MockedTensorProvider&, TFSPredictRequest, TFSPredictResponse>(
@@ -696,7 +695,7 @@ Status serializePredictResponse<MockedTensorProvider&, KFSRequest, KFSResponse>(
     bool useSharedOutputContent) {
     return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
-}
+}  // namespace ovms
 template ovms::Status ovms::serializePredictResponse<MockedTensorProvider&,
     tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
     ovms::OutputGetter<MockedTensorProvider&>&,
@@ -813,7 +812,6 @@ TEST_F(CAPISerialization, ValidSerialization) {
     EXPECT_EQ(buffer->getByteSize(), tensor.get_byte_size());
     EXPECT_EQ(std::memcmp(tensor.data(), buffer->data(), sizeof(float) * NUMBER_OF_ELEMENTS), 0);
 }
-
 
 template <typename Pair,
     typename RequestType = typename Pair::first_type,

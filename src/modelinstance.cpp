@@ -1310,37 +1310,6 @@ Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     }
     return StatusCode::OK;
 }
-/*
-template <typename RequestType>
-static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request) {
-    return nullptr;
-}
-template <typename RequestType>
-static void* getCallbackData(RequestType request) {
-    return nullptr;
-}
-
-template <>
-void* getCallbackData(const InferenceRequest* request) {
-    return request->getResponseCompleteCallbackData();
-}*/
-
-/*template <typename RequestType, typename ResponseType>
-void handleCallback(RequestType request, ResponseType response) {
-    return;
-}
-template <>
-void handleCallback(const InferenceRequest* request, InferenceResponse* response) {
-    SPDLOG_ERROR("C-API handle callback overload");
-    OVMS_InferenceRequestCompletionCallback_t userCallback = getCallback(request);
-    if (userCallback) {
-        void* userCallbackData = getCallbackData(request);
-        OVMS_InferenceResponse* responseC = reinterpret_cast<OVMS_InferenceResponse*>(response);
-        userCallback(responseC, 1, userCallbackData);
-    }
-}*/
-
-
 
 void ModelInstance::checkForOutputTensorResetAbility() {
     // for resetting output we need copy constructor of compiled model infer request ov::Tensor to be implemented.
@@ -1363,8 +1332,6 @@ void ModelInstance::checkForOutputTensorResetAbility() {
 bool ModelInstance::doesSupportOutputReset() const {
     return this->supportOutputTensorsReset;
 }
-
-#pragma GCC diagnostic pop
 
 const size_t ModelInstance::getBatchSizeIndex() const {
     const auto& inputItr = this->inputsInfo.cbegin();

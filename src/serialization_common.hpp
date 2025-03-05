@@ -37,7 +37,6 @@ private:
     T outputSource;
 };
 
-
 template <typename T, typename RequestType, typename ResponseType>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
@@ -68,8 +67,8 @@ void serializeStringContent(std::string* content, ov::Tensor& tensor);
 void serializeStringContentFrom2DU8(std::string* content, ov::Tensor& tensor);
 
 // used only for KFS
-template<typename RequestType>
+template <typename RequestType>
 bool useSharedOutputContentFn(const RequestType* request) {
-        return false;
+    return false;
 }
 }  // namespace ovms

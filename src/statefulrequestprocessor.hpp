@@ -34,7 +34,8 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
     Sequence* sequence{nullptr};
     std::optional<uint64_t> sequenceId;
 
-    StatefulRequestProcessor(SequenceManager& sequenceManager) : sequenceManager(sequenceManager) {}
+    StatefulRequestProcessor(SequenceManager& sequenceManager) :
+        sequenceManager(sequenceManager) {}
     Status prepare() override {
         sequenceManagerLock = std::make_unique<std::unique_lock<std::mutex>>(sequenceManager.getMutex());
         auto status = sequenceManager.processRequestedSpec(sequenceProcessingSpec);
@@ -44,7 +45,7 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
         if (!sequenceManager.sequenceExists(this->sequenceId.value()))
             return StatusCode::INTERNAL_ERROR;
         sequence = &sequenceManager.getSequence(this->sequenceId.value());
-    
+
         sequenceLock = std::make_unique<std::unique_lock<std::mutex>>(sequence->getMutex());
         sequenceManagerLock->unlock();
         return StatusCode::OK;
@@ -68,8 +69,8 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
         return StatusCode::OK;
     }
     // TODO @atobisze force check status
-    Status extractRequestParameters(const RequestType* request) override { return StatusCode::NOT_IMPLEMENTED;};
-    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override { return StatusCode::NOT_IMPLEMENTED;};
-    Status release() override { return StatusCode::NOT_IMPLEMENTED;};
+    Status extractRequestParameters(const RequestType* request) override { return StatusCode::NOT_IMPLEMENTED; };
+    Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override { return StatusCode::NOT_IMPLEMENTED; };
+    Status release() override { return StatusCode::NOT_IMPLEMENTED; };
 };
 }  // namespace ovms

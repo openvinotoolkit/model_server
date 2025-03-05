@@ -127,7 +127,7 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT
     }
     return StatusCode::OK;
 }
-template<>
+template <>
 size_t getStringInputWidth(const KFSTensorInputProto& src) {
     size_t maxStringLength = 0;
     for (const auto& str : src.contents().bytes_contents()) {
@@ -135,7 +135,7 @@ size_t getStringInputWidth(const KFSTensorInputProto& src) {
     }
     return maxStringLength + 1;
 }
-template<>
+template <>
 int64_t getStringBatchSize(const KFSTensorInputProto& src) {
     return src.contents().bytes_contents_size();
 }
@@ -230,11 +230,11 @@ Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT
     }
     return StatusCode::OK;
 }
-template<>
+template <>
 bool dataInRawInputContents(const KFSRequest& request) {
     return request.raw_input_contents().size() > 0;
 }
-template<>
+template <>
 const std::string* getRawInputContents(const KFSRequest& request, size_t bufferId) {
     return &(request.raw_input_contents().at(bufferId));
 }

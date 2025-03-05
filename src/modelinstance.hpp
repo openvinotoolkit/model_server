@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include  <chrono>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <map>
@@ -128,7 +128,7 @@ protected:
     cl_context oclContextC{nullptr};
 
 public:
-    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager;}
+    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
@@ -278,7 +278,6 @@ protected:
          */
     Status loadOVModelUsingCustomLoader();
 
-
 private:
     /**
          * @brief Holds model required file names. First is loaded
@@ -340,8 +339,10 @@ private:
     void checkForOutputTensorResetAbility();
     Status adjustForEmptyOutputNames();
     bool supportOutputTensorsReset = true;
+
 public:
     bool doesSupportOutputReset() const;
+
 private:
     Status gatherReshapeInfo(bool isBatchingModeAuto, const DynamicModelParameter& parameter, bool& isReshapeRequired, std::map<std::string, ov::PartialShape>& modelShapes);
 
@@ -422,7 +423,7 @@ public:
     virtual const std::string& getName() const {
         return name;
     }
-    const std::string& getTargetDevice() const { // TODO @atobisze
+    const std::string& getTargetDevice() const {  // TODO @atobisze
         return name;
     }
 
@@ -646,7 +647,7 @@ public:
 
     uint32_t getOptimalNumberOfInferRequests() const;
     uint32_t getNumOfStreams() const;
-    const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> getTensorFactories() { return this->tensorFactories;}
+    const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> getTensorFactories() { return this->tensorFactories; }
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);

@@ -64,12 +64,10 @@ Status convertStringRequestFromBufferToOVTensor2D(const ::KFSRequest::InferInput
 
 template Status convertStringRequestToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertNativeFileFormatRequestTensorToOVTensor<::KFSRequest::InferInputTensor>(const ::KFSRequest::InferInputTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
-} // namespace ovms
-
+}  // namespace ovms
 
 // TODO we need to see declarations before @atobisze
 #include "../tensor_conversion_after.hpp"
-
 
 namespace ovms {
 template Status convertStringRequestToOVTensor2D<KFSTensorInputProto>(const KFSTensorInputProto& src, ov::Tensor& tensor, const std::string* buffer);

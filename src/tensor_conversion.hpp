@@ -40,7 +40,6 @@ Status convertStringRequestToOVTensor2D(const TensorType& src, ov::Tensor& tenso
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst);
 
-
 namespace tensor_conversion {
 int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision);
 bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision);
