@@ -102,6 +102,9 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          if (${env.BRANCH_NAME} == "main") {
+                            build job: "ovms/store_ovms_windows_artifacts"
+                          }
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
