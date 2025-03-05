@@ -184,10 +184,9 @@ pipeline {
         always {
             script {
                 if (windows_success == "True") { // env.BRANCH_NAME == "main" &&
-                    build job: "ovms/store_ovms_windows_artifacts",
-                    parameters: [ string(name: 'NODE_NAME', value: "${agent_name_windows}") ]
+                    bat(returnStatus:true, script: "copy C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip Z:\\ovms-windows-main-latest.zip")
                 } else {
-                    echo "Not a main branch, skipping artifacts job trigger."
+                    echo "Not a main branch, skipping copying artifacts."
                 }
             }
         }
