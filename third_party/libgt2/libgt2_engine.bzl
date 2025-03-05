@@ -43,6 +43,38 @@ def _impl(repository_ctx):
     if https_proxy == "":
         https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
 
+    # Create the Python script dynamically
+    repository_ctx.file("remove_japanese_txt.py", """
+import os
+import fnmatch
+import sys
+
+def remove_japanese_txt(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in fnmatch.filter(files, '*'):
+            file_path = os.path.join(root, file)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Removed: {file_path}")
+            except Exception as e:
+                print(f"Failed to remove {file_path}: {e}", file=sys.stderr)
+
+if __name__ == "__main__":
+    directory = f"{os.getcwd()}/../libgt2_engine/tests/resources/status/"
+    print(f"Working in {directory}")
+    remove_japanese_txt(directory)
+""")
+
+    # Locate the Python binary
+    python_binary = repository_ctx.which("python3") or repository_ctx.which("python")
+    if not python_binary:
+        fail("Python interpreter not found in PATH")
+
+    # Execute the Python script
+    # This patches drogon repo to remove txt files which break building, such as 中文.txt
+    result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
+
     if _is_windows(repository_ctx):
         lib_name = "git2"
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
@@ -53,7 +85,9 @@ def _impl(repository_ctx):
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "Debug",
         "WIN32": "True",
         "X86_64": "True",
-        "BUILD_EXAMPLES": "OFF"
+        "BUILD_EXAMPLES": "OFF",
+        "BUILD_TESTS": "OFF",
+        "BUILD_CLI": "OFF"
         """
     else:
         lib_name = "libgit2"
@@ -63,7 +97,9 @@ def _impl(repository_ctx):
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
-        "BUILD_EXAMPLES": "OFF"
+        "BUILD_EXAMPLES": "OFF",
+        "BUILD_TESTS": "OFF",
+        "BUILD_CLI": "OFF"
         """
 
     # Note we need to escape '{/}' by doubling them due to call to format
