@@ -195,9 +195,13 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
                     }
+                    // Pulling out text from nested structure to the "content" field for text and erase whole "content" value for image data
+                    // since images are stored separately in request.images
                     member->value = contentText;
-                    // Add new field to the last message in history
-                    request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                    // Add new field to the last message in history if content is text
+                    if (!member->value.IsNull() && member->value.IsString()) {
+                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                    }
                 } else {
                     return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
