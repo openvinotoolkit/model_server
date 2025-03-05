@@ -1896,7 +1896,7 @@ cc_test(
                 "test/llmnode_test.cpp",
                 "test/llmtemplate_test.cpp",
                 "test/text_streamer_test.cpp",
-                "test/llm/visual_language_model/test_complete_flow.cpp",
+                "test/llm/visual_language_model/complete_flow_test.cpp",
             ],
             "//:disable_python" : [],
         }),

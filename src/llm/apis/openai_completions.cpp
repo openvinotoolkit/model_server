@@ -199,7 +199,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                     // since images are stored separately in request.images
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
-                    if (!member->value.IsNull() && member->value.IsString()) {
+                    if (member->value.IsString()) {
                         request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                     }
                 } else {
