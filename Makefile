@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= d86afe8b676ae38a7c59d9995c1f07950b7e0d7f # master / 2025-02-21
+OV_SOURCE_BRANCH ?= 5e16b688156dac78f419d326c7e8f1e718d5708f # master / 2025-03-04
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= b26f2935cb6dc86f07058c0484f19605d4d6ba5b # master 2025-02-20
+OV_TOKENIZERS_BRANCH ?= d6ab2bb0f6237176d40149c7eeca7781172abec7 # master 2025-02-28
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -161,11 +161,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "24.52.32224"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18174-6f7519ad4dc/openvino_toolkit_ubuntu24_2025.1.0.dev20250214_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_ubuntu24_2025.1.0.dev20250304_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18174-6f7519ad4dc/openvino_toolkit_ubuntu22_2025.1.0.dev20250214_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_ubuntu22_2025.1.0.dev20250304_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -175,7 +175,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   INSTALL_DRIVER_VERSION ?= "24.45.31740"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18174-6f7519ad4dc/openvino_toolkit_rhel8_2025.1.0.dev20250214_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_rhel8_2025.1.0.dev20250304_x86_64.tgz
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
