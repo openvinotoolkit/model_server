@@ -74,7 +74,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
             lastStreamerCallbackOutput = text;
-            return false;
+            return ov::genai::StreamingStatus::RUNNING;
         };
 
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
@@ -133,10 +133,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     // This loop could be handled in the streamer, but for now we want to keep it identical with GenAI
     // so such change should be done in GenAI first
     std::stringstream ss;
-    for (const auto& token : generationOutput.generated_ids) {
-        executionContext->textStreamer->write(token);
-        ss << executionContext->lastStreamerCallbackOutput;
-    }
+    executionContext->textStreamer->write(generationOutput.generated_ids);
+    ss << executionContext->lastStreamerCallbackOutput;
+
     std::string lastTextChunk = ss.str();
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
