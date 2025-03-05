@@ -56,7 +56,7 @@ Config& Config::parse(int argc, char** argv) {
     ovms::HfDownloader hfDownloader;
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings, &hfDownloader);
-    //TODO: Validate Hf downloader
+    // TODO: Validate Hf downloader
     if (!this->parse(&serverSettings, &modelsSettings))
 #ifdef __linux__
         exit(EX_USAGE);

@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#ifndef SRC_LIBGT2_LIBGT2_HPP_
+#define SRC_LIBGT2_LIBGT2_HPP_
 #include <string>
 
 #include <assert.h>
@@ -45,3 +47,4 @@ private:
 #ifdef __cplusplus
 }
 #endif
+#endif  // SRC_LIBGT2_LIBGT2_HPP_

@@ -100,7 +100,7 @@ int cred_acquire_cb(git_credential** out,
     const char* username_from_url,
     unsigned int allowed_types,
     void* payload) {
-    //TODO:: implement in ovms
+    // TODO: implement in ovms
     return 0;
 }
 
@@ -151,10 +151,11 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
             printf("ERROR %d: %s\n", err->klass, err->message);
         else
             printf("ERROR %d: no detailed info\n", error);
-    } else if (cloned_repo)
+    } else if (cloned_repo) {
         git_repository_free(cloned_repo);
+    }
 
-    //TODO: Create guard on init and shutdown
+    // TODO: Create guard on init and shutdown
     git_libgit2_shutdown();
     return error;
 }

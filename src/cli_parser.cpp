@@ -255,7 +255,6 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
             hfDownloader->source_model = result->operator[]("source_model").as<std::string>();
         if (result->count("repo_path"))
             hfDownloader->repo_path = result->operator[]("repo_path").as<std::string>();
-        
         return;
     }
 
