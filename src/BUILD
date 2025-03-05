@@ -234,6 +234,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "//src/libgt2:libgt2",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

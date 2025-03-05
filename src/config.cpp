@@ -31,6 +31,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
+#include "libgt2/libgt2.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {
@@ -52,8 +53,10 @@ Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
+    ovms::HfDownloader hfDownloader;
     p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings);
+    p.prepare(&serverSettings, &modelsSettings, &hfDownloader);
+    //TODO: Validate Hf downloader
     if (!this->parse(&serverSettings, &modelsSettings))
 #ifdef __linux__
         exit(EX_USAGE);

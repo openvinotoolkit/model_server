@@ -29,7 +29,8 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 
 cc_library(
     name = "libgt2",
-    srcs = [],
+    srcs = ["libgt2.cpp"],
+    hdrs = ["libgt2.hpp"],
     deps =  ["@libgt2_engine//:libgt2_engine"],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
