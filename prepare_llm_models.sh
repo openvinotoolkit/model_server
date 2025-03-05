@@ -24,7 +24,7 @@ CB_MODEL="facebook/opt-125m"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
-if [ -d "$1/$CB_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ] [ -d "$1/$VLM_MODEL" ]; then
+if [ -d "$1/$CB_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ] && [ -d "$1/$VLM_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
