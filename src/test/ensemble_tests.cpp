@@ -22,6 +22,12 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include "../tfs_frontend/tfs_request_utils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+
+#include "../deserialization_main.hpp"
+
 #include "../dags/dl_node.hpp"
 #include "../dags/entry_node.hpp"
 #include "../dags/exit_node.hpp"
@@ -29,14 +35,15 @@
 #include "../dags/pipeline.hpp"
 #include "../dags/pipeline_factory.hpp"
 #include "../dags/pipelinedefinition.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "../tfs_frontend/deserialization.hpp"
+#include "../inference_executor.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../metric_registry.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-#include "../prediction_service_utils.hpp"
+//#include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../tensor_conversion.hpp"
 #include "../timer.hpp"
@@ -830,7 +837,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
 
     tensorflow::serving::PredictResponse simpleModelResponse;
     // Do the inference directly on dummy model before inference on pipeline
-    ASSERT_EQ(model->infer(&simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
 
     ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
     auto& output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];
@@ -867,7 +874,7 @@ TEST_F(EnsembleFlowTest, DummyModelDirectAndPipelineInference) {
     checkDummyResponse(dummySeriallyConnectedCount);
 
     // Do the inference directly on dummy model after inference on pipeline
-    ASSERT_EQ(model->infer(&simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*model, &simpleModelRequest, &simpleModelResponse, unload_guard), ovms::StatusCode::OK);
 
     ASSERT_EQ(simpleModelResponse.outputs().count(DUMMY_MODEL_OUTPUT_NAME), 1);
     output_tensor = (*simpleModelResponse.mutable_outputs())[DUMMY_MODEL_OUTPUT_NAME];

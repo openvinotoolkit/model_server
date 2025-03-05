@@ -31,10 +31,10 @@
 #include "predict_request_validation_utils_impl.hpp"
 
 namespace inference{
-class KFSRequest;
+class ModelInferRequest;
 }
 namespace tensorflow::serving {
-class TFSRequestType;
+class PredictRequest;
 }
 
 namespace ovms {
@@ -291,7 +291,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
     }
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename IteratorType, typename ShapeType>
 Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::validate() {
-    if ((std::is_same<RequestType, ::inference::KFSRequest>::value || std::is_same<RequestType, ::tensorflow::serving::TFSRequestType>::value) && choice == ValidationChoice::OUTPUT) {
+    if ((std::is_same<RequestType, ::inference::ModelInferRequest>::value || std::is_same<RequestType, ::tensorflow::serving::PredictRequest>::value) && choice == ValidationChoice::OUTPUT) {
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;

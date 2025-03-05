@@ -41,8 +41,8 @@ namespace ovms {
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>
 OVMS_InferenceRequestCompletionCallback_t getCallback(const TFSPredictRequest* request) {
-    return nullptr; // TODO @atobisze is there no spec impl?
-} // TODO check if this exact impl is used @atobisze
+    return nullptr;
+}
 #pragma GCC diagnostic pop
 template Status infer<TFSPredictRequest, TFSPredictResponse>(ModelInstance& instance, const TFSPredictRequest*, TFSPredictResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template class RequestTensorExtractor<TFSPredictRequest, TFSInputTensorType, ExtractChoice::EXTRACT_INPUT>;

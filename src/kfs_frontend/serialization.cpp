@@ -203,7 +203,7 @@ std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::cre
     return protoStorage->add_raw_output_contents();
 }
 
-template <> // TODO @Atobisze for other type outputgetter
+template <>
 Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,

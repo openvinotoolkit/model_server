@@ -670,6 +670,55 @@ Status OutputGetter<MockedTensorProvider&>::get(const std::string& name, ov::Ten
     return StatusCode::OK;
 }
 
+
+namespace ovms {
+template <>
+Status serializePredictResponse<MockedTensorProvider&, TFSPredictRequest, TFSPredictResponse>(
+    OutputGetter<MockedTensorProvider&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const tensorflow::serving::PredictRequest* request,
+    tensorflow::serving::PredictResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent) {
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+}
+template <>
+Status serializePredictResponse<MockedTensorProvider&, KFSRequest, KFSResponse>(
+    OutputGetter<MockedTensorProvider&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent) {
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
+}
+}
+template ovms::Status ovms::serializePredictResponse<MockedTensorProvider&,
+    tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
+    ovms::OutputGetter<MockedTensorProvider&>&,
+    const std::string&,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const TFSPredictRequest* request,
+    tensorflow::serving::PredictResponse*,
+    outputNameChooser_t outputNameChooser,
+    bool);
+
+template ovms::Status ovms::serializePredictResponse<MockedTensorProvider&,
+    inference::ModelInferRequest, inference::ModelInferResponse>(
+    ovms::OutputGetter<MockedTensorProvider&>&,
+    const std::string&,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const KFSRequest*,
+    KFSResponse*,
+    outputNameChooser_t outputNameChooser,
+    bool);
+
 TEST_P(SerializeCAPITensorPositive, SerializeTensorShouldSucceedForPrecision) {
     ovms::Precision testedPrecision = GetParam();
     ov::Tensor tensor(ovmsPrecisionToIE2Precision(testedPrecision), ov::Shape{1, 10});

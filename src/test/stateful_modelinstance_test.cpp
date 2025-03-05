@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include "../deserialization.hpp"
+#include "../tfs_frontend/deserialization.hpp"
 #include "../executingstreamidguard.hpp"
 #include "../get_model_metadata_impl.hpp"
 #include "../global_sequences_viewer.hpp"

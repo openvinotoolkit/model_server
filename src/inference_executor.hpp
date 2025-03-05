@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "executingstreamidguard.hpp"
+#include "logging.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "outputkeeper.hpp"
@@ -261,7 +262,10 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     ExecutingStreamIdGuard executingStreamIdGuard(instance.getInferRequestsQueue(), instance.getMetricReporter());
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
     int executingInferId = executingStreamIdGuard.getId();
+#pragma GCC diagnostic pop
     ov::InferRequest& inferRequest = executingStreamIdGuard.getInferRequest();
     OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop(GET_INFER_REQUEST);
