@@ -35,6 +35,8 @@ class HfDownloader {
 		std::string source_model;
 		std::string repo_path;
 		bool pull_hf_model;
+	private:
+		bool CheckIfProxySet();
 };
 
 }

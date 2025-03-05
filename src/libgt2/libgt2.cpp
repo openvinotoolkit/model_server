@@ -112,7 +112,20 @@ int cred_acquire_cb(git_credential **out,
     return 0;
 }
 
-int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path){
+bool HfDownloader::CheckIfProxySet() {
+    const char* env_cred = std::getenv("https_proxy");
+    if (!env_cred) return false;
+    return true;
+}
+
+int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path) {
+    int res = git_libgit2_init();
+	if (res < 0) {
+		const git_error *err = git_error_last();
+		const char *msg = err ? err->message : "unknown failure";
+		fprintf(stderr, "failed to init libgit2: %s\n", msg);
+		return res;
+	}
     progress_data pd = {{0}};
     git_repository *cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -130,6 +143,12 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
     clone_opts.fetch_opts.callbacks.payload = &pd;
 
+    // Use proxy
+    if (CheckIfProxySet()) {
+        clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+        clone_opts.fetch_opts.proxy_opts.url = std::getenv("https_proxy");
+    }
+    
     /* Do the clone */
     error = git_clone(&cloned_repo, url, path, &clone_opts);
     printf("\n");
@@ -139,6 +158,9 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
         else printf("ERROR %d: no detailed info\n", error);
     }
     else if (cloned_repo) git_repository_free(cloned_repo);
+
+    //TODO: Create guard on init and shutdown
+    git_libgit2_shutdown();
     return error;
 }
 
