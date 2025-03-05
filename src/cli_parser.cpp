@@ -29,7 +29,6 @@
 #include "libgt2/libgt2.hpp"
 #include "version.hpp"
 
-
 namespace ovms {
 
 void CLIParser::parse(int argc, char** argv) {

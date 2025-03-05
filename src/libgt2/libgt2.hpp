@@ -13,15 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <assert.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <string.h>
 #include <string>
-#include <stdlib.h>
-#include <git2.h>
+
+#include <assert.h>
 #include <fcntl.h>
+#include <git2.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,16 +31,17 @@ extern "C" {
 namespace ovms {
 
 class HfDownloader {
-    public:
-        int cloneRepository(std::string& repo_url, std::string& repo_path);
-		std::string source_model;
-		std::string repo_path;
-		bool pull_hf_model;
-	private:
-		bool CheckIfProxySet();
+public:
+    int cloneRepository(std::string& repo_url, std::string& repo_path);
+    std::string source_model;
+    std::string repo_path;
+    bool pull_hf_model;
+
+private:
+    bool CheckIfProxySet();
 };
 
-}
+}  // namespace ovms
 #ifdef __cplusplus
 }
 #endif
