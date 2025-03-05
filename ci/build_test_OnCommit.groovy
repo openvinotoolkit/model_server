@@ -183,8 +183,9 @@ pipeline {
     post {
         always {
             script {
-                if (env.BRANCH_NAME == "main" && windows_success == "True") {
-                    build job: "ovms/store_ovms_windows_artifacts"
+                if (windows_success == "True") { // env.BRANCH_NAME == "main" &&
+                    build job: "ovms/store_ovms_windows_artifacts",
+                    parameters: [ string(name: 'NODE_NAME', value: "${agent_name_windows}") ]
                 } else {
                     echo "Not a main branch, skipping artifacts job trigger."
                 }
