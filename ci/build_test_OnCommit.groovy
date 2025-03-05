@@ -74,7 +74,7 @@ pipeline {
         }
         stage('Build') {
           parallel {
-            stage("Build linux") {
+            /* stage("Build linux") {
               agent {
                 label "${agent_name_linux}"
               }
@@ -83,7 +83,8 @@ pipeline {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
-            }
+            } 
+            */
             stage('Build windows') {
               agent {
                 label 'win_ovms'
@@ -102,9 +103,12 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          /*
                           if (${env.BRANCH_NAME} == "main") {
                             build job: "ovms/store_ovms_windows_artifacts"
                           }
+                          */
+                          build job: "ovms/store_ovms_windows_artifacts"
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
