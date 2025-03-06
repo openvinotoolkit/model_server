@@ -33,7 +33,7 @@ protected:
 public:
     Servable(const std::string& name, model_version_t version) :
         name(name),
-        version(version){}
+        version(version) {}
     virtual ~Servable() = default;
 
     virtual const std::string& getName() const {  // TODO virtual @atobisze

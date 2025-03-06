@@ -21,7 +21,6 @@
 #include <sstream>
 #include <string>
 
-
 #include "buffer.hpp"
 #include "../modelversion.hpp"
 #include "../shape.hpp"
