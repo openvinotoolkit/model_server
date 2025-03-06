@@ -1423,31 +1423,6 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void*
 #endif
     return nullptr;
 }
-
-// TODO @atobisze use from dags?
-using TensorMap = std::unordered_map<std::string, ov::Tensor>;
-namespace ovms {
-template Status serializePredictResponse(
-    OutputGetter<const TensorMap&>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    InferenceResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent);
-
-template Status serializePredictResponse(
-    OutputGetter<ov::InferRequest&>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const InferenceRequest* request,
-    InferenceResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent);
-
-//template class OutputGetter<ov::InferRequest&>;
-}  // namespace ovms
 #ifdef __cplusplus
 }
 #endif

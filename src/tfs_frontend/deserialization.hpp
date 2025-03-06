@@ -25,8 +25,12 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wall"
+
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201 4624 6385 6386 6011 6001 6326)
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
+#pragma warning(pop)
 #pragma GCC diagnostic pop
 
 #include "../deserialization_common.hpp"

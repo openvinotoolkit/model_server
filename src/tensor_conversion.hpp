@@ -29,6 +29,9 @@
 #include "tensorinfo.hpp"
 #include "status.hpp"
 
+namespace tensorflow {
+    class TensorProto;
+}
 namespace ovms {
 class Status;
 template <typename TensorType>
@@ -149,6 +152,11 @@ Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov:
     return StatusCode::OK;
 }
 
+class InferenceTensor;
+
+template <>
+Status convertNativeFileFormatRequestTensorToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
+
 template <typename TensorType>
 Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
@@ -163,6 +171,9 @@ Status convertStringRequestToOVTensor(const TensorType& src, ov::Tensor& tensor,
     }
     return StatusCode::OK;
 }
+
+template <>
+Status convertStringRequestToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
 
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst) {
@@ -183,4 +194,14 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
     }
     return StatusCode::OK;
 }
+template <>
+Status convertStringRequestToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
+template <>
+Status convertStringRequestToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
+template <>
+Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, InferenceTensor& dst);
+template <>
+Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
+template <>
+Status convertNativeFileFormatRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
 }  // namespace ovms
