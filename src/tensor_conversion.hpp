@@ -30,7 +30,7 @@
 #include "status.hpp"
 
 namespace tensorflow {
-    class TensorProto;
+class TensorProto;
 }
 namespace ovms {
 class Status;

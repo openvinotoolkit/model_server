@@ -112,6 +112,7 @@ protected:
          * @brief OpenVINO Runtime CompiledModel object
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
+
 public:
     // TODO windows
 #ifdef __linux__
@@ -122,7 +123,7 @@ public:
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
 public:
-virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
+    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
 
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;

@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-
 #pragma warning(push)
 #pragma warning(disable : 4624 6001 4324 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
