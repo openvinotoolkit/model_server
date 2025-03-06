@@ -453,7 +453,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
-    std::shared_ptr<Document> doc;// = std::make_shared<Document>();
+    std::shared_ptr<Document> doc = std::make_shared<Document>();
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
     // {
@@ -485,8 +485,6 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 SPDLOG_INFO("Model name from Multipart Field: {}", model_name);
             }
         } else if (isApplicationJson) {
-            doc = std::make_shared<Document>();
-
             doc->Parse(request_body.c_str());
 
             OVMS_PROFILE_SCOPE("rapidjson validate");

@@ -21,7 +21,11 @@ namespace ovms {
 class MultiPartParser {
 public:
     virtual bool parse() = 0;
-    virtual std::string getFieldByName(const std::string& name) = 0;
+
+    virtual bool hasParseError() const = 0;
+
+    virtual std::string getFieldByName(const std::string& name) const = 0;
+    virtual std::string_view getFileContentByName(const std::string& name) const = 0;
 };
 
 }  // namespace ovms

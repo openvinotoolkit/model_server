@@ -18,11 +18,24 @@
 namespace ovms {
 
 bool DrogonMultiPartParser::parse() {
-    return this->parser->parse(request) == 0;
+    this->hasParseError_ = this->parser->parse(request) != 0;
+    return !this->hasParseError_;
 }
 
-std::string DrogonMultiPartParser::getFieldByName(const std::string& name) {
+bool DrogonMultiPartParser::hasParseError() const {
+    return this->hasParseError_;
+}
+
+std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const {
     return this->parser->getParameter<std::string>(name);
+}
+
+std::string_view DrogonMultiPartParser::getFileContentByName(const std::string& name) const {
+    auto it = this->parser->getFilesMap().find(name);
+    if (it == this->parser->getFilesMap().end()) {
+        return "";
+    }
+    return it->second.fileContent();
 }
 
 }  // namespace ovms

@@ -23,11 +23,13 @@
 #pragma warning(pop)
 
 #include <string>
+#include <string_view>
 #include <memory>
 
 namespace ovms {
 
 class DrogonMultiPartParser : public MultiPartParser {
+    bool hasParseError_{true};
     const drogon::HttpRequestPtr request{nullptr};
     const std::shared_ptr<drogon::MultiPartParser> parser{nullptr};
 
@@ -36,7 +38,12 @@ public:
         : request(request), parser(std::make_shared<drogon::MultiPartParser>()) {}
 
     bool parse() override;
-    std::string getFieldByName(const std::string& name);
+
+    bool hasParseError() const override;
+
+    std::string getFieldByName(const std::string& name) const override;
+    std::string_view getFileContentByName(const std::string& name) const override;
+
 };
 
 }  // namespace ovms
