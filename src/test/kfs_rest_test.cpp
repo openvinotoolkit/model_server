@@ -562,7 +562,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>) {
+    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>, std::shared_ptr<ovms::MultiPartParser>) {
         c++;
         return ovms::StatusCode::OK;
     });
@@ -581,7 +581,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter> writer, multiPartParser) {
+    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>, std::shared_ptr<ovms::MultiPartParser>) {
         c++;
         return ovms::StatusCode::OK;
     });
