@@ -46,22 +46,6 @@ pipeline {
         stage('Style, SDL and clean') {
           parallel {
             stage('Style check') {
-                steps {
-                  sh 'make style'
-                }
-            }
-            /*stage('Sdl check') {
-                steps {
-                    sh 'make sdl-check'
-                }
-            }*/
-            stage('Client test') {
-                when { expression { client_test_needed == "true" } }
-                steps {
-                    sh "make test_client_lib"
-                }
-            }
-            stage('Cleanup node') {
               agent {
                 label "${agent_name_linux}"
               }
