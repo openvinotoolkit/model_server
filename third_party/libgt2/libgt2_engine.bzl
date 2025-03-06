@@ -97,6 +97,7 @@ if __name__ == "__main__":
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
+        "CMAKE_INSTALL_LIBDIR": "lib",
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
         "BUILD_CLI": "OFF"
