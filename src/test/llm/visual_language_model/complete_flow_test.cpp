@@ -39,7 +39,7 @@
 
 using namespace ovms;
 
-class VLMServableFlowTest : public ::testing::Test {
+class VLMServableExecutionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -84,7 +84,7 @@ public:
     }
 };
 
-std::unique_ptr<std::thread> VLMServableFlowTest::t;
+std::unique_ptr<std::thread> VLMServableExecutionTest::t;
 
 // This function wraps the same input data with the additional fields
 // specified in the fields parameter that control flow in the calculator, sampling etc.
@@ -119,7 +119,7 @@ std::string createRequestBody(const std::vector<std::pair<std::string, std::stri
     return oss.str();
 }
 
-TEST_F(VLMServableFlowTest, unaryBasic) {
+TEST_F(VLMServableExecutionTest, unaryBasic) {
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "false"},
@@ -153,7 +153,7 @@ TEST_F(VLMServableFlowTest, unaryBasic) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
-TEST_F(VLMServableFlowTest, streamBasic) {
+TEST_F(VLMServableExecutionTest, streamBasic) {
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "true"},

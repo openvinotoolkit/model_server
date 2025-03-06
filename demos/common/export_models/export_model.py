@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS
 subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
-parser_text.add_argument('--pipeline_type', default='CONTINUOUS_BATCHING', help='Type of the pipeline to be used. Can be either CONTINUOUS_BATCHING or VISUAL_LANGUAGE_MODEL.', dest='pipeline_type')
+parser_text.add_argument('--pipeline_type', default=None, help='Type of the pipeline to be used. Can be either TEXT_CB or VLM_CB', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
@@ -144,7 +144,8 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-          pipeline_type: {{pipeline_type}},
+          {%- if pipeline_type %}
+          pipeline_type: {{pipeline_type}},{% endif %}
           models_path: "{{model_path}}",
           plugin_config: '{ {% if kv_cache_precision %}"KV_CACHE_PRECISION": "{{kv_cache_precision}}"{% endif %}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
