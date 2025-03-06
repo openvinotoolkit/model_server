@@ -453,13 +453,13 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
-    std::shared_ptr<Document> doc = std::make_shared<Document>();
+    std::shared_ptr<Document> doc;// = std::make_shared<Document>();
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
-    {
-        OVMS_PROFILE_SCOPE("rapidjson parse body");
-        doc->Parse(request_body.c_str());
-    }
+    // {
+    //     OVMS_PROFILE_SCOPE("rapidjson parse body");
+    //     doc->Parse(request_body.c_str());
+    // }
     {
         SPDLOG_INFO("Headers in processV3:");
 
@@ -467,36 +467,72 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             SPDLOG_INFO("\t[{}]->[{}]", key, value);
         }
 
-        OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (doc->HasParseError()) {
-            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-        }
+        auto it = request_components.headers.find("content-type");
+        bool isApplicationJson = it != request_components.headers.end() && it->second.find("application/json") != std::string::npos;
+        bool isMultiPart = it != request_components.headers.end() && it->second.find("multipart/form-data") != std::string::npos;
+        bool isDefault = !isApplicationJson && !isMultiPart;
 
+        std::string model_name;
 
-        if (!doc->IsObject()) {
-            return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
-        }
-
-        auto modelNameIt = doc->FindMember("model");
-        if (modelNameIt == doc->MemberEnd()) {
-            return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
-        }
-
-        if (!modelNameIt->value.IsString()) {
-            return Status(StatusCode::JSON_INVALID, "model field is not a string");
-        }
-
-        const std::string model_name = modelNameIt->value.GetString();
-
-        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
-        if (isTextGenerationEndpoint) {
-            auto streamIt = doc->FindMember("stream");
-            if (streamIt != doc->MemberEnd()) {
-                if (!streamIt->value.IsBool()) {
-                    return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
-                }
-                streamFieldVal = streamIt->value.GetBool();
+        if (isMultiPart) {
+            if (!multiPartParser->parse()) {
+                return StatusCode::REST_INVALID_URL;  // TODO: Better errror?
             }
+            model_name = multiPartParser->getFieldByName("model");
+            if (model_name.empty()) {
+                isDefault = true;
+            } else {
+                SPDLOG_INFO("Model name from Multipart Field: {}", model_name);
+            }
+        } else if (isApplicationJson) {
+            doc = std::make_shared<Document>();
+
+            doc->Parse(request_body.c_str());
+
+            OVMS_PROFILE_SCOPE("rapidjson validate");
+            if (doc->HasParseError()) {
+                return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+            }
+
+            if (!doc->IsObject()) {
+                return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
+            }
+
+            auto modelNameIt = doc->FindMember("model");
+            if (modelNameIt == doc->MemberEnd()) {
+                return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
+            }
+
+            if (!modelNameIt->value.IsString()) {
+                return Status(StatusCode::JSON_INVALID, "model field is not a string");
+            }
+
+            bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+            if (isTextGenerationEndpoint) {
+                auto streamIt = doc->FindMember("stream");
+                if (streamIt != doc->MemberEnd()) {
+                    if (!streamIt->value.IsBool()) {
+                        return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
+                    }
+                    streamFieldVal = streamIt->value.GetBool();
+                }
+            }
+
+            model_name = modelNameIt->value.GetString();
+            if (model_name.empty()) {
+                isDefault = true;
+            } else {
+                SPDLOG_INFO("Model name from Application Json: {}", model_name);
+            }
+        }
+
+        // Deduce Graph Name from URI
+        if (isDefault) {
+            if (uri.size() <= 4) {  // nothing after "/v3/..."
+                return StatusCode::REST_INVALID_URL;
+            }
+            model_name = std::string(uri.substr(4));
+            SPDLOG_INFO("Model name from URI: {}", model_name);
         }
 
         auto status = this->modelManager.createPipeline(executor, model_name);
@@ -509,6 +545,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         request.parsedJson = std::move(doc);
         request.uri = std::string(uri);
         request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
+        request.multipartParser = std::move(multiPartParser);
     }
     if (streamFieldVal == false) {
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
