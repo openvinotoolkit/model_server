@@ -157,7 +157,7 @@ Here is example of the `subconfig.json`:
 ### Starting OpenVINO Model Server with Mediapipe servables
 MediaPipe servables configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
-Both models and graphs can be defined in section `model_config_list`.
+Graphs parameters can be defined in section `model_config_list` just like classic models (recommended) or in the section `mediapipe_config_list` which is deprecated now.
 In this case `name` and `base_path` parameters are required and `graph_path` parameter is optional for custom graph configuration file names (other than default `graph.pbtxt`).
 
 Here is an example `config.json` file that defines two MediaPipe graphs. One with custom `graph_path` and one default:
