@@ -159,7 +159,7 @@ void HttpRestApiHandler::registerHandler(RequestType type, HandlerCallbackFn f) 
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -169,44 +169,44 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
-    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter));
+        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
-    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -437,18 +437,19 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components,
     HttpResponseComponents& response_components,
-    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter));
+        return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
     HttpPayload request;
@@ -820,7 +821,8 @@ Status HttpRestApiHandler::processRequest(
     std::vector<std::pair<std::string, std::string>>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
-    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -838,7 +840,7 @@ Status HttpRestApiHandler::processRequest(
 
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter));
+    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
 }
 
 Status HttpRestApiHandler::processPredictRequest(

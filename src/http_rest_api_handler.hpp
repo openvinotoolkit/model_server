@@ -33,6 +33,7 @@
 #pragma warning(pop)
 
 #include "http_async_writer_interface.hpp"
+#include "multi_part_parser.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
 
@@ -73,7 +74,14 @@ struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
 
-using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, std::shared_ptr<HttpAsyncWriter>)>;
+using HandlerCallbackFn = std::function<Status(
+    const std::string_view,
+    const HttpRequestComponents&,
+    std::string&,
+    const std::string&,
+    HttpResponseComponents&,
+    std::shared_ptr<HttpAsyncWriter>,
+    std::shared_ptr<MultiPartParser>)>;
 
 std::string urlDecode(const std::string& encoded);
 
@@ -119,7 +127,8 @@ public:
         std::string* response,
         const HttpRequestComponents& request_components,
         HttpResponseComponents& response_components,
-        std::shared_ptr<HttpAsyncWriter> writer);
+        std::shared_ptr<HttpAsyncWriter> writer,
+        std::shared_ptr<MultiPartParser> multiPartParser);
 
     /**
      * @brief Process Request
@@ -139,7 +148,8 @@ public:
         std::vector<std::pair<std::string, std::string>>* headers,
         std::string* response,
         HttpResponseComponents& responseComponents,
-        std::shared_ptr<HttpAsyncWriter> writer);
+        std::shared_ptr<HttpAsyncWriter> writer,
+        std::shared_ptr<MultiPartParser> multiPartParser);
 
     /**
      * @brief Process predict request
@@ -220,7 +230,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter);
+    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
 
 private:
     const std::regex predictionRegex;
