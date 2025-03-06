@@ -748,9 +748,6 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
     Status firstErrorStatus = StatusCode::OK;
 
     for (const auto& configs : modelsConfigList->value.GetArray()) {
-        ModelConfig modelConfig;
-        modelConfig.setRootDirectoryPath(rootDirectoryPath);
-
 #if (MEDIAPIPE_DISABLE == 0)
         // Check if config is present for mediapipe graph
         MediapipeGraphConfig mpConfig;
@@ -769,6 +766,8 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
             }
         }
 #endif
+        ModelConfig modelConfig;
+        modelConfig.setRootDirectoryPath(rootDirectoryPath);
         auto status = modelConfig.parseNode(configs["config"]);
 
         if (!status.ok()) {

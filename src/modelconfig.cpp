@@ -470,7 +470,12 @@ Status ModelConfig::parseModelMapping() {
 Status ModelConfig::parseNode(const rapidjson::Value& v) {
     this->setName(v["name"].GetString());
     try {
-        this->setBasePath(v["base_path"].GetString());
+        // Check for optional parameters
+        if (v.HasMember("base_path")) {
+            this->setBasePath(v["base_path"].GetString());
+        } else {
+            this->setBasePath("");
+        }
     } catch (std::logic_error& e) {
         SPDLOG_DEBUG("Relative path error: {}", e.what());
         return StatusCode::INTERNAL_ERROR;
