@@ -489,11 +489,11 @@ public:
 };
 
 class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase : public MediapipeFlowTest {
-    public:
-        void SetUp() {
-            SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
-        }
-    };
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
+    }
+};
 
 class MediapipeFlowDummySubconfigTest : public MediapipeFlowTest {
 public:
