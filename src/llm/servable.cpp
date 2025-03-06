@@ -135,6 +135,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     std::stringstream ss;
     executionContext->textStreamer->write(generationOutput.generated_ids);
     ss << executionContext->lastStreamerCallbackOutput;
+    executionContext->lastStreamerCallbackOutput = "";
 
     std::string lastTextChunk = ss.str();
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
