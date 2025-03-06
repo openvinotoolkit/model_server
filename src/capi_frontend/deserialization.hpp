@@ -79,6 +79,8 @@ public:
     }
 };
 
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>  // TODO separate for different choice
@@ -104,6 +106,7 @@ std::tuple<ovms::Status, const typename RequestTraits<ovms::InferenceRequest>::T
     return std::make_tuple(Status(StatusCode::OK), requestTensorPtr, nullptr);
 }
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
 template class ConcreteTensorProtoDeserializator<InferenceTensor>;
 }  // namespace ovms
