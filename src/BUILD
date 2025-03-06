@@ -670,8 +670,10 @@ cc_library(
 cc_library(
     name = "libovmsmulti_part_parser_drogon_impl",
     hdrs = ["http_frontend/multi_part_parser_drogon_impl.hpp"],
+    srcs = ["http_frontend/multi_part_parser_drogon_impl.cpp"],
     deps = [
         "libovmsmulti_part_parser",
+        "@drogon//:drogon_cmake",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

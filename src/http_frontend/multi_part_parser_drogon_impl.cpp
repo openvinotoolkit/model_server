@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,30 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include "../multi_part_parser.hpp"
-
-#pragma warning(push)
-#pragma warning(disable : 6326)
-#include <drogon/drogon.h>
-#pragma warning(pop)
-
-#include <string>
-#include <memory>
+#include "multi_part_parser_drogon_impl.hpp"
 
 namespace ovms {
 
-class DrogonMultiPartParser : public MultiPartParser {
-    const drogon::HttpRequestPtr request{nullptr};
-    const std::shared_ptr<drogon::MultiPartParser> parser{nullptr};
+bool DrogonMultiPartParser::parse() {
+    return this->parser->parse(request) == 0;
+}
 
-public:
-    DrogonMultiPartParser(const drogon::HttpRequestPtr& request)
-        : request(request), parser(std::make_shared<drogon::MultiPartParser>()) {}
-
-    bool parse() override;
-    std::string getFieldByName(const std::string& name);
-};
+std::string DrogonMultiPartParser::getFieldByName(const std::string& name) {
+    return this->parser->getParameter<std::string>(name);
+}
 
 }  // namespace ovms
