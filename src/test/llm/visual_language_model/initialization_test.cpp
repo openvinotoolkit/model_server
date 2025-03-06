@@ -73,6 +73,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineTypeDefault) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     PipelineType pipelineType;
     auto status = callDeterminePipelineType(pipelineType, testPbtxt);
     ASSERT_EQ(status, StatusCode::OK);
@@ -114,6 +115,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_CB_Specified) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     PipelineType pipelineType;
     auto status = callDeterminePipelineType(pipelineType, testPbtxt);
     ASSERT_EQ(status, StatusCode::OK);
@@ -155,6 +157,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_TEXT_CB_Specified) {
         }
         }
     )";
+    adjustConfigForTargetPlatform(testPbtxt);
     PipelineType pipelineType;
     auto status = callDeterminePipelineType(pipelineType, testPbtxt);
     ASSERT_EQ(status, StatusCode::INTERNAL_ERROR);
@@ -196,7 +199,7 @@ TEST_F(VLMServableInitializationTest, draftModelProvided) {
         }
         }
     )";
-
+    adjustConfigForTargetPlatform(testPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
