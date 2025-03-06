@@ -39,13 +39,11 @@
 #include <openvino/runtime/remote_tensor.hpp>
 #include <sys/types.h>
 
-//#include "capi_frontend/inferencerequest.hpp"
-//#include "capi_frontend/inferenceresponse.hpp"
 #include "anonymous_input_name.hpp"
+#include "cleaner_utils.hpp"
 #include "config.hpp"
 #include "customloaderinterface.hpp"
 #include "customloaders.hpp"
-//#include "deserialization.hpp"
 #include "executingstreamidguard.hpp"
 #include "filesystem.hpp"
 #include "layout.hpp"
@@ -55,10 +53,8 @@
 #include "modelconfig.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "ov_utils.hpp"
-//#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "regularovtensorfactory.hpp"
-//#include "serialization.hpp"
 #include "shape.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"

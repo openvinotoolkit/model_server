@@ -35,9 +35,26 @@
 #include "capi_validation.hpp"
 
 namespace ovms {
-//const Status ModelInstance::validate(const InferenceRequest* request);
+using TensorMap = std::unordered_map<std::string, ov::Tensor>;
+template Status serializePredictResponse(
+    OutputGetter<const TensorMap&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    InferenceResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
 
+template Status serializePredictResponse(
+    OutputGetter<ov::InferRequest&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const InferenceRequest* request,
+    InferenceResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
 template Status modelInferAsync<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template Status infer<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
-template class OutputGetter<ov::InferRequest>;
+//template class OutputGetter<ov::InferRequest>; // TODO @atobisze remove
 }  // namespace ovms

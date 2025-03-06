@@ -36,7 +36,7 @@ namespace ovms {
 class FileSystem;
 class GlobalSequencesViewer;
 class ModelInstance;
-class NotifyReceiver;
+struct NotifyReceiver;
 class MetricConfig;
 class MetricRegistry;
 class Status;

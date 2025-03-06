@@ -25,55 +25,11 @@
 #include "predict_request_validation_utils.hpp"
 #include "profiler.hpp"
 #include "sequence_processing_spec.hpp"
-//#include "statefulrequestprocessor.hpp"
 #include "timer.hpp"
 
 namespace ovms {
 
 const std::set<std::string> StatefulModelInstance::SPECIAL_INPUT_NAMES{"sequence_id", "sequence_control_input"};
-
-/*const Status StatefulModelInstance::extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId) {
-    if (!proto.tensor_shape().dim_size()) {
-        SPDLOG_DEBUG("Sequence id tensor proto does not contain tensor shape information");
-        return StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE;
-    } else if (proto.tensor_shape().dim_size() != 1) {
-        SPDLOG_DEBUG("Sequence id tensor proto shape has invalid number of dimensions. Expecting shape with one dimension");
-        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Required shape for sequence_id is: (1)");
-    }
-
-    if (proto.tensor_shape().dim(0).size() != 1) {
-        SPDLOG_DEBUG("Sequence id tensor proto shape has invalid shape. Expecting shape: (1)");
-        return Status(StatusCode::INVALID_SHAPE, "Required shape for sequence_id is: (1)");
-    }
-
-    if (proto.uint64_val_size() == 1) {
-        sequenceId = proto.uint64_val(0);
-        return StatusCode::OK;
-    }
-    return StatusCode::SEQUENCE_ID_BAD_TYPE;
-}
-
-const Status StatefulModelInstance::extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput) {
-    if (proto.tensor_shape().dim_size() == 0) {
-        SPDLOG_DEBUG("Sequence control tensor proto does not contain tensor shape information");
-        return StatusCode::SPECIAL_INPUT_NO_TENSOR_SHAPE;
-    } else if (proto.tensor_shape().dim_size() != 1) {
-        SPDLOG_DEBUG("Sequence control tensor proto shape has invalid number of dimensions. Expecting shape with one dimension.");
-        return Status(StatusCode::INVALID_NO_OF_SHAPE_DIMENSIONS, "Required shape for sequence_control_input is: (1)");
-    }
-
-    if (proto.tensor_shape().dim(0).size() != 1) {
-        SPDLOG_DEBUG("Sequence control tensor proto shape has invalid shape. Expecting shape: (1)");
-        return Status(StatusCode::INVALID_SHAPE, "Required shape for sequence_control_input is: (1)");
-    }
-
-    if (proto.uint32_val_size() == 1) {
-        sequenceControlInput = proto.uint32_val(0);
-        return StatusCode::OK;
-    }
-    return StatusCode::SEQUENCE_CONTROL_INPUT_BAD_TYPE;
-}*/
-// TODO @atobisze
 
 Status StatefulModelInstance::loadModel(const ModelConfig& config) {
     std::lock_guard<std::recursive_mutex> loadingLock(loadingMutex);

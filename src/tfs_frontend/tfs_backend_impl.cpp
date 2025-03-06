@@ -48,4 +48,4 @@ template Status infer<TFSPredictRequest, TFSPredictResponse>(ModelInstance& inst
 template class RequestTensorExtractor<TFSPredictRequest, TFSInputTensorType, ExtractChoice::EXTRACT_INPUT>;
 }  // namespace ovms
 template class ovms::RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ovms::ExtractChoice::EXTRACT_INPUT>;
-class ovms::RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ovms::ExtractChoice::EXTRACT_INPUT>;
+template class ovms::RequestTensorExtractor<tensorflow::serving::PredictRequest, tensorflow::TensorProto, ovms::ExtractChoice::EXTRACT_INPUT>;

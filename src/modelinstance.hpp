@@ -30,25 +30,16 @@
 
 #include <openvino/openvino.hpp>
 
-//#include "deserialization.hpp"
-//#include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
-//#include "requestprocessor.hpp"
-//#include "executingstreamidguard.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelchangesubscription.hpp"
 #include "modelconfig.hpp"
-//#include "modelinstanceunloadguard.hpp"
 #include "modelversionstatus.hpp"
 #include "ovms.h"  // NOLINT
 #include "ovinferrequestsqueue.hpp"
-//#include "predict_request_validation_utils.hpp"
-//#include "profiler.hpp"
-//#include "serialization.hpp"
 #include "status.hpp"
 #include "servable.hpp"
 #include "tensorinfo.hpp"
-//#include "tfs_frontend/tfs_utils.hpp"
 
 // TODO windows
 #ifdef __linux__
@@ -58,18 +49,17 @@
 #include "openvino/runtime/remote_tensor.hpp"
 
 namespace ovms {
-namespace {
-}
+
 class MetricRegistry;
 class ModelInstanceUnloadGuard;
 class InferenceRequest;
 class InferenceResponse;
 class IOVTensorFactory;
-class NotifyReceiver;
+struct NotifyReceiver;
 class SequenceManager;
 class Status;
 template <typename T1, typename T2>
-class RequestProcessor;
+struct RequestProcessor;
 
 extern void* globalVaDisplay;
 
@@ -122,7 +112,7 @@ protected:
          * @brief OpenVINO Runtime CompiledModel object
          */
     std::shared_ptr<ov::CompiledModel> compiledModel;
-
+public:
     // TODO windows
 #ifdef __linux__
     cl_context oclContextC{nullptr};
@@ -132,6 +122,8 @@ public:
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
+public:
+virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
 
 protected:
     std::shared_ptr<SequenceManager> sequenceManager;

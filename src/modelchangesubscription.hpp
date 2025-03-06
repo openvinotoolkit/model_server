@@ -22,7 +22,7 @@
 #include "notifyreceiver.hpp"
 
 namespace ovms {
-class NotifyReceiver;
+struct NotifyReceiver;
 
 class ModelChangeSubscription {
     const std::string ownerName;
