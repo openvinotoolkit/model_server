@@ -58,7 +58,7 @@ template Status ovms::serializePredictResponse<ov::InferRequest&>(
     const KFSRequest* request,
     KFSResponse* response,
     outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent);  // TODO move to serialziation.cpp
+    bool useSharedOutputContent);  // TODO move to serialization.cpp
 template Status serializePredictResponse<KFSRequest, KFSResponse, ov::InferRequest&>(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,

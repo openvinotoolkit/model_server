@@ -2111,7 +2111,7 @@ cc_library(
 cc_library(
     name = "libovms_requestprocessor",
     hdrs = ["requestprocessor.hpp",],
-    srcs = ["requestprocessor.cpp",],
+    srcs = [],
     deps = [
             "//third_party:openvino",
             "libovmsstatus",
