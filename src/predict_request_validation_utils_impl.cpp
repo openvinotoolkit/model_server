@@ -23,9 +23,6 @@
 #include <string>
 
 #include "logging.hpp"
-//#include "modelconfig.hpp"
-//#include "prediction_service_utils.hpp"
-//#include "precision.hpp"
 #include "tensorinfo.hpp"
 #include "status.hpp"
 

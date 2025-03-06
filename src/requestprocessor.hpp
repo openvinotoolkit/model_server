@@ -25,10 +25,10 @@ template <typename RequestType, typename ResponseType>
 struct RequestProcessor {
     RequestProcessor() = default;
     virtual ~RequestProcessor() = default;
-    virtual Status extractRequestParameters(const RequestType* request) { return StatusCode::OK; };
-    virtual Status prepare() { return StatusCode::OK; };
-    virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; };
-    virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; };
-    virtual Status release() { return StatusCode::OK; };
+    virtual Status extractRequestParameters(const RequestType* request) { return StatusCode::OK; }
+    virtual Status prepare() { return StatusCode::OK; }
+    virtual Status preInferenceProcessing(ov::InferRequest& inferRequest) { return StatusCode::OK; }
+    virtual Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) { return StatusCode::OK; }
+    virtual Status release() { return StatusCode::OK; }
 };
 }  // namespace ovms

@@ -22,7 +22,6 @@
 
 #include <openvino/openvino.hpp>
 
-//#include "capi_utils.hpp"
 #include "../deserialization_common.hpp"
 #include "capi_request_utils.hpp"
 #include "inferencerequest.hpp"

@@ -206,7 +206,7 @@ cc_library(
 )
 cc_library(
     name = "libovms_capi_validation",
-    hdrs = ["capi_frontend/capi_validation.hpp"],
+    hdrs = [],
     srcs = ["capi_frontend/capi_validation.cpp"],
     deps = ["libovms_predict_request_validation_utils_h",
             "libovmsprofiler",
@@ -228,7 +228,7 @@ cc_library(
 )
 cc_library( # TODO @atobisze remove
     name = "libovms_predict_request_validation_utils",
-    srcs = ["predict_request_validation_utils.cpp"],
+    srcs = [],
     deps = [
             "libovms_predict_request_validation_utils_h",
             "libovmsshape",
@@ -573,9 +573,7 @@ cc_library(
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
-        #"prediction_service_utils.cpp",
         "predict_request_validation_utils.hpp",
-        #"predict_request_validation_utils.cpp",
         "rest_parser.cpp",
         "rest_parser.hpp",
         "rest_utils.cpp",
@@ -1572,7 +1570,7 @@ cc_library(
 )
 cc_library(
     name = "tfs_validation",
-    hdrs = ["tfs_frontend/validation.hpp"],
+    hdrs = [],
     srcs = ["tfs_frontend/validation.cpp"],
     deps = ["libovms_predict_request_validation_utils_h",
             "libovmsprofiler",

@@ -55,9 +55,7 @@
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
 
-#include "../capi_frontend/capi_validation.hpp"
 #include "../kfs_frontend/validation.hpp"
-#include "../tfs_frontend/validation.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"

@@ -22,15 +22,20 @@
 #include <sstream>
 #include <string>
 
+
 #include "buffer.hpp"
+#include "../modelversion.hpp"
+#include "../shape.hpp"
+#include "../status.hpp"
+#include "../tensorinfo.hpp"
+#include "../predict_request_validation_utils.hpp"
+
 #include "capi_utils.hpp"
 #include "inferencerequest.hpp"
 #include "inferencetensor.hpp"
 #include "capi_request_utils.hpp"
 #include "../logging.hpp"
 #include "../precision.hpp"
-//#include "../modelconfig.hpp"
-//#include "prediction_service_utils.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
 

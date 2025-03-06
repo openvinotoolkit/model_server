@@ -25,7 +25,6 @@
 
 #include <openvino/openvino.hpp>
 
-#include "kfs_utils.hpp"
 #include "../logging.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6269 6294 6201)

@@ -643,11 +643,6 @@ public:
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
-    /*virtual std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*);
-    virtual std::unique_ptr<RequestProcessor<KFSRequest, KFSResponse>> createRequestProcessor(const KFSRequest*, KFSResponse*);
-    virtual std::unique_ptr<RequestProcessor<InferenceRequest, InferenceResponse>> createRequestProcessor(const InferenceRequest*, InferenceResponse*);*/
     virtual const std::set<std::string>& getOptionalInputNames();
 };
-//template <typename RequestType>
-//static OVMS_InferenceRequestCompletionCallback_t getCallback(RequestType request);
 }  // namespace ovms

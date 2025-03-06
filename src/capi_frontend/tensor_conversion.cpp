@@ -62,10 +62,6 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, ovms::Inferen
     SPDLOG_ERROR("Tensor conversion is not supported for C-API");
     return StatusCode::NOT_IMPLEMENTED;
 }
-
-//template Status convertNativeFileFormatRequestTensorToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer);
-//template Status convertStringRequestToOVTensor<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
-//template Status convertStringRequestToOVTensor2D<ovms::InferenceTensor>(const ovms::InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertOVTensor2DToStringResponse<ovms::InferenceTensor>(const ov::Tensor& tensor, ovms::InferenceTensor& dst);
 
 }  // namespace ovms
