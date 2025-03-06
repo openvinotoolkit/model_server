@@ -195,7 +195,9 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         //std::vector<std::pair<std::string, std::string>> headers;
         std::unordered_map<std::string, std::string> headers;
 
+        SPDLOG_ERROR("Drogon headers:");
         for (const auto& header : req->headers()) {
+            SPDLOG_ERROR("\t[{}]->[{}]", header.first, header.second);
             headers[header.first] = header.second;
         }
 

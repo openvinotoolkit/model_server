@@ -461,7 +461,11 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         doc->Parse(request_body.c_str());
     }
     {
-        SPDLOG_INFO("AAAAAAAAAAAAA [{}]", request_components.headers.at("content-type"));
+        SPDLOG_INFO("Headers in processV3:");
+
+        for (const auto& [key, value] : request_components.headers) {
+            SPDLOG_INFO("\t[{}]->[{}]", key, value);
+        }
 
         OVMS_PROFILE_SCOPE("rapidjson validate");
         if (doc->HasParseError()) {
