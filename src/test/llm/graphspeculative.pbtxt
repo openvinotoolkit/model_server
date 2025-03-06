@@ -31,6 +31,7 @@ node {
           models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
           cache_size: 1
           draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+          pipeline_type: TEXT
         }
     }
     input_stream_handler {

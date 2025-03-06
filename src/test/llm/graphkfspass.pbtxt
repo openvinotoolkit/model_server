@@ -30,6 +30,8 @@ node {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
           models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
           cache_size: 1
+          pipeline_type: TEXT
+
         }
     }
     input_stream_handler {

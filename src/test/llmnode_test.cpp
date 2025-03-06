@@ -666,9 +666,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
-            "stream": false,
+            "stream": true,
             "seed" : 1,
-            "best_of" : 16,
             "max_tokens": 5,
             "messages": [
             {

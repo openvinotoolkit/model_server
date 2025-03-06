@@ -94,9 +94,9 @@ cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp", "servable_initializer.hpp", 
             "continuous_batching/servable.hpp", "continuous_batching/llm_executor.hpp", "continuous_batching/servable_initializer.hpp",
-            "visual_language_model/servable.hpp"],
+            "visual_language_model/servable.hpp", "legacy/servable.hpp", "legacy/servable_initializer.hpp", "legacy/legacy_executor.hpp",],
     srcs = ["servable.cpp", "servable_initializer.cpp", "continuous_batching/servable.cpp", "continuous_batching/servable_initializer.cpp",
-            "visual_language_model/servable.cpp"],
+            "visual_language_model/servable.cpp", "legacy/servable.cpp", "legacy/servable_initializer.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",

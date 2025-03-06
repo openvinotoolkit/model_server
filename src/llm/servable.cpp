@@ -36,13 +36,12 @@
 
 namespace ovms {
 
-// TODO: Find better place for this function. It will need to be moved when other pipelines are introduced.
 static std::string wrapTextInServerSideEventMessage(const std::string& text) {
     std::stringstream ss;
     ss << "data: " << text << "\n\n";
     return ss.str();
 }
-
+    
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
