@@ -43,7 +43,6 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
-//#include "../prediction_service_utils.hpp"
 #include "../status.hpp"
 #include "../tensor_conversion.hpp"
 #include "../timer.hpp"

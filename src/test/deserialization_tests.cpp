@@ -28,6 +28,7 @@
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"

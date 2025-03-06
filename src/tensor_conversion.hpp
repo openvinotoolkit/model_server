@@ -18,6 +18,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 #pragma warning(push)
 #pragma warning(disable : 6269 6294 6201)
 #include <opencv2/opencv.hpp>

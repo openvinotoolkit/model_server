@@ -24,18 +24,16 @@ namespace ovms {
 class Servable {
     const std::string name;
     const model_version_t version = -1;
-    // ModelVersionStatus status; // TODO PipelineDefinitionStatus @atobisze
-private:
-    tensor_map_t inputsInfo;
 
 protected:
+    tensor_map_t inputsInfo;
+
     tensor_map_t outputsInfo;
 
-private:
 public:
     Servable(const std::string& name, model_version_t version) :
         name(name),
-        version(version){};
+        version(version){}
     virtual ~Servable() = default;
 
     virtual const std::string& getName() const {  // TODO virtual @atobisze

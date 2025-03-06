@@ -35,7 +35,6 @@
 
 #include "../deserialization_common.hpp"
 #include "../logging.hpp"
-//#include "../prediction_service_utils.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../tensor_conversion.hpp"
@@ -43,12 +42,6 @@
 #include "tfs_utils.hpp"
 
 namespace ovms {
-
-//////
-//
-// Move to tfs
-//
-//////
 ov::Tensor makeTensor(const tensorflow::TensorProto& requestInput,
     const std::shared_ptr<const TensorInfo>& tensorInfo);
 

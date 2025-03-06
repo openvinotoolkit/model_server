@@ -122,6 +122,7 @@ public:
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif
+
 public:
     virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
 

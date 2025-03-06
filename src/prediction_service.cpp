@@ -43,7 +43,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
-//#include "prediction_service_utils.hpp" @atobisze TODO
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"

@@ -70,7 +70,6 @@
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
-#include "kfs_frontend/kfs_utils.hpp"
 #include "tfs_frontend/tfs_utils.hpp"
 #include "kfs_frontend/deserialization.hpp"
 #include "tfs_frontend/deserialization.hpp"

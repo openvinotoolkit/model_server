@@ -36,7 +36,6 @@
 #include <opencv2/opencv.hpp>
 #pragma warning(pop)
 
-#include "tfs_utils.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"
@@ -67,6 +66,5 @@ Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tens
 // TODO we need to see declarations before @atobisze
 #include "../tensor_conversion_after.hpp"
 namespace ovms {
-//template Status convertStringRequestToOVTensor2D<TFSInputTensorType>(const TFSInputTensorType& src, ov::Tensor& tensor, const std::string* buffer);
 template Status convertStringRequestToOVTensor2D<TFSInputTensorType>(const TFSInputTensorType& src, ov::Tensor& tensor, const std::string* buffer);
 }  // namespace ovms

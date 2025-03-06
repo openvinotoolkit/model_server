@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "capi_validation.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -26,9 +25,7 @@
 #include "buffer.hpp"
 #include "../modelversion.hpp"
 #include "../shape.hpp"
-#include "../status.hpp"
 #include "../tensorinfo.hpp"
-#include "../predict_request_validation_utils.hpp"
 
 #include "capi_utils.hpp"
 #include "inferencerequest.hpp"
@@ -39,6 +36,7 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 
+#include "../predict_request_validation_utils.hpp"
 namespace ovms {
 namespace request_validation_utils {
 Status validateCapiTensorPrecision(const ovms::TensorInfo& info, const InferenceTensor& tensor, const std::string& tensorName, const std::string& servableName, const model_version_t servableVersion, ValidationChoice choice) {

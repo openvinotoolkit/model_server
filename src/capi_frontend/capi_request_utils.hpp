@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 
@@ -40,7 +41,7 @@ inline OVMS_InferenceRequestCompletionCallback_t getCallback(const InferenceRequ
 #pragma GCC diagnostic pop
 
 std::optional<Dimension> getRequestBatchSize(const InferenceRequest* request, const size_t batchSizeIndex);
-std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);
+std::map<std::string, shape_t> getRequestShapes(const InferenceRequest* request);  // TODO @atobisze using?
 bool useSharedOutputContentFn(const InferenceRequest* request);
 
 template <>

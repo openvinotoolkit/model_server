@@ -49,14 +49,11 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/inferencetensor.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
-//#include "../prediction_service_utils.hpp"
 #include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;

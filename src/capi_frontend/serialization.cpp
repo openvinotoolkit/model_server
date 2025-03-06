@@ -247,5 +247,4 @@ Status serializePredictResponse(
     }
     return StatusCode::OK;
 }
-//template class OutputGetter<ov::InferRequest&>;
 }  // namespace ovms

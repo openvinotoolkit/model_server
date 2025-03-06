@@ -20,8 +20,6 @@
 #include <string>
 #include <vector>
 
-//#include <google/protobuf/map.h>
-
 #include "logging.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"

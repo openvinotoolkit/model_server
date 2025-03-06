@@ -27,13 +27,11 @@
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../statefulrequestprocessor.hpp"
-#include "../status.hpp"
 #include "serialization.hpp"
 #include "../serialization_common.hpp"
 #include "deserialization.hpp"
 #include "../deserialization_common.hpp"
 #include "../requesttensorextractor.hpp"
-#include "tfs_request_utils.hpp"
 
 namespace ovms {
 #pragma GCC diagnostic push

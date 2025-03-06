@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-//#include "predict_request_validation_utils.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -24,8 +23,6 @@
 #include <string>
 
 #include "logging.hpp"
-//#include "modelconfig.hpp"
-//#include "prediction_service_utils.hpp"
 #include "shape.hpp"
 #include "anonymous_input_name.hpp"
 #include "status.hpp"

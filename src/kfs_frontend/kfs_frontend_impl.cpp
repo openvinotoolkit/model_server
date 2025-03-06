@@ -27,7 +27,6 @@
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../status.hpp"
 
 namespace ovms {
 #pragma GCC diagnostic push

@@ -21,7 +21,6 @@
 
 #include "capi_request_utils.hpp"
 
-#include "../status.hpp"
 #include "../modelinstance.hpp"
 #include "../deserialization_main.hpp"
 #include "../inference_executor.hpp"
@@ -32,7 +31,7 @@
 #include "deserialization.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
-#include "capi_validation.hpp"
+#include "../predict_request_validation_utils.hpp"
 
 namespace ovms {
 using TensorMap = std::unordered_map<std::string, ov::Tensor>;
@@ -56,5 +55,4 @@ template Status serializePredictResponse(
     bool useSharedOutputContent);
 template Status modelInferAsync<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template Status infer<InferenceRequest, InferenceResponse>(ModelInstance& instance, const InferenceRequest*, InferenceResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);
-//template class OutputGetter<ov::InferRequest>; // TODO @atobisze remove
 }  // namespace ovms

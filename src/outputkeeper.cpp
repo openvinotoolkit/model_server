@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "outputkeeper.hpp"
 
+#include <utility>
+
 #include "logging.hpp"
 
 namespace ovms {

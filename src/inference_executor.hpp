@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include "modelinstance.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -32,7 +31,6 @@
 #include "modelinstanceunloadguard.hpp"
 #include "outputkeeper.hpp"
 #include "predict_request_validation_utils.hpp"
-//#include "predict_request_validation_utils_impl.hpp"
 #include "requestprocessor.hpp"
 #include "statefulrequestprocessor.hpp"
 
@@ -87,7 +85,7 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
     timer.start(GET_INFER_REQUEST);
     OVMS_PROFILE_SYNC_BEGIN("getInferRequest");
     auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(instance.getInferRequestsQueue(), instance.getMetricReporter());
-    //int executingInferId = executingStreamIdGuard->getId();
+    // int executingInferId = executingStreamIdGuard->getId();
     ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
     OVMS_PROFILE_SYNC_END("getInferRequest");
     timer.stop(GET_INFER_REQUEST);
@@ -126,7 +124,7 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
     */
     // set callback
     // TODO check if there is callback in async
-    //OVMS_InferenceRequestCompletionCallback_t userCallback = request->getResponseCompleteCallback();
+    // OVMS_InferenceRequestCompletionCallback_t userCallback = request->getResponseCompleteCallback();
     OVMS_InferenceRequestCompletionCallback_t userCallback = getCallback(request);
 
     if (userCallback == nullptr) {
