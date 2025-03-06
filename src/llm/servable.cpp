@@ -46,6 +46,9 @@ static std::string wrapTextInServerSideEventMessage(const std::string& text) {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (!payload.parsedJson || payload.parsedJson->HasParseError()) {
+        return absl::InvalidArgumentError("Cannot parse JSON body");
+    }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
     } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions") {
