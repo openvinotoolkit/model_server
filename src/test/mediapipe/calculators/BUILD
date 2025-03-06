@@ -49,6 +49,7 @@ cc_library(
         "streaming_test_calculator.cpp",
         "two_input_calculator.cpp",
         "openai_chat_completions_mock_calculator.cpp",
+        "multipart_accepting_calculator.cpp",
     ],
     copts = select({
             "//conditions:default": [
