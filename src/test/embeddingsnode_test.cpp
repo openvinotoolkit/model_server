@@ -35,6 +35,7 @@ public:
     const std::string endpointEmbeddings = "/v3/embeddings";
     const std::string endpointRerank = "/v3/rerank";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
@@ -52,6 +53,7 @@ public:
 
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
@@ -96,7 +98,7 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -130,7 +132,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -165,7 +167,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -192,7 +194,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveInt) {
             "input": [111, 222, 121]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -214,7 +216,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleInts) {
             "input": [[111, 222, 121], [123, 221, 311]]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -239,7 +241,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
             "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -266,7 +268,7 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
             "input": ["one", "two"]
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -291,7 +293,7 @@ TEST_F(EmbeddingsHttpTest, positiveLongInput) {
     }
     std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::OK)
         << status.string();
@@ -310,7 +312,7 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
     }
     std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
         << status.string();
@@ -328,7 +330,7 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
     }
     std::string requestBody = "{ \"model\": \"embeddings\", \"input\": [\"" + words + " \", \"short prompt\"]}";
 
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
         << status.string();
@@ -349,6 +351,7 @@ public:
     ovms::HttpRequestComponents comp;
     const std::string endpointEmbeddings = "/v3/embeddings";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
@@ -385,6 +388,7 @@ public:
         GTEST_SKIP() << "Skipping test because we have no custom extension built for Windows";
 #endif
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointEmbeddings, headers), ovms::StatusCode::OK);
@@ -416,7 +420,7 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
         }
     )";
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
@@ -454,7 +458,7 @@ TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
             "input": "dummyInput"
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
 
@@ -482,6 +486,6 @@ TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
             "input": "dummyInput"
         }
     )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer);
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
