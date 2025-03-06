@@ -462,8 +462,14 @@ cc_library(
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
         }) + select({
-            "//:enable_drogon": ["libdrogon_http_server"],
-            "//conditions:default" : ["libnet_http_server"],
+            "//:enable_drogon": [
+                "libdrogon_http_server",
+                "libovmsmulti_part_parser_drogon_impl",
+            ],
+            "//conditions:default" : [
+                "libnet_http_server",
+                # TODO
+            ],
         }) + [
             "cpp_headers",
             "libovms_capi_servable_metadata",
@@ -615,6 +621,7 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovmsclient_connection",
+        "libovmsmulti_part_parser",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -633,12 +640,38 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
+
 cc_library(
     name = "libhttpclientconnection",
     hdrs = ["http_frontend/http_client_connection.hpp"],
     deps = [
         "libovmsclient_connection",
         "libhttp_async_writer_interface",  # interface for http output streaming
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libovmsmulti_part_parser",
+    hdrs = ["multi_part_parser.hpp"],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "libovmsmulti_part_parser_drogon_impl",
+    hdrs = ["http_frontend/multi_part_parser_drogon_impl.hpp"],
+    deps = [
+        "libovmsmulti_part_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

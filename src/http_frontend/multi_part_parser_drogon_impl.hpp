@@ -15,27 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
-
-#include "client_connection.hpp"
-#include "multi_part_parser.hpp"
+#include "../multi_part_parser.hpp"
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
-    std::shared_ptr<MultiPartParser> multipartParser;
+class DrogonMultiPartParser : public MultiPartParser {
+    //std::shared_ptr<HttpAsyncWriter> serverReaderWriter;
+
+public:
+    //DrogonMultiPartParser(std::shared_ptr<HttpAsyncWriter> serverReaderWriter) :
+    DrogonMultiPartParser() {}
+        //serverReaderWriter(std::move(serverReaderWriter)) {}
+
+    bool parse() override {}
+    std::string getFieldByName(const std::string& name) {
+        return "";
+    };
 };
 
 }  // namespace ovms
