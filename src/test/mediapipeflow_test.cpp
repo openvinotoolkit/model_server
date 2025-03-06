@@ -488,6 +488,13 @@ public:
     }
 };
 
+class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase : public MediapipeFlowTest {
+    public:
+        void SetUp() {
+            SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
+        }
+    };
+
 class MediapipeFlowDummySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -827,6 +834,16 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecified, Infer) {
 }
 
 TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfig, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphdummy";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "graphdummy";
