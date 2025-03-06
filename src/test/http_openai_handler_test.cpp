@@ -37,7 +37,7 @@ protected:
     std::unique_ptr<std::thread> t;
     std::string port = "9173";
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers;
     ovms::HttpRequestComponents comp;
     const std::string endpoint = "/v3/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
@@ -100,8 +100,8 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
             "messages": []
         }
     )";
-    comp.headers.push_back(std::pair<std::string, std::string>("test1", "header"));
-    comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
+    comp.headers["test1"] = "header";
+    comp.headers["test2"] = "header";
 
     ASSERT_EQ(
         handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer),

@@ -190,9 +190,8 @@ std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, const std::string endpoint = "/v2/models/mediapipeAdd/versions/1/infer") {
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = std::to_string(headerLength);
 
     ovms::HttpRequestComponents comp;
 
@@ -222,9 +221,8 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
 static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status processorStatus) {
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
 
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = std::to_string(headerLength);
 
     ovms::HttpRequestComponents comp;
 
@@ -535,27 +533,24 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "15"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "15";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
 }
 
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNegative) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "-15"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "-15";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNotInt) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "value"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "value";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
 
@@ -1572,7 +1567,7 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough_binaryInput) {
     std::string binaryInputData{0x05, 0x00, 0x00, 0x00, 'H', 'e', 'l', 'l', 'o', 0x02, 0x00, 0x00, 0x00, '1', '2'};
     request_body += binaryInputData;
 
-    std::vector<std::pair<std::string, std::string>> headers{
+    std::unordered_map<std::string, std::string> headers{
         {"inference-header-content-length", std::to_string(jsonEnd)},
         {"Content-Type", "application/json"},
     };
