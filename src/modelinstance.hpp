@@ -118,7 +118,6 @@ public:
     cl_context oclContextC{nullptr};
 
 public:
-    virtual const std::shared_ptr<SequenceManager>& getSequenceManager() const { return this->sequenceManager; }
     // TODO const correctness & ownership & thread safety
     const cl_context* getOclCContext() const { return &oclContextC; }
 #endif

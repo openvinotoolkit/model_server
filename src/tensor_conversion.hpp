@@ -18,7 +18,10 @@
 #include <memory>
 #include <vector>
 #include <string>
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include <opencv2/opencv.hpp>
+#pragma warning(pop)
 
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
