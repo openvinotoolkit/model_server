@@ -20,10 +20,11 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+CB_MODEL="facebook/opt-125m"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
-if [ -d "$1/facebook/opt-125m" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ]; then
+if [ -d "$1/$CB_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ] && [ -d "$1/$VLM_MODEL" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -44,16 +45,16 @@ else
 fi
 mkdir -p $1
 
-if [ -d "$1/facebook/opt-125m" ]; then
-  echo "Models directory $1/facebook/opt-125m exists. Skipping downloading models."
+if [ -d "$1/$CB_MODEL" ]; then
+  echo "Models directory $1/$CB_MODEL exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model facebook/opt-125m --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$CB_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
 if [ -d "$1/$VLM_MODEL" ]; then
   echo "Models directory $1/$VLM_MODEL exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py text_generation --pipeline_type VISUAL_LANGUAGE_MODEL --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
 fi
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
