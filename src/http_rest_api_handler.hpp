@@ -67,7 +67,8 @@ struct HttpRequestComponents {
     std::string processing_method;
     std::string model_subresource;
     std::optional<int> inferenceHeaderContentLength;
-    std::vector<std::pair<std::string, std::string>> headers;
+    //std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers;
 };
 
 struct HttpResponseComponents {
@@ -113,7 +114,8 @@ public:
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
         const std::string& request_path,
-        const std::vector<std::pair<std::string, std::string>>& headers = {});
+        //const std::vector<std::pair<std::string, std::string>>& headers = {});
+        const std::unordered_map<std::string, std::string>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
@@ -145,7 +147,8 @@ public:
         const std::string_view http_method,
         const std::string_view request_path,
         const std::string& request_body,
-        std::vector<std::pair<std::string, std::string>>* headers,
+        //std::vector<std::pair<std::string, std::string>>* headers,
+        std::unordered_map<std::string, std::string>* headers,
         std::string* response,
         HttpResponseComponents& responseComponents,
         std::shared_ptr<HttpAsyncWriter> writer,

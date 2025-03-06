@@ -192,10 +192,11 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
-        std::vector<std::pair<std::string, std::string>> headers;
+        //std::vector<std::pair<std::string, std::string>> headers;
+        std::unordered_map<std::string, std::string> headers;
 
         for (const auto& header : req->headers()) {
-            headers.emplace_back(header.first, header.second);
+            headers[header.first] = header.second;
         }
 
         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
@@ -236,8 +237,9 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
-            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
-            headers.emplace_back(header);
+            //std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
+            //headers.emplace_back(header);
+            headers["inference-header-content-length"] = std::to_string(responseComponents.inferenceHeaderContentLength.value());
         }
         for (const auto& [key, value] : headers) {
             resp->addHeader(key, value);
@@ -321,7 +323,7 @@ private:
             body.size());
         HttpResponseComponents responseComponents;
         std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<NetHttpAsyncWriterImpl>(req);
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);  // TODO: vector of headers is no longer a vector
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.

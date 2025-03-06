@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 #pragma warning(push)
@@ -31,7 +32,8 @@ namespace ovms {
 
 struct HttpPayload {
     std::string uri;
-    std::vector<std::pair<std::string, std::string>> headers;
+    //std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers;
     std::string body;                                 // always
     std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
     std::shared_ptr<ClientConnection> client;

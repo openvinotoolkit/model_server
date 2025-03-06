@@ -461,10 +461,13 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
         doc->Parse(request_body.c_str());
     }
     {
+        SPDLOG_INFO("AAAAAAAAAAAAA [{}]", request_components.headers.at("content-type"));
+
         OVMS_PROFILE_SCOPE("rapidjson validate");
         if (doc->HasParseError()) {
             return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
         }
+
 
         if (!doc->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
@@ -658,7 +661,8 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 }
 
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
-    const std::vector<std::pair<std::string, std::string>>& headers) {
+    //const std::vector<std::pair<std::string, std::string>>& headers) {
+    const std::unordered_map<std::string, std::string>& headers) {
     for (auto& header : headers) {
         if (toLower(header.first) == "inference-header-content-length") {  // drogon automatically converts all headers to lowercase, net_http does not
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
@@ -673,8 +677,9 @@ static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestCo
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
     const std::string& request_path,
-    const std::vector<std::pair<std::string, std::string>>& headers) {
-    std::smatch sm;
+    //const std::vector<std::pair<std::string, std::string>>& headers) {
+    const std::unordered_map<std::string, std::string>& headers) {
+            std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
@@ -818,7 +823,8 @@ Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,
     const std::string_view request_path,
     const std::string& request_body,
-    std::vector<std::pair<std::string, std::string>>* headers,
+    // std::vector<std::pair<std::string, std::string>>* headers,
+    std::unordered_map<std::string, std::string>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
     std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
@@ -836,7 +842,8 @@ Status HttpRestApiHandler::processRequest(
 
     headers->clear();
     response->clear();
-    headers->push_back({"Content-Type", "application/json"});
+    //headers->push_back({"Content-Type", "application/json"});
+    (*headers)["content-type"] = "application/json";  // ?
 
     if (!status.ok())
         return status;
