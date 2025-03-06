@@ -33,6 +33,8 @@ message LLMCalculatorOptions {
       VISUAL_LANGUAGE_MODEL = 1;
       // LLM pipeline
       LLM = 2; // To be changed...
+      // Legacy pipeline, without continuous batching
+      LEGACY = 3;
     }
 
     optional string models_path = 1;
