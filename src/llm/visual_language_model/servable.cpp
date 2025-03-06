@@ -47,20 +47,23 @@ bool VisualLanguageModelServable::supportsSpeculativeDecoding() const {
 
 absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    // Earlier we should validate that chat completion endpoint is used.
     if (vlmExecutionContext->apiHandler == nullptr) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
 
     vlmExecutionContext->inputImages = vlmExecutionContext->apiHandler->getImages();
 
-    auto& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-    if (chatHistory.size() == 0) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "Chat history is empty");
+    // TODO (mzegla): Add test for that
+    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
+        auto& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        if (chatHistory.size() == 0) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, "Chat history is empty");
+        }
+        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+    } else if (executionContext->endpoint == Endpoint::COMPLETIONS) {
+        vlmExecutionContext->inputText = vlmExecutionContext->apiHandler->getPrompt().value();
     }
-
-    constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-    vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
     bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens
