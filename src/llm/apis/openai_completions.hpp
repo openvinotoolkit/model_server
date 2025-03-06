@@ -63,6 +63,7 @@ struct CompletionUsageStatistics {
 
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 struct OpenAIChatCompletionsRequest {
+    ov::genai::ChatHistory chatHistory;
     std::string processedJson;
     std::vector<ov::Tensor> images;
     std::optional<std::string> prompt{std::nullopt};
@@ -189,6 +190,7 @@ public:
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
     const std::vector<ov::Tensor> getImages() const;
+    const ov::genai::ChatHistory& getChatHistory() const;
 
     bool isStream() const;
     std::string getModel() const;
