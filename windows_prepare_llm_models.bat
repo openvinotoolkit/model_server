@@ -32,8 +32,9 @@ IF /I EXIST c:\opt\llm_testing (
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
+set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 
-if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist "%~1\%RERANK_MODEL%" (
+if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist "%~1\%RERANK_MODEL%" if exist "%~1\%VLM_MODEL%" (
   echo Models directory %~1 exists. Skipping downloading models.
   exit /b 0
 )
@@ -56,6 +57,7 @@ if not exist "%~1" mkdir "%~1"
 if exist "%~1\%TEXT_GENERATION_MODEL%" (
   echo Models directory %~1\%TEXT_GENERATION_MODEL% exists. Skipping downloading models.
 ) else (
+  echo Downloading text generation model to %~1\%TEXT_GENERATION_MODEL% directory.
   python demos\common\export_models\export_model.py text_generation --source_model "%TEXT_GENERATION_MODEL%" --weight-format int8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
@@ -63,6 +65,7 @@ if exist "%~1\%TEXT_GENERATION_MODEL%" (
 if exist "%~1\%EMBEDDING_MODEL%" (
   echo Models directory %~1\%EMBEDDING_MODEL% exists. Skipping downloading models.
 ) else (
+  echo Downloading embeddings model to %~1\%EMBEDDING_MODEL% directory.
   python demos\common\export_models\export_model.py embeddings --source_model "%EMBEDDING_MODEL%" --weight-format int8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
@@ -70,7 +73,16 @@ if exist "%~1\%EMBEDDING_MODEL%" (
 if exist "%~1\%RERANK_MODEL%" (
   echo Models directory %~1\%RERANK_MODEL% exists. Skipping downloading models.
 ) else (
+  echo Downloading rerank model to %~1\%RERANK_MODEL% directory.
   python demos\common\export_models\export_model.py rerank --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist "%~1\%VLM_MODEL%" (
+  echo Models directory %~1\%VLM_MODEL% exists. Skipping downloading models.
+) else (
+  echo Downloading visual language model to %~1\%VLM_MODEL% directory.
+  python demos\common\export_models\export_model.py text_generation --pipeline_type VISUAL_LANGUAGE_MODEL --source_model "%VLM_MODEL%" --weight-format int4 --kv_cache_precision u8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
