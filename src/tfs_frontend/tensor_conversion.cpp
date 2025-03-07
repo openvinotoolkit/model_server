@@ -41,12 +41,6 @@
 #include "../status.hpp"
 
 namespace ovms {
-template <>
-Status convertNativeFileFormatRequestTensorToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const TensorInfo& tensorInfo, const std::string* buffer) {
-    // TODO @atobisze double check
-    SPDLOG_ERROR("String conversion is not implemented for TFS-API");
-    return StatusCode::NOT_IMPLEMENTED;
-}
 
 Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     return StatusCode::NOT_IMPLEMENTED;

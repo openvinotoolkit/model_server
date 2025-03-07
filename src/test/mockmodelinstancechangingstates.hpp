@@ -29,7 +29,7 @@ class MockModelInstanceChangingStates : public ovms::ModelInstance {
 public:
     MockModelInstanceChangingStates(const std::string& modelName, const ovms::model_version_t modelVersion, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) :
         ModelInstance(modelName, modelVersion, ieCore, registry, metricConfig) {
-        status = ovms::ModelVersionStatus("UNUSED_NAME", UNUSED_MODEL_VERSION, ovms::ModelVersionState::START);
+        status = ovms::ModelVersionStatus(modelName, modelVersion, ovms::ModelVersionState::START);
     }
     virtual ~MockModelInstanceChangingStates() {}
     ovms::Status loadModel(const ovms::ModelConfig& config) override {

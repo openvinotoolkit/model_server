@@ -1609,6 +1609,18 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     return blocking_status;
 }
 
+const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
+    auto model = findModelByName(name);
+    if (!model) {
+        return nullptr;
+    }
+    if (version == 0) {
+        return model->getDefaultModelInstance();
+    } else {
+        return model->getModelInstanceByVersion(version);
+    }
+}
+
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);
@@ -1619,7 +1631,7 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     ovms::model_version_t modelVersionId,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
-    SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
+    SPDLOG_DEBUG("Man:{} Requesting model: {}; version: {}.", (void*)this, modelName, modelVersionId);
 
     auto model = findModelByName(modelName);
     if (model == nullptr) {

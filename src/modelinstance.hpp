@@ -408,16 +408,8 @@ public:
         --predictRequestsHandlesCount;
     }
 
-    /**
-         * @brief Gets the model name
-         * 
-         * @return model name
-         */
-    virtual const std::string& getName() const {
-        return name;
-    }
     const std::string& getTargetDevice() const {  // TODO @atobisze
-        return name;
+        return targetDevice;
     }
 
     /**
@@ -437,14 +429,6 @@ public:
     const std::vector<std::string>& getModelFiles() const {
         return modelFiles;
     }
-    /**
-         * @brief Gets version
-         *
-         * @return version
-         */
-    virtual model_version_t getVersion() const {
-        return version;
-    }
 
     /**
          * @brief Gets model status
@@ -453,15 +437,6 @@ public:
          */
     const ModelVersionStatus& getStatus() const {
         return status;
-    }
-
-    /**
-         * @brief Gets executing target device name
-         *
-         * @return target device name
-         */
-    const std::string& getTargetDevice() {
-        return targetDevice;
     }
 
     /**

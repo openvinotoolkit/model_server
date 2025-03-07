@@ -163,6 +163,12 @@ Status Model::addVersions(std::shared_ptr<model_versions_t>& versionsToStart, ov
     return result;
 }
 
+const std::shared_ptr<ModelInstance> Model::getModelInstanceByVersion(const model_version_t& version) const {
+    std::shared_lock lock(modelVersionsMtx);
+    auto it = modelVersions.find(version);
+    return it != modelVersions.end() ? it->second : nullptr;
+}
+
 Status Model::retireVersions(std::shared_ptr<model_versions_t>& versionsToRetire) {
     Status result = StatusCode::OK;
     for (const auto version : *versionsToRetire) {

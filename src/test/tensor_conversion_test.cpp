@@ -586,7 +586,8 @@ TEST_P(NativeFileInputConversionKFSInvalidPrecisionTest, Invalid) {
         Layout{"NHWC"});
 
     ov::Tensor tensor;
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, *tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
+    auto status = convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, *tensorInfo, nullptr);
+    ASSERT_EQ(status, ovms::StatusCode::INVALID_PRECISION) << status.string();
 }
 
 INSTANTIATE_TEST_SUITE_P(

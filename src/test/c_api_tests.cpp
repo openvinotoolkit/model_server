@@ -1385,8 +1385,8 @@ public:
     public:
         MockServableManagerModule(Server& server) :
             ServableManagerModule(server) {
-            state = ModuleState::INITIALIZED;
             servableManager = std::make_unique<MockModelManager>();
+            state = ModuleState::INITIALIZED;
         }
     };
     class MockServer : public Server {
@@ -1577,32 +1577,32 @@ TEST_F(CAPIState, ServerNull) {
 TEST_F(CAPIState, AllStates) {
     const std::string servableName = "dummy";
     const int64_t servableVersion = 1;
-    MockServer* cserver = new MockServer;
+    auto uptrCserver = std::make_unique<MockServer>();
+    MockServer* cserver = uptrCserver.get();
     cserver->setReady();
     cserver->setLive();
     OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
     OVMS_ServableState state;
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::START);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_BEGIN);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::UNLOADING);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_UNLOADING);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::END);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_RETIRED);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::LOADING);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_LOADING);
-    delete cserver;
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
