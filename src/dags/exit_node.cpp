@@ -21,7 +21,10 @@
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../logging.hpp"
 #include "../ov_utils.hpp"
-#include "../serialization.hpp"
+#include "../capi_frontend/serialization.hpp"
+#include "../kfs_frontend/serialization.hpp"
+#include "../tfs_frontend/serialization.hpp"
+
 #pragma warning(push)
 #pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
@@ -63,10 +66,12 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
     tensor = it->second;
     return StatusCode::OK;
 }
+ov::InferRequest* reqreq;
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
+    OutputGetter<ov::InferRequest&> outputGetter2(*reqreq);
     static const model_version_t version{1};
     return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName, useSharedOutputContent);
 }

@@ -130,7 +130,7 @@ pipeline {
               }
               } 
               }
-            } 
+            }
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -174,7 +174,7 @@ pipeline {
                       }
                   }
               }
-            }           
+            }
           }
         }
     }

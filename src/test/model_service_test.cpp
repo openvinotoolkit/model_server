@@ -30,6 +30,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
 #include "../model_service.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"

@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,56 +15,13 @@
 //*****************************************************************************
 #include "serialization.hpp"
 
-#include "kfs_frontend/kfs_utils.hpp"
-#include "logging.hpp"
-#include "ov_utils.hpp"
-#include "precision.hpp"
-#include "status.hpp"
-#include "tensor_conversion.hpp"
-#include "tfs_frontend/tfs_utils.hpp"
+#include "kfs_utils.hpp"
+#include "../logging.hpp"
+#include "../precision.hpp"
+#include "../status.hpp"
+#include "../tensor_conversion.hpp"
 
 namespace ovms {
-
-static Status serializePrecision(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getOvPrecision() != tensor.get_element_type()) {
-        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in precision expected:{} vs actual:{}",
-            servableOutput->getName(),
-            TensorInfo::getPrecisionAsString(servableOutput->getPrecision()),
-            tensor.get_element_type().get_type_name());
-        return StatusCode::INTERNAL_ERROR;
-    }
-    switch (servableOutput->getPrecision()) {
-    case ovms::Precision::FP32:
-    case ovms::Precision::I32:
-    case ovms::Precision::FP64:
-    case ovms::Precision::I8:
-    case ovms::Precision::U8:
-    case ovms::Precision::I16:  // 2 byte padding [v1, v0, 0, 0, u1, u0, 0, 0, ...]
-    case ovms::Precision::U16:
-    case ovms::Precision::FP16:
-    case ovms::Precision::I64:
-    case ovms::Precision::STRING:
-        responseOutput.set_dtype(getPrecisionAsDataType(servableOutput->getPrecision()));
-        break;
-
-    case ovms::Precision::Q78:
-    case ovms::Precision::BIN:
-    case ovms::Precision::BOOL:
-    case ovms::Precision::MIXED:
-    case ovms::Precision::CUSTOM:
-    default: {
-        Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
-        SPDLOG_ERROR(status.string());
-        return status;
-    }
-    }
-    return StatusCode::OK;
-}
-
 static Status serializePrecision(
     ::KFSResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<const TensorInfo>& servableOutput,
@@ -109,32 +66,6 @@ static Status serializePrecision(
     }
     return StatusCode::OK;
 }
-
-static Status serializeShape(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    responseOutput.mutable_tensor_shape()->Clear();
-    auto& effectiveNetworkOutputShape = servableOutput->getShape();
-    ov::Shape actualTensorShape = tensor.get_shape();
-    if (effectiveNetworkOutputShape.size() != actualTensorShape.size()) {
-        SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in number of dimensions expected:{} vs actual:{}",
-            servableOutput->getName(), effectiveNetworkOutputShape.size(), actualTensorShape.size());
-        return StatusCode::INTERNAL_ERROR;
-    }
-    for (size_t i = 0; i < effectiveNetworkOutputShape.size(); ++i) {
-        dimension_value_t dim = actualTensorShape[i];
-        if (!effectiveNetworkOutputShape[i].match(dim)) {
-            SPDLOG_ERROR("Failed to serialize tensor: {}. There is difference in dimension:{} expected:{} vs actual:{}",
-                servableOutput->getName(), i, effectiveNetworkOutputShape[i].toString(), dim);
-            return StatusCode::INTERNAL_ERROR;
-        }
-        responseOutput.mutable_tensor_shape()->add_dim()->set_size(dim);
-    }
-    return StatusCode::OK;
-}
-
 static Status serializeShape(
     ::KFSResponse::InferOutputTensor& responseOutput,
     const std::shared_ptr<const TensorInfo>& servableOutput,
@@ -164,53 +95,6 @@ static Status serializeShape(
     return StatusCode::OK;
 }
 
-static void serializeContent(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (content->size() == 0) {
-        content->assign((char*)tensor.data(), tensor.get_byte_size());
-    }
-}
-
-static void serializeStringContent(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    if (content->size()) {
-        return;
-    }
-
-    std::string* strings = tensor.data<std::string>();
-    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
-        uint32_t strLen = strings[i].size();
-        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
-        content->append((char*)strings[i].data(), strLen);
-    }
-}
-
-static void serializeOvTensorStringToTfProtoContent(tensorflow::TensorProto& proto, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    std::string* strings = tensor.data<std::string>();
-    for (size_t i = 0; i < tensor.get_shape()[0]; i++) {
-        proto.add_string_val(strings[i]);
-    }
-}
-
-static void serializeStringContentFrom2DU8(std::string* content, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    // We only fill if the content is not already filled.
-    // It can be filled in gather exit node handler.
-    if (!content->empty()) {
-        return;
-    }
-
-    size_t batchSize = tensor.get_shape()[0];
-    size_t maxStringLen = tensor.get_shape()[1];
-    for (size_t i = 0; i < batchSize; i++) {
-        uint32_t strLen = strnlen((char*)tensor.data() + i * maxStringLen, maxStringLen);
-        content->append(reinterpret_cast<const char*>(&strLen), sizeof(strLen));
-        content->append((char*)tensor.data() + i * maxStringLen, strLen);
-    }
-}
 #define SERIALIZE_BY_DATATYPE(contents, datatype)                                  \
     for (size_t i = 0; i < tensor.get_byte_size(); i += sizeof(datatype)) {        \
         auto value = responseOutput.mutable_contents()->contents()->Add();         \
@@ -243,31 +127,6 @@ static void serializeContent(::inference::ModelInferResponse::InferOutputTensor&
         responseOutput.mutable_contents()->add_bytes_contents((char*)tensor.data(), tensor.get_byte_size());
     }
 }
-
-Status serializeTensorToTensorProto(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_2D_U8) {
-        return convertOVTensor2DToStringResponse(tensor, responseOutput);
-    }
-    auto status = serializePrecision(responseOutput, servableOutput, tensor);
-    if (!status.ok()) {
-        return status;
-    }
-    status = serializeShape(responseOutput, servableOutput, tensor);
-    if (!status.ok()) {
-        return status;
-    }
-    if (servableOutput->getPostProcessingHint() == TensorInfo::ProcessingHint::STRING_NATIVE) {
-        serializeOvTensorStringToTfProtoContent(responseOutput, tensor);
-    } else {
-        serializeContent(responseOutput.mutable_tensor_content(), tensor);
-    }
-    return StatusCode::OK;
-}
-
 Status serializeTensorToTensorProtoRaw(
     ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
     std::string* rawOutputContents,
@@ -316,26 +175,6 @@ Status serializeTensorToTensorProto(
 }
 
 template <>
-Status OutputGetter<ov::InferRequest&>::get(const std::string& name, ov::Tensor& tensor) {
-    OVMS_PROFILE_FUNCTION();
-    try {
-        OV_LOGGER("ov::InferRequest: {}, outputSource.get_tensor({})", reinterpret_cast<void*>(&outputSource), name);
-        tensor = outputSource.get_tensor(name);
-    } catch (const ov::Exception& e) {
-        Status status = StatusCode::OV_INTERNAL_SERIALIZATION_ERROR;
-        SPDLOG_DEBUG("{}: {}", status.string(), e.what());
-        return status;
-    }
-    return StatusCode::OK;
-}
-
-template <>
-tensorflow::TensorProto& ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&>::createOutput(const std::string& name) {
-    OVMS_PROFILE_FUNCTION();
-    return (*protoStorage->mutable_outputs())[name];
-}
-
-template <>
 ::KFSResponse::InferOutputTensor& ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::createOutput(const std::string& name) {
     OVMS_PROFILE_FUNCTION();
     for (int i = 0; i < protoStorage->outputs_size(); i++) {
@@ -364,11 +203,25 @@ std::string* ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&>::cre
     return protoStorage->add_raw_output_contents();
 }
 
-const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo) {
-    return tensorInfo.getName();
+template <>
+Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent) {
+    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
 }
-
-const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo) {
-    return first;
-}
+template Status serializePredictResponse<ov::InferRequest&, KFSRequest, KFSResponse>(
+    OutputGetter<ov::InferRequest&>& outputGetter,
+    const std::string& servableName,
+    model_version_t servableVersion,
+    const tensor_map_t& outputMap,
+    const ::KFSRequest* request,
+    ::KFSResponse* response,
+    outputNameChooser_t outputNameChooser,
+    bool useSharedOutputContent);
 }  // namespace ovms

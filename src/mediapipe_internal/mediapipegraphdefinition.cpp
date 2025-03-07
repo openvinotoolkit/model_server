@@ -24,10 +24,11 @@
 #include <utility>
 #include <vector>
 
-#include "../deserialization.hpp"
 #include "../execution_context.hpp"
 #include "../filesystem.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../kfs_frontend/kfs_request_utils.hpp"
+#include "../deserialization_main.hpp"
 #include "../metric.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
@@ -37,7 +38,6 @@
 #include "../llm/servable_initializer.hpp"
 #include "../python/pythonnoderesources.hpp"
 #endif
-#include "../serialization.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../tensorinfo.hpp"

@@ -24,9 +24,16 @@
 
 #include <gtest/gtest.h>
 
-#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/capi_request_utils.hpp"
+#include "../deserialization_main.hpp"
+#include "../inference_executor.hpp"
 #include "../capi_frontend/capi_utils.hpp"
+#include "../capi_frontend/serialization.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
+#include "../capi_frontend/buffer.hpp"
+#include "../capi_frontend/capi_dag_utils.hpp"
 #include "../capi_frontend/servablemetadata.hpp"
 #include "../dags/pipelinedefinitionstatus.hpp"
 #include "../metric_module.hpp"
@@ -1378,8 +1385,8 @@ public:
     public:
         MockServableManagerModule(Server& server) :
             ServableManagerModule(server) {
-            state = ModuleState::INITIALIZED;
             servableManager = std::make_unique<MockModelManager>();
+            state = ModuleState::INITIALIZED;
         }
     };
     class MockServer : public Server {
@@ -1570,32 +1577,32 @@ TEST_F(CAPIState, ServerNull) {
 TEST_F(CAPIState, AllStates) {
     const std::string servableName = "dummy";
     const int64_t servableVersion = 1;
-    MockServer* cserver = new MockServer;
+    auto uptrCserver = std::make_unique<MockServer>();
+    MockServer* cserver = uptrCserver.get();
     cserver->setReady();
     cserver->setLive();
     OVMS_Server* server = reinterpret_cast<OVMS_Server*>(cserver);
     OVMS_ServableState state;
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::START);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_BEGIN);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::AVAILABLE);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_AVAILABLE);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::UNLOADING);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_UNLOADING);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::END);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     EXPECT_EQ(state, OVMS_ServableState::OVMS_STATE_RETIRED);
 
     CAPIState::modelInstance->setState(ovms::ModelVersionState::LOADING);
-    OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state);
+    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableState(server, servableName.c_str(), servableVersion, &state));
     ASSERT_EQ(state, OVMS_ServableState::OVMS_STATE_LOADING);
-    delete cserver;
 }
 
 TEST_F(CAPIMetadata, BasicDummy) {
@@ -1989,7 +1996,7 @@ TEST_F(CAPIInference, AsyncErrorHandling) {
     auto unblockSignal = callbackStruct.signal.get_future();
     request.setCompletionCallback(callbackCheckingIfErrorReported, &callbackStruct);
     instance.setOutputsInfo(outputInfo);
-    auto status = instance.inferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(&request, unloadGuard);
+    auto status = ovms::modelInferAsync<ovms::InferenceRequest, ovms::InferenceResponse>(instance, &request, unloadGuard);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     unblockSignal.get();
     std::this_thread::sleep_for(std::chrono::seconds(1));

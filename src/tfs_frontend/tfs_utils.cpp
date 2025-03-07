@@ -27,7 +27,6 @@
 #include "../status.hpp"
 
 namespace ovms {
-
 TFSDataType getPrecisionAsDataType(Precision precision) {
     static std::unordered_map<Precision, TFSDataType> precisionMap{
         {Precision::FP32, TFSDataType::DT_FLOAT},
@@ -170,5 +169,44 @@ void setBatchSize(TFSInputTensorType& proto, int64_t batch) {
 }
 void setStringPrecision(TFSInputTensorType& proto) {
     proto.set_dtype(TFSDataType::DT_STRING);
+}
+const std::string& getBinaryInput(const tensorflow::TensorProto& tensor, size_t i) {
+    return tensor.string_val(i);
+}
+int getBinaryInputsSize(const tensorflow::TensorProto& tensor) {
+    return tensor.string_val_size();
+}
+Status validateTensor(const TensorInfo& tensorInfo,
+    const tensorflow::TensorProto& src,
+    const std::string* buffer) {
+    OVMS_PROFILE_FUNCTION();
+    auto status = tensor_conversion::validateLayout(tensorInfo);
+    if (!status.ok()) {
+        return status;
+    }
+    // 4 for default pipelines, 5 for pipelines with demultiplication at entry
+    bool isShapeLengthValid = tensorInfo.getShape().size() == 4 ||
+                              (tensorInfo.isInfluencedByDemultiplexer() && tensorInfo.getShape().size() == 5);
+    if (!isShapeLengthValid) {
+        return StatusCode::INVALID_SHAPE;
+    }
+
+    if (tensor_conversion::checkBatchSizeMismatch(tensorInfo, src.string_val_size())) {
+        SPDLOG_DEBUG("Input: {} request batch size is incorrect. Expected: {} Actual: {}",
+            tensorInfo.getMappedName(),
+            tensorInfo.getBatchSize().has_value() ? tensorInfo.getBatchSize().value().toString() : std::string{"none"},
+            src.string_val_size());
+        return StatusCode::INVALID_BATCH_SIZE;
+    }
+
+    for (int i = 0; i < src.string_val_size(); i++) {
+        if (src.string_val(i).size() <= 0) {
+            return StatusCode::STRING_VAL_EMPTY;
+        }
+    }
+    return StatusCode::OK;
+}
+Status convertBinaryExtensionStringFromBufferToNativeOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
+    return StatusCode::NOT_IMPLEMENTED;
 }
 }  // namespace ovms

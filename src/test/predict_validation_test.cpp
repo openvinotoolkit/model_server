@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
 #include "../predict_request_validation_utils.hpp"
