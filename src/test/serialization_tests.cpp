@@ -728,7 +728,6 @@ TEST_P(SerializeCAPITensorPositive, SerializeTensorShouldSucceedForPrecision) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
-        nullptr,
         &response,
         getTensorInfoName);
     EXPECT_TRUE(status.ok())
@@ -789,10 +788,9 @@ TEST_F(CAPISerialization, ValidSerialization) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
-        nullptr,
         &response,
         getTensorInfoName);
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK) << status.string();
     InferenceTensor* responseOutput{nullptr};
     uint32_t outputCount = response.getOutputCount();
     ASSERT_EQ(1, outputCount);
