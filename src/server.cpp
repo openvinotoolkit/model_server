@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
+#include "libgt2/libgt2.hpp"
 #include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
@@ -383,8 +384,14 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
+        HfDownloader hfDownloader;
         parser.parse(argc, argv);
-        parser.prepare(&serverSettings, &modelsSettings);
+        parser.prepare(&serverSettings, &modelsSettings, &hfDownloader);
+
+        if (hfDownloader.pull_hf_model) {
+            return hfDownloader.cloneRepository(hfDownloader.source_model, hfDownloader.repo_path);
+        }
+
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
