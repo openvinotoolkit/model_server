@@ -157,10 +157,30 @@ Here is example of the `subconfig.json`:
 ### Starting OpenVINO Model Server with Mediapipe servables
 MediaPipe servables configuration is to be placed in the same json file like the
 [models config file](starting_server.md).
-While models are defined in section `model_config_list`, graphs are configured in
-the `mediapipe_config_list` section.
+Graphs parameters can be defined in section `model_config_list` just like classic models (recommended) or in the section `mediapipe_config_list` which is deprecated now.
 
-When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+Here is an example `config.json` file that defines two MediaPipe graphs. One with custom `graph_path` and one default:
+```json
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "mediapipe_graph_name",
+            }
+        },
+        {
+            "config": {
+                "name": "mediapipe_graph_name_for_default_name",
+                "base_path":"mediapipe_graph_name ",
+                "graph_path": " graph.pbtxt"
+            }
+        }
+    ]
+}
+```
+In case the `mediapipe_graph_name_for_default_name` above, ovms will search for the default graph name `graph.pbtxt` in the `mediapipe_graph_name` directory relative to the `config.json` location.
+
+Graphs can also be configured in the `mediapipe_config_list` section.
 ```json
 {
     "model_config_list": [],

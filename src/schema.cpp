@@ -181,7 +181,7 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 	"properties": {
 		"config": {
 			"type": "object",
-			"required": ["name", "base_path"],
+			"required": ["name"],
 			"properties": {
 				"name": {
 					"type": "string"
@@ -192,6 +192,12 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 				"batch_size": {
 					"type": ["integer", "string"],
 					"minimum": 0
+				},
+				"graph_path": {
+					"type": "string"
+				},
+				"subconfig": {
+					"type": "string"
 				},
 				"model_version_policy": {
 	"$ref": "#/definitions/model_version_policy"
@@ -383,14 +389,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
 			"items": {
 				"$ref": "#/definitions/pipeline_config"
 			}
-        },)" +
+},)" +
 #if (MEDIAPIPE_DISABLE == 0)
                                          R"("mediapipe_config_list": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/mediapipe_config"
-      }
-    },)" +
+		"type": "array",
+		"items": {
+			"$ref": "#/definitions/mediapipe_config"
+		}
+},)" +
 #endif
                                          R"("custom_node_library_config_list": {
 			"type": "array",
