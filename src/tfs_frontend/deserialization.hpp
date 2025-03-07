@@ -27,7 +27,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 
 #pragma warning(push)
-#pragma warning(disable : 6269 6294 6201 4624 6385 6386 6011 6001 6326)
+#pragma warning(disable : 4457 4624 6001 6011 6201 6246 6269 6294 6326 6308 6385 6386 6387)
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
 #pragma warning(pop)
@@ -111,7 +111,8 @@ public:
         }
     }
 };
-
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>  // TODO separate for different choice
@@ -128,4 +129,6 @@ std::tuple<ovms::Status, const typename RequestTraits<::TFSPredictRequest>::Tens
     return std::make_tuple(Status(StatusCode::OK), &requestInputItr->second, nullptr);
 }
 #pragma GCC diagnostic pop
+#pragma warning(pop)
+
 }  // namespace ovms

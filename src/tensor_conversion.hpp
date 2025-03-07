@@ -91,7 +91,7 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         if (image.data == nullptr)
             return StatusCode::IMAGE_PARSING_FAILED;
         cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
-        auto status = tensor_conversion::validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
+        status = tensor_conversion::validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
             return status;
         }

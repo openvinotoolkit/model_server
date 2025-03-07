@@ -52,4 +52,5 @@ ov::Tensor makeTensor(const ::KFSRequest::InferInputTensor& requestInput,
     ov::Tensor tensor(precision, shape);
     return tensor;
 }
+template std::tuple<ovms::Status, const typename RequestTraits<::KFSRequest>::TensorType*, const std::string*> getRequestTensorPtr(const ::KFSRequest& request, const std::string& name, ExtractChoice extractChoice);
 }  // namespace ovms

@@ -73,6 +73,8 @@ namespace ovms {
     }
 
 class IOVTensorFactory;
+#pragma warning(push)
+#pragma warning(disable : 4456 6246)
 template <template <typename> class TensorDeserializator, class Sink, class RequestType>
 static Status deserializePredictRequest(
     const RequestType& request,
@@ -80,8 +82,8 @@ static Status deserializePredictRequest(
     const tensor_map_t& outputMap,
     Sink& tensorSink, bool isPipeline, const std::unordered_map<int, std::shared_ptr<IOVTensorFactory>>& factories) {
     OVMS_PROFILE_FUNCTION();
-    Status status;
     ov::Tensor tensor;
+    Status status;
     for (const auto& [name, tensorInfo] : inputMap) {
         try {
             auto [status, requestInputItr, bufferLocation] = getRequestTensorPtr(request, name, ExtractChoice::EXTRACT_INPUT);
@@ -141,4 +143,6 @@ static Status deserializePredictRequest(
     }
     return status;
 }
+#pragma warning(pop)
+
 }  // namespace ovms
