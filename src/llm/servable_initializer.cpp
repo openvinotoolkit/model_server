@@ -117,27 +117,93 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
     }
 }
 
-Status GenAiServableInitializer::parseModelsPath(std::string modelsPath, std::string graphPath) {
+Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);
     if (fsModelsPath.is_relative()) {
-        this->basePath = (std::filesystem::path(graphPath) / fsModelsPath).string();
+        outPath = (std::filesystem::path(graphPath) / fsModelsPath).string();
     } else {
-        this->basePath = fsModelsPath.string();
+        outPath = fsModelsPath.string();
     }
 
-    if (this->basePath.empty()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is empty. ", this->basePath);
+    if (outPath.empty()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is empty. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    if (!std::filesystem::exists(this->basePath)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} does not exist. ", this->basePath);
+    if (!std::filesystem::exists(outPath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} does not exist. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    if (!std::filesystem::is_directory(this->basePath)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory. ", this->basePath);
+    if (!std::filesystem::is_directory(outPath)) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
 
+    return StatusCode::OK;
+}
+
+Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
+    // Assuming that models_path is always set
+    std::string parsedModelsPath;
+    auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+
+    std::filesystem::path parsedModelsPathFs(parsedModelsPath);
+    // Existence of embeddings models indicates we are dealing with VLM pipeline
+    bool isVLM = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
+                  std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+
+    // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
+    if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::UNDEFINED_PIPELINE_TYPE) {
+        if (nodeOptions.device() == "NPU") {
+            if (isVLM) {
+                pipelineType = PipelineType::VLM;
+            } else {
+                pipelineType = PipelineType::TEXT;
+            }
+        } else {
+            if (isVLM) {
+                pipelineType = PipelineType::VLM_CB;
+            } else {
+                pipelineType = PipelineType::TEXT_CB;
+            }
+        }
+    } else {
+        switch (nodeOptions.pipeline_type()) {
+        case mediapipe::LLMCalculatorOptions::TEXT:
+            pipelineType = PipelineType::TEXT;
+            break;
+        case mediapipe::LLMCalculatorOptions::VLM:
+            pipelineType = PipelineType::VLM;
+            break;
+        case mediapipe::LLMCalculatorOptions::TEXT_CB:
+            pipelineType = PipelineType::TEXT_CB;
+            break;
+        case mediapipe::LLMCalculatorOptions::VLM_CB:
+            pipelineType = PipelineType::VLM_CB;
+            break;
+        case mediapipe::LLMCalculatorOptions::CONTINUOUS_BATCHING:
+            pipelineType = PipelineType::TEXT_CB;
+            break;
+        case mediapipe::LLMCalculatorOptions::VISUAL_LANGUAGE_MODEL:
+            pipelineType = PipelineType::VLM_CB;
+            break;
+        default:
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+
+        if (isVLM && (pipelineType == PipelineType::TEXT || pipelineType == PipelineType::TEXT_CB)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+
+        if (!isVLM && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates non-VLM pipeline, but pipeline type is set to VLM type.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    }
     return StatusCode::OK;
 }
 
@@ -146,7 +212,12 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
     if (nodeOptions.has_models_path()) {  // Stable initialization
-        if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::CONTINUOUS_BATCHING) {
+        PipelineType pipelineType;
+        status = determinePipelineType(pipelineType, nodeOptions, graphPath);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        if (pipelineType == PipelineType::TEXT_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<ContinuousBatchingServable>();
@@ -155,7 +226,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
             }
-        } else if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VISUAL_LANGUAGE_MODEL) {
+        } else if (pipelineType == PipelineType::VLM_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model servable");

@@ -87,8 +87,12 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
 
-    std::string inputText;
+    // Base servable cannot process images
+    if (executionContext->apiHandler->getImages().size() > 0) {
+        return absl::InternalError("This servable supports only text input, but image_url has been provided");
+    }
 
+    std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
         bool success;

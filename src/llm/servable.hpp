@@ -185,6 +185,9 @@ public:
     // Returns properties of the servable
     virtual std::shared_ptr<GenAiServableProperties> getProperties() = 0;
 
+    // Return true if servable can load and use draft model in speculative decoding pipeline
+    virtual bool supportsSpeculativeDecoding() const = 0;
+
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
     For streaming requests, it MUST initialize textStreamer and lastStreamerCallbackOutput fields of executionContext.

@@ -27,12 +27,22 @@ message LLMCalculatorOptions {
     }
 
     enum PipelineType {
+      // Single modality (text only), text generation based on LLMPipeline
+      TEXT = 0;
+      // Multimodal (text and image), text generation based on LLMPipeline
+      VLM = 1;
+      // Single modality (text only), text generation based on ContinuousBatchingPipeline
+      TEXT_CB = 2;
+      // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
+      VLM_CB = 3;
+      // Default option. If selected, pipeline type will be inferred by the serving
+      UNDEFINED_PIPELINE_TYPE = 4;
+
+      // Compatibility with current configurations, remove below in the next PR
       // Continuous batching pipeline
-      CONTINUOUS_BATCHING = 0;
+      CONTINUOUS_BATCHING = 5;
       // Visual language model pipeline
-      VISUAL_LANGUAGE_MODEL = 1;
-      // LLM pipeline
-      LLM = 2; // To be changed...
+      VISUAL_LANGUAGE_MODEL = 6;
     }
 
     optional string models_path = 1;
@@ -73,7 +83,7 @@ message LLMCalculatorOptions {
 
     optional bool draft_dynamic_split_fuse = 17;
 
-    optional PipelineType pipeline_type = 18 [default = CONTINUOUS_BATCHING];
+    optional PipelineType pipeline_type = 18 [default = UNDEFINED_PIPELINE_TYPE];
     
     // START EXPERIMENTAL OPTIONS
     message PipelineConfig {
