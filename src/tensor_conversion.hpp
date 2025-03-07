@@ -198,9 +198,5 @@ Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& d
 template <>
 Status convertStringRequestToOVTensor(const InferenceTensor& src, ov::Tensor& tensor, const std::string* buffer);
 template <>
-Status convertStringRequestToOVTensor(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer);
-template <>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, InferenceTensor& dst);
-template <>
-Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, tensorflow::TensorProto& dst);
 }  // namespace ovms

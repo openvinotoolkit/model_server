@@ -838,15 +838,15 @@ TYPED_TEST(SerializeString, Valid_2D_U8_String) {
     infos["out_string"] = std::make_shared<ovms::TensorInfo>("out", "out_string", ovms::Precision::U8, ovms::Shape{-1, -1}, Layout{"N..."});
 
     bool useSharedOutputContent = true;
-    ASSERT_EQ(serializePredictResponse(outputGetter,
-                  UNUSED_NAME,
-                  UNUSED_VERSION,
-                  infos,
-                  &this->request,
-                  &this->response,
-                  getTensorInfoName,
-                  useSharedOutputContent),
-        ovms::StatusCode::OK);
+    auto status = serializePredictResponse(outputGetter,
+        UNUSED_NAME,
+        UNUSED_VERSION,
+        infos,
+        &this->request,
+        &this->response,
+        getTensorInfoName,
+        useSharedOutputContent);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     assertStringResponse(this->response, {"String_123", "zebra", ""}, "out_string");
 }
 

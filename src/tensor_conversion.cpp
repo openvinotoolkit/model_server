@@ -113,12 +113,5 @@ Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* fi
         firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
-/*bool checkBatchSizeMismatch(const TensorInfo& tensorInfo, const int batchSize) {
-    OVMS_PROFILE_FUNCTION();
-    if (!tensorInfo.getBatchSize().has_value() || batchSize == 0) {
-        return true;
-    }
-    return !tensorInfo.getBatchSize().value().match(batchSize);
-}*/
 }  // namespace tensor_conversion
 }  // namespace ovms

@@ -46,16 +46,11 @@ Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto&
     return StatusCode::NOT_IMPLEMENTED;
 }
 
-template <>
+/*template <>
 Status convertStringRequestToOVTensor<tensorflow::TensorProto>(const tensorflow::TensorProto& src, ov::Tensor& tensor, const std::string* buffer) {
     SPDLOG_ERROR("String conversion is not implemented for TFS-API");
     return StatusCode::NOT_IMPLEMENTED;
-}
-template <>
-Status convertOVTensor2DToStringResponse<tensorflow::TensorProto>(const ov::Tensor& tensor, tensorflow::TensorProto& dst) {
-    SPDLOG_ERROR("String conversion is not implemented for TFS-API");
-    return StatusCode::NOT_IMPLEMENTED;
-}
+}*/
 }  // namespace ovms
 // TODO we need to see declarations before @atobisze
 #include "../tensor_conversion_after.hpp"
