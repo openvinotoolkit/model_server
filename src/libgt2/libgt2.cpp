@@ -14,6 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include "libgt2.hpp"
+#include "filter.h"
+#include "git2/filter.h"
+#include "git2/sys/filter.h"
 
 #include <string>
 
@@ -39,6 +42,9 @@ extern "C" {
 #endif
 
 namespace ovms {
+
+#define GIT_FILTER_VERSION 1
+#define BITFLIP_FILTER_PRIORITY 1
 
 typedef struct progress_data {
     git_indexer_progress fetch_progress;
@@ -112,10 +118,10 @@ int cred_acquire_cb(git_credential** out,
         const char* env_cred = std::getenv("HF_TOKEN");
         if (env_cred) {
             username = _strdup(env_cred);
-            password = _strdup(env_cred);
+            password = _strdup(username);
         } else {
             username = _strdup("\0");
-            password = _strdup("\0");
+            password = _strdup(username);
         }
         password = _strdup(std::getenv("HF_TOKEN"));
         error = git_credential_userpass_plaintext_new(out, username, password);
@@ -147,6 +153,77 @@ bool HfDownloader::CheckIfTokenSet() {
     return true;
 }
 
+static int mockShutdown() {
+    return 0;
+}
+
+int HfDownloader::RegisterFilters() {
+    // Set-up LFS filter
+    git_filter *lfs_process = new git_filter{
+        GIT_FILTER_VERSION,
+        "git-lfs filter-process",
+        NULL,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown
+    };
+    git_filter *lfs_smudge = new git_filter{
+        GIT_FILTER_VERSION, 
+        "git-lfs smudge -- %f",
+        NULL,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown
+    };
+    git_filter *lfs_clean = new git_filter{
+        GIT_FILTER_VERSION,
+        "git-lfs clean -- %f",
+        NULL,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown,
+        mockShutdown
+    };
+
+    int error = git_filter_register(
+			"lfs-process", lfs_process, BITFLIP_FILTER_PRIORITY);
+
+    if (error != 0) {
+        const git_error* err = git_error_last();
+        if (err)
+            printf("ERROR %d: %s\n", err->klass, err->message);
+        else
+            printf("ERROR %d: no detailed info\n", error);
+    }
+
+    error = git_filter_register(
+			"lfs-smudge", lfs_smudge, BITFLIP_FILTER_PRIORITY);
+
+    if (error != 0) {
+        const git_error* err = git_error_last();
+        if (err)
+            printf("ERROR %d: %s\n", err->klass, err->message);
+        else
+            printf("ERROR %d: no detailed info\n", error);
+    }
+
+
+    error = git_filter_register(
+			"lfs-clean", lfs_clean, BITFLIP_FILTER_PRIORITY);
+
+    if (error != 0) {
+        const git_error* err = git_error_last();
+        if (err)
+            printf("ERROR %d: %s\n", err->klass, err->message);
+        else
+            printf("ERROR %d: no detailed info\n", error);
+    }
+
+    return error;
+}
+
 int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path) {
     int res = git_libgit2_init();
     if (res < 0) {
@@ -155,13 +232,19 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
         fprintf(stderr, "failed to init libgit2: %s\n", msg);
         return res;
     }
+
+    int error = RegisterFilters();
+    if (error != 0) {
+        return error;
+    }
+
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
     const char* url = repo_url.c_str();
     const char* path = repo_path.c_str();
-    int error;
+
     /* Set up options */
     checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
     checkout_opts.progress_cb = checkout_progress;
