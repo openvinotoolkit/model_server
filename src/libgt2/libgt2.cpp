@@ -100,12 +100,48 @@ int cred_acquire_cb(git_credential** out,
     const char* username_from_url,
     unsigned int allowed_types,
     void* payload) {
-    // TODO: implement in ovms
-    return 0;
+    char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
+    int error = 1;
+
+    // Unused
+    (char*)url;
+    (char*)payload;
+    (char*)username_from_url;
+
+    if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
+        const char* env_cred = std::getenv("HF_TOKEN");
+        if (env_cred) {
+            username = _strdup(env_cred);
+            password = _strdup(env_cred);
+        } else {
+            username = _strdup("\0");
+            password = _strdup("\0");
+        }
+        password = _strdup(std::getenv("HF_TOKEN"));
+        error = git_credential_userpass_plaintext_new(out, username, password);
+    } else {
+        fprintf(stderr, "Only USERPASS_PLAINTEXT supported in OVMS.\n");
+        error = -1;
+        goto out;
+    }
+
+out:
+    free(username);
+    free(password);
+    free(privkey);
+    free(pubkey);
+    return error;
 }
 
 bool HfDownloader::CheckIfProxySet() {
     const char* env_cred = std::getenv("https_proxy");
+    if (!env_cred)
+        return false;
+    return true;
+}
+
+bool HfDownloader::CheckIfTokenSet() {
+    const char* env_cred = std::getenv("HF_TOKEN");
     if (!env_cred)
         return false;
     return true;
@@ -140,6 +176,10 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
         clone_opts.fetch_opts.proxy_opts.url = std::getenv("https_proxy");
+    }
+
+    if (!CheckIfTokenSet()) {
+        printf("Info: HF_TOKEN environemt variable not set.\n");
     }
 
     /* Do the clone */

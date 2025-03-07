@@ -41,6 +41,7 @@ public:
 
 private:
     bool CheckIfProxySet();
+	bool CheckIfTokenSet();
 };
 
 }  // namespace ovms
