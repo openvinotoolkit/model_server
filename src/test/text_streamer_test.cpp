@@ -25,7 +25,7 @@ public:
     static inline ::mediapipe::CalculatorGraphConfig config;
     static inline std::shared_ptr<ovms::GenAiServable> servable;
     static inline std::shared_ptr<ov::genai::Tokenizer> tokenizer;
-    static inline std::shared_ptr<ov::genai::TextCallbackStreamer> streamer;
+    static inline std::shared_ptr<ov::genai::TextStreamer> streamer;
     static inline std::string lastTextChunk;
     static inline const std::string testPbtxt = R"(
     node: {
@@ -50,7 +50,7 @@ public:
             lastTextChunk = text;
             return false;
         };
-        streamer = std::make_shared<ov::genai::TextCallbackStreamer>(*tokenizer, callback);
+        streamer = std::make_shared<ov::genai::TextStreamer>(*tokenizer, callback);
     }
     static void TearDownTestSuite() {
         servable.reset();
@@ -69,7 +69,7 @@ TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_TRUE(lastTextChunk.empty());
     }
     this->streamer->end();
@@ -81,7 +81,7 @@ TEST_F(TextStreamerTest, putReturnsValue) {
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_TRUE(lastTextChunk.empty());
         } else {
@@ -95,7 +95,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
     auto tokens = tokenizer->encode(testPrompt1, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_TRUE(lastTextChunk.empty());
     }
     std::string testPrompt2 = "TEST\n";
@@ -108,7 +108,7 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
         "TEST\n"  // last put token is new line, so streamer flushes the cache and callback returns all remaining tokens decoded
     };
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_EQ(lastTextChunk.compare(expectedValues[i]), 0);
     }
 }
@@ -118,7 +118,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_TRUE(lastTextChunk.empty());
         } else {
@@ -127,7 +127,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
     }
     tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_TRUE(lastTextChunk.empty());
         } else {
@@ -143,7 +143,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
     std::vector<std::string> callbackExpectedValues = {"", "", "T", "EST", " TEST"};
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_EQ(lastTextChunk.compare(callbackExpectedValues[i]), 0);
     }
     this->streamer->end();
@@ -156,7 +156,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
     assertTokensValues(tokens, expectedTokens);
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         if (i == 2) {
             EXPECT_EQ(lastTextChunk.compare("TEST\n"), 0);
         } else {
@@ -172,7 +172,7 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_TRUE(lastTextChunk.empty());
     }
     this->streamer->end();
@@ -182,7 +182,7 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
     tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
     for (size_t i = 0; i < tokens.get_size(); i++) {
-        this->streamer->put(tokens.data<int64_t>()[i]);
+        this->streamer->write(tokens.data<int64_t>()[i]);
         if (i < tokens.get_size() - 1) {  // No value returned until last token with new line passed to tokenizer
             EXPECT_TRUE(lastTextChunk.empty());
         } else {
