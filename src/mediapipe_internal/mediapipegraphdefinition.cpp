@@ -263,7 +263,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
     GraphIdGuard graphIdGuard(*(this->queue)); // TODO timeout?
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
+        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
     return status;
 }
 
