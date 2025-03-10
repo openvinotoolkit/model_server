@@ -1631,7 +1631,7 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     ovms::model_version_t modelVersionId,
     std::shared_ptr<ovms::ModelInstance>& modelInstance,
     std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) const {
-    SPDLOG_DEBUG("Man:{} Requesting model: {}; version: {}.", (void*)this, modelName, modelVersionId);
+    SPDLOG_DEBUG("Requesting model: {}; version: {}.", modelName, modelVersionId);
 
     auto model = findModelByName(modelName);
     if (model == nullptr) {

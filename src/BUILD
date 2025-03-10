@@ -504,7 +504,7 @@ cc_library(
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "capi_frontend/tensor_conversion.cpp",
+        "capi_frontend/tensor_conversion.cpp", # TODO @atobisze
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
         "customloaderconfig.hpp",
@@ -2915,7 +2915,7 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
-            "//:disable_mediapipe" : [] +
+            "//:disable_mediapipe" : +
             [
                 "libovms_serialization_common",
             ],
