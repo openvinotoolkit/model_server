@@ -182,13 +182,10 @@ pipeline {
     }
     post {
         always {
+            when { expression { windows_success == "True" } } // env.BRANCH_NAME == "main" &&
             node("${agent_name_windows}") {
                 script {
-                    if (env.BRANCH_NAME == "main" && windows_success == "True") {
-                        bat(returnStatus:true, script: "xcopy /Y C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\10.211.120.232\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-main-latest.zip")
-                    } else {
-                        echo "Not a main branch, skipping copying artifacts."
-                    }
+                    bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-main-latest.zip")
                 }
             }
         }
