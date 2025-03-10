@@ -28,7 +28,6 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          pipeline_type: VISUAL_LANGUAGE_MODEL
           models_path: "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"
           cache_size: 1
         }

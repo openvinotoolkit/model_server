@@ -63,13 +63,13 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
 Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     auto continousBatchingPipelineConfig = nodeOptions.continuous_batching_pipeline_config();
     auto mainPipelineConfig = continousBatchingPipelineConfig.main_pipeline_config();
-
-    auto status = parseModelsPath(mainPipelineConfig.models_path(), graphPath);
+    std::string parsedModelsPath;
+    auto status = parseModelsPath(parsedModelsPath, mainPipelineConfig.models_path(), graphPath);
     if (!status.ok()) {
         return status;
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
-    properties->modelsPath = getBasePath();
+    properties->modelsPath = parsedModelsPath;
 
     properties->schedulerConfig.max_num_batched_tokens = mainPipelineConfig.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = mainPipelineConfig.cache_size();
@@ -104,19 +104,19 @@ Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {
-        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getBasePath(),
+        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,
             properties->pluginConfig, properties->tokenizerPluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", getBasePath(), e.what());
+        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {}", getBasePath());
+        SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(properties, getBasePath());
+    loadTextProcessor(properties, parsedModelsPath);
 
     properties->maxTokensLimit = mainPipelineConfig.max_tokens_limit();
     properties->bestOfLimit = mainPipelineConfig.best_of_limit();
@@ -126,13 +126,14 @@ Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared
 }
 
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
-    auto status = parseModelsPath(nodeOptions.models_path(), graphPath);
+    std::string parsedModelsPath;
+    auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
     if (!status.ok()) {
         return status;
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
 
-    properties->modelsPath = getBasePath();
+    properties->modelsPath = parsedModelsPath;
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
@@ -143,6 +144,10 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->device = nodeOptions.device();
     properties->isSpeculativePipeline = false;
     if (!nodeOptions.draft_models_path().empty()) {
+        if (!servable->supportsSpeculativeDecoding()) {
+            SPDLOG_ERROR("draft_models_path provided, but this servable does not support speculative decoding");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
         auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
         std::string draftPipelinePath;
         if (fsDraftModelsPath.is_relative()) {
@@ -169,19 +174,19 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {
-        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getBasePath(),
+        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
             properties->schedulerConfig, properties->device,
             properties->pluginConfig, properties->tokenizerPluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", getBasePath(), e.what());
+        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {}", getBasePath());
+        SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(properties, getBasePath());
+    loadTextProcessor(properties, parsedModelsPath);
 
     properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     properties->bestOfLimit = nodeOptions.best_of_limit();

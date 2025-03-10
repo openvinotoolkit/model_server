@@ -54,7 +54,7 @@ fi
 if [ -d "$1/$VLM_MODEL" ]; then
   echo "Models directory $1/$VLM_MODEL exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --pipeline_type VISUAL_LANGUAGE_MODEL --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
 fi
 
 if [ -d "$1/$EMBEDDING_MODEL" ]; then
