@@ -66,12 +66,10 @@ Status OutputGetter<const TensorMap&>::get(const std::string& name, ov::Tensor& 
     tensor = it->second;
     return StatusCode::OK;
 }
-ov::InferRequest* reqreq;
 
 template <typename ResponseType>
 Status ExitNode<ResponseType>::fetchResults(const TensorMap& inputTensors) {
     OutputGetter<const TensorMap&> outputGetter(inputTensors);
-    OutputGetter<ov::InferRequest&> outputGetter2(*reqreq);
     static const model_version_t version{1};
     return serializePredictResponse(outputGetter, pipelineName, version, this->outputsInfo, this->response, getOutputMapKeyName, useSharedOutputContent);
 }

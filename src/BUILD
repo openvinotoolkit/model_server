@@ -208,7 +208,7 @@ cc_library(
     name = "libovms_capi_validation",
     hdrs = [],
     srcs = ["capi_frontend/capi_validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils_h",
+    deps = ["libovms_predict_request_validation_utils",
             "libovmsprofiler",
             "libovmscapibuffer",
             "libovmslogging",
@@ -226,21 +226,8 @@ cc_library(
     linkopts = [],
     alwayslink=1, # TODO @atobisze
 )
-cc_library( # TODO @atobisze remove
-    name = "libovms_predict_request_validation_utils",
-    srcs = [],
-    deps = [
-            "libovms_predict_request_validation_utils_h",
-            "libovmsshape",
-            "libovms_tensorinfo",
-],
-    copts = COPTS_ADJUSTED,
-    visibility = ["//visibility:public",],
-    linkopts = [],
-    alwayslink=1, # TODO @atobisze
-)
 cc_library(
-    name = "libovms_predict_request_validation_utils_h",
+    name = "libovms_predict_request_validation_utils",
     hdrs = ["predict_request_validation_utils.hpp"],
     deps = [
             "libovmsshape",
@@ -266,7 +253,6 @@ cc_library(
 cc_library(
     name = "ovms_inference_request_common",
     hdrs = ["inference_request_common.hpp"],
-    #srcs = ["inference_request_common.cpp"], # TODO @atobisze
     deps = [
         "libovmsshape",
         "libovmsstatus",
@@ -513,7 +499,7 @@ cc_library(
 )
 cc_library(
     name = "ovms_lib",
-    hdrs = [#"ovms.h",
+    hdrs = [
             "ovms_internal.h",
     ],
     srcs = [
@@ -529,7 +515,7 @@ cc_library(
         "dags/dl_node.hpp",
         "dags/dlnodesession.cpp",
         "dags/dlnodesession.hpp",
-        "dags/entry_node.cpp", # TODO @atobisze FIXME
+        "dags/entry_node.cpp",
         "dags/entry_node.hpp",
         "dags/exit_node.cpp",
         "dags/exit_node.hpp",
@@ -647,7 +633,6 @@ cc_library(
             "libovms_dags_nodeinfo",
                         "libovms_dags_nodestreamidguard",
             "libovms_dags_session_id",
-            #"libovms_dags_pipelinedefinition",
             "libovms_dags_pipelineeventqueue",
             "libovms_dags_nodesessionmetadata",
             "libovms_dags_nodesessionresult",
@@ -692,7 +677,7 @@ cc_library(
             "libovmsmodelversioning",
             "httppayload",
             "libhttpclientconnection",
-	    #"libovmsoclutils", # TODO decide if will need
+            #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "libovms_threadsafequeue",
             "//:ovms_dependencies", # TODO dispose or replace
@@ -865,8 +850,7 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library( # TODO @atobisze to split as most of users should have access to opencv headers and
-           # require only convertNativeFileFormatRequestTensorToOVTensor
+cc_library(
     name = "libovms_tensor_conversion",
     hdrs = ["tensor_conversion.hpp"],
     srcs = ["tensor_conversion.cpp",],
@@ -886,8 +870,7 @@ cc_library( # TODO @atobisze to split as most of users should have access to ope
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
-cc_library( # TODO @atobisze to split as most of users should have access to opencv headers and
-           # require only convertNativeFileFormatRequestTensorToOVTensor
+cc_library(
     name = "ovms_tensor_conversion_common",
     hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
@@ -901,7 +884,6 @@ cc_library( # TODO @atobisze to split as most of users should have access to ope
         "libovms_tensorinfo",
         "ovms_inference_request_common",
         "libovms_predict_request_validation_utils_impl",
-#        "libovms_predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -909,11 +891,10 @@ cc_library( # TODO @atobisze to split as most of users should have access to ope
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
-cc_library( # TODO @atobisze to split as most of users should have access to opencv headers and
-           # require only convertNativeFileFormatRequestTensorToOVTensor
+cc_library(
     name = "ovms_tensor_conversion_after",
     hdrs = ["tensor_conversion_after.hpp"],
-    deps = [ # TODO verify @atobisze
+    deps = [
         "//third_party:openvino",
         "//third_party:opencv",
         "libovmsprecision",
@@ -1380,9 +1361,9 @@ cc_library(
             "libovmsshape",
             "libovmsprecision",
             "libovms_extractchoice",
-            "libovms_requesttensorextractor", # TODO @atobisz
+            "libovms_requesttensorextractor",
             "libovms_dags_pipelinedefinitionstatus", # TODO @atobisze split further
-            "libovms_predict_request_validation_utils_h", # TODO @atobisze tensorShapeToString
+            "libovms_predict_request_validation_utils",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1554,7 +1535,7 @@ cc_library(
     name = "libovms_kfs_validation",
     hdrs = ["kfs_frontend/validation.hpp"],
     srcs = ["kfs_frontend/validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils_h",
+    deps = ["libovms_predict_request_validation_utils",
             "libovmsprofiler",
             "libovmslogging",
             "libovmsstatus",
@@ -1572,7 +1553,7 @@ cc_library(
     name = "tfs_validation",
     hdrs = [],
     srcs = ["tfs_frontend/validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils_h",
+    deps = ["libovms_predict_request_validation_utils",
             "libovmsprofiler",
             "libovmslogging",
             "libovmsstatus",
@@ -2193,7 +2174,7 @@ cc_library(
 )
 cc_library(
     name = "libovms_deserialization_main",
-    hdrs = ["deserialization_main.hpp",], # TODO @atobisze FIXME
+    hdrs = ["deserialization_main.hpp",],
     deps = [
             "//third_party:openvino",
             "libovms_deserialization_common",
@@ -2688,7 +2669,7 @@ cc_test(
         "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
-        #"test/custom_loader_test.cpp",
+        #"test/custom_loader_test.cpp", # TODO remove?
         "test/custom_node_buffersqueue_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
@@ -2737,7 +2718,7 @@ cc_test(
         "test/server_test.cpp",
         "test/shape_test.cpp",
         "test/stateful_config_test.cpp",
-        #"test/stateful_modelinstance_test.cpp",
+        #"test/stateful_modelinstance_test.cpp", # TODO remove?
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
