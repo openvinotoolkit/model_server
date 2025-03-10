@@ -45,9 +45,6 @@ public:
         return this->sequenceManager;
     }
 
-    //    static const Status extractSequenceId(const tensorflow::TensorProto& proto, uint64_t& sequenceId);
-
-    //    static const Status extractSequenceControlInput(const tensorflow::TensorProto& proto, uint32_t& sequenceControlInput);
     /*
     Performs pre inference operations:
         - for SEQUENCE_START control input - reset InferRequest memory state
@@ -78,7 +75,6 @@ public:
     template <typename RequestType>
     static const Status extractSpecialKeys(const RequestType* request, SequenceProcessingSpec& sequenceProcessingSpec);
 
-    // TODO @atobisze std::unique_ptr<RequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>> createRequestProcessor(const tensorflow::serving::PredictRequest*, tensorflow::serving::PredictResponse*) override;
     const std::set<std::string>& getOptionalInputNames() override;
 };
 }  // namespace ovms

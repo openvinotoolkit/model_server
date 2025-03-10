@@ -25,30 +25,17 @@ class Servable {
     const std::string name;
     const model_version_t version = -1;
 
-protected:
-    tensor_map_t inputsInfo;
-
-    tensor_map_t outputsInfo;
-
 public:
     Servable(const std::string& name, model_version_t version) :
         name(name),
         version(version) {}
     virtual ~Servable() = default;
 
-    virtual const std::string& getName() const {  // TODO virtual @atobisze
+    virtual const std::string& getName() const {
         return name;
     }
-
-    virtual model_version_t getVersion() const {  // TODO virtual @atobisze
+    virtual model_version_t getVersion() const {
         return version;
-    }
-
-    virtual const tensor_map_t& getInputsInfo() const {
-        return inputsInfo;
-    }
-    virtual const tensor_map_t& getOutputsInfo() const {
-        return outputsInfo;
     }
 };
 }  // namespace ovms

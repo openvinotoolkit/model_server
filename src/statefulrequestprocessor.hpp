@@ -68,7 +68,6 @@ struct StatefulRequestProcessor : public RequestProcessor<RequestType, ResponseT
         }
         return StatusCode::OK;
     }
-    // TODO @atobisze force check status
     Status extractRequestParameters(const RequestType* request) override { return StatusCode::NOT_IMPLEMENTED; };
     Status postInferenceProcessing(ResponseType* response, ov::InferRequest& inferRequest) override { return StatusCode::NOT_IMPLEMENTED; };
     Status release() override { return StatusCode::NOT_IMPLEMENTED; };

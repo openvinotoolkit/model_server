@@ -22,8 +22,6 @@
 
 #include "ovms.h"  // NOLINT
 #include "extractchoice.hpp"
-// TODO @atobisze this is request interface to be implementend by backend
-// do we need more headers or just one? For now keeping it in here
 namespace ovms {
 class Status;
 template <typename Request, typename InputTensorType, ExtractChoice choice>

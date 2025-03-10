@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "deserialization.hpp"  // TODO @atobisze we need typetraits - where is the best place to put it?
+#include "deserialization.hpp"
 #include "kfs_utils.hpp"
 #include "kfs_request_utils.hpp"
 #include "../dags/pipeline.hpp"

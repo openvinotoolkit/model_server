@@ -33,8 +33,10 @@ namespace ovms {
 #pragma GCC diagnostic ignored "-Wunused-function"
 template <>
 OVMS_InferenceRequestCompletionCallback_t getCallback(const KFSRequest* request) {
-    return request->getResponseCompleteCallback();
-}  // TODO check if this exact impl is used @atobisze
+    SPDLOG_ERROR("Callbacks are not supported with KFS API");
+    throw std::runtime_error("Callbacks are not supported with KFS API");
+    return nullptr;
+}
 #pragma GCC diagnostic pop
 template Status modelInferAsync<KFSRequest, KFSResponse>(ModelInstance& instance, const KFSRequest*, std::unique_ptr<ModelInstanceUnloadGuard>&);
 template Status infer<KFSRequest, KFSResponse>(ModelInstance& instance, const KFSRequest*, KFSResponse*, std::unique_ptr<ModelInstanceUnloadGuard>&);

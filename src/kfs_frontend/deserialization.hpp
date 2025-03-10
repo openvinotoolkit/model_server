@@ -157,7 +157,4 @@ std::tuple<ovms::Status, const typename RequestTraits<::KFSRequest>::TensorType*
         }                                     \
     } while (0)
 
-// OV implementation the ov::Exception is not
-// a base class for all other exceptions thrown from OV.
-// OV can throw exceptions derived from std::logic_error.
 }  // namespace ovms

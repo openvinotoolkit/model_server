@@ -71,7 +71,6 @@
 #endif
 
 #include "tfs_frontend/tfs_utils.hpp"
-#include "kfs_frontend/deserialization.hpp"
 #include "tfs_frontend/deserialization.hpp"
 #include "deserialization_main.hpp"
 #include "inference_executor.hpp"

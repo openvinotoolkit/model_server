@@ -47,7 +47,7 @@ Status convertStringRequestFromBufferToOVTensor2D(const tensorflow::TensorProto&
     return StatusCode::NOT_IMPLEMENTED;
 }
 }  // namespace ovms
-// TODO we need to see declarations before @atobisze
+// we need to see declarations before
 #include "../tensor_conversion_after.hpp"
 namespace ovms {
 template Status convertStringRequestToOVTensor2D<TFSInputTensorType>(const TFSInputTensorType& src, ov::Tensor& tensor, const std::string* buffer);
