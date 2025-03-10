@@ -48,7 +48,7 @@ public:
         tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
         auto callback = [](std::string text) {
             lastTextChunk = text;
-            return false;
+            return ov::genai::StreamingStatus::RUNNING;
         };
         streamer = std::make_shared<ov::genai::TextStreamer>(*tokenizer, callback);
     }
