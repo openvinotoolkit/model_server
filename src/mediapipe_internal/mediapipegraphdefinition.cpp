@@ -79,6 +79,7 @@ Status MediapipeGraphDefinition::validateForConfigFileExistence() {
     ifs.seekg(0, std::ios::beg);
     std::stringstream config;
     config << ifs.rdbuf();
+    this->queue = std::make_unique<GraphQueue>(this->config, 48);
     this->mgconfig.setCurrentGraphPbTxtMD5(ovms::FileSystem::getStringMD5(config.str()));
     this->chosenConfig.assign(config.str());
     return StatusCode::OK;
@@ -188,9 +189,14 @@ MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     name(name),
     status(SCHEDULER_CLASS_NAME, this->name),
     pythonBackend(pythonBackend),
-    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
+    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name))
+    {
     mgconfig = config;
     passKfsRequestFlag = false;
+    /*if (!sharedThreadPool) {
+        SPDLOG_ERROR("Created shared Thread Pool XXX");
+        //sharedThreadPool = std::make_shared<mediapipe::ThreadPoolExecutor>(std::thread::hardware_concurrency());  // TODO FIXME should be in MP factory
+    }*/
 }
 
 Status MediapipeGraphDefinition::createInputsInfo() {
@@ -254,10 +260,10 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
         return status;
     }
     SPDLOG_DEBUG("Creating Mediapipe graph executor: {}", getName());
-
+    GraphIdGuard graphIdGuard(*(this->queue)); // TODO timeout?
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->llmNodeResourcesMap, this->pythonBackend, this->reporter.get(), std::move(graphIdGuard));
     return status;
 }
 
