@@ -24,7 +24,7 @@ tested_models=(
     thenlper/gte-small
 )
 
-mkdir -p models
+mkdir models
 
 for i in "${tested_models[@]}"; do
     echo "$i"
