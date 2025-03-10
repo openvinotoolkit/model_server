@@ -1,6 +1,7 @@
 -D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow \
 -D OPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib_repo/modules \
 -D CMAKE_BUILD_TYPE=Release \
+-D ENABLE_LTO=${LTO_ENABLE} \
 -D CMAKE_INSTALL_PREFIX=/opt/opencv \
 -D OPENCV_LIB_INSTALL_PATH=lib \
 -D BUILD_TESTS=OFF \
