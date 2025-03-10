@@ -1412,6 +1412,7 @@ Shape PipelineDefinition::getNodeGatherShape(const NodeInfo& info) const {
     std::reverse(shape.begin(), shape.end());
     return shape;
 }
+// TODO those should be part of frontend templatization
 template Status PipelineDefinition::create<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>(
     std::unique_ptr<Pipeline>& pipeline,
     const tensorflow::serving::PredictRequest* request,

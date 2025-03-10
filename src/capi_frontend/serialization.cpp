@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,168 +14,23 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
+#include "serialization.hpp"
 #include <memory>
 #include <string>
 
 #include <openvino/openvino.hpp>
-#include <spdlog/spdlog.h>
 
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow_serving/apis/prediction_service.grpc.pb.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-
-#include "capi_frontend/buffer.hpp"
-#include "capi_frontend/capi_utils.hpp"
-#include "capi_frontend/inferencerequest.hpp"
-#include "capi_frontend/inferenceresponse.hpp"
-#include "capi_frontend/inferencetensor.hpp"
-#include "kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "profiler.hpp"
-#include "status.hpp"
-#include "tensorinfo.hpp"
+#include "buffer.hpp"
+#include "capi_utils.hpp"
+#include "inferencerequest.hpp"
+#include "inferenceresponse.hpp"
+#include "inferencetensor.hpp"
+#include "../profiler.hpp"
+#include "../status.hpp"
+#include "../serialization_common.hpp"
+#include "../tensorinfo.hpp"
 
 namespace ovms {
-
-template <typename T>
-class OutputGetter {
-public:
-    OutputGetter(T t) :
-        outputSource(t) {}
-    Status get(const std::string& name, ov::Tensor& tensor);
-
-private:
-    T outputSource;
-};
-
-template <typename ProtoStorage, typename ProtoType>
-class ProtoGetter {
-    ProtoStorage protoStorage;
-
-public:
-    ProtoGetter(ProtoStorage protoStorage) :
-        protoStorage(protoStorage) {}
-    ProtoType createOutput(const std::string& name);
-    std::string* createContent(const std::string& name);
-};
-
-Status serializeTensorToTensorProto(
-    tensorflow::TensorProto& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-
-Status serializeTensorToTensorProto(
-    ::KFSResponse::InferOutputTensor& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-
-Status serializeTensorToTensorProtoRaw(
-    ::inference::ModelInferResponse::InferOutputTensor& responseOutput,
-    std::string* rawOutputContents,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-
-Status serializeTensorToTensorProto(
-    InferenceTensor& responseOutput,
-    const std::shared_ptr<const TensorInfo>& servableOutput,
-    ov::Tensor& tensor);
-
-typedef const std::string& (*outputNameChooser_t)(const std::string&, const TensorInfo&);
-const std::string& getTensorInfoName(const std::string& first, const TensorInfo& tensorInfo);
-const std::string& getOutputMapKeyName(const std::string& first, const TensorInfo& tensorInfo);
-
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const tensorflow::serving::PredictRequest* request,
-    tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
-    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
-}
-
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    tensorflow::serving::PredictResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {  // does not apply for TFS frontend
-    OVMS_PROFILE_FUNCTION();
-    Status status;
-    ProtoGetter<tensorflow::serving::PredictResponse*, tensorflow::TensorProto&> protoGetter(response);
-    for (const auto& [outputName, outputInfo] : outputMap) {
-        ov::Tensor tensor;
-        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
-        if (!status.ok()) {
-            return status;
-        }
-        auto& tensorProto = protoGetter.createOutput(outputInfo->getMappedName());
-        status = serializeTensorToTensorProto(tensorProto, outputInfo, tensor);
-        if (!status.ok()) {
-            return status;
-        }
-    }
-    return status;
-}
-
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    const ::KFSRequest* request,
-    ::KFSResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {
-    return serializePredictResponse(outputGetter, servableName, servableVersion, outputMap, response, outputNameChooser, useSharedOutputContent);
-}
-
-template <typename T>
-Status serializePredictResponse(
-    OutputGetter<T>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    ::KFSResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent = true) {
-    OVMS_PROFILE_FUNCTION();
-    Status status;
-    response->set_model_name(servableName);
-    response->set_model_version(std::to_string(servableVersion));
-    ProtoGetter<::KFSResponse*, ::KFSResponse::InferOutputTensor&> protoGetter(response);
-    for (const auto& [outputName, outputInfo] : outputMap) {
-        ov::Tensor tensor;
-        status = outputGetter.get(outputNameChooser(outputName, *outputInfo), tensor);
-        if (!status.ok()) {
-            return status;
-        }
-        auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
-        if (useSharedOutputContent) {
-            status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
-        } else {
-            status = serializeTensorToTensorProto(inferOutputTensor, outputInfo, tensor);
-        }
-
-        if (!status.ok()) {
-            return status;
-        }
-    }
-    return status;
-}
 template <typename T>
 Status serializePredictResponse(
     OutputGetter<T>& outputGetter,
@@ -227,7 +82,7 @@ Status serializePredictResponse(
         case ovms::Precision::BIN:
         case ovms::Precision::STRING:
         default: {
-            status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+            Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
             SPDLOG_ERROR(status.string());
             return status;
         }
@@ -325,7 +180,7 @@ Status serializePredictResponse(
         case ovms::Precision::Q78:
         case ovms::Precision::BIN:
         default: {
-            status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
+            Status status = StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION;
             SPDLOG_ERROR(status.string());
             return status;
         }
@@ -392,5 +247,4 @@ Status serializePredictResponse(
     }
     return StatusCode::OK;
 }
-
 }  // namespace ovms
