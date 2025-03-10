@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,27 +13,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#ifndef SRC_LIBGT2_LIBGT2_HPP_
+#define SRC_LIBGT2_LIBGT2_HPP_
+#include <string>
 
-#include <memory>
+#include <assert.h>
+#include <fcntl.h>
+#include <git2.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include <cxxopts.hpp>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 namespace ovms {
 
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
-class HfDownloader;
-
-class CLIParser {
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-
+class HfDownloader {
 public:
-    CLIParser() = default;
-    void parse(int argc, char** argv);
+    int cloneRepository(std::string& repo_url, std::string& repo_path);
+    std::string source_model;
+    std::string repo_path;
+    bool pull_hf_model;
 
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*, HfDownloader*);
+private:
+	int RegisterFilters();
+    bool CheckIfProxySet();
+	bool CheckIfTokenSet();
 };
 
 }  // namespace ovms
+#ifdef __cplusplus
+}
+#endif
+#endif  // SRC_LIBGT2_LIBGT2_HPP_
