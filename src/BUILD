@@ -169,7 +169,7 @@ cc_library(
     linkopts = [],
 )
 cc_library(
-    name = "libovms_servable",
+    name = "servable",
     hdrs = ["servable.hpp"],
     copts = [],
     linkopts = [],
@@ -193,30 +193,30 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_inference_executor",
+    name = "inference_executor",
     hdrs = ["inference_executor.hpp"],
     deps = ["libovms_outputkeeper",
-            "libovms_modelinstance_h",
-            "libovms_statefulrequestprocessor",
-            "libovms_modelinstanceunloadguard",
+            "modelinstance_h",
+            "statefulrequestprocessor",
+            "modelinstanceunloadguard",
     ],
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
     linkopts = [],
 )
 cc_library(
-    name = "libovms_capi_validation",
+    name = "capi_validation",
     hdrs = [],
     srcs = ["capi_frontend/capi_validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils",
+    deps = ["predict_request_validation_utils",
             "libovmsprofiler",
             "libovmscapibuffer",
             "libovmslogging",
             "libovmsstatus",
             "libovmsshape",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferencetensor",
-            "libovmscapi_request_utils",
+            "inferencerequest",
+            "inferencetensor",
+            "capi_request_utils",
             "libovmscapi_utils",
             "libovms_tensorinfo",
             "libovmsprecision",
@@ -227,22 +227,22 @@ cc_library(
     alwayslink=1, # TODO @atobisze
 )
 cc_library(
-    name = "libovms_predict_request_validation_utils",
+    name = "predict_request_validation_utils",
     hdrs = ["predict_request_validation_utils.hpp"],
     deps = [
             "libovmsshape",
             "libovmslogging",
             "libovms_tensorinfo",
             "libovmsmodelversion",
-            "libovms_requesttensorextractor",
-            "libovms_predict_request_validation_utils_impl",
+            "requesttensorextractor",
+            "predict_request_validation_utils_impl",
 ],
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
     linkopts = [],
 )
 cc_library(
-    name = "libovms_anonymous_input_name",
+    name = "anonymous_input_name",
     hdrs = ["anonymous_input_name.hpp"],
     srcs = ["anonymous_input_name.cpp"],
     copts = COPTS_ADJUSTED,
@@ -251,12 +251,12 @@ cc_library(
     alwayslink=1,
 )
 cc_library(
-    name = "ovms_inference_request_common",
+    name = "inference_request_common",
     hdrs = ["inference_request_common.hpp"],
     deps = [
         "libovmsshape",
         "libovmsstatus",
-        "libovms_anonymous_input_name",
+        "anonymous_input_name",
         "libovmslogging",
     ],
     copts = COPTS_ADJUSTED,
@@ -264,14 +264,14 @@ cc_library(
     linkopts = [],
 )
 cc_library(
-    name = "libovms_predict_request_validation_utils_impl",
+    name = "predict_request_validation_utils_impl",
     hdrs = ["predict_request_validation_utils_impl.hpp"],
     srcs = ["predict_request_validation_utils_impl.cpp"],
     deps = ["libovmslogging",
             "libovms_tensorinfo",
             "libovmsstatus",
             "libovmsshape",
-            "libovms_anonymous_input_name",
+            "anonymous_input_name",
     ],
     copts = [],
     visibility = ["//visibility:public",],
@@ -307,7 +307,7 @@ cc_library(
     deps = [
         "libovms_server_settings",
         "libovmslogging",
-        "libovmsmodelconfig",
+        "modelconfig",
         "libovms_cliparser",
         "libovms_systeminfo",
     ],
@@ -358,7 +358,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_model_metric_reporter",
+    name = "model_metric_reporter",
     hdrs = ["model_metric_reporter.hpp"],
     srcs = ["model_metric_reporter.cpp"],
     deps = [
@@ -373,11 +373,11 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_executingstreamidguard",
+    name = "executingstreamidguard",
     hdrs = ["executingstreamidguard.hpp"],
     srcs = ["executingstreamidguard.cpp"],
     deps = [
-        "libovms_model_metric_reporter",
+        "model_metric_reporter",
         "libovms_ovinferrequestsqueue",
         "libovmslogging",
     ],
@@ -387,11 +387,11 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_modelinstanceunloadguard",
+    name = "modelinstanceunloadguard",
     hdrs = ["modelinstanceunloadguard.hpp",],
     srcs = ["modelinstanceunloadguard.cpp",],
     deps = [
-        "libovms_modelinstance_h",
+        "modelinstance_h",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -399,19 +399,19 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_modelinstance_h",
+    name = "modelinstance_h",
     hdrs = ["modelinstance.hpp",],
     srcs = [],
     deps = [
         "libovmslogging",
         "libovms_outputkeeper",
         "libovmsprofiler",
-        "libovms_servable",
-        "libovms_modelchangesubscription",
+        "servable",
+        "modelchangesubscription",
         "libovms_ovinferrequestsqueue",
-        "libovms_model_metric_reporter",
+        "model_metric_reporter",
         "libovmsmodelversion",
-        "libovmsmodelconfig",
+        "modelconfig",
         "libovms_tensorinfo",
         "libovmsmodelversionstatus",
     ],
@@ -421,13 +421,13 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_nodestreamidguard",
+    name = "dags_nodestreamidguard",
     hdrs = ["dags/nodestreamidguard.hpp",],
     srcs = ["dags/nodestreamidguard.cpp",],
     deps = [
         "libovmsprofiler",
         "libovms_ovinferrequestsqueue",
-        "libovms_model_metric_reporter",
+        "model_metric_reporter",
         "libovmsmodelversion",
         "libovmslogging",
     ],
@@ -474,10 +474,10 @@ cc_library(
         "libovms_tensorinfo",
         "libovmsprecision",
         "libovmsmodelversion",
-        "ovms_tensor_conversion_common",
-        "libovms_predict_request_validation_utils_impl",
-        "libovms_anonymous_input_name",
-        "ovms_inference_request_common",
+        "tensor_conversion_common",
+        "predict_request_validation_utils_impl",
+        "anonymous_input_name",
+        "inference_request_common",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -504,7 +504,6 @@ cc_library(
     ],
     srcs = [
         "capi_frontend/capi.cpp",
-        "capi_frontend/tensor_conversion.cpp", # TODO @atobisze
         "cleaner_utils.cpp",
         "cleaner_utils.hpp",
         "customloaderconfig.hpp",
@@ -540,8 +539,6 @@ cc_library(
         "httpservermodule.hpp",
         "http_rest_api_handler.cpp",
         "httpservermodule.cpp",
-        "grpc_utils.cpp",
-        "grpc_utils.hpp",
         "grpcservermodule.cpp",
         "grpcservermodule.hpp",
         "kfs_frontend/kfs_grpc_inference_service.cpp",
@@ -551,8 +548,6 @@ cc_library(
         "modelmanager.hpp",
         "modelinstance.cpp",
         "modelinstance.hpp",
-        "modelinstanceunloadguard.cpp",
-        "modelinstanceunloadguard.hpp",
         "model_service.hpp",
         "model_service.cpp",
         "ovms_exit_codes.hpp",
@@ -609,51 +604,51 @@ cc_library(
         }) + [
             "cpp_headers",
             "ovms_header",
-            "libovms_capi_backend_impl",
+            "capi_backend_impl",
             "libovms_capi_servable_metadata",
             "libmodelconfigjsonparser",
-            "libovmsmodelconfig",
+            "modelconfig",
             "libovmscapibuffer",
             "libovmscapi_utils",
-            "libovmscapiinferenceparameter",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferenceresponse",
-            "libovmscapiinferencetensor",
+            "capiinferenceparameter",
+            "inferencerequest",
+            "inferenceresponse",
+            "inferencetensor",
             "capi_dag_utils",
             "libovms_cliparser",
             "libovms_config",
             "libovms_dags_pipelinedefinitionstatus",
             "libovms_dags_aliases",
-            "libovms_dags_custom_node",
-            "libovms_dags_custom_node_library_manager",
+            "custom_node",
+            "custom_node_library_manager",
             "libovms_dags_node",
-            "libovms_dags_node_library",
-            "libovms_dags_node_library_utils",
-            "libovms_dags_custom_node_library_internal_manager_wrapper",
-            "libovms_dags_nodeinfo",
-                        "libovms_dags_nodestreamidguard",
+            "node_library",
+            "node_library_utils",
+            "custom_node_library_internal_manager_wrapper",
+            "nodeinfo",
+            "dags_nodestreamidguard",
             "libovms_dags_session_id",
             "libovms_dags_pipelineeventqueue",
             "libovms_dags_nodesessionmetadata",
             "libovms_dags_nodesessionresult",
             "libovms_dags_nodeinputhandler",
-            "libovms_dags_custom_node_output_allocator",
+            "custom_node_output_allocator",
             "libovms_execution_context",
-            "libovms_executingstreamidguard",
+            "executingstreamidguard",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
             "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
-            "libovms_grpc_utils",
+            "grpc_utils",
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
-            "libovms_modelchangesubscription",
+            "modelchangesubscription",
             "libovmslocalfilesystem", # indirectly & directly through factory
             "libovmslogging",
             "libovmsmetrics",
-            "libovms_model_metric_reporter",
+            "model_metric_reporter",
             "libovms_ov_utils",
             "libovms_outputkeeper",
-            "libovms_requestprocessor",
+            "requestprocessor",
             "libovmsprecision",
             "libovmsshape",
             "libovmsschema",
@@ -661,9 +656,9 @@ cc_library(
             "libovmslayout_configuration",
             "libovms_tensorinfo",
             "libovmstimer",
-            "libovms_tfs_utils",
+            "tfs_utils",
             "libovms_version",
-            "libovms_serialization_common",
+            "serialization_common",
             "libovmsprofiler",
             "libovmsstatus",
             "libovms_sequence",
@@ -683,10 +678,10 @@ cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
-            "libovms_predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
-            "libovms_kfs_backend_impl",
+            "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
+            "kfs_backend_impl",
             "tfs_backend_impl",
-            "libovms_anonymous_input_name",
+            "anonymous_input_name",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -773,7 +768,7 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovms_notifyreceiver",
+    name = "notifyreceiver",
     hdrs = ["notifyreceiver.hpp"],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -781,11 +776,11 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_modelchangesubscription",
+    name = "modelchangesubscription",
     hdrs = ["modelchangesubscription.hpp"],
     srcs = ["modelchangesubscription.cpp",],
     deps = [
-        "libovms_notifyreceiver",
+        "notifyreceiver",
         "libovmslogging",
     ],
     visibility = ["//visibility:public",],
@@ -851,7 +846,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_tensor_conversion",
+    name = "tensor_conversion",
     hdrs = ["tensor_conversion.hpp"],
     srcs = ["tensor_conversion.cpp",],
     deps = [
@@ -862,7 +857,7 @@ cc_library(
         "libovmsstatus",
         "libovmsprofiler",
         "libovms_tensorinfo",
-        "libovms_predict_request_validation_utils_impl",
+        "predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -871,7 +866,7 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "ovms_tensor_conversion_common",
+    name = "tensor_conversion_common",
     hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
     deps = [
@@ -882,8 +877,8 @@ cc_library(
         "libovmsstatus",
         "libovmsprofiler",
         "libovms_tensorinfo",
-        "ovms_inference_request_common",
-        "libovms_predict_request_validation_utils_impl",
+        "inference_request_common",
+        "predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -892,7 +887,7 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "ovms_tensor_conversion_after",
+    name = "tensor_conversion_after",
     hdrs = ["tensor_conversion_after.hpp"],
     deps = [
         "//third_party:openvino",
@@ -902,8 +897,8 @@ cc_library(
         "libovmsstatus",
         "libovmsprofiler",
         "libovms_tensorinfo",
-        "ovms_inference_request_common",
-        "libovms_predict_request_validation_utils_impl",
+        "inference_request_common",
+        "predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1098,7 +1093,7 @@ cc_import(
 )
 
 cc_library(
-    name = "libovms_tfs_utils",
+    name = "tfs_utils",
     hdrs = ["tfs_frontend/tfs_utils.hpp",],
     srcs = [
         "tfs_frontend/tfs_utils.cpp",],
@@ -1110,9 +1105,9 @@ cc_library(
         "libovmsprofiler",
         "libovmsstatus",
         "//third_party:opencv",
-        "ovms_tensor_conversion_common",
-        "ovms_inference_request_common",
-        "libovms_predict_request_validation_utils_impl",
+        "tensor_conversion_common",
+        "inference_request_common",
+        "predict_request_validation_utils_impl",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1360,10 +1355,10 @@ cc_library(
             "ovms_header",
             "libovmsshape",
             "libovmsprecision",
-            "libovms_extractchoice",
-            "libovms_requesttensorextractor",
+            "extractchoice",
+            "requesttensorextractor",
             "libovms_dags_pipelinedefinitionstatus", # TODO @atobisze split further
-            "libovms_predict_request_validation_utils",
+            "predict_request_validation_utils",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1379,8 +1374,8 @@ cc_library(
             "libovmslogging",
             "libovmsstatus",
             "libovmscapibuffer",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferenceresponse",
+            "inferencerequest",
+            "inferenceresponse",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1398,8 +1393,8 @@ cc_library(
             "libovmslogging",
             "libovmscapi_utils",
             "libovmsstatus",
-            "libovmscapiinferenceresponse",
-            "libovmscapiinferencetensor",
+            "inferenceresponse",
+            "inferencetensor",
             "libovmscapibuffer",
     ],
     visibility = ["//visibility:public"],
@@ -1408,15 +1403,15 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovmscapi_request_utils",
+    name = "capi_request_utils",
     hdrs = ["capi_frontend/capi_request_utils.hpp",],
     srcs = ["capi_frontend/capi_request_utils.cpp",],
     deps = [
             "libovmslogging",
             "libovmsstatus",
             "libovmscapibuffer",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferenceresponse",
+            "inferencerequest",
+            "inferenceresponse",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1424,19 +1419,23 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_capi_backend_impl",
-    srcs = ["capi_frontend/capi_backend_impls.cpp",],
+    name = "capi_backend_impl",
+    srcs = ["capi_frontend/capi_backend_impls.cpp",
+            "capi_frontend/tensor_conversion.cpp",
+    ],
     deps = [
-            "libovms_modelinstance_h",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferenceresponse",
-            "libovms_capi_validation",
+            "modelinstance_h",
+            "inferencerequest",
+            "inferenceresponse",
+            "capi_validation",
             "libovmstimer",
             "capi_serialization",
-            "libovms_inference_executor",
+            "inference_executor",
             "capi_deserialization",
-            "libovms_deserialization_main",
-            "libovms_executingstreamidguard",
+            "deserialization_main",
+            "executingstreamidguard",
+            "tensor_conversion_common",
+            "tensor_conversion_after",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1445,15 +1444,15 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovms_kfs_request_utils",
+    name = "kfs_request_utils",
     hdrs = ["kfs_frontend/kfs_request_utils.hpp",],
     srcs = ["kfs_frontend/kfs_request_utils.cpp",],
     deps = [
             "libovmslogging",
             "libovms_kfs_utils",
             "libovmsstatus",
-            "libovms_extractchoice",
-            "libovms_requesttensorextractor",
+            "extractchoice",
+            "requesttensorextractor",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1466,12 +1465,12 @@ cc_library(
     srcs = ["tfs_frontend/tfs_request_utils.cpp",],
     deps = [
             "libovmslogging",
-            "libovms_tfs_utils",
+            "tfs_utils",
             "libovmsstatus",
             "libovmsshape",
-            "libovms_extractchoice",
-            "libovms_requesttensorextractor",
-            "libovms_statefulrequestprocessor",
+            "extractchoice",
+            "requesttensorextractor",
+            "statefulrequestprocessor",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1480,24 +1479,24 @@ cc_library(
     alwayslink = 1, # TODO @atobisze
 )
 cc_library(
-    name = "libovms_kfs_backend_impl",
+    name = "kfs_backend_impl",
     srcs = [
         "kfs_frontend/kfs_backend_impl.cpp",
         "kfs_frontend/tensor_conversion.cpp",
     ],
     deps = [
-            "libovms_modelinstance_h",
+            "modelinstance_h",
             "libovms_kfs_utils",
-            "libovms_kfs_validation",
-            "libovms_kfs_request_utils",
+            "kfs_validation",
+            "kfs_request_utils",
             "libovmstimer",
-            "libovms_inference_executor",
-            "libovms_kfs_deserialization",
-            "libovms_deserialization_main",
-            "libovms_executingstreamidguard",
-            "libovms_predict_request_validation_utils",
-            "libovms_kfs_serialization",
-            "ovms_tensor_conversion_after",
+            "inference_executor",
+            "kfs_deserialization",
+            "deserialization_main",
+            "executingstreamidguard",
+            "predict_request_validation_utils",
+            "kfs_serialization",
+            "tensor_conversion_after",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1512,17 +1511,17 @@ cc_library(
         "tfs_frontend/tensor_conversion.cpp",
     ],
     deps = [
-            "ovms_tensor_conversion_after",
-            "libovms_modelinstance_h",
-            "libovms_tfs_utils",
+            "tensor_conversion_after",
+            "modelinstance_h",
+            "tfs_utils",
             "tfs_request_utils",
             "libovmstimer",
             "tfs_serialization",
-            "libovms_inference_executor",
+            "inference_executor",
             "tfs_deserialization",
-            "libovms_deserialization_main",
-            "libovms_executingstreamidguard",
-            "libovms_predict_request_validation_utils",
+            "deserialization_main",
+            "executingstreamidguard",
+            "predict_request_validation_utils",
             "tfs_validation",
     ],
     visibility = ["//visibility:public"],
@@ -1532,10 +1531,10 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovms_kfs_validation",
+    name = "kfs_validation",
     hdrs = ["kfs_frontend/validation.hpp"],
     srcs = ["kfs_frontend/validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils",
+    deps = ["predict_request_validation_utils",
             "libovmsprofiler",
             "libovmslogging",
             "libovmsstatus",
@@ -1553,12 +1552,12 @@ cc_library(
     name = "tfs_validation",
     hdrs = [],
     srcs = ["tfs_frontend/validation.cpp"],
-    deps = ["libovms_predict_request_validation_utils",
+    deps = ["predict_request_validation_utils",
             "libovmsprofiler",
             "libovmslogging",
             "libovmsstatus",
             "libovmsshape",
-            "libovms_tfs_utils",
+            "tfs_utils",
             "libovms_tensorinfo",
             "libovmsprecision",
     ],
@@ -1568,7 +1567,7 @@ cc_library(
     alwayslink=1, # TODO @atobisze
 )
 cc_library(
-    name = "libovms_kfs_serialization",
+    name = "kfs_serialization",
     hdrs = ["kfs_frontend/serialization.hpp",],
     srcs = ["kfs_frontend/serialization.cpp",],
     deps = [
@@ -1577,9 +1576,9 @@ cc_library(
             "libovmsstatus",
             "libovms_kfs_utils",
             "libovmsprofiler",
-            "libovms_serialization_common",
+            "serialization_common",
             "libovms_tensorinfo",
-            "libovms_tensor_conversion",
+            "tensor_conversion",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1595,13 +1594,13 @@ cc_library(
             "//third_party:openvino",
             "libovmslogging",
             "libovmsstatus",
-            "libovms_tfs_utils",
+            "tfs_utils",
             "libovmsprofiler",
-            "libovms_serialization_common",
+            "serialization_common",
             "libovms_tensorinfo",
-            "libovms_tensor_conversion",
-            "ovms_tensor_conversion_common",
-            "ovms_inference_request_common",
+            "tensor_conversion",
+            "tensor_conversion_common",
+            "inference_request_common",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1610,20 +1609,20 @@ cc_library(
     alwayslink=1,
 )
 cc_library(
-    name = "libovms_kfs_deserialization",
+    name = "kfs_deserialization",
     hdrs = ["kfs_frontend/deserialization.hpp",],
     srcs = ["kfs_frontend/deserialization.cpp",],
     deps = [
             "//third_party:openvino",
             "libovmslogging",
-            "libovms_deserialization_common",
+            "deserialization_common",
             "libovms_itensorfactory",
             "libovms_kfs_utils",
             "libovmsprofiler",
             "libovmsstatus",
             "libovms_tensorinfo",
-            "libovms_requesttensorextractor",
-            "libovms_tensor_conversion",
+            "requesttensorextractor",
+            "tensor_conversion",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1638,16 +1637,16 @@ cc_library(
     deps = [
             "//third_party:openvino",
             "libovmslogging",
-            "libovms_deserialization_common",
+            "deserialization_common",
             "libovms_itensorfactory",
-            "libovms_tfs_utils",
+            "tfs_utils",
             "libovmsprofiler",
             "libovmsstatus",
             "libovms_tensorinfo",
-            "libovms_requesttensorextractor",
-            "libovms_tensor_conversion",
-            "ovms_tensor_conversion_common",
-            "ovms_inference_request_common",
+            "requesttensorextractor",
+            "tensor_conversion",
+            "tensor_conversion_common",
+            "inference_request_common",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1656,7 +1655,7 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovmscapiinferenceparameter",
+    name = "capiinferenceparameter",
     hdrs = ["capi_frontend/inferenceparameter.hpp",],
     srcs = ["capi_frontend/inferenceparameter.cpp",],
     deps = [
@@ -1669,7 +1668,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovmscapiinferencetensor",
+    name = "inferencetensor",
     hdrs = ["capi_frontend/inferencetensor.hpp",
     ],
     srcs = [
@@ -1688,13 +1687,13 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovmscapiinferencerequest",
+    name = "inferencerequest",
     hdrs = ["capi_frontend/inferencerequest.hpp",],
     srcs = ["capi_frontend/inferencerequest.cpp",],
     deps = [
             "ovms_header",
-            "libovmscapiinferencetensor",
-            "libovmscapiinferenceparameter",
+            "inferencetensor",
+            "capiinferenceparameter",
             "libovmscapibuffer",
             "libovmsmodelversion",
             "libovmsstatus",
@@ -1705,13 +1704,13 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovmscapiinferenceresponse",
+    name = "inferenceresponse",
     hdrs = ["capi_frontend/inferenceresponse.hpp",],
     srcs = ["capi_frontend/inferenceresponse.cpp",],
     deps = [
             "ovms_header",
-            "libovmscapiinferencetensor",
-            "libovmscapiinferenceparameter",
+            "inferencetensor",
+            "capiinferenceparameter",
             "libovmsmodelversion",
             "libovmsstatus",
     ],
@@ -1721,7 +1720,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovmsmodelconfig",
+    name = "modelconfig",
     hdrs = ["modelconfig.hpp",],
     srcs = ["modelconfig.cpp",],
     deps = [
@@ -1734,7 +1733,7 @@ cc_library(
             "libovmsstatus",
             "libovmsstring_utils",
             "libmodelconfigjsonparser",
-            "libovms_anonymous_input_name",
+            "anonymous_input_name",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1867,7 +1866,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_custom_node_interface",
+    name = "custom_node_interface",
     hdrs = ["custom_node_interface.h",],
     deps = [],
     visibility = ["//visibility:public"],
@@ -1885,13 +1884,13 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_nodeinfo",
+    name = "nodeinfo",
     hdrs = ["dags/nodeinfo.hpp",],
     deps = [
         "libovms_threadsafequeue",
         "libovmsmodelversion",
         "libovms_tensorinfo",
-        "libovms_dags_node_library",
+        "node_library",
         "libovms_dags_aliases",
     ],
     visibility = ["//visibility:public"],
@@ -1900,11 +1899,11 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_node_library",
+    name = "node_library",
     hdrs = ["dags/node_library.hpp",],
     srcs = ["dags/node_library.cpp",],
     deps = [
-        "libovms_dags_custom_node_interface",
+        "custom_node_interface",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -1912,7 +1911,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_grpc_utils",
+    name = "grpc_utils",
     hdrs = ["grpc_utils.hpp",],
     srcs = ["grpc_utils.cpp",],
     deps = [
@@ -1932,12 +1931,12 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovms_kfs_utils",
-        "libovms_tfs_utils",
+        "tfs_utils",
         "libovms_dags_aliases",
-        "libovms_dags_nodeinfo",
+        "nodeinfo",
         "libovms_dags_pipelinedefinitionstatus",
         "libovms_tensorinfo",
-        "libovms_notifyreceiver",
+        "notifyreceiver",
         "libovmsmodelversion",
     ],
     visibility = ["//visibility:public"],
@@ -1958,12 +1957,12 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_node_library_utils",
+    name = "node_library_utils",
     hdrs = ["dags/node_library_utils.hpp",],
     srcs = ["dags/node_library_utils.cpp",],
     deps = [
-        "libovms_dags_custom_node_interface",
-        "libovms_dags_node_library",
+        "custom_node_interface",
+        "node_library",
         "libovms_dags_tensormap",
         "libovmsprecision",
         "libovmsshape",
@@ -1977,11 +1976,11 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_custom_node_library_manager",
+    name = "custom_node_library_manager",
     hdrs = ["dags/custom_node_library_manager.hpp",],
     srcs = ["dags/custom_node_library_manager.cpp",],
     deps = [
-        "libovms_dags_node_library",
+        "node_library",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstatus",
@@ -1992,12 +1991,12 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_custom_node_output_allocator",
+    name = "custom_node_output_allocator",
     hdrs = ["dags/custom_node_output_allocator.hpp",],
     srcs = ["dags/custom_node_output_allocator.cpp",],
     deps = [
-        "libovms_dags_custom_node_interface",
-        "libovms_dags_node_library",
+        "custom_node_interface",
+        "node_library",
         "libovmslogging",
     ],
     visibility = ["//visibility:public"],
@@ -2006,10 +2005,10 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_custom_node_library_internal_manager_wrapper",
+    name = "custom_node_library_internal_manager_wrapper",
     hdrs = ["dags/custom_node_library_internal_manager_wrapper.hpp",],
     deps = [
-        "libovms_dags_node_library",
+        "node_library",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2017,20 +2016,20 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_customnodesession",
+    name = "customnodesession",
     hdrs = ["dags/customnodesession.hpp",],
     srcs = ["dags/customnodesession.cpp",],
     deps = [
-        "libovms_dags_custom_node_interface",
+        "custom_node_interface",
         "libovms_dags_pipelineeventqueue",
-#        "libovms_dags_nodeinfo",
+#        "nodeinfo",
         "libovms_dags_node",
-        "libovms_dags_node_library",
-        "libovms_dags_node_library_utils",
+        "node_library",
+        "node_library_utils",
         "libovms_dags_nodeinputhandler",
         "libovms_dags_nodesession",
         "libovms_dags_tensormap",
-        "libovms_dags_custom_node_output_allocator",
+        "custom_node_output_allocator",
         "libovmslogging",
         "libovmsstatus",
         "libovmstimer",
@@ -2042,19 +2041,19 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_dags_custom_node",
+    name = "custom_node",
     hdrs = ["dags/custom_node.hpp",],
     srcs = ["dags/custom_node.cpp",],
     deps = [
-        "libovms_dags_custom_node_interface",
+        "custom_node_interface",
         "libovms_dags_pipelineeventqueue",
-        "libovms_dags_nodeinfo",
-        "libovms_dags_node_library",
+        "nodeinfo",
+        "node_library",
         "libovms_dags_node",
-        "libovms_dags_node_library_utils",
-        "libovms_dags_customnodesession",
-        "libovms_dags_custom_node_output_allocator",
-        "libovms_dags_custom_node_library_internal_manager_wrapper",
+        "node_library_utils",
+        "customnodesession",
+        "custom_node_output_allocator",
+        "custom_node_library_internal_manager_wrapper",
         "libovmslogging",
         "libovmsstatus",
     ],
@@ -2090,7 +2089,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_requestprocessor",
+    name = "requestprocessor",
     hdrs = ["requestprocessor.hpp",],
     srcs = [],
     deps = [
@@ -2117,7 +2116,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_extractchoice",
+    name = "extractchoice",
     hdrs = ["extractchoice.hpp",],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2125,10 +2124,10 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_requesttensorextractor",
+    name = "requesttensorextractor",
     hdrs = ["requesttensorextractor.hpp",],
     deps = [
-        "libovms_extractchoice"
+        "extractchoice"
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2136,7 +2135,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_serialization_common",
+    name = "serialization_common",
     hdrs = ["serialization_common.hpp",],
     srcs = ["serialization_common.cpp",],
     deps = [
@@ -2154,18 +2153,18 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovms_deserialization_common",
+    name = "deserialization_common",
     hdrs = ["deserialization_common.hpp",],
     srcs = ["deserialization_common.cpp",],
     deps = [
             "//third_party:openvino",
             "libovmslogging",
-            "libovms_extractchoice",
+            "extractchoice",
             "libovmsstatus",
             "libovmsprofiler",
             "libovms_itensorfactory",
             "libovms_tensorinfo",
-            "libovms_tensor_conversion",
+            "tensor_conversion",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2173,18 +2172,18 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_deserialization_main",
+    name = "deserialization_main",
     hdrs = ["deserialization_main.hpp",],
     deps = [
             "//third_party:openvino",
-            "libovms_deserialization_common",
+            "deserialization_common",
             "libovmslogging",
-            "libovms_extractchoice",
+            "extractchoice",
             "libovmsstatus",
             "libovmsprofiler",
             "libovms_itensorfactory",
             "libovms_tensorinfo",
-            "libovms_tensor_conversion",
+            "tensor_conversion",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2201,9 +2200,9 @@ cc_library(
             "libovmsstatus",
             "libovmscapibuffer",
             "libovmscapi_utils",
-            "libovmscapiinferencerequest",
+            "inferencerequest",
             "libovmsprofiler",
-            "libovms_serialization_common",
+            "serialization_common",
             "libovms_tensorinfo",
     ],
     visibility = ["//visibility:public"],
@@ -2218,17 +2217,17 @@ cc_library(
     deps = [
             "//third_party:openvino",
             "libovmslogging",
-            "libovms_deserialization_common",
-            "libovmscapi_request_utils",
+            "deserialization_common",
+            "capi_request_utils",
             "libovmsprofiler",
             "libovmscapibuffer",
-            "libovmscapiinferencerequest",
-            "libovmscapiinferenceparameter",
+            "inferencerequest",
+            "capiinferenceparameter",
             "libovmsstatus",
             "libovms_itensorfactory",
             "libovms_tensorinfo",
-            "libovms_tensor_conversion",
-            "libovms_requesttensorextractor",
+            "tensor_conversion",
+            "requesttensorextractor",
     ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2237,12 +2236,12 @@ cc_library(
     alwayslink = 1,
 )
 cc_library(
-    name = "libovms_statefulrequestprocessor",
+    name = "statefulrequestprocessor",
     hdrs = ["statefulrequestprocessor.hpp",],
     deps = [
             "//third_party:openvino",
             "libovmsstatus",
-            "libovms_requestprocessor",
+            "requestprocessor",
             "libovms_sequence",
             "libovms_sequence_manager",
             "libovms_sequence_processing_spec",
@@ -2915,9 +2914,9 @@ cc_test(
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
-            "//:disable_mediapipe" : +
+            "//:disable_mediapipe" :
             [
-                "libovms_serialization_common",
+                "serialization_common",
             ],
         }),
     copts = COPTS_TESTS,
@@ -2987,9 +2986,9 @@ cc_library(
             ":libovmslogging",
             ":libovmsstatus",
             ":libovmsshape",
-            ":libovmscapiinferenceparameter",
-            ":libovmscapiinferencerequest",
-            ":libovmscapiinferenceresponse",
+            ":capiinferenceparameter",
+            ":inferencerequest",
+            ":inferenceresponse",
             "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,
