@@ -27,6 +27,35 @@ index 4c49c259..058203c8 100644
      if (runAsDaemon_)
      {
          // go daemon!
+diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
+index 51506f95..839354d4 100644
+--- a/lib/src/HttpServer.cc
++++ b/lib/src/HttpServer.cc
+@@ -978,7 +978,10 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+         auto &asyncStreamCallback = respImplPtr->asyncStreamCallback();
+         if (asyncStreamCallback)
+         {
+-            if (!respImplPtr->ifCloseConnection())
++            // ifCloseConnection is true when request contains header "connection: close"
++            // As seen in Continue (code completion plugin) it is commont to include such header in the request
++            //if (!respImplPtr->ifCloseConnection())
++            if (true)
+             {
+                 asyncStreamCallback(
+                     std::make_unique<ResponseStream>(conn->sendAsyncStream(
+@@ -1062,7 +1065,11 @@ void HttpServer::sendResponses(
+             {
+                 conn->send(buffer);
+                 buffer.retrieveAll();
+-                if (!respImplPtr->ifCloseConnection())
++                
++                // ifCloseConnection is true when request contains header "connection: close"
++                // As seen in Continue (code completion plugin) it is commont to include such header in the request
++                //if (!respImplPtr->ifCloseConnection())
++                if (true)
+                 {
+                     asyncStreamCallback(
+                         std::make_unique<ResponseStream>(conn->sendAsyncStream(
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..8c55ed15 100644
 --- a/lib/src/Utilities.cc
