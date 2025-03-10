@@ -224,7 +224,6 @@ cc_library(
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
     linkopts = [],
-    alwayslink=1, # TODO @atobisze
 )
 cc_library(
     name = "predict_request_validation_utils",
@@ -248,7 +247,6 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    alwayslink=1,
 )
 cc_library(
     name = "inference_request_common",
@@ -750,7 +748,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library(
@@ -765,7 +762,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED + COPTS_OV_TRACE,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "notifyreceiver",
@@ -863,7 +859,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "tensor_conversion_common",
@@ -884,7 +879,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "tensor_conversion_after",
@@ -904,7 +898,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 load("@pip_deps//:requirements.bzl", "all_requirements")
 
@@ -1441,7 +1434,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "kfs_request_utils",
@@ -1476,7 +1468,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1, # TODO @atobisze
 )
 cc_library(
     name = "kfs_backend_impl",
@@ -1546,7 +1537,6 @@ cc_library(
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
     linkopts = [],
-    alwayslink=1, # TODO @atobisze
 )
 cc_library(
     name = "tfs_validation",
@@ -1564,7 +1554,6 @@ cc_library(
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
     linkopts = [],
-    alwayslink=1, # TODO @atobisze
 )
 cc_library(
     name = "kfs_serialization",
@@ -1584,7 +1573,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1, # @atobisze TODO
 )
 cc_library(
     name = "tfs_serialization",
@@ -1606,7 +1594,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink=1,
 )
 cc_library(
     name = "kfs_deserialization",
@@ -1628,7 +1615,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "tfs_deserialization",
@@ -1652,7 +1638,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "capiinferenceparameter",
@@ -2150,7 +2135,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "deserialization_common",
@@ -2233,7 +2217,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 cc_library(
     name = "statefulrequestprocessor",
@@ -2492,7 +2475,6 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED + COPTS_CLOUD,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library(
