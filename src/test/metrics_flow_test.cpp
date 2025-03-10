@@ -197,8 +197,8 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
-        int arg_count = 5;
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080", (char*)"--grpc_max_threads", (char*)"4"};  // Workaround to have rest_port parsed in order to enable metrics
+        int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
         ASSERT_TRUE(createConfigFileWithContent(this->prepareConfigContent(), fileToReload));
@@ -207,9 +207,6 @@ protected:
 };
 
 TEST_F(MetricFlowTest, GrpcPredict) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [SPORADIC] pipeline_config_list";
-#endif
     PredictionServiceImpl impl(server);
     tensorflow::serving::PredictRequest request;
     tensorflow::serving::PredictResponse response;
@@ -274,7 +271,7 @@ TEST_F(MetricFlowTest, GrpcPredict) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(6)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
@@ -416,7 +413,7 @@ TEST_F(MetricFlowTest, GrpcModelInfer) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(6)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
@@ -616,7 +613,7 @@ TEST_F(MetricFlowTest, RestPredict) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(6)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
@@ -737,7 +734,7 @@ TEST_F(MetricFlowTest, RestModelInfer) {
     EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(4)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_STREAMS + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 
-    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(2)));
+    EXPECT_THAT(server.collect(), HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + modelName + std::string{"\",version=\"1\"} "} + std::to_string(6)));
     EXPECT_THAT(server.collect(), Not(HasSubstr(METRIC_NAME_INFER_REQ_QUEUE_SIZE + std::string{"{name=\""} + dagName + std::string{"\",version=\"1\"} "})));
 }
 
@@ -1011,8 +1008,8 @@ std::string MetricFlowTest::prepareConfigContent() {
         "model_config_list": [
             {"config": {
                     "name": "dummy",
-                    "nireq": 2,
-                    "plugin_config": {"CPU_THROUGHPUT_STREAMS": 4},
+                    "nireq": 6,
+                    "plugin_config": {"NUM_STREAMS": 4},
                     "base_path": "/ovms/src/test/dummy"}}
         ],
         "pipeline_config_list": [
