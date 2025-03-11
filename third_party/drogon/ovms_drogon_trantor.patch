@@ -28,7 +28,7 @@ index 4c49c259..058203c8 100644
      {
          // go daemon!
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..839354d4 100644
+index 51506f95..ef784a68 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
 @@ -978,7 +978,10 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
@@ -37,7 +37,7 @@ index 51506f95..839354d4 100644
          {
 -            if (!respImplPtr->ifCloseConnection())
 +            // ifCloseConnection is true when request contains header "connection: close"
-+            // As seen in Continue (code completion plugin) it is commont to include such header in the request
++            // As seen in Continue (code completion plugin) it is common to include such header in the request
 +            //if (!respImplPtr->ifCloseConnection())
 +            if (true)
              {
@@ -50,7 +50,7 @@ index 51506f95..839354d4 100644
 -                if (!respImplPtr->ifCloseConnection())
 +                
 +                // ifCloseConnection is true when request contains header "connection: close"
-+                // As seen in Continue (code completion plugin) it is commont to include such header in the request
++                // As seen in Continue (code completion plugin) it is common to include such header in the request
 +                //if (!respImplPtr->ifCloseConnection())
 +                if (true)
                  {
