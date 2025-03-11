@@ -65,6 +65,7 @@ public:
 };
 
 TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
@@ -77,6 +78,7 @@ TEST_F(TextStreamerTest, noValueReturnedStringWithoutNewLineOrSpace) {
 }
 
 TEST_F(TextStreamerTest, putReturnsValue) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST\n";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
@@ -88,9 +90,11 @@ TEST_F(TextStreamerTest, putReturnsValue) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
+    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
+    lastTextChunk = "";
     std::string testPrompt1 = "TEST";
     auto tokens = tokenizer->encode(testPrompt1, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
@@ -111,9 +115,11 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
         this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_EQ(lastTextChunk.compare(expectedValues[i]), 0);
     }
+    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST\n";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
@@ -125,6 +131,7 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
+    lastTextChunk = "";
     tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     for (size_t i = 0; i < tokens.get_size(); i++) {
         this->streamer->write(tokens.data<int64_t>()[i]);
@@ -134,9 +141,11 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
+    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST TEST TEST TEST";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 41759, 41759, 41759};
@@ -151,6 +160,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
 }
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST\nTEST";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> expectedTokens = {565, 4923, 50118, 565, 4923};
@@ -159,6 +169,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
         this->streamer->write(tokens.data<int64_t>()[i]);
         if (i == 2) {
             EXPECT_EQ(lastTextChunk.compare("TEST\n"), 0);
+            lastTextChunk = "";
         } else {
             EXPECT_TRUE(lastTextChunk.empty());
         }
@@ -168,6 +179,7 @@ TEST_F(TextStreamerTest, putReturnsValueTextWithNewLineInTheMiddle) {
 }
 
 TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
+    lastTextChunk = "";
     std::string testPrompt = "TEST";
     auto tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923});
@@ -178,6 +190,7 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
     this->streamer->end();
     ASSERT_EQ(lastTextChunk.compare("TEST"), 0);
 
+    lastTextChunk = "";
     testPrompt = "TEST\n";
     tokens = tokenizer->encode(testPrompt, ov::genai::add_special_tokens(false)).input_ids;
     assertTokensValues(tokens, {565, 4923, 50118});
@@ -189,4 +202,5 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
+    this->streamer->end();
 }
