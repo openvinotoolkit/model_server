@@ -27,6 +27,7 @@
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../prediction_service_utils.hpp"
 #include "absl/synchronization/notification.h"
@@ -537,7 +538,7 @@ TEST_F(ModelManager, ConfigParseNodeConfigWihoutBasePathKey) {
     std::string configFile = this->getFilePath("/ovms_config_file.json");
     createConfigFileWithContent(configWithoutBasePathKey, configFile);
     auto status = fixtureManager.startFromFile(configFile);
-    EXPECT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
 }
 
 TEST_F(ModelManager, parseConfigWhenPipelineDefinitionMatchSchema) {
