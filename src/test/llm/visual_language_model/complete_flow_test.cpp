@@ -86,9 +86,7 @@ public:
 
 std::unique_ptr<std::thread> VLMServableExecutionTest::t;
 
-// This function wraps the same input data with the additional fields
-// specified in the fields parameter that control flow in the calculator, sampling etc.
-std::string createRequestBody(const std::vector<std::pair<std::string, std::string>>& fields) {
+std::string createRequestBody(const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, bool includeImage = true) {
     std::ostringstream oss;
     oss << R"(
         {
@@ -96,17 +94,27 @@ std::string createRequestBody(const std::vector<std::pair<std::string, std::stri
             "messages": [
             {
                 "role": "user",
-                "content": [
+                "content": [)";
+    if (includeText) {
+        oss << R"(
                     {
                         "type": "text",
                         "text": "What is in this image?"
-                    },
+                    })";
+        if (includeImage) {
+            oss << ",";
+        }
+    }
+    if (includeImage) {
+        oss << R"(
                     {
                         "type": "image_url",
                         "image_url": {
-                        "url":  "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
+                            "url": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGIy+/oREAAA//8DiQIftNKCRwAAAABJRU5ErkJggg=="
                         }
-                    }
+                    })";
+    }
+    oss << R"(
                 ]
             }
             ]
@@ -118,6 +126,8 @@ std::string createRequestBody(const std::vector<std::pair<std::string, std::stri
     oss << "\n}";
     return oss.str();
 }
+
+// Unary flow
 
 TEST_F(VLMServableExecutionTest, unaryBasic) {
     std::vector<std::pair<std::string, std::string>> fields = {
@@ -153,6 +163,43 @@ TEST_F(VLMServableExecutionTest, unaryBasic) {
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
+// Only image input is accepted, but expected output can't be predicted
+TEST_F(VLMServableExecutionTest, unaryBasicOnlyImage) {
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"temperature", "0.0"},
+        {"stream", "false"},
+        {"max_tokens", "5"},
+        {"ignore_eos", "true"}};
+    std::string requestBody = createRequestBody(fields, false, true);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    int i = 0;
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        ASSERT_EQ(choice["index"], i++);
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+        ASSERT_TRUE(choice["message"].IsObject());
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
+    }
+
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "dummyVLMServable");
+    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+}
+
+// Stream flow
+
 TEST_F(VLMServableExecutionTest, streamBasic) {
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
@@ -160,6 +207,28 @@ TEST_F(VLMServableExecutionTest, streamBasic) {
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
     std::string requestBody = createRequestBody(fields);
+
+    std::vector<std::string> responses;
+
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+}
+
+// Only image input is accepted, but expected output can't be predicted
+TEST_F(VLMServableExecutionTest, streamBasicOnlyImage) {
+    std::vector<std::pair<std::string, std::string>> fields = {
+        {"temperature", "0.0"},
+        {"stream", "true"},
+        {"max_tokens", "5"},
+        {"ignore_eos", "true"}};
+    std::string requestBody = createRequestBody(fields, false, true);
 
     std::vector<std::string> responses;
 

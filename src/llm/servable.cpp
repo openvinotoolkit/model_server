@@ -88,7 +88,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     // Base servable cannot process images
-    if (executionContext->apiHandler->getImages().size() > 0) {
+    if (executionContext->apiHandler->getImageHistory().size() > 0) {
         return absl::InternalError("This servable supports only text input, but image_url has been provided");
     }
 

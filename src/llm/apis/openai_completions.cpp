@@ -190,7 +190,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
                             ov::Tensor tensor = load_image_stbi(decoded);
-                            request.images.push_back(tensor);
+                            request.imageHistory.push_back({i, tensor});
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
@@ -220,11 +220,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
     return request.processedJson;
 }
-const std::vector<ov::Tensor> OpenAIChatCompletionsHandler::getImages() const {
-    return request.images;
+ImageHistory& OpenAIChatCompletionsHandler::getImageHistory() {
+    return request.imageHistory;
 }
 
-const ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() const {
+ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() {
     return request.chatHistory;
 }
 
