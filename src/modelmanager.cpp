@@ -1640,6 +1640,18 @@ Status ModelManager::reloadModelWithVersions(ModelConfig& config) {
     return blocking_status;
 }
 
+const std::shared_ptr<ModelInstance> ModelManager::findModelInstance(const std::string& name, model_version_t version) const {
+    auto model = findModelByName(name);
+    if (!model) {
+        return nullptr;
+    }
+    if (version == 0) {
+        return model->getDefaultModelInstance();
+    } else {
+        return model->getModelInstanceByVersion(version);
+    }
+}
+
 const std::shared_ptr<Model> ModelManager::findModelByName(const std::string& name) const {
     std::shared_lock lock(modelsMtx);
     auto it = models.find(name);

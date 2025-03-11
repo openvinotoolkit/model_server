@@ -4,6 +4,7 @@ def client_test_needed = "false"
 def shortCommit = ""
 def agent_name_windows = ""
 def agent_name_linux = ""
+def windows_success = ""
 
 pipeline {
     agent {
@@ -102,6 +103,7 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          windows_success = "True"
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
@@ -130,7 +132,7 @@ pipeline {
               }
               } 
               }
-            } 
+            }
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -174,8 +176,21 @@ pipeline {
                       }
                   }
               }
-            }           
+            }
           }
+        }
+    }
+    post {
+        always {
+            node("${agent_name_windows}") {
+                script {
+                    if (env.BRANCH_NAME == "main" && windows_success == "True") {
+                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-main-latest.zip")
+                    } else {
+                        echo "Not a main branch, skipping copying artifacts."
+                    }
+                }
+            }
         }
     }
 }

@@ -27,22 +27,33 @@
 #include <openvino/openvino.hpp>
 #include <stdlib.h>
 
+#include "../capi_frontend/capi_utils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../tfs_frontend/deserialization.hpp"
+#include "../kfs_frontend/deserialization.hpp"
+#include "../deserialization_main.hpp"
+
+#include "../capi_frontend/serialization.hpp"
+#include "../kfs_frontend/serialization.hpp"
+#include "../tfs_frontend/serialization.hpp"
+
+#include "kfs_frontend/kfs_request_utils.hpp"
+#include "tfs_frontend/tfs_request_utils.hpp"
+#include "../inference_executor.hpp"
+
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../capi_frontend/inferencetensor.hpp"
-#include "../deserialization.hpp"
 #include "../executingstreamidguard.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelversion.hpp"
-#include "../prediction_service_utils.hpp"
 #include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
-#include "../serialization.hpp"
-#include "../tfs_frontend/tfs_utils.hpp"
 #include "test_utils.hpp"
 
 using testing::Each;
@@ -381,7 +392,7 @@ public:
             return status;
         }
         response.Clear();
-        return model->infer(&request, &response, unload_guard);
+        return ovms::infer(*model, &request, &response, unload_guard);
     }
 
     ovms::Status performInferenceWithShape(ResponseType& response, const ovms::signed_shape_t& shape = {1, 10}, const ovms::Precision precision = ovms::Precision::FP32) {
@@ -482,7 +493,14 @@ public:
         ModelInstance(UNUSED_SERVABLE_NAME, UNUSED_MODEL_VERSION, ieCore) {}
     template <typename RequestType>
     const ovms::Status mockValidate(const RequestType* request) {
-        return validate(request);
+        return ovms::request_validation_utils::validate(*request,
+            this->getInputsInfo(),
+            this->getOutputsInfo(),
+            this->getName(),
+            this->getVersion(),
+            this->getOptionalInputNames(),
+            this->getModelConfig().getBatchingMode(),
+            this->getModelConfig().getShapes());
     }
 };
 const size_t DUMMY_DIM_POS = 1;
@@ -726,7 +744,7 @@ TYPED_TEST(TestPredictWithMapping, SuccesfullOnPassthrough_2D_U8ModelWithMapping
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(manager.getModelInstance("passhtrough_u8", 1, modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     assertStringResponse(response, {"String_123", "", "zebra"}, "copy:0_string");
 }
 
@@ -1892,7 +1910,7 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShape) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_NE(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
 TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
@@ -1911,7 +1929,7 @@ TYPED_TEST(TestPredict, InferenceWithNegativeShapeDynamicParameter) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_NE(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_NE(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
 }
 
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
@@ -1927,7 +1945,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     this->checkOutputShape(response, {2, 11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
     std::vector<uint8_t> expectedData = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
@@ -1949,7 +1967,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_2D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    auto status = modelInstance->infer(&request, &response, modelInstanceUnloadGuard);
+    auto status = ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard);
     ASSERT_EQ(status, ovms::StatusCode::INVALID_BATCH_SIZE) << status.string();
 }
 
@@ -1966,7 +1984,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_2D_data_in_buffer) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     this->checkOutputShape(response, {2, 11}, PASSTHROUGH_MODEL_OUTPUT_NAME);
     std::vector<uint8_t> expectedData = {
         'S', 't', 'r', 'i', 'n', 'g', '_', '1', '2', '3', 0,
@@ -1990,7 +2008,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString) {
@@ -2007,7 +2025,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     bool checkRaw = true;
     this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
 }
@@ -2027,7 +2045,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_1D) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_NativeString) {
@@ -2043,7 +2061,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_batch0_NativeString) 
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     bool checkRaw = true;
     this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
 }
@@ -2063,7 +2081,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_1D_data_in_buffer) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString_data_in_buffer) {
@@ -2080,7 +2098,7 @@ TYPED_TEST(TestPredict, InferenceWithStringInputs_positive_NativeString_data_in_
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     typename TypeParam::second_type response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     bool checkRaw = true;
     this->checkOutputValuesString(response, inputStrings, PASSTHROUGH_STRING_MODEL_OUTPUT_NAME, checkRaw);
 }
@@ -2103,7 +2121,7 @@ TEST_F(TestPredictKFS, RequestDataInFp32ContentResponseInRaw) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     KFSResponse response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_FALSE(response.outputs(0).has_contents());
     ASSERT_GT(response.raw_output_contents_size(), 0);
@@ -2125,7 +2143,7 @@ TEST_F(TestPredictKFS, RequestDataInRawResponseInRaw) {
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuard;
     ASSERT_EQ(this->manager.getModelInstance(config.getName(), config.getVersion(), modelInstance, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     KFSResponse response;
-    ASSERT_EQ(modelInstance->infer(&request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
+    ASSERT_EQ(ovms::infer(*modelInstance, &request, &response, modelInstanceUnloadGuard), ovms::StatusCode::OK);
     ASSERT_EQ(response.outputs_size(), 1);
     ASSERT_FALSE(response.outputs(0).has_contents());
     ASSERT_GT(response.raw_output_contents_size(), 0);
