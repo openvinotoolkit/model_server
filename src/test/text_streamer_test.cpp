@@ -90,7 +90,6 @@ TEST_F(TextStreamerTest, putReturnsValue) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
-    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
@@ -115,7 +114,6 @@ TEST_F(TextStreamerTest, putDoesNotReturnValueUntilNewLineDetected) {
         this->streamer->write(tokens.data<int64_t>()[i]);
         EXPECT_EQ(lastTextChunk.compare(expectedValues[i]), 0);
     }
-    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
@@ -141,7 +139,6 @@ TEST_F(TextStreamerTest, valueReturnedCacheCleared) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
-    this->streamer->end();
 }
 
 TEST_F(TextStreamerTest, putReturnsValueTextWithSpaces) {
@@ -202,5 +199,4 @@ TEST_F(TextStreamerTest, putReturnsValueAfterEndCalled) {
             EXPECT_EQ(lastTextChunk.compare(testPrompt), 0);
         }
     }
-    this->streamer->end();
 }
