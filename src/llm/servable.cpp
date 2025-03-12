@@ -74,10 +74,10 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
             lastStreamerCallbackOutput = text;
-            return false;
+            return ov::genai::StreamingStatus::RUNNING;
         };
 
-        executionContext->textStreamer = std::make_shared<ov::genai::TextCallbackStreamer>(getProperties()->tokenizer, callback);
+        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
     return absl::OkStatus();
 }
@@ -134,13 +134,14 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     auto& generationOutput = executionContext->generationOutputs[0];
     executionContext->apiHandler->incrementProcessedTokens(generationOutput.generated_ids.size());
-    // This loop could be handled in the streamer, but for now we want to keep it identical with GenAI
-    // so such change should be done in GenAI first
+
     std::stringstream ss;
-    for (const auto& token : generationOutput.generated_ids) {
-        executionContext->textStreamer->put(token);
-        ss << executionContext->lastStreamerCallbackOutput;
-    }
+    executionContext->textStreamer->write(generationOutput.generated_ids);
+    ss << executionContext->lastStreamerCallbackOutput;
+    // OpenVINO GenAI TextStreamer dose not trigger callback if text is empty: https://github.com/openvinotoolkit/openvino.genai/blob/434c2a9494fb1ee83ca7a36fe8315cfc2691c232/src/cpp/src/text_streamer.cpp#L102-L108
+    // Reset lastStreamerCallbackOutput as "" to avoid repeated sending previous text if lastStreamerCallbackOutput not updated by callback
+    executionContext->lastStreamerCallbackOutput = "";
+
     std::string lastTextChunk = ss.str();
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
