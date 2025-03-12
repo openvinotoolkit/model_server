@@ -782,7 +782,7 @@ int main(int argc, char** argv) {
 ```{code} bash
 curl -X POST http://localhost:9000/v2/models/model_name/infer
 -H 'Content-Type: application/json'
--d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}
+-d '{"inputs" : [ {"name" : "input_name", "shape" : [ 1 ], "datatype"  : "BYTES", "data" : ["<string>"]} ]}'
 ```
 :::
 ::::
