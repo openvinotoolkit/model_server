@@ -21,6 +21,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <openvino/genai/generation_config.hpp>
@@ -61,11 +62,15 @@ struct CompletionUsageStatistics {
     }
 };
 
+// Type that holds vector of pairs where first element is chat turn index and second is image tensor
+// this way we store information about which image is associated with which chat turn
+using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
+
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 struct OpenAIChatCompletionsRequest {
     ov::genai::ChatHistory chatHistory;
     std::string processedJson;
-    std::vector<ov::Tensor> images;
+    ImageHistory imageHistory;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
@@ -100,8 +105,8 @@ struct OpenAIChatCompletionsRequest {
 
     ov::genai::GenerationConfig createGenerationConfig() const {
         ov::genai::GenerationConfig config;
-
         // Generic
+        config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
             config.max_new_tokens = maxTokens.value();
         // TODO: max_length = ?
@@ -189,8 +194,9 @@ public:
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
-    const std::vector<ov::Tensor> getImages() const;
-    const ov::genai::ChatHistory& getChatHistory() const;
+    // User input might be modified by the servable logic, so it is not const
+    const ImageHistory& getImageHistory() const;
+    ov::genai::ChatHistory& getChatHistory();
 
     bool isStream() const;
     std::string getModel() const;

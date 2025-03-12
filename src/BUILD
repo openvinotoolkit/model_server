@@ -2749,6 +2749,7 @@ cc_test(
                 "test/llmtemplate_test.cpp",
                 "test/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
+                "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_python" : [],
         }),

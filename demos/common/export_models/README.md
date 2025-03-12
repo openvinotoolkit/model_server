@@ -61,7 +61,7 @@ options:
                         CPU or GPU, default is CPU
   --pipeline_type PIPELINE_TYPE
                         Type of the pipeline to be used. Can be either
-                        CONTINUOUS_BATCHING or VISUAL_LANGUAGE_MODEL.
+                        TEXT_CB or VLM_CB. When undefined, it will be autodetected
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache
                         precision to u8 lowers the cache size consumption.
