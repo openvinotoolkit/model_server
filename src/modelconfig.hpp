@@ -29,7 +29,7 @@
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
-#include "filesystem.hpp"
+#include "anonymous_input_name.hpp"
 #include "layout_configuration.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
@@ -42,7 +42,6 @@ using mapping_config_t = std::unordered_map<std::string, std::string>;
 using plugin_config_t = std::map<std::string, ov::Any>;
 using custom_loader_options_config_t = std::map<std::string, std::string>;
 
-extern const std::string ANONYMOUS_INPUT_NAME;
 extern const std::string MAPPING_CONFIG_JSON;
 const uint32_t DEFAULT_MAX_SEQUENCE_NUMBER = 500;
 
@@ -292,9 +291,7 @@ public:
          * 
          * @return std::string
          * */
-    const std::string getPath() const {
-        return getLocalPath() + FileSystem::getOsSeparator() + std::to_string(version);
-    }
+    const std::string getPath() const;
 
     /**
          * @brief Get the base path

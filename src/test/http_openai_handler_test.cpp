@@ -265,9 +265,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    std::vector<ov::Tensor> images = apiHandler->getImages();
-    ASSERT_EQ(images.size(), 1);
-    ov::Tensor image = images[0];
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     std::vector<uint8_t> expectedBytes = {110, 181, 160};
@@ -299,9 +300,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    std::vector<ov::Tensor> images = apiHandler->getImages();
-    ASSERT_EQ(images.size(), 1);
-    ov::Tensor image = images[0];
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_size(), 3);
     std::vector<uint8_t> expectedBytes = {54, 245, 241};
@@ -359,11 +361,20 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
         ]
       },
       {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "No idea my friend."
+          }
+        ]
+      },
+      {
         "role": "user",
         "content": [
           {
             "type": "text",
-            "text": "What is in this image?"
+            "text": "What about this one?"
           },
           {
             "type": "image_url",
@@ -374,8 +385,17 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
         ]
       },
       {
-        "role": "system",
-        "content": "What is Openvino?"
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Same thing. I'm not very good with images."
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "You were not trained with images, were you?"
       }
     ]
   })";
@@ -383,10 +403,13 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-    std::vector<ov::Tensor> images = apiHandler->getImages();
-    ASSERT_EQ(images.size(), 2);
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 2);
     std::vector<uint8_t> expectedBytes = {110, 181, 160};
-    for (auto image : images) {
+    std::vector<size_t> expectedImageIndexes = {0, 2};
+    size_t i = 0;
+    for (auto [index, image] : imageHistory) {
+        EXPECT_EQ(index, expectedImageIndexes[i++]);
         EXPECT_EQ(image.get_element_type(), ov::element::u8);
         EXPECT_EQ(image.get_size(), 3);
         for (size_t i = 0; i < image.get_size(); i++) {
@@ -394,7 +417,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
         }
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"},{\"role\":\"user\",\"content\":\"What is in this image?\"},{\"role\":\"system\",\"content\":\"What is Openvino?\"}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"},"
+                                "{\"role\":\"assistant\",\"content\":\"No idea my friend.\"},"
+                                "{\"role\":\"user\",\"content\":\"What about this one?\"},"
+                                "{\"role\":\"assistant\",\"content\":\"Same thing. I'm not very good with images.\"},"
+                                "{\"role\":\"user\",\"content\":\"You were not trained with images, were you?\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesWithInvalidContentTypeFails) {

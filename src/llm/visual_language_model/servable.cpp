@@ -41,24 +41,37 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
     return properties;
 }
 
+bool VisualLanguageModelServable::supportsSpeculativeDecoding() const {
+    return false;
+}
+
 absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    // Earlier we should validate that chat completion endpoint is used.
     if (vlmExecutionContext->apiHandler == nullptr) {
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
-
-    vlmExecutionContext->inputImages = vlmExecutionContext->apiHandler->getImages();
-
-    auto& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-    if (chatHistory.size() == 0) {
-        return absl::Status(absl::StatusCode::kInvalidArgument, "Chat history is empty");
+    if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
+        ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
+        size_t imageIndex = 0;
+        for (const auto& image : imageHistory) {
+            const auto& [chatTurnIndex, imageTensor] = image;
+            std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
+            if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
+                chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];
+            } else {
+                chatHistory[chatTurnIndex]["content"] = imageTag;
+            }
+            vlmExecutionContext->inputImages.push_back(imageTensor);
+        }
+        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+    } else if (executionContext->endpoint == Endpoint::COMPLETIONS) {
+        vlmExecutionContext->inputText = vlmExecutionContext->apiHandler->getPrompt().value();
     }
 
-    constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
-    vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "VLM input text: {}", vlmExecutionContext->inputText);
     bool encodeAddSpecialTokens = false;  // assuming chat template application added special tokens
     ov::Tensor inputTextIds = getProperties()->tokenizer.encode(vlmExecutionContext->inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     vlmExecutionContext->apiHandler->setPromptTokensUsage(inputTextIds.get_size());
