@@ -8,6 +8,8 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Prerequisites
 
+**OVMS version 2025.1** This demo require version 2025.1. Till it is published, it should be [built from source](../../../docs/build_from_source.md)
+
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
@@ -22,8 +24,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 

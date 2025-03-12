@@ -99,7 +99,7 @@ It will launch 250 multi modal requests per task (500 in total)
 
 Results:
 ```
-openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kwargs: (), limit: 100.0, num_fewshot: None, batch_size: 1
+openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kwargs: (), limit: 250.0, num_fewshot: None, batch_size: 1
 | Tasks  |Version|Filter|n-shot|       Metric       |   | Value  |   |Stderr|
 |--------|-------|------|-----:|--------------------|---|-------:|---|------|
 |mme     |Yaml   |none  |     0|mme_cognition_score |↑  |155.0000|±  |   N/A|
@@ -111,7 +111,7 @@ openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kw
 
 
 
-> **Note** The same procedure can be used to validate vLLM component. The only needed change would be updating base_url including replacing `/v3/` with `/v1/`.  
+> **Note:** The same procedure can be used to validate vLLM component. The only needed change would be updating base_url including replacing `/v3/` with `/v1/`.  
 
 
 
