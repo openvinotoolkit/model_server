@@ -52,10 +52,10 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
-        ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
+        const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
         size_t imageIndex = 0;
-        for (auto& image : imageHistory) {
-            auto& [chatTurnIndex, imageTensor] = image;
+        for (const auto& image : imageHistory) {
+            const auto& [chatTurnIndex, imageTensor] = image;
             std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
             if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
                 chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];

@@ -36,7 +36,7 @@ message LLMCalculatorOptions {
       // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
       VLM_CB = 3;
       // Default option. If selected, pipeline type will be inferred by the serving
-      UNDEFINED_PIPELINE_TYPE = 4;
+      AUTO = 4;
 
       // Compatibility with current configurations, remove below in the next PR
       // Continuous batching pipeline
@@ -83,7 +83,7 @@ message LLMCalculatorOptions {
 
     optional bool draft_dynamic_split_fuse = 17;
 
-    optional PipelineType pipeline_type = 18 [default = UNDEFINED_PIPELINE_TYPE];
+    optional PipelineType pipeline_type = 18 [default = AUTO];
     
     // START EXPERIMENTAL OPTIONS
     message PipelineConfig {

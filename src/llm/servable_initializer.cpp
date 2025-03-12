@@ -155,7 +155,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
                   std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
-    if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::UNDEFINED_PIPELINE_TYPE) {
+    if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (nodeOptions.device() == "NPU") {
             if (isVLM) {
                 pipelineType = PipelineType::VLM;
@@ -212,7 +212,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
     if (nodeOptions.has_models_path()) {  // Stable initialization
-        PipelineType pipelineType;
+        // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
+        PipelineType pipelineType{PipelineType::TEXT_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
             return status;

@@ -195,7 +195,7 @@ public:
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
     // User input might be modified by the servable logic, so it is not const
-    ImageHistory& getImageHistory();
+    const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
 
     bool isStream() const;

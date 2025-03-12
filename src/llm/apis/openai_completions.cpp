@@ -220,7 +220,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
     return request.processedJson;
 }
-ImageHistory& OpenAIChatCompletionsHandler::getImageHistory() {
+const ImageHistory& OpenAIChatCompletionsHandler::getImageHistory() const {
     return request.imageHistory;
 }
 
