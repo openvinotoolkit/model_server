@@ -40,7 +40,6 @@ public:
     bool pull_hf_model;
 
 private:
-	int RegisterFilters();
     bool CheckIfProxySet();
 	bool CheckIfTokenSet();
 };

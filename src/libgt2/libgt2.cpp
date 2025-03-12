@@ -153,77 +153,6 @@ bool HfDownloader::CheckIfTokenSet() {
     return true;
 }
 
-static int mockShutdown() {
-    return 0;
-}
-
-int HfDownloader::RegisterFilters() {
-    // Set-up LFS filter
-    git_filter *lfs_process = new git_filter{
-        GIT_FILTER_VERSION,
-        "git-lfs filter-process",
-        NULL,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown
-    };
-    git_filter *lfs_smudge = new git_filter{
-        GIT_FILTER_VERSION, 
-        "git-lfs smudge -- %f",
-        NULL,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown
-    };
-    git_filter *lfs_clean = new git_filter{
-        GIT_FILTER_VERSION,
-        "git-lfs clean -- %f",
-        NULL,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown,
-        mockShutdown
-    };
-
-    int error = git_filter_register(
-			"lfs-process", lfs_process, BITFLIP_FILTER_PRIORITY);
-
-    if (error != 0) {
-        const git_error* err = git_error_last();
-        if (err)
-            printf("ERROR %d: %s\n", err->klass, err->message);
-        else
-            printf("ERROR %d: no detailed info\n", error);
-    }
-
-    error = git_filter_register(
-			"lfs-smudge", lfs_smudge, BITFLIP_FILTER_PRIORITY);
-
-    if (error != 0) {
-        const git_error* err = git_error_last();
-        if (err)
-            printf("ERROR %d: %s\n", err->klass, err->message);
-        else
-            printf("ERROR %d: no detailed info\n", error);
-    }
-
-
-    error = git_filter_register(
-			"lfs-clean", lfs_clean, BITFLIP_FILTER_PRIORITY);
-
-    if (error != 0) {
-        const git_error* err = git_error_last();
-        if (err)
-            printf("ERROR %d: %s\n", err->klass, err->message);
-        else
-            printf("ERROR %d: no detailed info\n", error);
-    }
-
-    return error;
-}
-
 int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path) {
     int res = git_libgit2_init();
     if (res < 0) {
@@ -231,11 +160,6 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
         const char* msg = err ? err->message : "unknown failure";
         fprintf(stderr, "failed to init libgit2: %s\n", msg);
         return res;
-    }
-
-    int error = RegisterFilters();
-    if (error != 0) {
-        return error;
     }
 
     progress_data pd = {{0}};
@@ -266,7 +190,7 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
     }
 
     /* Do the clone */
-    error = git_clone(&cloned_repo, url, path, &clone_opts);
+    int error = git_clone(&cloned_repo, url, path, &clone_opts);
     printf("\n");
     if (error != 0) {
         const git_error* err = git_error_last();

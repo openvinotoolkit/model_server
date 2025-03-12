@@ -26,6 +26,8 @@ def libgt2_engine():
         remote = "https://github.com/libgit2/libgit2.git",
         commit = "338e6fb681369ff0537719095e22ce9dc602dbf0", # Dec 28, 2024 - v1.9.0
         build_file = "@_libgt2_engine//:BUILD",
+        patch_args = ["-p1"],
+        patches = ["lfs.patch"],
     )
 
     #native.new_local_repository(
