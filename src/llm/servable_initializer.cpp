@@ -194,7 +194,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (isVLM && (pipelineType == PipelineType::TEXT || pipelineType == PipelineType::TEXT_CB)) {
+        if (isVLM && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
             return StatusCode::INTERNAL_ERROR;
         }
