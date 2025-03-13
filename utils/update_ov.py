@@ -15,7 +15,7 @@
 #
 
 # This script is pretty much a draft that has quite chaotic flow and probably a few unnecessary things.
-# It was created to automate OV dependecies update process and if it's supposed to be merged then it will require some improvements for
+# It was created to automate OV dependencies update process and if it's supposed to be merged then it will require some improvements for
 # better readability and maintainability.
 
 # This script is intended to be run from the root of the OpenVINO Model Server repository.
@@ -86,7 +86,7 @@ def update_openvino():
     # Find a link that starts with the specified URL
     commit_link = next((link for link in all_links if link.startswith("https://github.com/openvinotoolkit/openvino/commit/")), None)
 
-    # Extract the comit SHA from the link
+    # Extract the commit SHA from the link
     if commit_link:
         commit = commit_link.split("https://github.com/openvinotoolkit/openvino/commit/")[1]
         print(f"OpenVINO commit: {commit}")
@@ -333,7 +333,7 @@ def update_openvino_genai():
             new_win_build_bat_content.append(new_line)
         elif 'set "genai_http=' in line:
             print("Updating genai_http in windows_install_build_dependencies.bat")
-            new_line = f'set "genai_http={before_last_slash}"\n'
+            new_line = f'set "genai_http={before_last_slash}/"\n'
             print(new_line)
             new_win_build_bat_content.append(new_line)
         else:
