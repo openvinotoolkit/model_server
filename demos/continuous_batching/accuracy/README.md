@@ -20,7 +20,7 @@ pip3 install -U -r demos/common/export_models/requirements.txt
 mkdir models 
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
-python export_model.py text_generation --source_model OpenGVLab/InternVL2_5-8B --weight-format fp16 --config_file_path models/config.json --model_repository_path models  
+python demos/common/export_models/export_model.py text_generation --source_model OpenGVLab/InternVL2_5-8B --weight-format fp16 --config_file_path models/config.json --model_repository_path models  
 ```
 
 ## Starting the model server
@@ -81,7 +81,6 @@ export OPENAI_COMPATIBLE_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
-```
 python -m lmms_eval \
     --model openai_compatible \
     --model_args model_version=OpenGVLab/InternVL2_5-8B,max_retries=1 \

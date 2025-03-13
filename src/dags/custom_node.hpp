@@ -24,11 +24,9 @@
 #include "node.hpp"
 #include "node_library.hpp"
 #include "nodeinfo.hpp"
-#include "pipelineeventqueue.hpp"
 
 namespace ovms {
 
-struct NodeLibrary;
 class Status;
 struct CNLIMWrapper;
 

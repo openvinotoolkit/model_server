@@ -19,21 +19,22 @@
 #include <string>
 #include <unordered_map>
 
-namespace ovms {
+#include "notifyreceiver.hpp"
 
-class PipelineDefinition;
+namespace ovms {
+struct NotifyReceiver;
 
 class ModelChangeSubscription {
     const std::string ownerName;
-    std::unordered_map<std::string, PipelineDefinition&> subscriptions;
+    std::unordered_map<std::string, NotifyReceiver&> subscriptions;
 
 public:
     ModelChangeSubscription(const std::string& ownerName) :
         ownerName(ownerName) {}
 
-    void subscribe(PipelineDefinition& pd);
+    void subscribe(NotifyReceiver& pd);
 
-    void unsubscribe(PipelineDefinition& pd);
+    void unsubscribe(NotifyReceiver& pd);
 
     void notifySubscribers();
 

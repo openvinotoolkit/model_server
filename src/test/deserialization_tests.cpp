@@ -30,12 +30,13 @@
 
 #include "../capi_frontend/buffer.hpp"
 #include "../capi_frontend/capi_utils.hpp"
-#include "../capi_frontend/inferencerequest.hpp"
-#include "../capi_frontend/inferencetensor.hpp"
-#include "../deserialization.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../regularovtensorfactory.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../tfs_frontend/deserialization.hpp"
+#include "../kfs_frontend/deserialization.hpp"
+#include "../deserialization_main.hpp"
+#include "../regularovtensorfactory.hpp"
 #include "test_utils.hpp"
 
 using TFTensorProto = tensorflow::TensorProto;
