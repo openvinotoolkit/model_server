@@ -8,6 +8,8 @@ hidden:
 ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
+ovms_demos_llm_npu
+ovms_demos_vlm_npu
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
