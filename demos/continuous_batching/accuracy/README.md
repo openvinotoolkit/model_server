@@ -89,22 +89,20 @@ python -m lmms_eval \
     --batch_size 1 \
     --log_samples \
     --log_samples_suffix openai_compatible \
-    --output_path ./logs \
-    --limit=250
+    --output_path ./logs
 ```
 
-It will launch 250 multi modal requests per task (500 in total) 
 
 ### 5. Results
 
 Results:
 ```
-openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kwargs: (), limit: 250.0, num_fewshot: None, batch_size: 1
-| Tasks  |Version|Filter|n-shot|       Metric       |   | Value  |   |Stderr|
-|--------|-------|------|-----:|--------------------|---|-------:|---|------|
-|mme     |Yaml   |none  |     0|mme_cognition_score |↑  |155.0000|±  |   N/A|
-|mme     |Yaml   |none  |     0|mme_perception_score|↑  |153.3333|±  |   N/A|
-|mmmu_val|      0|none  |     0|mmmu_acc            |↑  |  0.4500|±  |   N/A|
+openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kwargs: (), limit: None, num_fewshot: None, batch_size: 1
+| Tasks  |Version|Filter|n-shot|       Metric       |   |  Value  |   |Stderr|
+|--------|-------|------|-----:|--------------------|---|--------:|---|------|
+|mme     |Yaml   |none  |     0|mme_cognition_score |↑  | 600.3571|±  |   N/A|
+|mme     |Yaml   |none  |     0|mme_perception_score|↑  |1618.2984|±  |   N/A|
+|mmmu_val|      0|none  |     0|mmmu_acc            |↑  |   0.5100|±  |   N/A|
 
 ```
 
