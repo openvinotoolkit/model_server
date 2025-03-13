@@ -2,7 +2,7 @@
 
 This demo shows how to deploy Vision Language Models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` endpoints.
-That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
+That makes it easy to use and efficient especially on Intel® Xeon® processors and ARC GPUs.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
@@ -18,9 +18,9 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 
 ## Model preparation
-Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
+Here, the original VLM model and its auxiliary models (tokenizer, vision encoder, embeddings model etc.) will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
+Execution parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
