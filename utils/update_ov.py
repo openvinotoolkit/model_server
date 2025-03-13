@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -217,7 +217,7 @@ def update_openvino_genai():
         if "commit =" in line:
             print("Updating GenAI commit in llm_engine.bzl")
             indentation = line[:line.index("commit =")]
-            new_line = f'{indentation}commit = "{commit}" # master {date_formatted}\n'
+            new_line = f'{indentation}commit = "{commit}", # master {date_formatted}\n'
             print(new_line.lstrip())
             new_llm_engine_bzl_content.append(new_line)
         else:
