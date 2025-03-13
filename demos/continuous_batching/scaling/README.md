@@ -2,11 +2,11 @@
 
 > **Note**: This demo uses Docker and has been tested only on Linux hosts
 
-Text generation in OpenVINO Model Server on Xeon CPU is the most efficient when it is bound to a single NUMA node. 
-That ensures the fastest memory access from the node and avoidance of intra socket communication.
+Text generation in OpenVINO Model Server on Xeon CPU is the most efficient when its container is bound to a single NUMA node. 
+That ensures the fastest memory access and avoids intra socket communication.
 
 The example below demonstrate how serving can be scaled on dual socket Intel(R) Xeon(R) 6972P servers to multiply the throughout. 
-It deploys 6 instances of the model server allocated to different NUMA nodes on 3 CPU sockets. The client calls are distributed used an Nginx proxy server with a load balancer.
+It deploys 6 instances of the model server allocated to different NUMA nodes on 2 CPU sockets. The client calls are distributed using an Nginx proxy as a load balancer.
 
 ![drawing](./loadbalancing.png)
 
