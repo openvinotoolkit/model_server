@@ -1973,9 +1973,30 @@ TEST(SchemaTest, MediapipeConfigPositive) {
         "mediapipe_config_list": [
         {
             "name": "dummy_model",
-            "graph_path": "dummy_path"
+            "graph_path": "graph.pbtxt",
+            "base_path": "dummy_path_base"
         }
         ]
+    })";
+
+    rapidjson::Document configDoc;
+    configDoc.Parse(mediapipeConfigPositive);
+    auto result = ovms::validateJsonAgainstSchema(configDoc, ovms::MODELS_CONFIG_SCHEMA.c_str());
+    EXPECT_EQ(result, ovms::StatusCode::OK);
+}
+
+TEST(SchemaTest, MediapipeConfigInModelConfigPositive) {
+    const char* mediapipeConfigPositive = R"(
+    {
+        "model_config_list": [
+        {
+            "config": {
+                "name": "dummy",
+                "base_path": "dummy_path",
+                "graph_path": "dummy_path.pbtxt"
+            }
+        }
+    ]
     })";
 
     rapidjson::Document configDoc;

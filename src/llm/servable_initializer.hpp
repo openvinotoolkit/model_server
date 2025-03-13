@@ -28,21 +28,24 @@
 #include "src/llm/llm_calculator.pb.h"
 
 namespace ovms {
+
+// Defines what servable type should be initialized based on the pipeline type
+enum class PipelineType {
+    TEXT,     // Single modality (text only), text generation based on LLMPipeline
+    VLM,      // Multimodal (text and image), text generation based on LLMPipeline
+    TEXT_CB,  // Single modality (text only), text generation based on ContinuousBatchingPipeline
+    VLM_CB,   // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
+
+    // Note that *_CB pipelines do not support execution on NPU
+};
+
 class Status;
 class GenAiServable;
 struct GenAiServableProperties;
 
 class GenAiServableInitializer {
-    std::string basePath;
-
-protected:
-    Status parseModelsPath(std::string modelsPath, std::string graphPath);
-
 public:
     virtual ~GenAiServableInitializer() = default;
-    std::string getBasePath() const {
-        return basePath;
-    }
     static void loadTextProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
@@ -51,6 +54,7 @@ public:
     */
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
-
+Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
+Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
 }  // namespace ovms
