@@ -30,15 +30,15 @@ cc_library(
 cc_import(
     name = "genai_lib",
     hdrs = [],
-    interface_library = "lib/intel64/openvino_genai.lib",
-    shared_library = "bin/intel64/openvino_genai.dll",
+    interface_library = "lib/intel64/Release/openvino_genai.lib",
+    shared_library = "bin/intel64/Release/openvino_genai.dll",
     visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "genai",
     srcs = glob([
-        "bin\\intel64\\openvino_genai.dll",
+        "bin\\intel64\\Release\\openvino_genai.dll",
         "bin\\intel64\\Release\\icudt70.dll",
         "bin\\intel64\\Release\\icuuc70.dll",
         "bin\\intel64\\Release\\openvino_tokenizers.dll",
