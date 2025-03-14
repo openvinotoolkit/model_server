@@ -47,20 +47,16 @@ def _impl(repository_ctx):
 
     # Create the Python script dynamically
     repository_ctx.file("remove_japanese_txt.py", """
+import shutil
 import os
-import fnmatch
-import sys
 
 def remove_japanese_txt(directory):
-    for root, dirs, files in os.walk(directory):
-        for file in fnmatch.filter(files, '*'):
-            file_path = os.path.join(root, file)
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    print(f"Removed: {file_path}")
-            except Exception as e:
-                print(f"Failed to remove {file_path}: {e}", file=sys.stderr)
+    try:
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+            print(f"Removed: {directory}")
+    except Exception as e:
+        print(f"Failed to remove {directory}: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
     directory = f"{os.getcwd()}/../libgt2_engine/tests/resources/status/"
@@ -76,6 +72,12 @@ if __name__ == "__main__":
     # Execute the Python script
     # This patches drogon repo to remove txt files which break building, such as 中文.txt
     result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
+    if result.return_code == 0:
+        print("remove_japanese_txt.py Command executed successfully")
+    else:
+        print("Command failed remove_japanese_txt.py with return code", result.return_code)
+        print("Output:", result.stdout)
+        print("Error:", result.stderr)
 
     if _is_windows(repository_ctx):
         lib_name = "git2"
@@ -105,7 +107,7 @@ if __name__ == "__main__":
         "BUILD_CLI": "OFF"
         """
 
-    # Note we need to escape '{/}' by doubling them due to call to format
+    # Note that we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
@@ -136,7 +138,7 @@ cmake(
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
-        # there is no elegant parallel compilation support - lets go with default - CORES + 2 for ninja
+        # there is no elegant parallel compilation support
         #"-j 32",
     ],
     cache_entries = {{ 
@@ -176,5 +178,5 @@ cc_library(
 
 libgt2_repository = repository_rule(
     implementation = _impl,
-    local=True,
+    local=False,
 )

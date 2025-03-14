@@ -14,9 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 #include "libgt2.hpp"
-#include "filter.h"
-#include "git2/filter.h"
-#include "git2/sys/filter.h"
 
 #include <string>
 
@@ -42,9 +39,6 @@ extern "C" {
 #endif
 
 namespace ovms {
-
-#define GIT_FILTER_VERSION 1
-#define BITFLIP_FILTER_PRIORITY 1
 
 typedef struct progress_data {
     git_indexer_progress fetch_progress;
@@ -109,13 +103,18 @@ int cred_acquire_cb(git_credential** out,
     char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
     int error = 1;
 
-    // Unused
-    (char*)url;
-    (char*)payload;
-    (char*)username_from_url;
-
     if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
         const char* env_cred = std::getenv("HF_TOKEN");
+#ifdef __linux__
+        if (env_cred) {
+            username = strdup(env_cred);
+            password = strdup(username);
+        } else {
+            username = strdup("\0");
+            password = strdup(username);
+        }
+password = strdup(std::getenv("HF_TOKEN"));
+#elif _WIN32
         if (env_cred) {
             username = _strdup(env_cred);
             password = _strdup(username);
@@ -124,6 +123,7 @@ int cred_acquire_cb(git_credential** out,
             password = _strdup(username);
         }
         password = _strdup(std::getenv("HF_TOKEN"));
+#endif
         error = git_credential_userpass_plaintext_new(out, username, password);
     } else {
         fprintf(stderr, "Only USERPASS_PLAINTEXT supported in OVMS.\n");

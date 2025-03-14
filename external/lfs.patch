@@ -1,6 +1,6 @@
-commit 8370799265fefaff0e06e9f75b971104cef1e92d
-Author: rasapala <rafal.a.sapala@intel.com>
-Date:   Mon Mar 10 14:56:07 2025 +0100
+commit 81baf1be374a9486564fbf01bb8e5ee6722d5cf5
+Author: Rafal Sapala <rafal.a.sapala@intel.com>
+Date:   Thu Mar 13 11:12:19 2025 +0100
 
     Lfs
 
@@ -100,25 +100,25 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..8c9d96f00
+index 000000000..76f78d459
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,246 @@
-+//*****************************************************************************
-+// Copyright 2025 Intel Corporation
-+//
-+// Licensed under the Apache License, Version 2.0 (the "License");
-+// you may not use this file except in compliance with the License.
-+// You may obtain a copy of the License at
-+//
-+//     http://www.apache.org/licenses/LICENSE-2.0
-+//
-+// Unless required by applicable law or agreed to in writing, software
-+// distributed under the License is distributed on an "AS IS" BASIS,
-+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+// See the License for the specific language governing permissions and
-+// limitations under the License.
-+//*****************************************************************************
+@@ -0,0 +1,243 @@
++/*
++/ Copyright 2025 Intel Corporation
++/
++/ Licensed under the Apache License, Version 2.0 (the "License");
++/ you may not use this file except in compliance with the License.
++/ You may obtain a copy of the License at
++/
++/     http://www.apache.org/licenses/LICENSE-2.0
++/
++/ Unless required by applicable law or agreed to in writing, software
++/ distributed under the License is distributed on an "AS IS" BASIS,
++/ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++/ See the License for the specific language governing permissions and
++/ limitations under the License.
++*/
 +
 +#include "common.h"
 +
@@ -144,11 +144,11 @@ index 000000000..8c9d96f00
 +	size_t existingLength = strlen(existingBuffer);
 +	char *newBuffer = (char *)malloc((existingLength + 2) * sizeof(char));
 +	if (newBuffer == NULL) {
-+		return NULL; // Handle allocation failure
++		return NULL;
 +	}
 +	strcpy(newBuffer, existingBuffer);
 +	newBuffer[existingLength] = additionalChar;
-+	newBuffer[existingLength + 1] = '\0'; // Null-terminate the new buffer
++	newBuffer[existingLength + 1] = '\0';
 +	return newBuffer;
 +}
 +
@@ -171,7 +171,7 @@ index 000000000..8c9d96f00
 +	GIT_ERROR_CHECK_ALLOC(*payload);
 +	memcpy(*payload, &la, sizeof(la));
 +
-+	// Just write the oryginal lfs file contents
++	/*Just write the oryginal lfs file contents */ 
 +	return git_str_set(to, from->ptr, from->size);
 +}
 +
@@ -243,7 +243,7 @@ index 000000000..8c9d96f00
 +		                     "cd",
 +		                     "/d",
 +		                     la->workdir,
-+		                     "&",
++		                     "&&",
 +		                     "c:\\opt\\git-lfs.exe",
 +		                     "smudge",
 +		                     la->path,
@@ -251,81 +251,78 @@ index 000000000..8c9d96f00
 +		                     la->full_path,
 +		                     ">",
 +		                     tmp_out_file };
-+// TODO implement linux
 +#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
 +        defined(__MidnightBSD__) || defined(__DragonFly__)
-+	const char *args_array[] = { "/usr/bin/false" };
++	const char *args_array[] = { "/bin/bash",
++							"-c",
++							"'cd",
++		                     la->workdir,
++		                     "&&",
++		                     "git-lfs",
++		                     "smudge",
++		                     la->path,
++		                     "<",
++		                     la->full_path,
++		                     ">",
++		                     tmp_out_file,
++							"'"};
 +#else
-+	const char *args_array[] = { "/bin/false" };
++	const char *args_array[] = { "/bin/bash",
++							"-c",
++		                     "git-lfs",
++		                     "smudge",
++		                     la->path,
++		                     "<",
++		                     la->full_path,
++		                     ">",
++		                     tmp_out_file};
 +#endif
 +
 +	git_process *process;
 +	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
++	opts.cwd = la->workdir;
 +	git_process_result result = GIT_PROCESS_RESULT_INIT;
 +
 +	if (git_process_new(&process, args_array, ARRAY_SIZE(args_array), NULL, 0, &opts) < 0) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "failed to create git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "failed to create git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +	if (git_process_start(process) < 0) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "failed to start git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "failed to start git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +	if (git_process_wait(&result, process) < 0) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "failed to wait for git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "failed to wait for git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +
 +	if (GIT_PROCESS_STATUS_NORMAL != result.status) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "abnormal process status for git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "abnormal process status for git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +
 +	if (0 != result.exitcode) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "abnormal process exitcode for git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "abnormal exitcode signal for git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +	if (0 != result.signal) {
-+		git_error_set(
-+		        GIT_ERROR_OS,
-+		        "abnormal process signal for git-lfs process for '%s'",
-+		        la->full_path);
++		fprintf(stderr, "abnormal process signal for git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
 +
-+	git_process_free(process);
-+
-+	// Remove lfs file and rename downloaded file to oryginal lfs filename
++	/* Remove lfs file and rename downloaded file to oryginal lfs filename  
 +	if (p_unlink(la->full_path) < 0)
 +	{
-+		git_error_set(
-+		        GIT_ERROR_OS, "failed to delete file '%s'",
-+		        la->full_path);
++		fprintf(stderr, "failed to delete file '%s'", la->full_path);
 +		goto on_error;
 +	}
 +
 +	if (p_rename(tmp_out_file, la->full_path) < 0) {
-+		git_error_set(
-+		        GIT_ERROR_OS, "failed to rename file to '%s'",
-+		        la->full_path);
++		fprintf(stderr, "failed to rename file to '%s'", la->full_path);
 +		goto on_error;
 +	}
-+
++	*/
++	git_process_free(process);
 +	git__free(payload);
 +	return;
 +

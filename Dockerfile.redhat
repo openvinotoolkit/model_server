@@ -118,6 +118,8 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             libicu-devel && \
             dnf clean all
 
+RUN dnf install -y https://packagecloud.io/github/git-lfs/packages/el/9/git-lfs-3.6.1-1.el9.x86_64.rpm && dnf clean all
+
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
 ARG INSTALL_DRIVER_VERSION="23.22.26516"
