@@ -31,59 +31,30 @@
 #include "../../../profiler.hpp"
 
 #include <chrono>
-#include <thread>
 #include <future>
 
 namespace ovms {
-struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
-    ov::genai::EncodedResults results;
-    std::mutex mutex;
-    std::promise<void> readySignal;
-    std::future<void> finished = readySignal.get_future();
-};
+struct LegacyServableExecutionContext;
+struct LegacyExecutor;
 
 struct LegacyExecutor {
-    // For logging purposes we could have more information about graph and node here
     std::condition_variable cv;
     std::queue<std::shared_ptr<LegacyServableExecutionContext>> requests;
     std::mutex queueMutex;
     std::shared_ptr<ov::genai::LLMPipeline> pipe;
 
-    LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe) {
-        this->pipe = std::move(pipe);
-    }
+    LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe);
 
-    bool hasRequests() {
-        return (requests.size() > 0);
-    }
+    bool hasRequests();
 
-    bool requestsQueueSize() {
-        return requests.size();
-    }
+    bool requestsQueueSize();
+    void processRequest();
 
-    void processRequest() {
-        OVMS_PROFILE_FUNCTION();
-        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
-        std::unique_lock<std::mutex> lock(queueMutex);
-        requests.front()->readySignal.set_value();
-        requests.pop();
-    }
+    void waitForRequests(std::atomic<bool>* receivedEndSignal);
 
-    void waitForRequests(std::atomic<bool>* receivedEndSignal) {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        cv.wait(lock, [this, receivedEndSignal] { return (requests.size() > 0 || *receivedEndSignal); });
-    }
+    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
 
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-        std::lock_guard<std::mutex> guard(queueMutex);
-        requests.push(request);
-        cv.notify_one();
-    }
-
-    void notify() {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        cv.notify_one();
-    }
+    void notify();
 };
 
 class LegacyExecutorWrapper {
@@ -91,36 +62,11 @@ class LegacyExecutorWrapper {
     std::thread legacyExecutorThread;
     std::atomic<bool> finishExecutorThread = false;
 
-    static void run(LegacyExecutor* legacyExecutor, std::atomic<bool>* receivedEndSignal) {
-        // TODO add metrics
-        while (!(*receivedEndSignal)) {
-            try {
-                if (legacyExecutor->hasRequests()) {
-                    legacyExecutor->processRequest();
-                } else {
-                    SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", legacyExecutor->requestsQueueSize());
-                    legacyExecutor->waitForRequests(receivedEndSignal);
-                }
-            } catch (std::exception& e) {
-                SPDLOG_LOGGER_ERROR(llm_executor_logger, "Error occurred in LLM executor: {}.", e.what());
-                exit(1);
-            }
-        }
-    }
+    static void run(LegacyExecutor* legacyExecutor, std::atomic<bool>* receivedEndSignal);
 
 public:
-    LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe) :
-        legacyExecutor(std::move(pipe)) {
-        legacyExecutorThread = std::thread(LegacyExecutorWrapper::run, &legacyExecutor, &finishExecutorThread);
-    }
-
-    ~LegacyExecutorWrapper() {
-        finishExecutorThread = true;
-        legacyExecutor.notify();
-        legacyExecutorThread.join();
-    }
-    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-        legacyExecutor.addRequest(request);
-    }
+    LegacyExecutorWrapper(std::shared_ptr<ov::genai::LLMPipeline> pipe);
+    ~LegacyExecutorWrapper();
+    void addRequest(std::shared_ptr<LegacyServableExecutionContext> request);
 };
 }  // namespace ovms

@@ -34,7 +34,6 @@ class Status;
 
 class LegacyServableInitializer : public GenAiServableInitializer {
 public:
-    Status initializeExperimental(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath);
     Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
 };
 }  // namespace ovms

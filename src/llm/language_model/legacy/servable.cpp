@@ -47,22 +47,8 @@ std::shared_ptr<GenAiServableProperties> LegacyServable::getProperties() {
     return properties;
 }
 
-absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
-    if (legacyExecutionContext->payload.client->isDisconnected()) {
-        return absl::CancelledError();
-    }
-    properties->legacyExecutor->addRequest(legacyExecutionContext);
-    return absl::OkStatus();
-}
-
-absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
-    if (legacyExecutionContext->payload.client->isDisconnected()) {
-        return absl::CancelledError();
-    }
-    legacyExecutionContext->finished.wait();
-    return absl::OkStatus();
+bool LegacyServable::supportsSpeculativeDecoding() const {
+    return false;
 }
 
 absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
@@ -94,6 +80,24 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     return absl::OkStatus();
 }
 
+absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
+    if (legacyExecutionContext->payload.client->isDisconnected()) {
+        return absl::CancelledError();
+    }
+    properties->legacyExecutor->addRequest(legacyExecutionContext);
+    return absl::OkStatus();
+}
+
+absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
+    if (legacyExecutionContext->payload.client->isDisconnected()) {
+        return absl::CancelledError();
+    }
+    legacyExecutionContext->finished.wait();
+    return absl::OkStatus();
+}
+
 absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
@@ -101,6 +105,10 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
     }
     executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
+    return absl::OkStatus();
+}
+
+absl::Status LegacyServable::readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     return absl::OkStatus();
 }
 
@@ -141,11 +149,4 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
     return absl::OkStatus();
 }
 
-absl::Status LegacyServable::readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    return absl::OkStatus();
-}
-
-bool LegacyServable::supportsSpeculativeDecoding() const {
-    return false;
-}
 }  // namespace ovms
