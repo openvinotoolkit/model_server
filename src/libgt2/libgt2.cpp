@@ -100,9 +100,10 @@ int cred_acquire_cb(git_credential** out,
     const char* username_from_url,
     unsigned int allowed_types,
     void* payload) {
-    char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
-    int error = 1;
+    char *username = NULL, *password = NULL;
+    int error = -1;
 
+    fprintf(stdout, "Authentication is required for repository clone.\n");
     if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
         const char* env_cred = std::getenv("HF_TOKEN");
 #ifdef __linux__
@@ -110,32 +111,30 @@ int cred_acquire_cb(git_credential** out,
             username = strdup(env_cred);
             password = strdup(username);
         } else {
-            username = strdup("\0");
-            password = strdup(username);
+            fprintf(stderr, "HF_TOKEN env variable is not set.\n");
+            return -1;
         }
-password = strdup(std::getenv("HF_TOKEN"));
 #elif _WIN32
         if (env_cred) {
             username = _strdup(env_cred);
             password = _strdup(username);
         } else {
-            username = _strdup("\0");
-            password = _strdup(username);
+            fprintf(stderr, "HF_TOKEN env variable is not set.\n");
+            return -1;
         }
-        password = _strdup(std::getenv("HF_TOKEN"));
 #endif
         error = git_credential_userpass_plaintext_new(out, username, password);
+        if (error < 0 ){
+            fprintf(stderr, "Creating credentials failed.\n");
+            error = -1;
+        }
     } else {
         fprintf(stderr, "Only USERPASS_PLAINTEXT supported in OVMS.\n");
-        error = -1;
-        goto out;
+        return 1;
     }
 
-out:
     free(username);
     free(password);
-    free(privkey);
-    free(pubkey);
     return error;
 }
 
