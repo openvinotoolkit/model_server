@@ -102,7 +102,7 @@ public:
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const GenAiServableMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&&guard);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard);
 
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
@@ -121,6 +121,14 @@ public:
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
             }
+            ///////////////
+            ///// OutputStreamPollers
+            ///////////
+            // CreateAPI Specific observer
+            // Replace guard ptr with new one
+            // What to do if
+            //MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, &executionContext, this](const ::mediapipe::Packet& packet) -> absl::Status {
+
             auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
             if (!absStatusOrPoller.ok()) {
                 const std::string absMessage = absStatusOrPoller.status().ToString();

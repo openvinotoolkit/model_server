@@ -353,8 +353,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::KFS_REQUEST}},
@@ -412,8 +412,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -500,8 +500,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -547,8 +547,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1182,8 +1182,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
@@ -1236,8 +1236,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in1", mediapipe_packet_type_enum::OVTENSOR},
@@ -1279,8 +1279,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1315,8 +1315,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1342,8 +1342,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1372,8 +1372,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1410,8 +1410,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1435,8 +1435,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1472,8 +1472,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1521,8 +1521,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1551,8 +1551,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1588,8 +1588,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1632,8 +1632,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1670,8 +1670,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1709,8 +1709,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1740,8 +1740,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1768,8 +1768,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},
@@ -1804,8 +1804,8 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
         {{"in", mediapipe_packet_type_enum::OVTENSOR}},

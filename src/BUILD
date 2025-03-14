@@ -585,6 +585,7 @@ cc_library(
                 "mediapipe_internal/mediapipegraphconfig.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/outputstreamobserver.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
@@ -2917,6 +2918,7 @@ cc_test(
             ],
         }),
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 
 cc_library(
