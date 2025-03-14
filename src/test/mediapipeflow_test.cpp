@@ -1506,7 +1506,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
 
 // Inference on reloaded mediapipe graph, completely different pipeline
 // Expects old stream to still use old configuration
-// Expect new stream to use new configuration
+// Expect new stream to use new configuration XXXXXX
 TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -2637,8 +2637,8 @@ class MediapipeSerialization : public ::testing::Test {
 
 protected:
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
-    std::unique_ptr<GraphQueue> queue;
     ::inference::ModelInferResponse mp_response;
     void SetUp() {
         ovms::stream_types_mapping_t mapping;
@@ -2652,9 +2652,10 @@ protected:
         const ::mediapipe::CalculatorGraphConfig config;
         PythonNodeResourcesMap pythonNodeResourcesMap;
         this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
-        queue = std::make_unique<GraphQueue>(config, 1);
-        GraphIdGuard guard(*queue);
+        queue = std::make_shared<GraphQueue>(config, 1);
+        GraphIdGuard guard(queue);
         executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get(), std::move(guard));
+        SPDLOG_ERROR("Exit SetUp");
     }
 };
 

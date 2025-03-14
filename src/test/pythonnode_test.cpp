@@ -1013,8 +1013,8 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const std::vector<std::string> outputNames;
     const ::mediapipe::CalculatorGraphConfig config;
     PythonNodeResourcesMap pythonNodeResourcesMap;
-    std::unique_ptr<GraphQueue> queue = std::make_unique<GraphQueue>(config, 1);
-    GraphIdGuard guard(*queue);
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    GraphIdGuard guard(queue);
     auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, getPythonBackend(), this->reporter.get(), std::move(guard));
 
     std::string datatype = "FP32";

@@ -136,7 +136,7 @@ protected:
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config; // TODO rename configs
+    ::mediapipe::CalculatorGraphConfig config;  // TODO rename configs
 
     Status createInputsInfo();
     Status createOutputsInfo();
@@ -166,7 +166,7 @@ private:
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
-    std::unique_ptr<GraphQueue> queue;
+    std::shared_ptr<GraphQueue> queue;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {

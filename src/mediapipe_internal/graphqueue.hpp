@@ -31,50 +31,39 @@
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 namespace ovms {
-
-class GraphQueue : public Queue<std::unique_ptr<::mediapipe::CalculatorGraph>> {
+// we need to keep Graph alive during MP reload hence shared_ptr
+class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
 public:
-    /**
-    * @brief Allocating idle stream for execution
-    */
-    std::future<int> getIdleStream() {
-        // OVMS_PROFILE_FUNCTION();
-        int value;
-        std::promise<int> idleStreamPromise;
-        std::future<int> idleStreamFuture = idleStreamPromise.get_future();
-        std::unique_lock<std::mutex> lk(front_mut);
-        if (streams[front_idx] < 0) {  // we need to wait for any idle stream to be returned
-            std::unique_lock<std::mutex> queueLock(queue_mutex);
-            promises.push(std::move(idleStreamPromise));
-        } else {  // we can give idle stream right away
-            value = streams[front_idx];
-            streams[front_idx] = -1;  // negative value indicate consumed vector index
-            front_idx = (front_idx + 1) % streams.size();
-            lk.unlock();
-            idleStreamPromise.set_value(value);
-        }
-        return idleStreamFuture;
-    }
-
-    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, int streamsLength) : Queue(streamsLength) {
+    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, int streamsLength) :
+        Queue(streamsLength) {
+        SPDLOG_ERROR("ER Constr graph queue:{}", (void*)this);
         inferRequests.reserve(streamsLength);
-        for (auto i =0; i < streamsLength; ++i) {
-            inferRequests.emplace_back(std::make_unique<::mediapipe::CalculatorGraph>());
-            std::ignore = inferRequests.back()->Initialize(config); // TODO FIXME
+        for (auto i = 0; i < streamsLength; ++i) {
+            inferRequests.emplace_back(std::make_shared<::mediapipe::CalculatorGraph>());
+            std::ignore = inferRequests.back()->Initialize(config);  // TODO FIXME
         }
+    }
+    ~GraphQueue() {
+        SPDLOG_ERROR("ER Destroy graph queue:{}", (void*)this);
     }
 };
 
 struct GraphIdGuard {
-    GraphQueue& queue;
+    std::weak_ptr<GraphQueue> weakQueue;
     const int id;
     ::mediapipe::CalculatorGraph& graph;
-GraphIdGuard(GraphQueue& queue) :
-        queue(queue),
-       id(queue.getIdleStream().get()),
-       graph(*(queue.getInferRequest(id).get())) {}
-~GraphIdGuard(){
-        this->queue.returnStream(this->id);
-}
+    GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :
+        weakQueue(queue),
+        id(queue->getIdleStream().get()),
+        graph(*(queue->getInferRequest(id).get())) {}
+    GraphIdGuard(GraphIdGuard&&) = default;
+    GraphIdGuard(const GraphIdGuard&) = delete;
+    ~GraphIdGuard() {
+        auto existingQueue = weakQueue.lock();
+        SPDLOG_ERROR("ER DEstroy Guard begin qu:{}", (void*)existingQueue.get());
+        if (existingQueue)
+            existingQueue->returnStream(this->id);
+        SPDLOG_ERROR("ER Destroy Guard end qu:{}", (void*)existingQueue.get());
+    }
 };
 }  // namespace ovms
