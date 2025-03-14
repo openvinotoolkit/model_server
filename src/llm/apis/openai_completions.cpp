@@ -782,7 +782,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) { // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
