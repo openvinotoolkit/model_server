@@ -35,8 +35,8 @@
 #include "../http_status_code.hpp"
 #include "../json_parser.hpp"
 #include "../llm/apis/openai_completions.hpp"
-#include "../llm/continuous_batching/llm_executor.hpp"
-#include "../llm/continuous_batching/servable.hpp"
+#include "../llm/language_model/continuous_batching/llm_executor.hpp"
+#include "../llm/language_model/continuous_batching/servable.hpp"
 #include "../llm/servable.hpp"
 #include "../llm/servable_initializer.hpp"
 #include "../llm/text_processor.hpp"
@@ -666,7 +666,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     std::string requestBody = R"(
         {
             "model": "llmDummyKFS",
-            "stream": true,
+            "stream": false,
             "seed" : 1,
             "max_tokens": 5,
             "messages": [

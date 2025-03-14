@@ -32,9 +32,9 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "continuous_batching/servable.hpp"
-#include "continuous_batching/servable_initializer.hpp"
-#include "legacy/servable_initializer.hpp"
+#include "language_model/continuous_batching/servable.hpp"
+#include "language_model/continuous_batching/servable_initializer.hpp"
+#include "language_model/legacy/servable_initializer.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
 #include "visual_language_model/servable.hpp"
@@ -236,7 +236,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
-        } else if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::TEXT) {
+        } else if (pipelineType == PipelineType::TEXT) {
             LegacyServableInitializer legacyServableInitializer;
             status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
