@@ -71,6 +71,7 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
     std::string lastStreamerCallbackOutput;
+    std::string inputText;
 };
 
 struct GenAiServableProperties {
