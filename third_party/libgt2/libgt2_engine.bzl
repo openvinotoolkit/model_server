@@ -70,7 +70,7 @@ if __name__ == "__main__":
         fail("Python interpreter not found in PATH")
 
     # Execute the Python script
-    # This patches drogon repo to remove txt files which break building, such as 中文.txt
+    # This patches the libgit2 repo to remove txt files which break building, such as 中文.txt
     result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
     if result.return_code == 0:
         print("remove_japanese_txt.py Command executed successfully")
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         "X86_64": "True",
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
-        "BUILD_CLI": "OFF"
+        "BUILD_CLI": "ON"
         """
     else:
         lib_name = "libgit2"
@@ -178,5 +178,5 @@ cc_library(
 
 libgt2_repository = repository_rule(
     implementation = _impl,
-    local=False,
+    local=True,
 )
