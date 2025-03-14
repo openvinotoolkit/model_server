@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include "openvino/genai/llm_pipeline.hpp"
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 

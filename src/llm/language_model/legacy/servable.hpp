@@ -17,7 +17,7 @@
 #include <memory>
 #include <string>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include "openvino/genai/llm_pipeline.hpp"
 
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"

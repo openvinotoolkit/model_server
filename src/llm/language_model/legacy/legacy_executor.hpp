@@ -25,7 +25,7 @@
 #include <utility>
 #include <queue>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include "openvino/genai/llm_pipeline.hpp"
 
 #include "../../../logging.hpp"
 #include "../../../profiler.hpp"
