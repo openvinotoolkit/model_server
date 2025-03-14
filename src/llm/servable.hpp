@@ -172,6 +172,8 @@ public:
     */
     virtual absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 };
+#pragma warning(push)
+#pragma warning(disable : 4505)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function";
 static std::string wrapTextInServerSideEventMessage(const std::string& text) {
@@ -180,5 +182,6 @@ static std::string wrapTextInServerSideEventMessage(const std::string& text) {
     return ss.str();
 }
 #pragma GCC diagnostic pop
+#pragma warning(push)
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 }  // namespace ovms
