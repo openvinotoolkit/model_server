@@ -83,6 +83,8 @@ OV_CONTRIB_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+VLM_INTERN_VL2_1B_SRC_PATH ?= "/opt/home/k8sworker/ovms_models/llm_models/internvl2-1b/pytorch/ov/OV_FP16-INT8_ASYM/"
+VLM_INTERN_VL2_1B_DST_PATH ?= "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -662,6 +664,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v $(shell realpath ${VLM_INTERN_VL2_1B_SRC_PATH}):${VLM_INTERN_VL2_1B_DST_PATH}:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
@@ -679,6 +682,7 @@ else
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v $(shell realpath ${VLM_INTERN_VL2_1B_SRC_PATH}):${VLM_INTERN_VL2_1B_DST_PATH}:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
