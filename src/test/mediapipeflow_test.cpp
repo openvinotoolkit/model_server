@@ -1365,7 +1365,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnUnloadedGraph) {
 
 // Inference on reloaded mediapipe graph, completely different pipeline
 // Expects old stream to still use old configuration
-// Expect new stream to use new configuration
+// Expect new stream to use new configuration XXXXXX
 TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
@@ -2494,12 +2494,13 @@ class MediapipeSerialization : public ::testing::Test {
             stream_types_mapping_t outputTypes,
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
-            MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter) {}
+            MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard) :
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter, std::move(guard)) {}
     };
 
 protected:
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
     std::unique_ptr<MockedMediapipeGraphExecutor> executor;
     ::inference::ModelInferResponse mp_response;
     void SetUp() {
@@ -2514,7 +2515,10 @@ protected:
         const ::mediapipe::CalculatorGraphConfig config;
         PythonNodeResourcesMap pythonNodeResourcesMap;
         this->reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");  // disabled reporter
-        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get());
+        queue = std::make_shared<GraphQueue>(config, 1);
+        GraphIdGuard guard(queue);
+        executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, this->reporter.get(), std::move(guard));
+        SPDLOG_ERROR("Exit SetUp");
     }
 };
 
