@@ -20,7 +20,7 @@
 
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 
-#include "../continuous_batching/servable.hpp"
+#include "../language_model/continuous_batching/servable.hpp"
 
 namespace ovms {
 

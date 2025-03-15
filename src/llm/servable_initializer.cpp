@@ -32,8 +32,10 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "continuous_batching/servable.hpp"
-#include "continuous_batching/servable_initializer.hpp"
+#include "language_model/continuous_batching/servable.hpp"
+#include "language_model/continuous_batching/servable_initializer.hpp"
+#include "language_model/legacy/servable_initializer.hpp"
+#include "servable.hpp"
 #include "servable_initializer.hpp"
 #include "visual_language_model/servable.hpp"
 
@@ -234,11 +236,13 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+        } else if (pipelineType == PipelineType::TEXT) {
+            LegacyServableInitializer legacyServableInitializer;
+            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
             }
-
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
             return StatusCode::INTERNAL_ERROR;

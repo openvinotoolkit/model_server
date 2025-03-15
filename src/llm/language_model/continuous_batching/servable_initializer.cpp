@@ -30,10 +30,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../json_parser.hpp"
-#include "../../logging.hpp"
-#include "../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../../status.hpp"
+#include "../../../json_parser.hpp"
+#include "../../../logging.hpp"
+#include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../../status.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"

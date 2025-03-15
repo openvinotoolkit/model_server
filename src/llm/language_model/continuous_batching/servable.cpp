@@ -19,8 +19,8 @@
 #include <string>
 #include <vector>
 
-#include "../../logging.hpp"
-#include "../../status.hpp"
+#include "../../../logging.hpp"
+#include "../../../status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -30,10 +30,10 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../http_payload.hpp"
-#include "../../mediapipe_internal/mediapipe_utils.hpp"
-#include "../apis/openai_completions.hpp"
-#include "../text_processor.hpp"
+#include "../../../http_payload.hpp"
+#include "../../../mediapipe_internal/mediapipe_utils.hpp"
+#include "../../apis/openai_completions.hpp"
+#include "../../text_processor.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
 

@@ -27,17 +27,13 @@
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
-#include "../servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 class Status;
 
-class ContinuousBatchingServableInitializer : public GenAiServableInitializer {
-    static ov::genai::SchedulerConfig prepareDraftPipelineSchedulerConfigExperimental(const mediapipe::LLMCalculatorOptions_PipelineConfig& draftModelConfig);
-    static ov::genai::SchedulerConfig prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions);
-
+class LegacyServableInitializer : public GenAiServableInitializer {
 public:
-    Status initializeExperimental(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath);
     Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
 };
 }  // namespace ovms
