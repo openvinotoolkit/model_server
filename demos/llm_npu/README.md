@@ -1,0 +1,326 @@
+# Text generation serving with NPU acceleration #ovms_demos_llm_npu
+
+
+This demo shows how to deploy LLM models in the OpenVINO Model Server with NPU acceleration.
+From the client perspective it is very similar to the [generative model deployment with continuous batching](../continuous_batching/README.md)
+Likewise it exposes the models via OpenAI API `chat/completions` and `completions` endpoints.
+The difference is that it doesn't support request batching. They can be sent concurrently but they are processed sequentially.
+It is targeted on client machines equipped with NPU accelerator.
+
+> **Note:** This demo was tested on MeteorLake, LunarLake, ArrowLake platforms on Windows11 and Ubuntu24.
+
+## Prerequisites
+
+**OVMS 2025.1**
+
+**Model preparation**: Python 3.9 or higher with pip and HuggingFace account
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+
+**(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
+
+
+## Model preparation
+Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
+That ensures faster initialization time, better performance and lower memory consumption.
+LLM engine parameters will be defined inside the `graph.pbtxt` file.
+
+Download export script, install it's dependencies and create directory for the models:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/0/demos/common/export_models/requirements.txt
+mkdir models
+```
+
+Run `export_model.py` script to download and quantize the model:
+
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+
+**LLM**
+```console
+python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.2 --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
+```
+Below is a list of tested models:
+- meta-llama/Meta-Llama-3-8B-Instruct
+- meta-llama/Llama-3.1-8B
+- microsoft/Phi-3-mini-4k-instruct
+- Qwen/Qwen2-7B
+- mistralai/Mistral-7B-Instruct-v0.2
+- openbmb/MiniCPM-1B-sft-bf16
+- TinyLlama/TinyLlama-1.1B-Chat-v1.0
+- TheBloke/Llama-2-7B-Chat-GPTQ
+- Qwen/Qwen2-7B-Instruct-GPTQ-Int4
+
+You should have a model folder like below:
+```
+tree models
+models
+├── config.json
+└── mistralai
+    └── Mistral-7B-Instruct-v0.2
+        ├── config.json
+        ├── generation_config.json
+        ├── graph.pbtxt
+        ├── openvino_detokenizer.bin
+        ├── openvino_detokenizer.xml
+        ├── openvino_model.bin
+        ├── openvino_model.xml
+        ├── openvino_tokenizer.bin
+        ├── openvino_tokenizer.xml
+        ├── special_tokens_map.json
+        ├── tokenizer_config.json
+        └── tokenizer.json
+```
+
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+
+## Server Deployment
+
+:::{dropdown} **Deploying with Docker**
+
+
+Running this command starts the container with NPU enabled:
+```bash
+docker run -d --rm --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+-p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+```
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+:::
+
+## Readiness Check
+
+Wait for the model to load. You can check the status with a simple command:
+```console
+curl http://localhost:8000/v1/config
+```
+```json
+{
+    "mistralai/Mistral-7B-Instruct-v0.2": {
+        "model_version_status": [
+            {
+                "version": "1",
+                "state": "AVAILABLE",
+                "status": {
+                    "error_code": "OK",
+                    "error_message": "OK"
+                }
+            }
+        ]
+    }
+}
+```
+
+## Request Generation
+
+A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
+Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
+Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
+
+:::{dropdown} **Unary call with cURL**
+```console
+curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"mistralai/Mistral-7B-Instruct-v0.2\", \"max_tokens\":30,\"stream\":false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},{\"role\": \"user\",\"content\": \"What is OpenVINO?\"}]}"
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1724405301,
+  "model": "mistralai/Mistral-7B-Instruct-v0.2",
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 27,
+    "completion_tokens": 30,
+    "total_tokens": 57
+  }
+}
+```
+
+A similar call can be made with a `completion` endpoint:
+```console
+curl http://localhost:8000/v3/completions -H "Content-Type: application/json"-d "{\"model\": \"mistralai/Mistral-7B-Instruct-v0.2\",\"max_tokens\":30,\"stream\":false,\"prompt\": \"You are a helpful assistant. What is OpenVINO? \"}"
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
+    }
+  ],
+  "created": 1724405354,
+  "model": "mistralai/Mistral-7B-Instruct-v0.2",
+  "object": "text_completion",
+  "usage": {
+    "prompt_tokens": 23,
+    "completion_tokens": 30,
+    "total_tokens": 53
+  }
+}
+```
+
+:::
+
+:::{dropdown} **Unary call with OpenAI Python package**
+
+The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+
+Install the client library:
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+response = client.chat.completions.create(
+    model="mistralai/Mistral-7B-Instruct-v0.2",
+    messages=[{"role": "user", "content": "Say this is a test"}],
+    stream=False,
+)
+print(response.choices[0].message.content)
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+
+A similar code can be applied for the completion endpoint:
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+response = client.completions.create(
+    model="mistralai/Mistral-7B-Instruct-v0.2",
+    prompt="Say this is a test.",
+    stream=False,
+)
+print(response.choices[0].text)
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+:::
+
+:::{dropdown} **Streaming call with OpenAI Python package**
+
+The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+
+Install the client library:
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.chat.completions.create(
+    model="mistralai/Mistral-7B-Instruct-v0.2",
+    messages=[{"role": "user", "content": "Say this is a test"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+
+A similar code can be applied for the completion endpoint:
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.completions.create(
+    model="mistralai/Mistral-7B-Instruct-v0.2",
+    prompt="Say this is a test.",
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].text is not None:
+        print(chunk.choices[0].text, end="", flush=True)
+```
+
+Output:
+```
+It looks like you're testing me!
+```
+:::
+
+## Benchmarking text generation with high concurrency
+
+OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
+It can be demonstrated using benchmarking app from vLLM repository:
+```console
+git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
+cd vllm
+pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+cd benchmarks
+curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model mistralai/Mistral-7B-Instruct-v0.2 --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 100 --request-rate inf --max_concurrency 1
+
+
+```
+
+## Testing the model accuracy over serving API
+
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+
+## References
+- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
+- [Completions API](../../docs/model_server_rest_api_completions.md)
+- [Writing client code](../../docs/clients_genai.md)
+- [LLM calculator reference](../../docs/llm/reference.md)
