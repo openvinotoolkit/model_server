@@ -2769,7 +2769,11 @@ cc_test(
         "test/configs/config_standard_scalar.json",
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
-        "test/llm/graphkfspass.pbtxt",
+        "test/llm/config.json"
+        "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_cb_speculative.pbtxt",
+        "test/llm/visual_language_model/config.json"
+        "test/llm/visual_language_model/vlm_cb_regular.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
