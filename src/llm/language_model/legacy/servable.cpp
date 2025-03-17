@@ -69,7 +69,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
 
     if (legacyExecutionContext->apiHandler->isStream()) {
         legacyExecutionContext->lastStreamerCallbackOutput = "";  // initialize with empty string
-        auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress, & mutex = legacyExecutionContext->mutex, &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput](std::string text) {
+        auto callback = [& executionInProgress = legacyExecutionContext->executionInProgress, &mutex = legacyExecutionContext->mutex, &lastStreamerCallbackOutput = legacyExecutionContext->lastStreamerCallbackOutput](std::string text) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
             {
                 std::lock_guard<std::mutex> lock(mutex);
