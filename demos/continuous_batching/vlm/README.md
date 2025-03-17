@@ -143,10 +143,6 @@ curl http://localhost:8000/v1/config
 
 ## Request Generation
 
-A single servable exposes both `chat/completions` and `completions` endpoints with and without stream capabilities.
-Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
-Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
-
 Let's send a request with text an image in the messages context.
 ![zebra](../../../demos/common/static/images/zebra.jpeg) 
 
@@ -210,7 +206,7 @@ print(response.text)
 :::
 :::{dropdown} **Streaming request with OpenAI client**
 
-The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` is compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
@@ -263,33 +259,30 @@ git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2_5-8B --endpoint /v1/chat/completions  --request-rate 1 --num-prompts 10 --trust-remote-code
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2_5-8B --endpoint /v3/chat/completions  --request-rate inf --num-prompts 100 --trust-remote-code
 
-
-Maximum request concurrency: 1
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10/10 [01:36<00:00,  9.67s/it]
+Burstiness factor: 1.0 (Poisson process)
+Maximum request concurrency: None
 ============ Serving Benchmark Result ============
-Successful requests:                     10
-Benchmark duration (s):                  96.70
-Total input tokens:                      5670
-Total generated tokens:                  798
-Request throughput (req/s):              0.10
-Output token throughput (tok/s):         8.25
-Total Token throughput (tok/s):          66.89
+Successful requests:                     100
+Benchmark duration (s):                  328.26
+Total input tokens:                      15381
+Total generated tokens:                  5231
+Request throughput (req/s):              0.30
+Output token throughput (tok/s):         15.94
+Total Token throughput (tok/s):          62.79
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          5692.99
-Median TTFT (ms):                        5506.32
-P99 TTFT (ms):                           16854.37
+Mean TTFT (ms):                          166209.84
+Median TTFT (ms):                        185027.54
+P99 TTFT (ms):                           317956.52
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          50.00
-Median TPOT (ms):                        49.28
-P99 TPOT (ms):                           56.07
+Mean TPOT (ms):                          217.28
+Median TPOT (ms):                        243.84
+P99 TPOT (ms):                           473.48
 ---------------Inter-token Latency----------------
-Mean ITL (ms):                           55.29
-Median ITL (ms):                         50.21
-P99 ITL (ms):                            158.05
-==================================================
-
+Mean ITL (ms):                           394.46
+Median ITL (ms):                         311.98
+P99 ITL (ms):                            1500.04
 ```
 
 ## RAG with visual language model and Model Server
@@ -303,6 +296,5 @@ Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
-- [Completions API](../../docs/model_server_rest_api_completions.md)
 - [Writing client code](../../docs/clients_genai.md)
 - [LLM calculator reference](../../docs/llm/reference.md)
