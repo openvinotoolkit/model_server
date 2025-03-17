@@ -152,6 +152,29 @@ bool HfDownloader::CheckIfTokenSet() {
     return true;
 }
 
+std::string HfDownloader::GetHfEndpoint() {
+    const char* env_cred = std::getenv("HF_ENDPOINT");
+    std::string hf_endpoint = "huggingface.co";
+    if (env_cred) {
+        hf_endpoint = std::string(env_cred);
+    }
+    return hf_endpoint;
+}
+
+std::string HfDownloader::GetRepoUrl(std::string& hf_endpoint, std::string& hf_model) {
+    std::string repo_url = "https://";
+
+    std::string hf_token
+    const char* env_cred = std::getenv("HF_TOKEN");
+    if (env_cred) {
+        std::string cred = std::string(env_cred);
+        repo_url += repo_url + cred + ":" + cred + "@";
+    }
+
+    repo_url +=
+
+}
+
 int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path) {
     int res = git_libgit2_init();
     if (res < 0) {
@@ -185,7 +208,7 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
     }
 
     if (!CheckIfTokenSet()) {
-        printf("Info: HF_TOKEN environemt variable not set.\n");
+        printf("Info: HF_TOKEN environmet variable not set.\n");
     }
 
     /* Do the clone */

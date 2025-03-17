@@ -34,10 +34,11 @@ namespace ovms {
 
 class HfDownloader {
 public:
-    int cloneRepository(std::string& repo_url, std::string& repo_path);
+    int cloneRepository(std::string& hf_model, std::string& repo_path);
     std::string source_model;
     std::string repo_path;
     bool pull_hf_model;
+    std::string endpoint;
 
 private:
     bool CheckIfProxySet();
