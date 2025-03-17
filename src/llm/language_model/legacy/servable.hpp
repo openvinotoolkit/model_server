@@ -30,6 +30,7 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     std::promise<void> readySignal;
     std::future<void> finished = readySignal.get_future();
     std::mutex mutex;
+    std::condition_variable executionInProgress;
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {
