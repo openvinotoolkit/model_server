@@ -1027,6 +1027,8 @@ extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath);
 
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName);
+
 class ConstructorEnabledConfig : public ovms::Config {
 public:
     ConstructorEnabledConfig() {}

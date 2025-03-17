@@ -222,6 +222,39 @@ void ModelManager::startCleaner() {
 
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
+    
+    this->setRootDirectoryPath("");
+    Status status = StatusCode::OK;
+
+#if (MEDIAPIPE_DISABLE == 0)
+    // Check if config is present for mediapipe graph
+    MediapipeGraphConfig mpConfig;
+    mpConfig.setGraphName(config.modelName());
+    if (config.modelPath().back() == FileSystem::getOsSeparator().back()) {
+        mpConfig.setBasePath(config.modelPath());
+        mpConfig.setRootDirectoryPath(config.modelPath());
+    } else {
+        mpConfig.setBasePath(config.modelPath() + FileSystem::getOsSeparator());
+        mpConfig.setRootDirectoryPath(config.modelPath() + FileSystem::getOsSeparator());
+    }
+    mpConfig.setGraphPath(mpConfig.getBasePath() + config.modelName() + ".pbtxt");
+    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
+
+    std::ifstream ifs(mpConfig.getGraphPath());
+    if (ifs.is_open()) {
+        mpConfig.setCurrentGraphPbTxtMD5(FileSystem::getFileMD5(mpConfig.getGraphPath()));
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        mediapipesInConfigFile.push_back(mpConfig);
+        // TODO Add part with mediapipe subconfigs
+        // Do not load additional single models just return here?
+        return loadMediapipeGraphsConfig(mediapipesInConfigFile);
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+    }
+
+#endif
+
+
 
     auto [it, success] = servedModelConfigs.emplace(
         config.modelName(),
@@ -240,9 +273,6 @@ Status ModelManager::startFromConfig() {
     if (!success) {
         return StatusCode::UNKNOWN_ERROR;
     }
-
-    this->setRootDirectoryPath("");
-    Status status = StatusCode::OK;
 
     // Reading metric config only once per server start
     if (!this->metricConfigLoadedOnce) {
@@ -311,6 +341,7 @@ Status ModelManager::startFromConfig() {
         return StatusCode::INTERNAL_ERROR;
     }
 
+    // TODO Add loading mediapipe graph here
     return reloadModelWithVersions(modelConfig);
 }
 
