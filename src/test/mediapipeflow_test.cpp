@@ -102,7 +102,7 @@ protected:
 class MediapipeCliFlowTestDummy : public MediapipeCliFlowTest {
 public:
     void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/", "graphkfspass");
+        SetUpServer("/ovms/src/test/mediapipe/cli", "graphkfspass");
     }
 };
 

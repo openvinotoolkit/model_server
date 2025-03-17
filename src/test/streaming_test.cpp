@@ -453,6 +453,55 @@ public:
     }
 };
 
+class StreamingWithOVMSCalculatorsCliTest : public StreamingTest {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+
+public:
+    void SetUpServer(const char* graphPath, const char* graphName) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
+    }
+
+    void TearDown() {
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSendSeparately) {
+    std::string configFilePath{};
+    const std::string inputName{"in\""};
+    const std::string newInputName{"in2\""};
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(),"my_graph");
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& manager = smm->getServableManager();
+    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(name);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
+    EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
+
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    KFSRequest request;
+    KFSResponse response;
+    auto status = manager.createPipeline(executor, name);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    // Mock receiving 1 request with not all inputs (client)
+    prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(Disconnect());
+
+    // Expect no responses
+    status = executor->inferStream(this->firstRequest, this->stream, this->executionContext);
+    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
     std::string configFilePath{getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json")};
     const std::string inputName{"in\""};
