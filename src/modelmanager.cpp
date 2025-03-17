@@ -222,7 +222,7 @@ void ModelManager::startCleaner() {
 
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
-    
+
     this->setRootDirectoryPath("");
     Status status = StatusCode::OK;
 
@@ -259,8 +259,6 @@ Status ModelManager::startFromConfig() {
     }
 
 #endif
-
-
 
     auto [it, success] = servedModelConfigs.emplace(
         config.modelName(),
@@ -864,8 +862,8 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::loadMediapipeSubConfigModels( std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
-    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile){
+Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+    std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     Status status = StatusCode::OK;
     Status firstErrorStatus = StatusCode::OK;
     std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
@@ -908,7 +906,7 @@ Status ModelManager::loadMediapipeSubConfigModels( std::vector<ModelConfig>& gat
         }
     }
 
-     return firstErrorStatus;
+    return firstErrorStatus;
 }
 
 Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile)

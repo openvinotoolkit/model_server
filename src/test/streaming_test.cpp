@@ -477,7 +477,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     std::string configFilePath{};
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
-    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(),"my_graph");
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
     const MediapipeFactory& factory = manager.getMediapipeFactory();
