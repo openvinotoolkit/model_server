@@ -51,13 +51,13 @@ A demonstration on how to use OpenVINO Model Server can be found in our [quick-s
 
 Check also other instructions:
 
-[Preparing model repository](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_models_repository.html)
+[Preparing model repository](https://docs.openvino.ai/nightly/model-server/ovms_docs_models_repository.html)
 
-[Deployment](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_deploying_server.html)
+[Deployment](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server.html)
 
-[Writing client code](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_server_app.html)
+[Writing client code](https://docs.openvino.ai/nightly/model-server/ovms_docs_server_app.html)
 
-[Demos](https://docs.openvino.ai/nightly/openvino-workflow/model-server/ovms_docs_demos.html)
+[Demos](https://docs.openvino.ai/nightly/model-server/ovms_docs_demos.html)
 
 
 

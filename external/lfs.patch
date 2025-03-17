@@ -1,3 +1,9 @@
+commit 2bffb7221f923276b883f0f169744bb0c22dc1ab
+Author: Rafal Sapala <rafal.a.sapala@intel.com>
+Date:   Thu Mar 13 11:12:19 2025 +0100
+
+    Lfs
+
 diff --git a/include/git2/sys/filter.h b/include/git2/sys/filter.h
 index 60466d173..a35ad5f98 100644
 --- a/include/git2/sys/filter.h
@@ -94,10 +100,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..730e73147
+index 000000000..e164705bb
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,236 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -231,6 +237,10 @@ index 000000000..730e73147
 +	struct lfs_attrs *la = (struct lfs_attrs *)payload;
 +	char *tmp_out_file = appendCharToBuffer(la->full_path, '2');
 +
++	git_process *process;
++	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
++	opts.cwd = la->workdir;
++	git_process_result result = GIT_PROCESS_RESULT_INIT;
 +#if defined(GIT_WIN32)
 +	const char *args_array[] = { "C:\\Windows\\System32\\cmd.exe",
 +		                     "/c",
@@ -241,42 +251,35 @@ index 000000000..730e73147
 +		                     la->full_path,
 +		                     ">",
 +		                     tmp_out_file };
-+#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
-+        defined(__MidnightBSD__) || defined(__DragonFly__)
-+	const char *args_array[] = { "/bin/bash",
-+				    "-c",
-+				    "'cd",
-+		                     la->workdir,
-+		                     "&&",
-+		                     "git-lfs",
-+		                     "smudge",
-+		                     la->path,
-+		                     "<",
-+		                     la->full_path,
-+		                     ">",
-+		                     tmp_out_file,
-+				    "'"};
-+#else
-+	const char *args_array[] = { "/bin/bash",
-+				    "-c",
-+		                     "git-lfs",
-+		                     "smudge",
-+		                     la->path,
-+		                     "<",
-+		                     la->full_path,
-+		                     ">",
-+		                     tmp_out_file};
-+#endif
-+
-+	git_process *process;
-+	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
-+	opts.cwd = la->workdir;
-+	git_process_result result = GIT_PROCESS_RESULT_INIT;
-+
 +	if (git_process_new(&process, args_array, ARRAY_SIZE(args_array), NULL, 0, &opts) < 0) {
 +		fprintf(stderr, "failed to create git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
 +	}
++#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
++        defined(__MidnightBSD__) || defined(__DragonFly__)
++	git_str cmd_line = GIT_STR_INIT;
++
++		int error = git_str_printf(&cmd_line, "git-lfs smudge %s < %s > %s",
++			la->path,
++			la->full_path,
++			tmp_out_file);
++		if (git_process_new_from_cmdline(&process, cmd_line.ptr, NULL, 0, &opts) < 0) {
++			fprintf(stderr, "failed to create git-lfs process for '%s'\n", la->full_path);
++			goto on_error;
++		}
++#else
++	git_str cmd_line = GIT_STR_INIT;
++
++	int error = git_str_printf(&cmd_line, "git-lfs smudge %s < %s > %s",
++		la->path,
++		la->full_path,
++		tmp_out_file);
++	if (git_process_new_from_cmdline(&process, cmd_line.ptr, NULL, 0, &opts) < 0) {
++		fprintf(stderr, "failed to create git-lfs process for '%s'\n", la->full_path);
++		goto on_error;
++	}
++#endif
++
 +	if (git_process_start(process) < 0) {
 +		fprintf(stderr, "failed to start git-lfs process for '%s'\n", la->full_path);
 +		goto on_error;
