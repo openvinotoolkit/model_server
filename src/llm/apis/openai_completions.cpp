@@ -154,7 +154,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                         return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                     }
                     jsonChanged = true;
-                    Value contentText;
+                    Value contentText(rapidjson::kStringType);
+                    contentText.SetString("", doc.GetAllocator());
                     for (auto& v : member->value.GetArray()) {
                         if (!v.IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -195,8 +196,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
                     }
-                    // Pulling out text from nested structure to the "content" field for text and erase whole "content" value for image data
-                    // since images are stored separately in request.images
+                    // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
+                    // with empty string, since images are stored separately in request.images
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
@@ -206,6 +207,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                     return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
             }
+        }
+        const auto& lastMessage = request.chatHistory.back();
+        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
         }
     }
     if (jsonChanged) {

@@ -2745,9 +2745,9 @@ cc_test(
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
-                "test/text_streamer_test.cpp",
+                "test/llm/llmnode_test.cpp",
+                "test/llm/llmtemplate_test.cpp",
+                "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
             ],

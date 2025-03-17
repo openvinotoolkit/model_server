@@ -27,15 +27,15 @@
 #pragma warning(pop)
 #include <rapidjson/error/en.h>
 
-#include "../filesystem.hpp"
-#include "../http_payload.hpp"
-#include "../http_rest_api_handler.hpp"
-#include "../httpservermodule.hpp"
-#include "../llm/language_model/continuous_batching/servable.hpp"
-#include "../llm/language_model/continuous_batching/servable_initializer.hpp"
-#include "../llm/text_processor.hpp"
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../server.hpp"
+#include "../../filesystem.hpp"
+#include "../../http_payload.hpp"
+#include "../../http_rest_api_handler.hpp"
+#include "../../httpservermodule.hpp"
+#include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
+#include "../../llm/text_processor.hpp"
+#include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../../server.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -43,8 +43,8 @@
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
 
-#include "test_http_utils.hpp"
-#include "test_utils.hpp"
+#include "../test_http_utils.hpp"
+#include "../test_utils.hpp"
 
 using namespace ovms;
 
@@ -454,7 +454,7 @@ std::string configTemplate = R"(
             "model_config_list": [],
             "mediapipe_config_list": [
             {
-                "name":"llmDummyKFS",
+                "name":"lm_cb_regular",
                 "graph_path":"<GRAPH_PATTERN>"
             }
             ]
@@ -654,7 +654,7 @@ std::unique_ptr<std::thread> LLMJinjaChatTemplateHttpTest::t;
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": "lm_cb_regular",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -673,7 +673,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
-    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
+    std::string expectedResponsePart2 = R"(,"model":"lm_cb_regular","object":"chat.completion"})";
     // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
     // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
@@ -681,7 +681,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsUnary) {
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": "lm_cb_regular",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -695,7 +695,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"text":"\n\nThe first thing"}],"created":)";
-    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"text_completion"})";
+    std::string expectedResponsePart2 = R"(,"model":"lm_cb_regular","object":"text_completion"})";
     // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
     // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
@@ -703,7 +703,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsUnary) {
 TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": "lm_cb_regular",
             "stream": true,
             "seed" : 1,
             "max_tokens": 6,
@@ -743,7 +743,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferChatCompletionsStream) {
 TEST_F(LLMJinjaChatTemplateHttpTest, inferCompletionsStream) {
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": "lm_cb_regular",
             "stream": true,
             "seed" : 1,
             "max_tokens": 6,
@@ -784,7 +784,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     std::unique_ptr<CleanupFilesGuard> cleanupGuard = std::make_unique<CleanupFilesGuard>(directoryPath);
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": "lm_cb_regular",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -803,7 +803,7 @@ TEST_F(LLMJinjaChatTemplateHttpTest, inferDefaultChatCompletionsUnary) {
     // Assertion split in two parts to avoid timestamp mismatch
     // const size_t timestampLength = 10;
     std::string expectedResponsePart1 = R"({"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"\nOpenVINO is","role":"assistant"}}],"created":)";
-    std::string expectedResponsePart2 = R"(,"model":"llmDummyKFS","object":"chat.completion"})";
+    std::string expectedResponsePart2 = R"(,"model":"lm_cb_regular","object":"chat.completion"})";
     // TODO: New output ASSERT_EQ(response.compare(0, expectedResponsePart1.length(), expectedResponsePart1), 0);
     // TODO: New output ASSERT_EQ(response.compare(expectedResponsePart1.length() + timestampLength, expectedResponsePart2.length(), expectedResponsePart2), 0);
 }
