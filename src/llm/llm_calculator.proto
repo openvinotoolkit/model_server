@@ -43,7 +43,6 @@ message LLMCalculatorOptions {
       CONTINUOUS_BATCHING = 5;
       // Visual language model pipeline
       VISUAL_LANGUAGE_MODEL = 6;
-      // Legacy pipeline
     }
 
     optional string models_path = 1;

@@ -117,12 +117,12 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    std::stringstream ss;
-    ss << executionContext->lastStreamerCallbackOutput;
-    std::string lastTextChunk = ss.str();
-    legacyExecutionContext->mutex.lock();
-    executionContext->lastStreamerCallbackOutput = "";
-    legacyExecutionContext->mutex.unlock();
+    std::string lastTextChunk;
+    {
+        std::scoped_lock lock(legacyExecutionContext->mutex);
+        std::string lastTextChunk = executionContext->lastStreamerCallbackOutput;
+        executionContext->lastStreamerCallbackOutput = "";
+    }
     auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {

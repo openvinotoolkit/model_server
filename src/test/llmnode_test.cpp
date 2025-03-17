@@ -668,6 +668,7 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
             "model": "llmDummyKFS",
             "stream": false,
             "seed" : 1,
+            "best_of" : 16,
             "max_tokens": 5,
             "messages": [
             {
