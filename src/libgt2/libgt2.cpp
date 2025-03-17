@@ -208,7 +208,9 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
     }
 
     if (!CheckIfTokenSet()) {
-        printf("Info: HF_TOKEN environmet variable not set.\n");
+        printf("Info: HF_TOKEN environemt variable not set.\n");
+    } else {
+        // Add credentails to url
     }
 
     /* Do the clone */
