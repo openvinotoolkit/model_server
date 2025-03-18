@@ -132,7 +132,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
             ("model_path",
-                "folder with AI model versions or with mediapipe graph",
+                "Folder with AI model versions or with mediapipe graph",
                 cxxopts::value<std::string>(),
                 "MODEL_PATH")
             ("batch_size",
