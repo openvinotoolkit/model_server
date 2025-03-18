@@ -220,6 +220,33 @@ void ModelManager::startCleaner() {
     }
 }
 
+Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
+    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> disallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            disallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!disallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : disallowedUserSettings) {
+            arguments+= userSetting +", ";
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting ovms single model mediapipe graph with unsupported model settings: {}set this property in subconfig.json for the model.", arguments);
+        
+        return StatusCode::OPTIONS_USAGE_ERROR;
+    }
+
+    return StatusCode::OK;
+}
+
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
@@ -242,6 +269,10 @@ Status ModelManager::startFromConfig() {
 
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
+        status = validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        if (!status.ok())
+            return status;
+
         mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
         mediapipesInConfigFile.push_back(mpConfig);

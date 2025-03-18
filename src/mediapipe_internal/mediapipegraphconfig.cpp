@@ -29,6 +29,9 @@
 
 namespace ovms {
 
+const std::string DEFAULT_GRAPH_FILENAME = "graph.pbtxt";
+const std::string DEFAULT_SUBCONFIG_FILENAME = "subconfig.json";
+
 void MediapipeGraphConfig::setBasePathWithRootPath() {
     this->basePath = this->rootDirectoryPath;
 }

@@ -50,6 +50,7 @@ extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
 struct CNLIMWrapper;
+struct ModelsSettingsImpl;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
@@ -111,6 +112,7 @@ private:
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    Status validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings);
 #else
     Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);

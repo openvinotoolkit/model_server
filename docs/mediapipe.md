@@ -160,7 +160,7 @@ Starting the single graph with `subconfig.json` is obtained by running the serve
 
 This example command will load the `graph.pbtxt` and `subconfig.json` file from `/mediapipe_graph_name` directory.
 
-For running multiple graphs in one server instance you must use the `config.json` configuration desribed below.
+For running multiple graphs in one server instance you must use the `config.json` configuration described below.
 
 MediaPipe servables configuration can also be placed in the same json file like the
 [models config file](starting_server.md).

@@ -235,13 +235,19 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 
-    if (result->count("model_name"))
+    if (result->count("model_name")) {
         modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
-    if (result->count("model_path"))
+        modelsSettings->userArguments.push_back("model_name");
+    }
+    if (result->count("model_path")) {
         modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
+        modelsSettings->userArguments.push_back("model_name");
+    }
 
-    if (result->count("max_sequence_number"))
+    if (result->count("max_sequence_number")) {
         modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
+        modelsSettings->userArguments.push_back("max_sequence_number");
+    }
 
     if (result->count("cpu_extension")) {
         serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
@@ -264,38 +270,58 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("rest_workers"))
         serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
-    if (result->count("batch_size"))
+    if (result->count("batch_size")) {
         modelsSettings->batchSize = result->operator[]("batch_size").as<std::string>();
+        modelsSettings->userArguments.push_back("batch_size");
+    }
 
-    if (result->count("shape"))
+    if (result->count("shape")) {
         modelsSettings->shape = result->operator[]("shape").as<std::string>();
+        modelsSettings->userArguments.push_back("shape");
+    }
 
-    if (result->count("layout"))
+    if (result->count("layout")) {
         modelsSettings->layout = result->operator[]("layout").as<std::string>();
+        modelsSettings->userArguments.push_back("layout");
+    }
 
-    if (result->count("model_version_policy"))
+    if (result->count("model_version_policy")) {
         modelsSettings->modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
+        modelsSettings->userArguments.push_back("model_version_policy");
+    }
 
-    if (result->count("nireq"))
+    if (result->count("nireq")) {
         modelsSettings->nireq = result->operator[]("nireq").as<uint32_t>();
+        modelsSettings->userArguments.push_back("nireq");
+    }
 
-    if (result->count("target_device"))
+    if (result->count("target_device")) {
         modelsSettings->targetDevice = result->operator[]("target_device").as<std::string>();
+        modelsSettings->userArguments.push_back("target_device");
+    }
 
-    if (result->count("plugin_config"))
+    if (result->count("plugin_config")) {
         modelsSettings->pluginConfig = result->operator[]("plugin_config").as<std::string>();
+        modelsSettings->userArguments.push_back("plugin_config");
+    }
 
-    if (result->count("stateful"))
+    if (result->count("stateful")) {
         modelsSettings->stateful = result->operator[]("stateful").as<bool>();
+        modelsSettings->userArguments.push_back("stateful");
+    }
 
     serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
 
-    if (result->count("idle_sequence_cleanup"))
+    if (result->count("idle_sequence_cleanup")) {
         modelsSettings->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
+        modelsSettings->userArguments.push_back("idle_sequence_cleanup");
+    }
 
-    if (result->count("low_latency_transformation"))
+    if (result->count("low_latency_transformation")) {
         modelsSettings->lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
+        modelsSettings->userArguments.push_back("low_latency_transformation");
+    }
 
     if (result->count("log_level"))
         serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
@@ -321,8 +347,10 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->cacheDir = result->operator[]("cache_dir").as<std::string>();
     }
 
-    if (result->count("config_path"))
+    if (result->count("config_path")) {
         modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
+        modelsSettings->userArguments.push_back("config_path");
+    }
 }
 
 }  // namespace ovms

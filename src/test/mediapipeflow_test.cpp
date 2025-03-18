@@ -48,6 +48,7 @@
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
+#include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -99,12 +100,64 @@ protected:
     }
 };
 
+class MediapipeCliFlowTestNegative : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+
+    void SetUpServer(const char* graphPath, const char* graphName) {
+        server.setShutdownRequest(0);
+        randomizePort(this->port);
+        char* argv[] = {(char*)"ovms",
+        (char*)"--model_name",
+        (char*)graphName,
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest(graphPath).c_str(),
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--batch_size",
+        (char*)"10"};
+        int argc = 9;
+        t.reset(new std::thread([&argc, &argv, this]() {
+            EXPECT_EQ(OVMS_EX_USAGE, server.start(argc, argv));
+        }));
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+               (!server.isReady()) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+        }
+    }
+
+    void SetUp() override {
+    }
+    void TearDown() {
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
 class MediapipeCliFlowTestDummy : public MediapipeCliFlowTest {
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/mediapipe/cli", "graphkfspass");
     }
 };
+
+class MediapipeCliFlowTestDummyNegative : public MediapipeCliFlowTestNegative {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/cli", "graphkfspass");
+    }
+};
+
+TEST_F(MediapipeCliFlowTestDummyNegative, UnsupportedCliParamBatchSize) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_EQ(grpcModule, nullptr);
+}
 
 TEST_F(MediapipeCliFlowTestDummy, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
