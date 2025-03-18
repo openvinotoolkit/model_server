@@ -316,5 +316,8 @@ public:
          * @return const std::string& 
          */
     const std::string cacheDir() const;
+    bool startedFromCLI() {
+        return serverSettings.startedWithCLI;
+    }
 };
 }  // namespace ovms
