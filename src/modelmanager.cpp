@@ -231,11 +231,11 @@ Status ModelManager::startFromConfig() {
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     if (config.modelPath().back() == FileSystem::getOsSeparator().back()) {
-        mpConfig.setBasePath(config.modelPath());
         mpConfig.setRootDirectoryPath(config.modelPath());
+        mpConfig.setBasePath(config.modelPath());
     } else {
-        mpConfig.setBasePath(config.modelPath() + FileSystem::getOsSeparator());
         mpConfig.setRootDirectoryPath(config.modelPath() + FileSystem::getOsSeparator());
+        mpConfig.setBasePath(config.modelPath() + FileSystem::getOsSeparator());
     }
     mpConfig.setGraphPath(mpConfig.getBasePath() + DEFAULT_GRAPH_FILENAME);
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
