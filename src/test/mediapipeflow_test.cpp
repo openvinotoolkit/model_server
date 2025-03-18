@@ -112,14 +112,14 @@ protected:
         server.setShutdownRequest(0);
         randomizePort(this->port);
         char* argv[] = {(char*)"ovms",
-        (char*)"--model_name",
-        (char*)graphName,
-        (char*)"--model_path",
-        (char*)getGenericFullPathForSrcTest(graphPath).c_str(),
-        (char*)"--port",
-        (char*)port.c_str(),
-        (char*)"--batch_size",
-        (char*)"10"};
+            (char*)"--model_name",
+            (char*)graphName,
+            (char*)"--model_path",
+            (char*)getGenericFullPathForSrcTest(graphPath).c_str(),
+            (char*)"--port",
+            (char*)port.c_str(),
+            (char*)"--batch_size",
+            (char*)"10"};
         int argc = 9;
         t.reset(new std::thread([&argc, &argv, this]() {
             EXPECT_EQ(OVMS_EX_USAGE, server.start(argc, argv));

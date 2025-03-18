@@ -237,10 +237,10 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettin
     if (!disallowedUserSettings.empty()) {
         std::string arguments = "";
         for (const std::string& userSetting : disallowedUserSettings) {
-            arguments+= userSetting +", ";
+            arguments += userSetting + ", ";
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting ovms single model mediapipe graph with unsupported model settings: {}set this property in subconfig.json for the model.", arguments);
-        
+
         return StatusCode::OPTIONS_USAGE_ERROR;
     }
 
