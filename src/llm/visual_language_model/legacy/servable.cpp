@@ -52,7 +52,7 @@ bool VisualLanguageModelLegacyServable::supportsSpeculativeDecoding() const {
 }
 
 absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
+    auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
