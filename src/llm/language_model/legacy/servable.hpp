@@ -17,45 +17,48 @@
 #include <memory>
 #include <string>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include "openvino/genai/llm_pipeline.hpp"
 
-#include "../servable.hpp"
+#include "../../servable.hpp"
+#include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"
 
 namespace ovms {
 
-class LLMExecutorWrapper;
-
-struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
-    ov::genai::GenerationHandle generationHandle;
+struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
+    ov::genai::EncodedResults results;
+    std::promise<void> readySignal;
+    std::future<void> finished = readySignal.get_future();
+    std::mutex mutex;
+    std::condition_variable executionInProgress;
 };
 
-struct ContinuousBatchingServableProperties : public GenAiServableProperties {
+struct LegacyServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
-    std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
-    std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
+    std::shared_ptr<ov::genai::LLMPipeline> pipeline;
+    std::shared_ptr<LegacyExecutorWrapper> legacyExecutor;
 };
 
-class ContinuousBatchingServable : public GenAiServable {
+class LegacyServable : public GenAiServable {
+    std::shared_ptr<LegacyServableProperties> properties;
+
 protected:
-    std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
 
 public:
-    ContinuousBatchingServable() {
-        properties = std::make_shared<ContinuousBatchingServableProperties>();
+    LegacyServable() {
+        properties = std::make_shared<LegacyServableProperties>();
     }
-
-    // addRequestToPipeline implementation can be specific for different servables with Continuous Batching engine
-    // This method is used in scheduleExecution and MUST fill generationHandle in executionContext
-    virtual absl::Status addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
     // Interface methods
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     bool supportsSpeculativeDecoding() const override;
+    absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
 };
 }  // namespace ovms
