@@ -83,7 +83,6 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     return absl::OkStatus();
 }
 
-
 absl::Status VisualLanguageModelLegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {

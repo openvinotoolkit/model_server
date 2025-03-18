@@ -16,6 +16,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
 
@@ -47,7 +48,7 @@ protected:
     void notifyExecutorThread();
 
 public:
-VisualLanguageModelLegacyServable() {
+    VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
     }
 
