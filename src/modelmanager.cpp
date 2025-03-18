@@ -345,7 +345,6 @@ Status ModelManager::startFromConfig() {
         return StatusCode::INTERNAL_ERROR;
     }
 
-    // TODO Add loading mediapipe graph here
     return reloadModelWithVersions(modelConfig);
 }
 
