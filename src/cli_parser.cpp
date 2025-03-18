@@ -351,6 +351,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
         modelsSettings->userArguments.push_back("config_path");
     }
+    serverSettings->startedWithCLI = true;
 }
 
 }  // namespace ovms
