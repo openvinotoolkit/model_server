@@ -75,7 +75,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
                 std::lock_guard<std::mutex> lock(mutex);
                 lastStreamerCallbackOutput += text;
             }
-            executionInProgress.notify_all();
+            executionInProgress.notify_one();
             return ov::genai::StreamingStatus::RUNNING;
         };
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
@@ -123,8 +123,10 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
     std::string lastTextChunk;
     {
         std::unique_lock lock(legacyExecutionContext->mutex);
-        legacyExecutionContext->executionInProgress.wait(lock);
-        std::string lastTextChunk = executionContext->lastStreamerCallbackOutput;
+        while(executionContext->lastStreamerCallbackOutput.size() == 0){
+            legacyExecutionContext->executionInProgress.wait(lock);
+        }
+        lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
     auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
