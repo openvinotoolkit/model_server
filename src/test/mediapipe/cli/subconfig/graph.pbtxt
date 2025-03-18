@@ -1,6 +1,6 @@
 input_stream: "in"
 input_stream: "in2"
-output_stream: "out"
+output_stream: "sum"
 node {
   calculator: "OpenVINOModelServerSessionCalculator"
   output_side_packet: "SESSION:add"
@@ -16,7 +16,7 @@ node {
   input_side_packet: "SESSION:add"
   input_stream: "ADD_INPUT1:in"
   input_stream: "ADD_INPUT2:in2"
-  output_stream: "SUM:out"
+  output_stream: "SUM:sum"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
         tag_to_input_tensor_names {
@@ -29,7 +29,7 @@ node {
         }
         tag_to_output_tensor_names {
           key: "SUM"
-          value: "out"
+          value: "sum"
         }
     }
   }

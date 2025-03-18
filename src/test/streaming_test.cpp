@@ -474,7 +474,6 @@ public:
 };
 
 TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSendSeparately) {
-    std::string configFilePath{};
     const std::string inputName{"in\""};
     const std::string newInputName{"in2\""};
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
@@ -486,6 +485,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
+    EXPECT_EQ(definition->getOutputsInfo().count("sum"), 1);
 
     std::shared_ptr<MediapipeGraphExecutor> executor;
     KFSRequest request;
@@ -493,13 +493,21 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     auto status = manager.createPipeline(executor, name);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
     // Mock receiving 1 request with not all inputs (client)
-    prepareRequest(this->firstRequest, {{"in", 3.5f}}, 3);
+    prepareRequest(this->firstRequest, {{"in", 3.5f}, {"in2", 1.0f}}, 3);
     EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}, {"in2", 1.0f}}, 12))   // this is correct because 12 > 3
+        .WillOnce(ReceiveWithTimestamp({{"in", 99.9f}, {"in2", 1.0f}}, 99))  // this is also correct because 99 > 12
         .WillOnce(Disconnect());
+
+    // Expect 3 responses with correct timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"sum", 4.5f}}, 3))
+        .WillOnce(SendWithTimestamp({{"sum", 8.2f}}, 12))
+        .WillOnce(SendWithTimestamp({{"sum", 100.9f}}, 99));
 
     // Expect no responses
     status = executor->inferStream(this->firstRequest, this->stream, this->executionContext);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
