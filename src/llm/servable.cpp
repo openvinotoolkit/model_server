@@ -160,4 +160,16 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     return absl::OkStatus();
 }
 
+#pragma warning(push)
+#pragma warning(disable : 4505)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function";
+std::string wrapTextInServerSideEventMessage(const std::string& text) {
+    std::stringstream ss;
+    ss << "data: " << text << "\n\n";
+    return ss.str();
+}
+#pragma GCC diagnostic pop
+#pragma warning(push)
+
 }  // namespace ovms

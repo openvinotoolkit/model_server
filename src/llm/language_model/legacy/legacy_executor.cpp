@@ -23,7 +23,7 @@ LegacyExecutor::LegacyExecutor(std::shared_ptr<ov::genai::LLMPipeline> pipe) {
 }
 
 bool LegacyExecutor::hasRequests() {
-    return (requests.size() > 0);
+    return requests.size() > 0;
 }
 
 bool LegacyExecutor::requestsQueueSize() {
@@ -33,8 +33,8 @@ bool LegacyExecutor::requestsQueueSize() {
 void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
-    std::unique_lock<std::mutex> lock(queueMutex);
     requests.front()->readySignal.set_value();
+    std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }
 
