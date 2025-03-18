@@ -236,6 +236,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
         } else if (pipelineType == PipelineType::TEXT) {
             LegacyServableInitializer legacyServableInitializer;
             status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
