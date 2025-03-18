@@ -123,7 +123,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
     std::string lastTextChunk;
     {
         std::unique_lock lock(legacyExecutionContext->mutex);
-        while(executionContext->lastStreamerCallbackOutput.size() == 0){
+        while (executionContext->lastStreamerCallbackOutput.size() == 0) {
             legacyExecutionContext->executionInProgress.wait(lock);
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
