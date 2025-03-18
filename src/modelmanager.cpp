@@ -220,33 +220,6 @@ void ModelManager::startCleaner() {
     }
 }
 
-Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
-    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
-    std::vector<std::string> disallowedUserSettings;
-    for (const std::string& userSetting : modelsSettings.userArguments) {
-        bool isAllowed = false;
-        for (const std::string& allowedSetting : allowedUserSettings) {
-            if (userSetting == allowedSetting)
-                isAllowed = true;
-        }
-
-        if (!isAllowed)
-            disallowedUserSettings.push_back(userSetting);
-    }
-
-    if (!disallowedUserSettings.empty()) {
-        std::string arguments = "";
-        for (const std::string& userSetting : disallowedUserSettings) {
-            arguments += userSetting + ", ";
-        }
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting ovms single model mediapipe graph with unsupported model settings: {}set this property in subconfig.json for the model.", arguments);
-
-        return StatusCode::OPTIONS_USAGE_ERROR;
-    }
-
-    return StatusCode::OK;
-}
-
 Status ModelManager::startFromConfig() {
     auto& config = ovms::Config::instance();
 
@@ -461,6 +434,33 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
+    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> disallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            disallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!disallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : disallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting ovms single model mediapipe graph with unsupported model settings: {}set this property in subconfig.json for the model.", arguments);
+
+        return StatusCode::OPTIONS_USAGE_ERROR;
+    }
+
+    return StatusCode::OK;
+}
+
 Status ModelManager::processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory) {
     if (mediapipesInConfigFile.find(config.getGraphName()) != mediapipesInConfigFile.end()) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Duplicated mediapipe names: {} defined in config file. Only first graph will be loaded.", config.getGraphName());
