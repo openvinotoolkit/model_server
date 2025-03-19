@@ -158,7 +158,7 @@ Here is example of the `subconfig.json`:
 Starting the single graph with `subconfig.json` is obtained by running the server in single model mode (without `config.json`) and passing the graph path and name:
 `docker run --rm -it -v $(pwd):/mediapipe_graph_name openvino/model_server:latest --model_path /mediapipe_graph_name --model_name my_graph`
 
-This example command will load the `graph.pbtxt` and `subconfig.json` file from `/mediapipe_graph_name` directory.
+This example command will load the `graph.pbtxt` and `subconfig.json` file from the mounted directory the container.
 
 For running multiple graphs in one server instance you must use the `config.json` configuration described below.
 
