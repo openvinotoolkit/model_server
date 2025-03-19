@@ -166,7 +166,7 @@ bool Config::validate() {
         return false;
     }
     // both ports cannot be unset
-    if ((restPort() == 0) && (port() == 0)) {
+    if (startedFromCLI() && ((restPort() == 0) && (port() == 0))) {
         std::cerr << "port and rest_port cannot both be unset" << std::endl;
         return false;
     }

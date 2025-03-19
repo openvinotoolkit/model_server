@@ -35,14 +35,6 @@
 #include "text_processor.hpp"
 
 namespace ovms {
-
-// TODO: Find better place for this function. It will need to be moved when other pipelines are introduced.
-static std::string wrapTextInServerSideEventMessage(const std::string& text) {
-    std::stringstream ss;
-    ss << "data: " << text << "\n\n";
-    return ss.str();
-}
-
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
@@ -167,5 +159,17 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     return absl::OkStatus();
 }
+
+#pragma warning(push)
+#pragma warning(disable : 4505)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function";
+std::string wrapTextInServerSideEventMessage(const std::string& text) {
+    std::stringstream ss;
+    ss << "data: " << text << "\n\n";
+    return ss.str();
+}
+#pragma GCC diagnostic pop
+#pragma warning(push)
 
 }  // namespace ovms

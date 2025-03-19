@@ -697,6 +697,27 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     }
 }
 
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName) {
+    server.setShutdownRequest(0);
+    randomizePort(port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name",
+        (char*)modelName,
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest(modelPath).c_str(),
+        (char*)"--port",
+        (char*)port.c_str()};
+    int argc = 7;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (!server.isReady()) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+    }
+}
+
 std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const TensorInfo> src, ovms::Precision newPrecision) {
     return std::make_shared<TensorInfo>(
         src->getName(),

@@ -154,7 +154,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                         return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                     }
                     jsonChanged = true;
-                    Value contentText;
+                    Value contentText(rapidjson::kStringType);
+                    contentText.SetString("", doc.GetAllocator());
                     for (auto& v : member->value.GetArray()) {
                         if (!v.IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -195,8 +196,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
                     }
-                    // Pulling out text from nested structure to the "content" field for text and erase whole "content" value for image data
-                    // since images are stored separately in request.images
+                    // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
+                    // with empty string, since images are stored separately in request.images
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
@@ -206,6 +207,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                     return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
             }
+        }
+        const auto& lastMessage = request.chatHistory.back();
+        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
         }
     }
     if (jsonChanged) {
@@ -721,6 +726,93 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         } else {
             writer.Null();
         }
+        // message: object
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            writer.String("message");
+            writer.StartObject();  // {
+            // content: string; Actual content of the text produced
+            writer.String("content");
+            writer.String(completeResponse.c_str());
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String("role");
+            writer.String("assistant");  // TODO - hardcoded
+            // TODO: tools_call
+            // TODO: function_call (deprecated)
+            writer.EndObject();  // }
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            writer.String("text");
+            writer.String(completeResponse.c_str());
+        }
+
+        writer.EndObject();  // }
+    }
+    writer.EndArray();  // ]
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    writer.String("created");
+    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+
+    // model: string; copied from the request
+    writer.String("model");
+    writer.String(request.model.c_str());
+
+    // object: string; defined that the type is unary rather than streamed chunk
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion");
+    }
+
+    writer.String("usage");
+    writer.StartObject();  // {
+    writer.String("prompt_tokens");
+    writer.Int(usage.promptTokens);
+    writer.String("completion_tokens");
+    writer.Int(usage.completionTokens);
+    writer.String("total_tokens");
+    writer.Int(usage.calculateTotalTokens());
+    writer.EndObject();  // }
+
+    // TODO
+    // id: string; A unique identifier for the chat completion.
+
+    // TODO
+    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    writer.EndObject();  // }
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
+    OVMS_PROFILE_FUNCTION();
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+
+    writer.StartObject();  // {
+
+    // choices: array of size N, where N is related to n request parameter
+    writer.String("choices");
+    writer.StartArray();  // [
+    int index = 0;
+    usage.completionTokens = 0;
+    for (int i = 0; i < results.tokens.size(); i++) {
+        const std::vector<int64_t>& tokens = results.tokens[i];
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        usage.completionTokens += tokens.size();
+        if (request.echo)
+            usage.completionTokens -= usage.promptTokens;
+        std::string completeResponse = tokenizer.decode(tokens);
+        writer.StartObject();  // {
+        writer.String("finish_reason");
+        writer.String("stop");
+        // index: integer; Choice index, only n=1 supported anyway
+        writer.String("index");
+        writer.Int(index++);
+        // logprobs: object/null; Log probability information for the choice. TODO
         // message: object
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
             writer.String("message");

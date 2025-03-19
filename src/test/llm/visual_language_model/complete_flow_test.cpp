@@ -90,7 +90,7 @@ std::string createRequestBody(const std::vector<std::pair<std::string, std::stri
     std::ostringstream oss;
     oss << R"(
         {
-            "model": "dummyVLMServable",
+            "model": "vlm_cb_regular",
             "messages": [
             {
                 "role": "user",
@@ -159,7 +159,7 @@ TEST_F(VLMServableExecutionTest, unaryBasic) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "dummyVLMServable");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "vlm_cb_regular");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
@@ -194,7 +194,7 @@ TEST_F(VLMServableExecutionTest, unaryBasicOnlyImage) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "dummyVLMServable");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), "vlm_cb_regular");
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 

@@ -48,6 +48,7 @@
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
+#include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -77,6 +78,83 @@ using testing::HasSubstr;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
+
+class MediapipeCliFlowTest : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+
+    void SetUpServer(const char* graphPath, const char* graphName) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
+    }
+
+    void SetUp() override {
+    }
+    void TearDown() {
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class MediapipeCliFlowTestNegative : public ::testing::Test {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+};
+
+class MediapipeCliFlowTestDummy : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/cli", "graphkfspass");
+    }
+};
+
+TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
+    server.setShutdownRequest(0);
+    randomizePort(this->port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name",
+        (char*)"graphkfspass",
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli").c_str(),
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--batch_size",
+        (char*)"10"};
+    int argc = 9;
+    t.reset(new std::thread([&argc, &argv, this]() {
+        EXPECT_EQ(OVMS_EX_USAGE, server.start(argc, argv));
+    }));
+
+    server.setShutdownRequest(1);
+    t->join();
+}
+
+TEST_F(MediapipeCliFlowTestDummy, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphkfspass";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
+    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
 
 class MediapipeFlowTest : public ::testing::TestWithParam<std::string> {
 protected:
