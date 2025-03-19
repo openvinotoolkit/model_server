@@ -311,7 +311,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
     json = apiHandler->getProcessedJson();
-    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":null}]}"));
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucceeds) {
