@@ -35,6 +35,7 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     requests.front()->results = pipe->generate(requests.front()->inputText, requests.front()->inputImages, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
     requests.front()->readySignal.set_value();
+    requests.front()->executionInProgress.notify_one();
     std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }

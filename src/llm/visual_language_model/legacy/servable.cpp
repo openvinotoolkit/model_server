@@ -74,8 +74,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 lastStreamerCallbackOutput += text;
+                executionInProgress.notify_one();
             }
-            executionInProgress.notify_one();
             return ov::genai::StreamingStatus::RUNNING;
         };
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
@@ -121,15 +121,17 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         return absl::CancelledError();
     }
     std::string lastTextChunk;
+    auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
     {
         std::unique_lock lock(legacyExecutionContext->mutex);
-        while (executionContext->lastStreamerCallbackOutput.size() == 0) {
+        while (executionContext->lastStreamerCallbackOutput.size() == 0 && generationStatus != std::future_status::ready) {
+            SPDLOG_LOGGER_TRACE(llm_executor_logger, "Waiting for partial data...");
             legacyExecutionContext->executionInProgress.wait(lock);
+            generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
-    auto generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
             executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE));
