@@ -1000,7 +1000,7 @@ public:
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        const PythonNodeResourcesMap& pythonNodeResourcesMap,
+        const std::shared_ptr<PythonNodeResourcesMap>& pythonNodeResourcesMap,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard) :
         MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, pythonBackend, mediapipeServableMetricReporter, std::move(guard)) {}
@@ -1012,10 +1012,11 @@ TEST_F(PythonFlowTest, SerializePyObjectWrapperToKServeResponse) {
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
     const ::mediapipe::CalculatorGraphConfig config;
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
-    auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pythonNodeResourcesMap, getPythonBackend(), this->reporter.get(), std::move(guard));
+    auto executor = MockedMediapipeGraphExecutorPy("", "", config, mapping, mapping, inputNames, outputNames, pnsm, getPythonBackend(), this->reporter.get(), std::move(guard));
 
     std::string datatype = "FP32";
     std::string name = "python_result";

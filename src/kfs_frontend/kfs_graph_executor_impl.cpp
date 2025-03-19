@@ -925,6 +925,7 @@ static Status createPacketAndPushIntoGraph(const std::string& name, std::shared_
     }
     std::unique_ptr<T> inputTensor;
     OVMS_RETURN_ON_FAIL(deserializeTensor(name, *request, inputTensor, pythonBackend));
+    SPDLOG_ERROR("Current Timestamp before actual pushing:{}", timestamp.Value());
     MP_RETURN_ON_FAIL(graph.AddPacketToInputStream(
                           name,
                           ::mediapipe::packet_internal::Create(
@@ -1040,8 +1041,10 @@ static Status deserializeTimestampIfAvailable(
             return status;
         }
     } else {
+        SPDLOG_ERROR("Current Timestamp before setting:{}", timestamp.Value());
         auto now = std::chrono::system_clock::now();
         timestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+        SPDLOG_ERROR("Current Timestamp setting:{}", timestamp.Value());
     }
     return StatusCode::OK;
 }

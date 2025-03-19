@@ -98,8 +98,8 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
+    std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap;
+    std::shared_ptr<GenAiServableMap> genAiServableMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
