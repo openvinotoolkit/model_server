@@ -436,8 +436,8 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 #if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
     std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
-    std::vector<std::string> disallowedUserSettings;
-    for (const std::string& userSetting : modelsSettings.userArguments) {
+    std::vector<std::string> usedButdisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.singleModelArguments) {
         bool isAllowed = false;
         for (const std::string& allowedSetting : allowedUserSettings) {
             if (userSetting == allowedSetting)
@@ -445,12 +445,12 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettin
         }
 
         if (!isAllowed)
-            disallowedUserSettings.push_back(userSetting);
+            usedButdisallowedUserSettings.push_back(userSetting);
     }
 
-    if (!disallowedUserSettings.empty()) {
+    if (!usedButdisallowedUserSettings.empty()) {
         std::string arguments = "";
-        for (const std::string& userSetting : disallowedUserSettings) {
+        for (const std::string& userSetting : usedButdisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting ovms single model mediapipe graph with unsupported model settings: {}set this property in subconfig.json for the model.", arguments);
