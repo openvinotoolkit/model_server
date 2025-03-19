@@ -353,7 +353,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -412,7 +414,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -500,7 +504,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -547,7 +553,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1182,7 +1190,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1236,7 +1246,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1279,7 +1291,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1315,7 +1329,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1342,7 +1358,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1372,7 +1390,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1410,7 +1430,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1435,7 +1457,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1472,7 +1496,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1521,7 +1547,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1551,7 +1579,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1588,7 +1618,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1632,7 +1664,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1670,7 +1704,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1709,7 +1745,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1740,7 +1778,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1768,7 +1808,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,
@@ -1804,7 +1846,9 @@ node {
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
 
-    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, 1);
+    std::shared_ptr<GenAiServableMap> gasm = std::make_shared<GenAiServableMap>();
+    std::shared_ptr<PythonNodeResourcesMap> pnsm = std::make_shared<PythonNodeResourcesMap>();
+    std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
     GraphIdGuard guard(queue);
     MediapipeGraphExecutor executor{
         this->name, this->version, config,

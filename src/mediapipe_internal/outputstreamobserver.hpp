@@ -37,7 +37,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "mediapipe_utils.hpp"
-#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
+//#include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
 #include "graphqueue.hpp"
 
@@ -47,6 +47,7 @@ class ServableMetricReporter;
 class OutputStreamObserverI {
 public:
     virtual absl::Status handlePacket(const ::mediapipe::Packet& packet) = 0;
+    virtual ~OutputStreamObserverI() = default;
 };
 class NullOutputStreamObserver : public OutputStreamObserverI {
 public:
@@ -59,6 +60,4 @@ public:
         return absl::Status(absl::StatusCode::kInternal, "Should not happen");
     }
 };
-/*
-*/
 }  // namespace ovms

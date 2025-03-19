@@ -39,7 +39,8 @@ std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdl
 #if (OV_TRACE == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");
 #endif
-const std::string default_pattern = "[%i] [%Y-%m-%d %T.%f][%t][%n][%l][%s:%#] %v";
+//const std::string default_pattern = "[%i] [%Y-%m-%d %T.%f][%t][%n][%l][%s:%#] %v";
+const std::string default_pattern = "[%Y-%m-%d %T.%f][%t][%n][%l][%s:%#] %v";
 
 static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
     logger->set_level(spdlog::level::info);

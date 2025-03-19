@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2021 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,35 +27,55 @@
 #include <vector>
 
 #include "../queue.hpp"
+#include "src/python/pythonnoderesources.hpp"
+#include "src/llm/servable.hpp"
 
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
+
+#include "outputstreamobserver.hpp"
+// TODO FIXME HEADERS
+const ::mediapipe::Timestamp STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);  // TODO @atobisze common
+const std::string PYTHON_SESSION_SIDE_PACKET_TAG = "PYTHON_NODE_RESOURCES";
+const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 namespace ovms {
+class OutputStreamObserverI;
+class NullOutputStreamObserver;
+struct GraphHelper {
+    std::shared_ptr<::mediapipe::CalculatorGraph> graph; // TODO FIXME this does not have to be shared_ptr
+    std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
+    ::mediapipe::Timestamp currentTimestamp; // TODO FIXME const
+    // TODO FIXME move constr/=
+    GraphHelper() = default;
+    GraphHelper(const GraphHelper&) = delete;
+    GraphHelper& operator=(const GraphHelper&) = delete;
+    GraphHelper(GraphHelper&& gh) : graph(std::move(gh.graph)), outStreamObservers(std::move(gh.outStreamObservers)), currentTimestamp(gh.currentTimestamp) {}
+    GraphHelper& operator=(GraphHelper&& gh) = default;
+};
 // we need to keep Graph alive during MP reload hence shared_ptr
-class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
+//class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
+class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
+    std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap;
+    std::shared_ptr<GenAiServableMap> genAiServableMap;
+
 public:
-    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, int streamsLength) :
-        Queue(streamsLength) {
-        SPDLOG_ERROR("ER Constr graph queue:{}", (void*)this);
-        inferRequests.reserve(streamsLength);
-        for (auto i = 0; i < streamsLength; ++i) {
-            inferRequests.emplace_back(std::make_shared<::mediapipe::CalculatorGraph>());
-            std::ignore = inferRequests.back()->Initialize(config);  // TODO FIXME
-        }
-    }
-    ~GraphQueue() {
-        SPDLOG_ERROR("ER Destroy graph queue:{}", (void*)this);
-    }
+    GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap, std::shared_ptr<GenAiServableMap> genAiServableMap, int streamsLength);
+    ~GraphQueue();
 };
 
 struct GraphIdGuard {
     std::weak_ptr<GraphQueue> weakQueue;
     const int id;
+    std::shared_ptr<GraphHelper> gh;
+    // TODO FIXME shared_ptr
     ::mediapipe::CalculatorGraph& graph;
     GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :
         weakQueue(queue),
         id(queue->getIdleStream().get()),
-        graph(*(queue->getInferRequest(id).get())) {}
+        gh((queue->getInferRequest(id))),
+        graph(*gh->graph) {
+        SPDLOG_ERROR("ER Guard construct this:{}", (void*)this);
+    }
     GraphIdGuard(GraphIdGuard&&) = default;
     GraphIdGuard(const GraphIdGuard&) = delete;
     ~GraphIdGuard() {
@@ -64,6 +84,7 @@ struct GraphIdGuard {
         if (existingQueue)
             existingQueue->returnStream(this->id);
         SPDLOG_ERROR("ER Destroy Guard end qu:{}", (void*)existingQueue.get());
+        SPDLOG_ERROR("ER Guard destroy this:{}", (void*)this);
     }
 };
 }  // namespace ovms
