@@ -38,7 +38,7 @@ public:
     void setSourceModel(std::string inSourceModel);
     void setRepositoryPath(std::string inRepoPath);
     void setPullHfModelMode(bool isOn);
-	bool isPullHfModelModeOn();
+    bool isPullHfModelModeOn();
 
 private:
     std::string sourceModel;
@@ -46,7 +46,7 @@ private:
     bool pullHfModelMode;
     std::string hfEndpoint;
     std::string repoUrl;
-    
+
     void UpdateRepoUrl();
     void SetHfEndpoint();
     std::string GetRepositoryUrlWithPassword();

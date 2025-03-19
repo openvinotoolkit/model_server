@@ -130,7 +130,7 @@ int cred_acquire_cb(git_credential** out,
         }
 #endif
         error = git_credential_userpass_plaintext_new(out, username, password);
-        if (error < 0 ){
+        if (error < 0) {
             fprintf(stderr, "Creating credentials failed.\n");
             error = -1;
         }
@@ -150,8 +150,7 @@ class Libgt2InitGuard {
 public:
     int status;
     std::string errMsg;
-    Libgt2InitGuard()
-    { 
+    Libgt2InitGuard() {
         this->status = git_libgit2_init();
         if (this->status < 0) {
             const git_error* err = git_error_last();
@@ -178,7 +177,7 @@ void HfDownloader::setPullHfModelMode(bool isOn) {
 bool HfDownloader::isPullHfModelModeOn() {
     return this->pullHfModelMode;
 }
-    
+
 bool HfDownloader::CheckIfProxySet() {
     const char* envCred = std::getenv("https_proxy");
     if (!envCred)
@@ -201,7 +200,7 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
         std::string cred = std::string(envCred);
         passRepoUrl += cred + ":" + cred + "@";
     } else {
-        printf("Info: HF_TOKEN environemt variable not set.\n");
+        printf("Info: HF_TOKEN environment variable not set.\n");
     }
 
     passRepoUrl += this->hfEndpoint + this->sourceModel;
@@ -215,7 +214,7 @@ void HfDownloader::SetHfEndpoint() {
     if (envCred) {
         this->hfEndpoint = std::string(envCred);
     } else {
-        printf("Info: HF_ENDPOINT environemt variable not set.\n");
+        printf("Info: HF_ENDPOINT environment variable not set.\n");
     }
 
     if (!endsWith(this->hfEndpoint, "/")) {
