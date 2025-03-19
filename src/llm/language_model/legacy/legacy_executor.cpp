@@ -32,8 +32,11 @@ bool LegacyExecutor::requestsQueueSize() {
 
 void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
+    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
     requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+    SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     requests.front()->readySignal.set_value();
+    requests.front()->executionInProgress.notify_one();
     std::unique_lock<std::mutex> lock(queueMutex);
     requests.pop();
 }
