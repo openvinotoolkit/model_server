@@ -201,7 +201,7 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
         std::string cred = std::string(envCred);
         passRepoUrl += cred + ":" + cred + "@";
     } else {
-        printf("Info: HF_TOKEN environemt variable not set.\n");
+        printf("Info: HF_TOKEN environment variable not set.\n");
     }
 
     passRepoUrl += this->hfEndpoint + this->sourceModel;
@@ -215,7 +215,7 @@ void HfDownloader::SetHfEndpoint() {
     if (envCred) {
         this->hfEndpoint = std::string(envCred);
     } else {
-        printf("Info: HF_ENDPOINT environemt variable not set.\n");
+        printf("Info: HF_ENDPOINT environment variable not set.\n");
     }
 
     if (!endsWith(this->hfEndpoint, "/")) {
