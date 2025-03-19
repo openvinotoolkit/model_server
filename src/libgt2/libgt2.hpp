@@ -34,6 +34,7 @@ namespace ovms {
 
 class HfDownloader {
 public:
+    HfDownloader();
     int cloneRepository();
     void setSourceModel(std::string inSourceModel);
     void setRepositoryPath(std::string inRepoPath);

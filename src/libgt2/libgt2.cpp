@@ -225,6 +225,14 @@ void HfDownloader::UpdateRepoUrl() {
     this->repoUrl += this->hfEndpoint + this->sourceModel;
 }
 
+HfDownloader::HfDownloader() {
+    this->sourceModel = "";
+    this->repoPath = "";
+    this->pullHfModelMode = false;
+    this->hfEndpoint = "";
+    this->repoUrl = "";
+}
+
 int HfDownloader::cloneRepository() {
     std::unique_ptr<Libgt2InitGuard> initGuard = std::make_unique<Libgt2InitGuard>();
     if (initGuard->status < 0) {

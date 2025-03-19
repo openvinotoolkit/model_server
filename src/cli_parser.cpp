@@ -256,6 +256,8 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         if (result->count("repo_path"))
             hfDownloader->setRepositoryPath(result->operator[]("repo_path").as<std::string>());
         return;
+    } else {
+        hfDownloader->setPullHfModelMode(false);
     }
 
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
