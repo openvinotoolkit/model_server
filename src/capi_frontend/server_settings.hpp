@@ -61,7 +61,7 @@ struct ModelsSettingsImpl {
     std::optional<bool> lowLatencyTransformation;
     std::optional<uint32_t> maxSequenceNumber;
     std::optional<bool> idleSequenceCleanup;
-    std::vector<std::string> singleModelArguments;
+    std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;
 };

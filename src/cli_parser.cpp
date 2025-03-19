@@ -237,16 +237,16 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("model_name")) {
         modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("model_name");
+        modelsSettings->userSetSingleModelArguments.push_back("model_name");
     }
     if (result->count("model_path")) {
         modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("model_name");
+        modelsSettings->userSetSingleModelArguments.push_back("model_name");
     }
 
     if (result->count("max_sequence_number")) {
         modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings->singleModelArguments.push_back("max_sequence_number");
+        modelsSettings->userSetSingleModelArguments.push_back("max_sequence_number");
     }
 
     if (result->count("cpu_extension")) {
@@ -272,42 +272,42 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("batch_size")) {
         modelsSettings->batchSize = result->operator[]("batch_size").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("batch_size");
+        modelsSettings->userSetSingleModelArguments.push_back("batch_size");
     }
 
     if (result->count("shape")) {
         modelsSettings->shape = result->operator[]("shape").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("shape");
+        modelsSettings->userSetSingleModelArguments.push_back("shape");
     }
 
     if (result->count("layout")) {
         modelsSettings->layout = result->operator[]("layout").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("layout");
+        modelsSettings->userSetSingleModelArguments.push_back("layout");
     }
 
     if (result->count("model_version_policy")) {
         modelsSettings->modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("model_version_policy");
+        modelsSettings->userSetSingleModelArguments.push_back("model_version_policy");
     }
 
     if (result->count("nireq")) {
         modelsSettings->nireq = result->operator[]("nireq").as<uint32_t>();
-        modelsSettings->singleModelArguments.push_back("nireq");
+        modelsSettings->userSetSingleModelArguments.push_back("nireq");
     }
 
     if (result->count("target_device")) {
         modelsSettings->targetDevice = result->operator[]("target_device").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("target_device");
+        modelsSettings->userSetSingleModelArguments.push_back("target_device");
     }
 
     if (result->count("plugin_config")) {
         modelsSettings->pluginConfig = result->operator[]("plugin_config").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("plugin_config");
+        modelsSettings->userSetSingleModelArguments.push_back("plugin_config");
     }
 
     if (result->count("stateful")) {
         modelsSettings->stateful = result->operator[]("stateful").as<bool>();
-        modelsSettings->singleModelArguments.push_back("stateful");
+        modelsSettings->userSetSingleModelArguments.push_back("stateful");
     }
 
     serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
@@ -315,12 +315,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("idle_sequence_cleanup")) {
         modelsSettings->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
-        modelsSettings->singleModelArguments.push_back("idle_sequence_cleanup");
+        modelsSettings->userSetSingleModelArguments.push_back("idle_sequence_cleanup");
     }
 
     if (result->count("low_latency_transformation")) {
         modelsSettings->lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
-        modelsSettings->singleModelArguments.push_back("low_latency_transformation");
+        modelsSettings->userSetSingleModelArguments.push_back("low_latency_transformation");
     }
 
     if (result->count("log_level"))
@@ -349,7 +349,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("config_path")) {
         modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
-        modelsSettings->singleModelArguments.push_back("config_path");
+        modelsSettings->userSetSingleModelArguments.push_back("config_path");
     }
     serverSettings->startedWithCLI = true;
 }
