@@ -192,8 +192,8 @@ bool HfDownloader::CheckIfTokenSet() {
     return true;
 }
 
-std::string HfDownloader::GetRepositoryUrlWithPassword() {
-    std::string passRepoUrl = "https://";
+void HfDownloader::GetRepositoryUrlWithPassword(std::string& passRepoUrl) {
+    passRepoUrl = "https://";
 
     const char* envCred = std::getenv("HF_TOKEN");
     if (envCred) {
@@ -204,8 +204,6 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
     }
 
     passRepoUrl += this->hfEndpoint + this->sourceModel;
-
-    return passRepoUrl;
 }
 
 void HfDownloader::SetHfEndpoint() {
@@ -258,7 +256,9 @@ int HfDownloader::cloneRepository() {
     SetHfEndpoint();
     UpdateRepoUrl();
     printf("Downloading from url: %s\n", this->repoUrl.c_str());
-    const char* url = GetRepositoryUrlWithPassword().c_str();
+    std::string passRepoUrl;
+    GetRepositoryUrlWithPassword(passRepoUrl);
+    const char* url = passRepoUrl.c_str();
     const char* path = this->repoPath.c_str();
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     printf("\n");

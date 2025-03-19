@@ -49,7 +49,7 @@ private:
 
     void UpdateRepoUrl();
     void SetHfEndpoint();
-    std::string GetRepositoryUrlWithPassword();
+    void GetRepositoryUrlWithPassword(std::string& passRepoUrl);
     bool CheckIfProxySet();
     bool CheckIfTokenSet();
 };
