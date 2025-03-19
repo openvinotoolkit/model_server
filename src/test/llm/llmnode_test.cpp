@@ -31,24 +31,32 @@
 #include <pybind11/embed.h>
 #pragma warning(pop)
 
-#include "../http_rest_api_handler.hpp"
-#include "../http_status_code.hpp"
-#include "../json_parser.hpp"
-#include "../llm/apis/openai_completions.hpp"
-#include "../llm/language_model/continuous_batching/llm_executor.hpp"
-#include "../llm/language_model/continuous_batching/servable.hpp"
-#include "../llm/servable.hpp"
-#include "../llm/servable_initializer.hpp"
-#include "../llm/text_processor.hpp"
-#include "../ov_utils.hpp"
-#include "../server.hpp"
+#include "../../http_rest_api_handler.hpp"
+#include "../../http_status_code.hpp"
+#include "../../json_parser.hpp"
+#include "../../llm/apis/openai_completions.hpp"
+#include "../../llm/language_model/continuous_batching/llm_executor.hpp"
+#include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/servable.hpp"
+#include "../../llm/servable_initializer.hpp"
+#include "../../llm/text_processor.hpp"
+#include "../../ov_utils.hpp"
+#include "../../server.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "test_http_utils.hpp"
-#include "test_utils.hpp"
+#include "../test_http_utils.hpp"
+#include "../test_utils.hpp"
 
 using namespace ovms;
+
+struct TestParameters {
+    std::string modelName;
+    bool generateExpectedOutput;
+    bool checkLogprobs;
+    bool checkFinishReason;
+    bool testSpeculativeDecoding;
+};
 
 class LLMFlowHttpTest : public ::testing::Test {
 protected:
@@ -73,7 +81,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config_llm_dummy_kfs.json").c_str());
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str());
         auto start = std::chrono::high_resolution_clock::now();
         const int numberOfRetries = 5;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
@@ -161,6 +169,7 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // --------------------------------------- OVMS LLM nodes tests
 
 TEST(OpenAiApiHandlerTest, writeLogprobs) {
+    // TODO: remove that skip
     GTEST_SKIP();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -173,15 +182,21 @@ TEST(OpenAiApiHandlerTest, writeLogprobs) {
     }
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
+class LLMFlowHttpTestParameterized : public LLMFlowHttpTest, public ::testing::WithParamInterface<TestParameters> {};
+
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
+    auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
     config.num_beams = 16;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of": 16,
@@ -190,39 +205,59 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJson) {
         }
     )";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
-    int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        ASSERT_FALSE(choice["logprobs"].IsObject());
-        ASSERT_TRUE(choice["text"].IsString());
-        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
-        ASSERT_EQ(choice["index"], i++);
-    }
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of such if...else...
+    if (params.modelName.find("vlm") == std::string::npos) {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::OK);
+        parsedResponse.Parse(response.c_str());
+        ASSERT_TRUE(parsedResponse["choices"].IsArray());
+        ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+        int i = 0;
+        for (auto& choice : parsedResponse["choices"].GetArray()) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["text"].IsString());
+            if (params.generateExpectedOutput) {
+                EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+            }
+            ASSERT_EQ(choice["index"], i++);
+        }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+        ASSERT_TRUE(parsedResponse["usage"].IsObject());
+        ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+        ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+        ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
+        ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+        EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
+        EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+    } else {  // Completions endpoint not supported for VLM servable
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpeculativeDecoding) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     config.max_new_tokens = 10;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
     // Static number of candidates
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "temperature" : 0,
             "max_tokens": 10,
@@ -239,12 +274,15 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    if (params.generateExpectedOutput) {
+        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    }
 
     // Dynamic number of candidates
     requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" +
+                  params.modelName + R"(",
             "stream": false,
             "temperature": 0,
             "max_tokens": 10,
@@ -261,19 +299,30 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSpeculativeDecoding) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    if (params.generateExpectedOutput) {
+        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    }
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+
     config.max_new_tokens = 5;
     config.rng_seed = 1;
     config.num_beams = 16;
     config.echo = true;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of": 16,
@@ -291,10 +340,16 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+        }
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["text"].IsString());
-        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        if (params.generateExpectedOutput) {
+            EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        }
         EXPECT_TRUE(std::string(choice["text"].GetString()).find("What is OpenVINO?") != std::string::npos);
         EXPECT_EQ(std::string(choice["text"].GetString()).rfind("What is OpenVINO?", 0), 0);  // Check if prompt is at the beginning
         ASSERT_EQ(choice["index"], i++);
@@ -305,14 +360,20 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoWithCompletion) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 10,
@@ -321,7 +382,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
         }
     )";
     std::vector<std::string> chunks;
-    ON_CALL(*writer, PartialReply).WillByDefault([this, &chunks](std::string response) {
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &chunks, &params](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -333,17 +394,21 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (choice["finish_reason"].IsString()) {
-                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-            } else {
-                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            if (params.checkFinishReason) {
+                if (choice["finish_reason"].IsString()) {
+                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+                } else {
+                    ASSERT_TRUE(choice["finish_reason"].IsNull());
+                }
             }
             ASSERT_EQ(choice["index"], i++);
-            ASSERT_FALSE(choice["logprobs"].IsObject());
+            if (params.checkLogprobs) {
+                ASSERT_FALSE(choice["logprobs"].IsObject());
+            }
             ASSERT_TRUE(choice["text"].IsString());
             chunks.push_back(std::string(choice["text"].GetString()));
         }
-        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
     });
 
@@ -357,10 +422,16 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoWithCompletion) {
     ASSERT_GT(chunks.size(), 1);
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 0,
             "prompt": "What is OpenVINO?",
@@ -377,18 +448,22 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
 
-        ASSERT_TRUE(choice["logprobs"].IsObject());
-        ASSERT_TRUE(choice["logprobs"].GetObject()["token_logprobs"].IsArray());
-        for (size_t i = 0; i < choice["logprobs"].GetObject()["token_logprobs"].Size(); ++i) {
-            auto& logprob = choice["logprobs"].GetObject()["token_logprobs"][i];
-            if (i == 0) {
-                ASSERT_TRUE(logprob.IsNull());
-            } else {
-                ASSERT_TRUE(logprob.IsFloat());
-                ASSERT_LT(logprob.GetFloat(), 0);
+        if (params.checkLogprobs) {
+            ASSERT_TRUE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["logprobs"].GetObject()["token_logprobs"].IsArray());
+            for (size_t i = 0; i < choice["logprobs"].GetObject()["token_logprobs"].Size(); ++i) {
+                auto& logprob = choice["logprobs"].GetObject()["token_logprobs"][i];
+                if (i == 0) {
+                    ASSERT_TRUE(logprob.IsNull());
+                } else {
+                    ASSERT_TRUE(logprob.IsFloat());
+                    ASSERT_LT(logprob.GetFloat(), 0);
+                }
             }
         }
 
@@ -403,14 +478,20 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonEchoOnly) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
     ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 0,
@@ -418,7 +499,7 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this](std::string response) {
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -430,17 +511,18 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (choice["finish_reason"].IsString()) {
+            if (params.checkFinishReason) {
+                ASSERT_TRUE(choice["finish_reason"].IsString());
                 EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-            } else {
-                ASSERT_TRUE(choice["finish_reason"].IsNull());
             }
             ASSERT_EQ(choice["index"], i++);
-            ASSERT_FALSE(choice["logprobs"].IsObject());
+            if (params.checkLogprobs) {
+                ASSERT_FALSE(choice["logprobs"].IsObject());
+            }
             ASSERT_TRUE(choice["text"].IsString());
             EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
         }
-        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
     });
     ASSERT_EQ(
@@ -448,10 +530,16 @@ TEST_F(LLMFlowHttpTest, streamCompletionsEchoOnly) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "ignore_eos": true,
             "max_tokens": 5,
@@ -468,19 +556,29 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonFinishReasonLength) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["text"].IsString());
     }
-    ASSERT_EQ(parsedResponse["model"], "llmDummyKFS");
+    ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
     ASSERT_EQ(parsedResponse["object"], "text_completion");
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "ignore_eos": false,
             "max_tokens": 1000,
@@ -499,21 +597,31 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonSingleStopString) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["text"].IsString());
         auto text_size = std::string(choice["text"].GetString()).size();
         ASSERT_EQ(choice["text"].GetString()[text_size - 1], '.');
     }
-    ASSERT_EQ(parsedResponse["model"], "llmDummyKFS");
+    ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
     ASSERT_EQ(parsedResponse["object"], "text_completion");
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonNFail) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of": 2,
@@ -527,17 +635,26 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonNFail) {
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
+
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     config.max_new_tokens = 5;
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
     config.echo = false;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?"), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of": 16,
@@ -556,9 +673,16 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["text"].IsString());
-        EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        if (params.generateExpectedOutput) {
+            EXPECT_STREQ(choice["text"].GetString(), expectedMessages[i].c_str());
+        }
         ASSERT_EQ(choice["index"], i++);
     }
     ASSERT_TRUE(parsedResponse["usage"].IsObject());
@@ -566,14 +690,16 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonN) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNFail) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 2,
@@ -593,17 +719,21 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNFail) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
+    auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
     config.num_beams = 16;
     config.num_return_sequences = 8;
     config.echo = false;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 16,
@@ -627,10 +757,17 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkFinishReason) {
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
-        ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[i]);
+        if (params.generateExpectedOutput) {
+            ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[i]);
+        }
         ASSERT_EQ(choice["index"], i++);
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
@@ -640,11 +777,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonN) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
-TEST_F(LLMFlowHttpTest, KFSApiRequestToChatCompletionsGraph) {
+TEST_P(LLMFlowHttpTestParameterized, KFSApiRequestToChatCompletionsGraph) {
+    auto params = GetParam();
     std::string requestBody = R"({
     "inputs" : [
         {
@@ -656,16 +794,18 @@ TEST_F(LLMFlowHttpTest, KFSApiRequestToChatCompletionsGraph) {
     ]
     })";
     std::vector<std::pair<std::string, std::string>> headers;
-    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", "/v2/models/llmDummyKFS/versions/1/infer", headers), ovms::StatusCode::OK);
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", "/v2/models/" + params.modelName + "/versions/1/infer", headers), ovms::StatusCode::OK);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 16,
@@ -687,10 +827,14 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
@@ -701,23 +845,27 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    // Setting lower max new tokens for this test to pass.
-    // For some reason in this test, during second request processing, BOS token is added to the input.
-    // It wasn't reproduced in real life scenario and shall be investigated.
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonSpeculativeDecoding) {
+    auto params = GetParam();
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     config.max_new_tokens = 8;
     config.temperature = 0;
-    ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
-    ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+        ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
+    }
 
     // Static number of candidates
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "temperature": 0,
             "max_tokens": 8,
@@ -740,12 +888,21 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
-    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    }
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+    }
+    if (params.checkLogprobs) {
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+    }
 
     // Dynamic number of candidates
     requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" +
+                  params.modelName + R"(",
             "stream": false,
             "temperature": 0,
             "max_tokens": 8,
@@ -768,13 +925,23 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
     choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
-    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    if (params.generateExpectedOutput) {
+        ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    }
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(choice["finish_reason"].IsString());
+    }
+    if (params.checkLogprobs) {
+        ASSERT_FALSE(choice["logprobs"].IsObject());
+    }
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 16,
@@ -796,10 +963,14 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
@@ -810,14 +981,16 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArray) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "llmDummyKFS");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArrayWithImage) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithImage) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 16,
@@ -831,15 +1004,23 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonContentArrayWithImage) {
         }
     )";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    if (params.modelName.find("vlm") != std::string::npos) {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::OK);
+    } else {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "best_of" : 4,
@@ -864,10 +1045,14 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 4);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
+        if (params.checkFinishReason) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
+        if (params.checkLogprobs) {
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
         auto text_size = std::string(choice["message"]["content"].GetString()).size();
@@ -878,10 +1063,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsJsonNMultipleStopStrings) {
 }
 
 // TODO: Fails no idea why
-TEST_F(LLMFlowHttpTest, DISABLED_unaryChatCompletionsJsonLogprobs) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonLogprobs) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -901,23 +1088,31 @@ TEST_F(LLMFlowHttpTest, DISABLED_unaryChatCompletionsJsonLogprobs) {
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["logprobs"].IsObject());
-        ASSERT_TRUE(choice["logprobs"]["content"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["content"][0].IsObject());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["token"].IsString());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].IsNumber());
-        ASSERT_LE(choice["logprobs"]["content"][0]["logprob"].GetFloat(), 0);
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].Empty());
+        if (params.checkLogprobs) {
+            ASSERT_TRUE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["logprobs"]["content"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["content"][0].IsObject());
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["token"].IsString());
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["logprob"].IsNumber());
+            ASSERT_LE(choice["logprobs"]["content"][0]["logprob"].GetFloat(), 0);
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["bytes"][0].IsInt());
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["content"][0]["top_logprobs"].Empty());
+        }
     }
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsJsonLogprobs) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -932,22 +1127,26 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsJsonLogprobs) {
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["logprobs"].IsObject());
-        ASSERT_TRUE(choice["logprobs"]["text_offset"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["text_offset"][0].IsInt());
-        ASSERT_TRUE(choice["logprobs"]["token_logprobs"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].IsNumber());
-        ASSERT_LE(choice["logprobs"]["token_logprobs"][0].GetFloat(), 0);
-        ASSERT_TRUE(choice["logprobs"]["tokens"].IsArray());
-        ASSERT_TRUE(choice["logprobs"]["tokens"][0].IsString());
-        ASSERT_TRUE(choice["logprobs"]["top_logprobs"].IsArray());
+        if (params.checkLogprobs) {
+            ASSERT_TRUE(choice["logprobs"].IsObject());
+            ASSERT_TRUE(choice["logprobs"]["text_offset"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["text_offset"][0].IsInt());
+            ASSERT_TRUE(choice["logprobs"]["token_logprobs"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["token_logprobs"][0].IsNumber());
+            ASSERT_LE(choice["logprobs"]["token_logprobs"][0].GetFloat(), 0);
+            ASSERT_TRUE(choice["logprobs"]["tokens"].IsArray());
+            ASSERT_TRUE(choice["logprobs"]["tokens"][0].IsString());
+            ASSERT_TRUE(choice["logprobs"]["top_logprobs"].IsArray());
+        }
     }
 }
 
-TEST_F(LLMFlowHttpTest, ChatCompletionsJsonLogprobsStream) {
+TEST_P(LLMFlowHttpTestParameterized, ChatCompletionsJsonLogprobsStream) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "logprobs": true,
             "seed" : 1,
@@ -966,10 +1165,16 @@ TEST_F(LLMFlowHttpTest, ChatCompletionsJsonLogprobsStream) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, CompletionsJsonLogprobsStream) {
+TEST_P(LLMFlowHttpTestParameterized, CompletionsJsonLogprobsStream) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "logprobs": 2,
             "seed" : 1,
@@ -983,10 +1188,12 @@ TEST_F(LLMFlowHttpTest, CompletionsJsonLogprobsStream) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringBadType) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringBadType) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stop": {},
             "seed" : 1,
@@ -1005,10 +1212,12 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringBadType) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsIncludeStopStringInOutputBadType) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsIncludeStopStringInOutputBadType) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stop": "\n\n",
             "include_stop_str_in_output": "yes",
@@ -1028,10 +1237,16 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsIncludeStopStringInOutputBadType) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringElementBadType) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringElementBadType) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stop": [".", "OpenVINO", 1.92],
             "seed" : 1,
@@ -1045,10 +1260,12 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringElementBadType) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringExceedingSize) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stop": ["a", "b", "c", "d", "e"],
             "seed" : 1,
@@ -1067,10 +1284,16 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsStopStringExceedingSize) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringEmpty) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stop": [],
             "seed" : 1,
@@ -1084,10 +1307,16 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStopStringEmpty) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMFlowHttpTest, streamBeamSearchCompletionsFail) {
+TEST_P(LLMFlowHttpTestParameterized, streamBeamSearchCompletionsFail) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "best_of": 2,
             "prompt": "What is OpenVINO?"
@@ -1099,10 +1328,12 @@ TEST_F(LLMFlowHttpTest, streamBeamSearchCompletionsFail) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamBeamSearchChatCompletionsFail) {
+TEST_P(LLMFlowHttpTestParameterized, streamBeamSearchChatCompletionsFail) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "best_of": 2,
             "messages": [
@@ -1119,10 +1350,16 @@ TEST_F(LLMFlowHttpTest, streamBeamSearchChatCompletionsFail) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
+TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStream) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -1130,7 +1367,7 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this](std::string response) {
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1142,16 +1379,20 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (choice["finish_reason"].IsString()) {
-                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-            } else {
-                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            if (params.checkFinishReason) {
+                if (choice["finish_reason"].IsString()) {
+                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+                } else {
+                    ASSERT_TRUE(choice["finish_reason"].IsNull());
+                }
             }
             ASSERT_EQ(choice["index"], i++);
-            ASSERT_FALSE(choice["logprobs"].IsObject());
+            if (params.checkLogprobs) {
+                ASSERT_FALSE(choice["logprobs"].IsObject());
+            }
             ASSERT_TRUE(choice["text"].IsString());
         }
-        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
     });
     ASSERT_EQ(
@@ -1159,10 +1400,12 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStream) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStream) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -1175,7 +1418,7 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
             ]
         }
     )";
-    ON_CALL(*writer, PartialReply).WillByDefault([this](std::string response) {
+    ON_CALL(*writer, PartialReply).WillByDefault([this, &params](std::string response) {
         rapidjson::Document d;
         std::string dataPrefix = "data:";
         ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
@@ -1187,17 +1430,21 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
         ASSERT_EQ(d["choices"].Capacity(), 1);
         int i = 0;
         for (auto& choice : d["choices"].GetArray()) {
-            if (choice["finish_reason"].IsString()) {
-                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
-            } else {
-                ASSERT_TRUE(choice["finish_reason"].IsNull());
+            if (params.checkFinishReason) {
+                if (choice["finish_reason"].IsString()) {
+                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+                } else {
+                    ASSERT_TRUE(choice["finish_reason"].IsNull());
+                }
             }
             ASSERT_EQ(choice["index"], i++);
-            ASSERT_FALSE(choice["logprobs"].IsObject());
+            if (params.checkLogprobs) {
+                ASSERT_FALSE(choice["logprobs"].IsObject());
+            }
             ASSERT_TRUE(choice["delta"].IsObject());
             ASSERT_TRUE(choice["delta"]["content"].IsString());
         }
-        EXPECT_STREQ(d["model"].GetString(), "llmDummyKFS");
+        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(d["object"].GetString(), "chat.completion.chunk");
     });
     ASSERT_EQ(
@@ -1205,10 +1452,12 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStream) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsStreamOptionsSetFail) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStreamOptionsSetFail) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stream_options": { "include_usage": true },
             "seed" : 1,
@@ -1227,10 +1476,16 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsStreamOptionsSetFail) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, unaryCompletionsStreamOptionsSetFail) {
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStreamOptionsSetFail) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "stream_options": { "include_usage": true },
             "seed" : 1,
@@ -1244,10 +1499,12 @@ TEST_F(LLMFlowHttpTest, unaryCompletionsStreamOptionsSetFail) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonLength) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "ignore_eos": true,
             "seed" : 1,
@@ -1271,14 +1528,18 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsFinishReasonLength) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_F(LLMFlowHttpTest, streamChatCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "ignore_eos": false,
@@ -1304,15 +1565,23 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsSingleStopString) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
+    }
     std::regex content_regex("\"content\":\".*\\.[ ]{0,1}\"");
     ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsFinishReasonLength) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "ignore_eos": true,
             "seed" : 1,
@@ -1331,14 +1600,22 @@ TEST_F(LLMFlowHttpTest, streamCompletionsFinishReasonLength) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
 
 // Potential sporadic - move to functional if problematic
-TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "ignore_eos": false,
@@ -1360,15 +1637,19 @@ TEST_F(LLMFlowHttpTest, streamCompletionsSingleStopString) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
+    }
     std::regex content_regex("\"text\":\".*\\.[ ]{0,1}\"");
     ASSERT_TRUE(std::regex_search(responses.back(), content_regex)) << responses.back();
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "include_usage": true },
             "ignore_eos": true,
@@ -1396,13 +1677,21 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "include_usage": true },
             "ignore_eos": true,
@@ -1425,13 +1714,17 @@ TEST_F(LLMFlowHttpTest, streamCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStopStringType) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsBadStopStringType) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stop": {},
             "include_stop_str_in_output": true,
@@ -1461,10 +1754,16 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStopStringType) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsBadStopStringElementType) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsBadStopStringElementType) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stop": ["abc", "def", []],
             "ignore_eos": true,
@@ -1488,10 +1787,12 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadStopStringElementType) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsIncludeStopStrInOutputFalse) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stop": ".",
             "include_stop_str_in_output": false,
@@ -1521,10 +1822,16 @@ TEST_F(LLMFlowHttpTest, streamCompletionsIncludeStopStrInOutputFalse) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsBadIncludeStopStrInOutputType) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stop": ["abc", "def"],
             "include_stop_str_in_output": 1.9,
@@ -1549,10 +1856,12 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeStopStrInOutputType) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsBadStreamOptionsBadType) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": ["include_usage"],
             "ignore_eos": true,
@@ -1581,10 +1890,16 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadStreamOptionsBadType) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsStreamOptionsBadType) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": ["include_usage"],
             "ignore_eos": true,
@@ -1608,10 +1923,12 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadType) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsStreamOptionsBadContent) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "option": "A" },
             "ignore_eos": true,
@@ -1640,10 +1957,16 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsStreamOptionsBadContent) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsStreamOptionsBadContent) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "include_usage": true, "option": "A" },
             "ignore_eos": true,
@@ -1667,10 +1990,12 @@ TEST_F(LLMFlowHttpTest, streamCompletionsStreamOptionsBadContent) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsBadIncludeUsage) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "include_usage": 123 },
             "ignore_eos": true,
@@ -1699,10 +2024,16 @@ TEST_F(LLMFlowHttpTest, streamChatCompletionsBadIncludeUsage) {
         ovms::StatusCode::PARTIAL_END);
 }
 
-TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsBadIncludeUsage) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "stream_options": { "include_usage": 123 },
             "ignore_eos": true,
@@ -1729,10 +2060,12 @@ TEST_F(LLMFlowHttpTest, streamCompletionsBadIncludeUsage) {
 // /v3/chat/completions endpoint
 // unary, gready search
 // Correct payload, however disconnection immediately
-TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) {
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsUnaryClientDisconnectedImmediately) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "seed" : 1,
             "max_tokens": 5,
@@ -1756,10 +2089,12 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsUnaryClientDisconnectedImmediately) 
 // /v3/chat/completions endpoint
 // streaming
 // Correct payload, however disconnection immediately
-TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately) {
+TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsStreamClientDisconnectedImmediately) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -1796,10 +2131,16 @@ TEST_F(LLMFlowHttpTest, inferChatCompletionsStreamClientDisconnectedImmediately)
 // /v3/completions endpoint
 // streaming
 // Correct payload, however disconnection immediately
-TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
+TEST_P(LLMFlowHttpTestParameterized, inferCompletionsStreamClientDisconnectedImmediately) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": true,
             "seed" : 1,
             "max_tokens": 5,
@@ -1828,10 +2169,19 @@ TEST_F(LLMFlowHttpTest, inferCompletionsStreamClientDisconnectedImmediately) {
     ASSERT_EQ(response, "");
 }
 
-const std::string validRequestBodyWithParameter(const std::string& parameter, const std::string& value) {
+INSTANTIATE_TEST_SUITE_P(
+    LLMFlowHttpTestInstances,
+    LLMFlowHttpTestParameterized,
+    ::testing::Values(
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
+        TestParameters{"lm_cb_regular", true, true, true, false},
+        TestParameters{"vlm_cb_regular", false, true, true, false}));
+
+const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + modelName +
+                              R"(",
             "max_tokens": 1,
             ")" + parameter + R"(": )" +
                               value + R"(,
@@ -1847,12 +2197,14 @@ const std::string validRequestBodyWithParameter(const std::string& parameter, co
     return requestBody;
 }
 
-class LLMHttpParametersValidationTest : public LLMFlowHttpTest {};
+class LLMHttpParametersValidationTest : public LLMFlowHttpTest, public ::testing::WithParamInterface<TestParameters> {};
 
-TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
+TEST_P(LLMHttpParametersValidationTest, maxTokensInvalid) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": "INVALID",
             "messages": [
@@ -1869,10 +2221,12 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
+TEST_P(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 4294967296,
             "messages": [
@@ -1889,10 +2243,12 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
+TEST_P(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "ignore_eos": true,
             "max_tokens": 4001,
@@ -1910,10 +2266,12 @@ TEST_F(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
+TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_completion_tokens": "INVALID",
             "messages": [
@@ -1930,10 +2288,12 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
+TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_completion_tokens": 4294967296,
             "messages": [
@@ -1950,10 +2310,12 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
+TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "ignore_eos": true,
             "max_completion_tokens": 4001,
@@ -1971,18 +2333,21 @@ TEST_F(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnor
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, streamInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("stream", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, streamInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "stream", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::JSON_INVALID);
 }
 
-TEST_F(LLMHttpParametersValidationTest, messagesInvalid) {
+TEST_P(LLMHttpParametersValidationTest, messagesInvalid) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1,
             "messages": "What is OpenVINO?"
@@ -1994,10 +2359,12 @@ TEST_F(LLMHttpParametersValidationTest, messagesInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, messagesMissing) {
+TEST_P(LLMHttpParametersValidationTest, messagesMissing) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1
         }
@@ -2008,10 +2375,12 @@ TEST_F(LLMHttpParametersValidationTest, messagesMissing) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, messageNotAnObject) {
+TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1,
             "messages": [
@@ -2025,10 +2394,12 @@ TEST_F(LLMHttpParametersValidationTest, messageNotAnObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, messageNotAString) {
+TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1,
             "messages": [
@@ -2045,10 +2416,12 @@ TEST_F(LLMHttpParametersValidationTest, messageNotAString) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, roleNotAString) {
+TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1,
             "messages": [
@@ -2065,10 +2438,16 @@ TEST_F(LLMHttpParametersValidationTest, roleNotAString) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, promptInvalid) {
+TEST_P(LLMHttpParametersValidationTest, promptInvalid) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1,
             "prompt": 5
@@ -2080,10 +2459,12 @@ TEST_F(LLMHttpParametersValidationTest, promptInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, promptMissing) {
+TEST_P(LLMHttpParametersValidationTest, promptMissing) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "max_tokens": 1
         }
@@ -2094,7 +2475,8 @@ TEST_F(LLMHttpParametersValidationTest, promptMissing) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, modelMissing) {
+TEST_P(LLMHttpParametersValidationTest, modelMissing) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
             "stream": false,
@@ -2113,7 +2495,8 @@ TEST_F(LLMHttpParametersValidationTest, modelMissing) {
         ovms::StatusCode::JSON_INVALID);
 }
 
-TEST_F(LLMHttpParametersValidationTest, modelInvalid) {
+TEST_P(LLMHttpParametersValidationTest, modelInvalid) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
             "model": 0,
@@ -2133,300 +2516,333 @@ TEST_F(LLMHttpParametersValidationTest, modelInvalid) {
         ovms::StatusCode::JSON_INVALID);
 }
 
-TEST_F(LLMHttpParametersValidationTest, ignoreEosValid) {
-    std::string requestBody = validRequestBodyWithParameter("ignore_eos", "false");
+TEST_P(LLMHttpParametersValidationTest, ignoreEosValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "ignore_eos", "false");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, ignoreEosInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("ignore_eos", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, ignoreEosInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "ignore_eos", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("repetition_penalty", "2.0");
+TEST_P(LLMHttpParametersValidationTest, repetitionPenaltyValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "repetition_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("repetition_penalty", "1");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-}
-
-TEST_F(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("repetition_penalty", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, diversityPenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("diversity_penalty", "2.0");
+    requestBody = validRequestBodyWithParameter(params.modelName, "repetition_penalty", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("diversity_penalty", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "repetition_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, lengthPenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("length_penalty", "2.0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-
-    requestBody = validRequestBodyWithParameter("length_penalty", "2");
+TEST_P(LLMHttpParametersValidationTest, diversityPenaltyValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "diversity_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("length_penalty", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "diversity_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, temperatureValid) {
-    std::string requestBody = validRequestBodyWithParameter("temperature", "1.5");
+TEST_P(LLMHttpParametersValidationTest, lengthPenaltyValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "2.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("temperature", "0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-
-    requestBody = validRequestBodyWithParameter("temperature", "2");
+    requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "2");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, temperatureInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("temperature", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, lengthPenaltyInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, temperatureOutOfRange) {
-    std::string requestBody = validRequestBodyWithParameter("temperature", "3.0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "1.5");
+TEST_P(LLMHttpParametersValidationTest, temperatureValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "1.5");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("frequency_penalty", "1");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-}
-
-TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, frequencyPenaltyOutOfRange) {
-    std::string requestBody = validRequestBodyWithParameter("frequency_penalty", "3.0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, presencePenaltyValid) {
-    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "1.5");
+    requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("presence_penalty", "1");
+    requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "2");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, presencePenaltyInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, temperatureInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, presencePenaltyOutOfRange) {
-    std::string requestBody = validRequestBodyWithParameter("presence_penalty", "3.0");
+TEST_P(LLMHttpParametersValidationTest, temperatureOutOfRange) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "3.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, topPValid) {
-    std::string requestBody = validRequestBodyWithParameter("top_p", "0.5");
+TEST_P(LLMHttpParametersValidationTest, frequencyPenaltyValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "frequency_penalty", "1.5");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 
-    requestBody = validRequestBodyWithParameter("top_p", "1");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-}
-
-TEST_F(LLMHttpParametersValidationTest, topPInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("top_p", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, topPOutOfRange) {
-    std::string requestBody = validRequestBodyWithParameter("top_p", "3.0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, topKValid) {
-    std::string requestBody = validRequestBodyWithParameter("top_k", "2");
+    requestBody = validRequestBodyWithParameter(params.modelName, "frequency_penalty", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, topKInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("top_k", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, frequencyPenaltyInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "frequency_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, seedValid) {
-    std::string requestBody = validRequestBodyWithParameter("seed", "1");
+TEST_P(LLMHttpParametersValidationTest, frequencyPenaltyOutOfRange) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "frequency_penalty", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, presencePenaltyValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "presence_penalty", "1.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "presence_penalty", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, seedInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("seed", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, presencePenaltyInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "presence_penalty", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, bestOfValid) {
-    std::string requestBody = validRequestBodyWithParameter("best_of", "1");
+TEST_P(LLMHttpParametersValidationTest, presencePenaltyOutOfRange) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "presence_penalty", "3.0");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, topPValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_p", "0.5");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+
+    requestBody = validRequestBodyWithParameter(params.modelName, "top_p", "1");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, bestOfInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("best_of", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, topPInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_p", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, bestOfNegative) {
-    std::string requestBody = validRequestBodyWithParameter("best_of", "-1");
+TEST_P(LLMHttpParametersValidationTest, topPOutOfRange) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_p", "3.0");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, bestOfExceedsLimit) {
-    std::string requestBody = validRequestBodyWithParameter("best_of", "40");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_F(LLMHttpParametersValidationTest, nValid) {
-    std::string requestBody = validRequestBodyWithParameter("n", "1");
+TEST_P(LLMHttpParametersValidationTest, topKValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "2");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
 }
 
-TEST_F(LLMHttpParametersValidationTest, nInvalid) {
-    std::string requestBody = validRequestBodyWithParameter("n", "\"INVALID\"");
+TEST_P(LLMHttpParametersValidationTest, topKInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "top_k", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, nNegative) {
-    std::string requestBody = validRequestBodyWithParameter("best_of", "-1");
+TEST_P(LLMHttpParametersValidationTest, seedValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, seedInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "seed", "\"INVALID\"");
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, nGreaterThanBestOf) {
+TEST_P(LLMHttpParametersValidationTest, bestOfValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, bestOfInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, bestOfNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, bestOfExceedsLimit) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "40");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, nValid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "n", "1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, nInvalid) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "n", "\"INVALID\"");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, nNegative) {
+    auto params = GetParam();
+    std::string requestBody = validRequestBodyWithParameter(params.modelName, "n", "-1");
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMHttpParametersValidationTest, nGreaterThanBestOf) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "stream": false,
             "best_of" : 1,
             "n" : 2,
@@ -2445,10 +2861,12 @@ TEST_F(LLMHttpParametersValidationTest, nGreaterThanBestOf) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesEmpty) {
+TEST_P(LLMHttpParametersValidationTest, MessagesEmpty) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "max_tokens": 1,
             "messages": []
         }
@@ -2459,10 +2877,12 @@ TEST_F(LLMHttpParametersValidationTest, MessagesEmpty) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesWithEmptyObject) {
+TEST_P(LLMHttpParametersValidationTest, MessagesWithEmptyObject) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "messages": [{}]
         }
     )";
@@ -2472,10 +2892,16 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithEmptyObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, EmptyPrompt) {
+TEST_P(LLMHttpParametersValidationTest, EmptyPrompt) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "prompt": ""
         }
     )";
@@ -2485,10 +2911,12 @@ TEST_F(LLMHttpParametersValidationTest, EmptyPrompt) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
+TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "messages": [{"role": "abc"}]
         }
     )";
@@ -2498,10 +2926,19 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvided) {
+TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvided) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "prompt": "hello",
             "num_assistant_tokens": 5,
             "assistant_confidence_threshold": 0.5
@@ -2513,10 +2950,15 @@ TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersPr
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvidedChat) {
+TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersProvidedChat) {
+    auto params = GetParam();
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "messages": [{"content": "def"}],
             "num_assistant_tokens": 5,
             "assistant_confidence_threshold": 0.5
@@ -2528,10 +2970,19 @@ TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingExclusiveParametersPr
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
+TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "prompt": "hello"
         }
     )";
@@ -2541,10 +2992,15 @@ TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParameter
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvidedChat) {
+TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvidedChat) {
+    auto params = GetParam();
+    if (!params.testSpeculativeDecoding) {
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
-            "model": "llmDummySpeculativePipeline",
+            "model": ")" + params.modelName +
+                              R"(",
             "messages": [{"content": "def"}]
         }
     )";
@@ -2554,10 +3010,12 @@ TEST_F(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParameter
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
+TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "max_tokens": 1,
             "messages": [{"content": "def"}]
         }
@@ -2565,13 +3023,15 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithOnlyContent) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_F(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
+TEST_P(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
+    auto params = GetParam();
     std::string requestBody = R"(
         {
-            "model": "llmDummyKFS",
+            "model": ")" + params.modelName +
+                              R"(",
             "max_tokens": 1,
             "messages": [{"role": "123", "content": "def", "unexpected": "123"}]
         }
@@ -2582,6 +3042,15 @@ TEST_F(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
         ovms::StatusCode::OK);
 }
 
+INSTANTIATE_TEST_SUITE_P(
+    LLMHttpParametersValidationTestInstances,
+    LLMHttpParametersValidationTest,
+    ::testing::Values(
+        // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
+        TestParameters{"lm_cb_regular", true, true, true, false},
+        TestParameters{"vlm_cb_regular", false, true, true, false}));
+
+// Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
 public:
     void SetUp() { py::initialize_interpreter(); }
@@ -2841,7 +3310,14 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
 }
 
-TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
+class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
+public:
+    void SetUp() { py::initialize_interpreter(); }
+    void TearDown() { py::finalize_interpreter(); }
+};
+
+TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
+    auto [pipelineType, expectedStatusCode] = GetParam();
     ConstructorEnabledModelManager manager;
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -2861,7 +3337,9 @@ TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/"
+                models_path: "/",
+                pipeline_type: )" +
+                            pipelineType + R"(
             }
         }
         input_stream_handler {
@@ -2880,17 +3358,28 @@ TEST_F(LLMConfigHttpTest, LLMNodeResourceInitFailed) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    ASSERT_EQ(mediapipeDummy.validate(manager), expectedStatusCode);
     ASSERT_EQ(mediapipeDummy.getGenAiServable("llmNode"), nullptr);
 }
 
-class LLMOptionsHttpTest : public ::testing::Test {
+INSTANTIATE_TEST_SUITE_P(
+    LLMConfigHttpTestInstances,
+    LLMConfigHttpTestParameterized,
+    // For VLM, directory contents are checked in pipeline selection logic,
+    // before pipeline initialization, hence INTERNAL_ERROR not LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED
+    // We might want to consider unification of error codes in the future
+    ::testing::Values(
+        std::make_tuple("TEXT_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
+        std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR)));
+
+class LLMOptionsHttpTest : public ::testing::TestWithParam<std::string> {
 public:
     void SetUp() { py::initialize_interpreter(); }
     void TearDown() { py::finalize_interpreter(); }
 };
 
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
+TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
+    std::string modelsPath = GetParam();
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -2909,7 +3398,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                models_path: ")" +
+                            modelsPath + R"("
             }
         }
         input_stream_handler {
@@ -2939,7 +3429,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(properties->pluginConfig.size(), 0);
 }
 
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
+TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
+    std::string modelsPath = GetParam();
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -2958,7 +3449,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                models_path: ")" +
+                            modelsPath + R"("
                 max_num_batched_tokens: 98
                 cache_size: 1
             }
@@ -2988,7 +3480,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
 }
 
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
+TEST_P(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
+    std::string modelsPath = GetParam();
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3007,7 +3500,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                models_path: ")" +
+                            modelsPath + R"("
                 cache_size: 1
                 plugin_config: "[PERF_COUNT=TRUE]"
             }
@@ -3031,7 +3525,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
 
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    std::string modelsPath = GetParam();
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3050,7 +3545,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                models_path: ")" +
+                            modelsPath + R"("
                 plugin_config: '{"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1"}'
             }
         }
@@ -3080,7 +3576,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     ASSERT_EQ(properties->pluginConfig["NUM_STREAMS"], "1");
 }
 
-TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
+TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
+    std::string modelsPath = GetParam();
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3099,7 +3596,8 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+                models_path: ")" +
+                            modelsPath + R"("
                 max_num_batched_tokens: 1024
                 cache_size: 1
                 max_num_seqs: 95
@@ -3137,6 +3635,7 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(properties->bestOfLimit, 3);
 }
 
+// Speculative decoding is not supported in VLM pipelines, currently not using parameters for this test
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -3178,6 +3677,13 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    LLMOptionsHttpTestInstances,
+    LLMOptionsHttpTest,
+    ::testing::Values(
+        "/ovms/src/test/llm_testing/facebook/opt-125m",         // TEXT and TEXT_CB
+        "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"));  // VLM and VLM_CB
 
 class GetPromptTokensString : public ::testing::Test {
 public:
