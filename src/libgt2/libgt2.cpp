@@ -16,6 +16,7 @@
 #include "libgt2.hpp"
 
 #include <string>
+#include <memory>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -25,6 +26,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include "../stringutils.hpp"
 
 #ifndef PRIuZ
 /* Define the printf format specifier to use for size_t output */
@@ -40,6 +43,7 @@ extern "C" {
 
 namespace ovms {
 
+// C-style callback functions section used in libgt2 library STARTS ********************************
 typedef struct progress_data {
     git_indexer_progress fetch_progress;
     size_t completed_steps;
@@ -95,6 +99,8 @@ static void checkout_progress(const char* path, size_t cur, size_t tot, void* pa
     print_progress(pd);
 }
 
+// Callback for clone authentication - will be used when password is not set in repo_url
+// Does not work with LFS download as it requires additional authentication when password is not set in repository url
 int cred_acquire_cb(git_credential** out,
     const char* url,
     const char* username_from_url,
@@ -138,58 +144,101 @@ int cred_acquire_cb(git_credential** out,
     return error;
 }
 
+// C-style callback functions section used in libgt2 library ENDS ********************************
+
+class Libgt2InitGuard {
+public:
+    int status;
+    std::string errMsg;
+    Libgt2InitGuard()
+    { 
+        this->status = git_libgit2_init();
+        if (this->status < 0) {
+            const git_error* err = git_error_last();
+            const char* msg = err ? err->message : "unknown failure";
+            errMsg = std::string(msg);
+        } else {
+            errMsg = "";
+        }
+    }
+    ~Libgt2InitGuard() {
+        git_libgit2_shutdown();
+    }
+};
+
+void HfDownloader::setSourceModel(std::string inSourceModel) {
+    this->sourceModel = inSourceModel;
+}
+void HfDownloader::setRepositoryPath(std::string inRepoPath) {
+    this->repoPath = inRepoPath;
+}
+void HfDownloader::setPullHfModelMode(bool isOn) {
+    this->pullHfModelMode = isOn;
+}
+bool HfDownloader::isPullHfModelModeOn() {
+    return this->pullHfModelMode;
+}
+    
 bool HfDownloader::CheckIfProxySet() {
-    const char* env_cred = std::getenv("https_proxy");
-    if (!env_cred)
+    const char* envCred = std::getenv("https_proxy");
+    if (!envCred)
         return false;
     return true;
 }
 
 bool HfDownloader::CheckIfTokenSet() {
-    const char* env_cred = std::getenv("HF_TOKEN");
-    if (!env_cred)
+    const char* envCred = std::getenv("HF_TOKEN");
+    if (!envCred)
         return false;
     return true;
 }
 
-std::string HfDownloader::GetHfEndpoint() {
-    const char* env_cred = std::getenv("HF_ENDPOINT");
-    std::string hf_endpoint = "huggingface.co";
-    if (env_cred) {
-        hf_endpoint = std::string(env_cred);
-    }
-    return hf_endpoint;
-}
+std::string HfDownloader::GetRepositoryUrlWithPassword() {
+    std::string passRepoUrl = "https://";
 
-std::string HfDownloader::GetRepoUrl(std::string& hf_endpoint, std::string& hf_model) {
-    std::string repo_url = "https://";
-
-    std::string hf_token
-    const char* env_cred = std::getenv("HF_TOKEN");
-    if (env_cred) {
-        std::string cred = std::string(env_cred);
-        repo_url += repo_url + cred + ":" + cred + "@";
+    const char* envCred = std::getenv("HF_TOKEN");
+    if (envCred) {
+        std::string cred = std::string(envCred);
+        passRepoUrl += cred + ":" + cred + "@";
+    } else {
+        printf("Info: HF_TOKEN environemt variable not set.\n");
     }
 
-    repo_url +=
+    passRepoUrl += this->hfEndpoint + this->sourceModel;
 
+    return passRepoUrl;
 }
 
-int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path) {
-    int res = git_libgit2_init();
-    if (res < 0) {
-        const git_error* err = git_error_last();
-        const char* msg = err ? err->message : "unknown failure";
-        fprintf(stderr, "failed to init libgit2: %s\n", msg);
-        return res;
+void HfDownloader::SetHfEndpoint() {
+    const char* envCred = std::getenv("HF_ENDPOINT");
+    this->hfEndpoint = "huggingface.co";
+    if (envCred) {
+        this->hfEndpoint = std::string(envCred);
+    } else {
+        printf("Info: HF_ENDPOINT environemt variable not set.\n");
+    }
+
+    if (!endsWith(this->hfEndpoint, "/")) {
+        this->hfEndpoint.append("/");
+    }
+}
+
+void HfDownloader::UpdateRepoUrl() {
+    this->repoUrl = "https://";
+    this->repoUrl += this->hfEndpoint + this->sourceModel;
+}
+
+int HfDownloader::cloneRepository() {
+    std::unique_ptr<Libgt2InitGuard> initGuard = std::make_unique<Libgt2InitGuard>();
+    if (initGuard->status < 0) {
+        fprintf(stderr, "Failed to init libgit2: %s\n", initGuard->errMsg.c_str());
+        return initGuard->status;
     }
 
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-    const char* url = repo_url.c_str();
-    const char* path = repo_path.c_str();
 
     /* Set up options */
     checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
@@ -207,13 +256,11 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
         clone_opts.fetch_opts.proxy_opts.url = std::getenv("https_proxy");
     }
 
-    if (!CheckIfTokenSet()) {
-        printf("Info: HF_TOKEN environemt variable not set.\n");
-    } else {
-        // Add credentails to url
-    }
-
-    /* Do the clone */
+    SetHfEndpoint();
+    UpdateRepoUrl();
+    printf("Downloading from url: %s\n", this->repoUrl.c_str());
+    const char* url = GetRepositoryUrlWithPassword().c_str();
+    const char* path = this->repoPath.c_str();
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     printf("\n");
     if (error != 0) {
@@ -226,8 +273,6 @@ int HfDownloader::cloneRepository(std::string& repo_url, std::string& repo_path)
         git_repository_free(cloned_repo);
     }
 
-    // TODO: Create guard on init and shutdown
-    git_libgit2_shutdown();
     return error;
 }
 

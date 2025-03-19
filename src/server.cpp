@@ -388,8 +388,9 @@ int Server::start(int argc, char** argv) {
         parser.parse(argc, argv);
         parser.prepare(&serverSettings, &modelsSettings, &hfDownloader);
 
-        if (hfDownloader.pull_hf_model) {
-            return hfDownloader.cloneRepository(hfDownloader.source_model, hfDownloader.repo_path);
+        if (hfDownloader.isPullHfModelModeOn()) {
+            SPDLOG_INFO("OpenVino Model Server started in huggingface.co download mode.");
+            return hfDownloader.cloneRepository();
         }
 
         Status ret = start(&serverSettings, &modelsSettings);

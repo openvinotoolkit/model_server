@@ -34,15 +34,24 @@ namespace ovms {
 
 class HfDownloader {
 public:
-    int cloneRepository(std::string& hf_model, std::string& repo_path);
-    std::string source_model;
-    std::string repo_path;
-    bool pull_hf_model;
-    std::string endpoint;
+    int cloneRepository();
+    void setSourceModel(std::string inSourceModel);
+    void setRepositoryPath(std::string inRepoPath);
+    void setPullHfModelMode(bool isOn);
+	bool isPullHfModelModeOn();
 
 private:
+    std::string sourceModel;
+    std::string repoPath;
+    bool pullHfModelMode;
+    std::string hfEndpoint;
+    std::string repoUrl;
+    
+    void UpdateRepoUrl();
+    void SetHfEndpoint();
+    std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
-	bool CheckIfTokenSet();
+    bool CheckIfTokenSet();
 };
 
 }  // namespace ovms

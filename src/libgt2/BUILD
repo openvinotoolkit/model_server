@@ -31,7 +31,10 @@ cc_library(
     name = "libgt2",
     srcs = ["libgt2.cpp"],
     hdrs = ["libgt2.hpp"],
-    deps =  ["@libgt2_engine//:libgt2_engine"],
+    deps =  [
+        "@libgt2_engine//:libgt2_engine",
+        "@ovms//src:libovmsstring_utils"
+    ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
