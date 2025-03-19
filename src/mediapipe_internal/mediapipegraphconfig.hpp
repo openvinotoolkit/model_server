@@ -23,6 +23,9 @@
 
 namespace ovms {
 
+extern const std::string DEFAULT_GRAPH_FILENAME;
+extern const std::string DEFAULT_SUBCONFIG_FILENAME;
+
 class Status;
 
 /**

@@ -51,6 +51,9 @@ public:
     ServerSettingsImpl getServerSettings() {
         return serverSettings;
     }
+    ModelsSettingsImpl& getModelSettings() {
+        return modelsSettings;
+    }
     /**
          * @brief Gets the instance of the config
          */
