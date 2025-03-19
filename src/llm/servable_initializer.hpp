@@ -31,10 +31,10 @@ namespace ovms {
 
 // Defines what servable type should be initialized based on the pipeline type
 enum class PipelineType {
-    TEXT,     // Single modality (text only), text generation based on LLMPipeline
-    VLM,      // Multimodal (text and image), text generation based on LLMPipeline
-    TEXT_CB,  // Single modality (text only), text generation based on ContinuousBatchingPipeline
-    VLM_CB,   // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
+    LM,      // Single modality (text only), text generation based on LLMPipeline
+    VLM,     // Multimodal (text and image), text generation based on LLMPipeline
+    LM_CB,   // Single modality (text only), text generation based on ContinuousBatchingPipeline
+    VLM_CB,  // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
 
     // Note that *_CB pipelines do not support execution on NPU
 };

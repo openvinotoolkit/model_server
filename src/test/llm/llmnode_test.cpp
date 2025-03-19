@@ -307,7 +307,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpeculativeDecoding) {
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
-    if (params.modelName.find("vlm") != std::string::npos) {
+    if (params.modelName.find("vlm") != std::string::npos || params.modelName.find("legacy") != std::string::npos) {
+        // VLM does not support completions endpoint and legacy servables do not support echo
         GTEST_SKIP();
     }
 
@@ -367,7 +368,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
-    if (params.modelName.find("vlm") != std::string::npos) {
+    if (params.modelName.find("vlm") != std::string::npos || params.modelName.find("legacy") != std::string::npos) {
+        // VLM does not support completions endpoint and legacy servables do not support echo
         GTEST_SKIP();
     }
     std::string requestBody = R"(
@@ -425,7 +427,8 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
-    if (params.modelName.find("vlm") != std::string::npos) {
+    if (params.modelName.find("vlm") != std::string::npos || params.modelName.find("legacy") != std::string::npos) {
+        // VLM does not support completions endpoint and legacy servables do not support echo
         GTEST_SKIP();
     }
     std::string requestBody = R"(
@@ -477,7 +480,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
+    if (params.checkLogprobs) {
+        ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
+    }
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
 }
@@ -485,7 +490,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
-    if (params.modelName.find("vlm") != std::string::npos) {
+    if (params.modelName.find("vlm") != std::string::npos || params.modelName.find("legacy") != std::string::npos) {
+        // VLM does not support completions endpoint and legacy servables do not support echo
         GTEST_SKIP();
     }
     std::string requestBody = R"(
@@ -499,35 +505,58 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
             "prompt": "What is OpenVINO?"
         }
     )";
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params](std::string response) {
-        rapidjson::Document d;
-        std::string dataPrefix = "data:";
-        ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
-        size_t pos = response.find("\n");
-        ASSERT_NE(pos, response.npos);
-        rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
-        ASSERT_EQ(parsingSucceeded.Code(), 0);
-        ASSERT_TRUE(d["choices"].IsArray());
-        ASSERT_EQ(d["choices"].Capacity(), 1);
-        int i = 0;
-        for (auto& choice : d["choices"].GetArray()) {
-            if (params.checkFinishReason) {
-                ASSERT_TRUE(choice["finish_reason"].IsString());
-                EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+
+    if (params.modelName.find("legacy") == std::string::npos) {
+        EXPECT_CALL(*writer, PartialReply(::testing::_)).WillOnce([this, &params](std::string response) {
+            rapidjson::Document d;
+            std::string dataPrefix = "data:";
+            ASSERT_STREQ(response.substr(0, dataPrefix.size()).c_str(), dataPrefix.c_str());
+            size_t pos = response.find("\n");
+            ASSERT_NE(pos, response.npos);
+            rapidjson::ParseResult parsingSucceeded = d.Parse(response.substr(dataPrefix.size(), (pos - dataPrefix.size())).c_str());
+            ASSERT_EQ(parsingSucceeded.Code(), 0);
+            ASSERT_TRUE(d["choices"].IsArray());
+            ASSERT_EQ(d["choices"].Capacity(), 1);
+            int i = 0;
+            for (auto& choice : d["choices"].GetArray()) {
+                if (params.checkFinishReason) {
+                    ASSERT_TRUE(choice["finish_reason"].IsString());
+                    EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+                }
+                ASSERT_EQ(choice["index"], i++);
+                if (params.checkLogprobs) {
+                    ASSERT_FALSE(choice["logprobs"].IsObject());
+                }
+                ASSERT_TRUE(choice["text"].IsString());
+                EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
             }
-            ASSERT_EQ(choice["index"], i++);
-            if (params.checkLogprobs) {
-                ASSERT_FALSE(choice["logprobs"].IsObject());
+            EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
+            EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
+        });
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::PARTIAL_END);
+    } else {
+        // In legacy servable streaming with echo, prompt can be sent back in multiple chunks
+        std::vector<std::string> responses;
+        EXPECT_CALL(*writer, PartialReply(::testing::_))
+            .WillRepeatedly([this, &responses](std::string response) {
+                responses.push_back(response);
+            });
+        EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+            ovms::StatusCode::PARTIAL_END);
+        std::string mergedContent;
+        for (const auto& response : responses) {
+            std::regex content_regex("\"text\":\"(.*?)\"");
+            std::smatch match;
+            if (std::regex_search(response, match, content_regex)) {
+                mergedContent += match[1].str();
             }
-            ASSERT_TRUE(choice["text"].IsString());
-            EXPECT_STREQ(choice["text"].GetString(), "What is OpenVINO?");
         }
-        EXPECT_STREQ(d["model"].GetString(), params.modelName.c_str());
-        EXPECT_STREQ(d["object"].GetString(), "text_completion.chunk");
-    });
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::PARTIAL_END);
+        EXPECT_EQ(mergedContent, "What is OpenVINO?");
+    }
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
@@ -1569,7 +1598,13 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
     std::regex content_regex("\"content\":\".*\\.[ ]{0,1}\"");
-    ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+    if (params.modelName.find("legacy") != std::string::npos) {
+        // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
+        // Because of that, we might get additional response with empty content at the end of the stream.
+        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+    } else {
+        ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+    }
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
@@ -1641,7 +1676,13 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
     std::regex content_regex("\"text\":\".*\\.[ ]{0,1}\"");
-    ASSERT_TRUE(std::regex_search(responses.back(), content_regex)) << responses.back();
+    if (params.modelName.find("legacy") != std::string::npos) {
+        // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
+        // Because of that, we might get additional response with empty content at the end of the stream.
+        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
+    } else {
+        ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+    }
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
@@ -2062,6 +2103,10 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsBadIncludeUsage) {
 // Correct payload, however disconnection immediately
 TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsUnaryClientDisconnectedImmediately) {
     auto params = GetParam();
+    if (params.modelName.find("legacy") != std::string::npos) {
+        // TODO: Disconnection logic should probably be adjusted for legacy servable streaming
+        GTEST_SKIP();
+    }
     std::string requestBody = R"(
         {
             "model": ")" + params.modelName +
@@ -2175,6 +2220,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
+        TestParameters{"lm_legacy_regular", false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false}));
 
 const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
@@ -3048,6 +3094,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
+        TestParameters{"lm_legacy_regular", false, false, false, false},
         TestParameters{"vlm_cb_regular", false, true, true, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
@@ -3369,9 +3416,12 @@ INSTANTIATE_TEST_SUITE_P(
     // before pipeline initialization, hence INTERNAL_ERROR not LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED
     // We might want to consider unification of error codes in the future
     ::testing::Values(
-        std::make_tuple("TEXT_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
+        std::make_tuple("LM_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
+        std::make_tuple("LM", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
         std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR)));
 
+// Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
+// We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTest : public ::testing::TestWithParam<std::string> {
 public:
     void SetUp() { py::initialize_interpreter(); }
@@ -3682,7 +3732,7 @@ INSTANTIATE_TEST_SUITE_P(
     LLMOptionsHttpTestInstances,
     LLMOptionsHttpTest,
     ::testing::Values(
-        "/ovms/src/test/llm_testing/facebook/opt-125m",         // TEXT and TEXT_CB
+        "/ovms/src/test/llm_testing/facebook/opt-125m",         // LM and LM_CB
         "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"));  // VLM and VLM_CB
 
 class GetPromptTokensString : public ::testing::Test {

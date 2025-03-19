@@ -130,6 +130,11 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
+        if (!lastTextChunk.empty()) {
+            auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
+            auto numTokens = tokensTensor.get_size();
+            executionContext->apiHandler->incrementProcessedTokens(numTokens);
+        }
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
@@ -150,7 +155,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", lastTextChunk);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
         return absl::OkStatus();
     }
