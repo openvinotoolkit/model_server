@@ -874,6 +874,89 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     return buffer.GetString();
 }
 
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results) {  // TODO separate common part with function implemented above
+    OVMS_PROFILE_FUNCTION();
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+
+    writer.StartObject();  // {
+
+    // choices: array of size N, where N is related to n request parameter
+    writer.String("choices");
+    writer.StartArray();  // [
+    int index = 0;
+    usage.completionTokens = 0;
+    for (int i = 0; i < results.texts.size(); i++) {
+        const std::string& texts = results.texts[i];
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        writer.StartObject();  // {
+        writer.String("finish_reason");
+        writer.String("stop");
+        // index: integer; Choice index, only n=1 supported anyway
+        writer.String("index");
+        writer.Int(index++);
+        // logprobs: object/null; Log probability information for the choice. TODO
+        // message: object
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            writer.String("message");
+            writer.StartObject();  // {
+            // content: string; Actual content of the text produced
+            writer.String("content");
+            writer.String(texts.c_str());
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String("role");
+            writer.String("assistant");  // TODO - hardcoded
+            // TODO: tools_call
+            // TODO: function_call (deprecated)
+            writer.EndObject();  // }
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            writer.String("text");
+            writer.String(texts.c_str());
+        }
+
+        writer.EndObject();  // }
+    }
+    writer.EndArray();  // ]
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    writer.String("created");
+    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+
+    // model: string; copied from the request
+    writer.String("model");
+    writer.String(request.model.c_str());
+
+    // object: string; defined that the type is unary rather than streamed chunk
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion");
+    }
+
+    writer.String("usage");
+    writer.StartObject();  // {
+    writer.String("prompt_tokens");
+    writer.Int(usage.promptTokens);
+    writer.String("completion_tokens");
+    writer.Int(usage.completionTokens);
+    writer.String("total_tokens");
+    writer.Int(usage.calculateTotalTokens());
+    writer.EndObject();  // }
+
+    // TODO
+    // id: string; A unique identifier for the chat completion.
+
+    // TODO
+    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    writer.EndObject();  // }
+    return buffer.GetString();
+}
+
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
