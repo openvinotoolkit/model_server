@@ -132,6 +132,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
         executionContext->lastStreamerCallbackOutput = "";
     }
+    if (!lastTextChunk.empty()) {
+        auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
+        auto numTokens = tokensTensor.get_size();
+        executionContext->apiHandler->incrementProcessedTokens(numTokens);
+    }
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
             executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE));

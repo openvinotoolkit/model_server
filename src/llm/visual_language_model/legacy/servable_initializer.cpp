@@ -70,9 +70,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return status;
     }
 
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+    properties->pluginConfig["ATTENTION_BACKEND"] = "SDPA";
     try {
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device);
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
