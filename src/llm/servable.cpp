@@ -84,29 +84,30 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::InternalError("This servable supports only text input, but image_url has been provided");
     }
 
+    std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
         bool success;
         if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), executionContext->inputText);
+            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
         } else {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->payload.body, executionContext->inputText);
+            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
         }
         if (!success) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, executionContext->inputText);
+            return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
         }
-        if (executionContext->inputText.size() == 0) {
+        if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
         break;
     }
     case Endpoint::COMPLETIONS: {
-        executionContext->inputText = executionContext->apiHandler->getPrompt().value();
+        inputText = executionContext->apiHandler->getPrompt().value();
     }
     }
 
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
-    executionContext->inputIds = getProperties()->tokenizer.encode(executionContext->inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
+    executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
