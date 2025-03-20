@@ -33,6 +33,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::mutex mutex;
     std::vector<ov::Tensor> inputImages;
     std::condition_variable executionInProgress;
+    std::string inputText;
 };
 
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
