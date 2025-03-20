@@ -244,6 +244,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 return status;
             }
         } else if (pipelineType == PipelineType::VLM) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Legacy servable");
             VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
             status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
