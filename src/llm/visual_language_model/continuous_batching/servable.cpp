@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "../../logging.hpp"
+#include "../../../logging.hpp"
 
 namespace ovms {
 
