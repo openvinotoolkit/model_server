@@ -33,6 +33,18 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
     return absl::OkStatus();
 }
 
+absl::Status VisualLanguageModelServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
+        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else {
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+    }
+    executionContext->payload = payload;
+    return absl::OkStatus();
+}
+
 std::shared_ptr<GenAiServableExecutionContext> VisualLanguageModelServable::createExecutionContext() {
     return std::make_shared<VisualLanguageModelServableExecutionContext>();
 }
@@ -57,17 +69,13 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         for (const auto& image : imageHistory) {
             const auto& [chatTurnIndex, imageTensor] = image;
             std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
-                chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];
-            } else {
-                chatHistory[chatTurnIndex]["content"] = imageTag;
-            }
+            chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];
             vlmExecutionContext->inputImages.push_back(imageTensor);
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-    } else if (executionContext->endpoint == Endpoint::COMPLETIONS) {
-        vlmExecutionContext->inputText = vlmExecutionContext->apiHandler->getPrompt().value();
+    } else {
+        return absl::InvalidArgumentError("Unsupported endpoint");
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.
