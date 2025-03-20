@@ -35,6 +35,9 @@ ${debug_bazel_flags} \
 LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
+echo "RUN_GPU_TESTS"
+echo $RUN_GPU_TESTS
+
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
     if grep -q "ID=ubuntu" /etc/os-release; then
@@ -73,7 +76,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         set +x
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
         for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
-            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
+            if bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=all --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
                 failed=1
@@ -83,7 +86,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             cat tmp.log >> ${TEST_LOG}
         done
         for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep '^  '` ; do
-            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
+            if bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=all --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
                 failed=1
@@ -101,7 +104,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         fi
     else
         # For RH UBI and Ubuntu20
-        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
             failed=1
         fi
         cat ${TEST_LOG} | tail -500
