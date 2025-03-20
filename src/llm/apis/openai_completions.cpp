@@ -273,7 +273,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
@@ -534,6 +534,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("assistant_confidence_threshold must be greater than 0");
         }
     }
+    request.maxModelLength = maxModelLength;
 
     // use_beam_search: bool; optional - defaults to false
     // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
@@ -577,8 +578,8 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
-    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline);
+absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength);
 
     if (status != absl::OkStatus())
         return status;

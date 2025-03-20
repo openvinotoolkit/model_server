@@ -86,6 +86,7 @@ struct GenAiServableProperties {
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     TextProcessor textProcessor;
+    std::optional<uint32_t> maxModelLength;
 };
 
 class GenAiServable {
