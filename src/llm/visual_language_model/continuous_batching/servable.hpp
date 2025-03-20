@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
+#include <openvino/genai/visual_language/pipeline.hpp>
 
-#include "../language_model/continuous_batching/servable.hpp"
+#include "../../language_model/continuous_batching/servable.hpp"
 
 namespace ovms {
 

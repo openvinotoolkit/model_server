@@ -94,9 +94,11 @@ cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp", "servable_initializer.hpp", 
             "language_model/continuous_batching/servable.hpp", "language_model/continuous_batching/llm_executor.hpp", "language_model/continuous_batching/servable_initializer.hpp",
-            "visual_language_model/servable.hpp", "language_model/legacy/servable.hpp", "language_model/legacy/servable_initializer.hpp", "language_model/legacy/legacy_executor.hpp",],
+            "visual_language_model/continuous_batching/servable.hpp", "language_model/legacy/servable.hpp", "language_model/legacy/servable_initializer.hpp", "language_model/legacy/legacy_executor.hpp",
+            "visual_language_model/legacy/servable.hpp", "visual_language_model/legacy/servable_initializer.hpp", "visual_language_model/legacy/legacy_executor.hpp"],
     srcs = ["servable.cpp", "servable_initializer.cpp", "language_model/continuous_batching/servable.cpp", "language_model/continuous_batching/servable_initializer.cpp",
-            "visual_language_model/servable.cpp", "language_model/legacy/servable.cpp", "language_model/legacy/servable_initializer.cpp", "language_model/legacy/legacy_executor.cpp"],
+            "visual_language_model/continuous_batching/servable.cpp", "language_model/legacy/servable.cpp", "language_model/legacy/servable_initializer.cpp", "language_model/legacy/legacy_executor.cpp",
+            "visual_language_model/legacy/servable.cpp", "visual_language_model/legacy/servable_initializer.cpp", "visual_language_model/legacy/legacy_executor.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
