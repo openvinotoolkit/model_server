@@ -31,6 +31,7 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     std::future<void> finished = readySignal.get_future();
     std::mutex mutex;
     std::condition_variable executionInProgress;
+    std::string errorMessage;
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {

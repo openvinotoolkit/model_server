@@ -98,6 +98,9 @@ absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiS
         return absl::CancelledError();
     }
     legacyExecutionContext->finished.wait();
+    if(legacyExecutionContext->errorMessage.size() > 0){
+        return absl::InvalidArgumentError(legacyExecutionContext->errorMessage);
+    }
     return absl::OkStatus();
 }
 
@@ -144,6 +147,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
+        if(legacyExecutionContext->errorMessage.size() > 0){
+            return absl::InvalidArgumentError(legacyExecutionContext->errorMessage);
+        }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually

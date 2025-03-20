@@ -33,9 +33,13 @@ bool LegacyExecutor::requestsQueueSize() {
 void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
-    pipe->start_chat();
-    requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
-    pipe->finish_chat();
+    try {
+        pipe->start_chat();
+        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+        pipe->finish_chat();
+    } catch (std::exception& e) {
+        requests.front()->errorMessage = e.what();
+    }
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     requests.front()->readySignal.set_value();
     requests.front()->executionInProgress.notify_one();
