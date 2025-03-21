@@ -19,7 +19,8 @@ pipeline {
                           windows.build_and_test()
                           windows.check_tests()
                         } finally {
-                          windows.archive_artifacts()
+                          windows.archive_build_artifacts()
+                          windows.archive_test_artifacts()
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
