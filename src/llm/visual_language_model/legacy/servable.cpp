@@ -38,6 +38,18 @@
 
 namespace ovms {
 
+absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
+        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else {
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+    }
+    executionContext->payload = payload;
+    return absl::OkStatus();
+}
+
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> VisualLanguageModelLegacyServable::createExecutionContext() {
     return std::make_shared<VisualLanguageModelLegacyServableExecutionContext>();
@@ -109,7 +121,13 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    size_t completionTokens = 0;
+    for (std::string text : legacyExecutionContext->results.texts) {
+        auto tokensTensor = properties->tokenizer.encode(text, ov::genai::add_special_tokens(false)).input_ids;
+        completionTokens += tokensTensor.get_size();
+    }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated tokens number: {}", completionTokens);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completionTokens);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
