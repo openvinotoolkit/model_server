@@ -2783,7 +2783,7 @@ cc_test(
         "test/llm/lm_cb_speculative.pbtxt",
         "test/llm/visual_language_model/config.json",
         "test/llm/visual_language_model/vlm_cb_regular.pbtxt",
-        "test/llm/visual_language_model/vlm_legacy_regular.pbtxt"
+        "test/llm/visual_language_model/vlm_legacy_regular.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
