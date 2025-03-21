@@ -33,7 +33,12 @@ bool VisualLanguageModelLegacyExecutor::requestsQueueSize() {
 
 void VisualLanguageModelLegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
-    requests.front()->results = pipe->generate(requests.front()->inputText, requests.front()->inputImages, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+    try {
+        requests.front()->results = pipe->generate(requests.front()->inputText, requests.front()->inputImages, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+    } catch (std::exception& e) {
+        requests.front()->success = false;
+        SPDLOG_LOGGER_ERROR(llm_executor_logger, "VLM pipeline generation failed: {}.", e.what());
+    }
     requests.front()->readySignal.set_value();
     requests.front()->executionInProgress.notify_one();
     std::unique_lock<std::mutex> lock(queueMutex);
