@@ -2754,6 +2754,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llm/llmnode_test.cpp",
+                "test/llm/max_model_length_test.cpp",
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",

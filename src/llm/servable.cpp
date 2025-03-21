@@ -55,7 +55,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -108,6 +108,15 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
+    if (getProperties()->maxModelLength.has_value()) {
+        if (!(executionContext->inputIds.get_size() < getProperties()->maxModelLength.value())) {
+            std::stringstream ss;
+            ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " exceeds model max length: " << getProperties()->maxModelLength.value();
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
+        }
+    }
+
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
