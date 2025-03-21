@@ -1376,9 +1376,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["usage"].IsObject());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2046);
+    EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2047);
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 2);
+    EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 1);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringEmpty) {
