@@ -34,9 +34,7 @@ bool VisualLanguageModelLegacyExecutor::requestsQueueSize() {
 void VisualLanguageModelLegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     try {
-        pipe->start_chat();
         requests.front()->results = pipe->generate(requests.front()->inputText, requests.front()->inputImages, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
-        pipe->finish_chat();
     } catch (std::exception& e) {
         requests.front()->success = false;
         SPDLOG_LOGGER_ERROR(llm_executor_logger, "VLM pipeline generation failed: {}.", e.what());
