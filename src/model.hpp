@@ -129,7 +129,7 @@ public:
          * @brief Destroy the Model object
          * 
          */
-    virtual ~Model() {}
+    virtual ~Model();
 
     /**
          * @brief Gets the model name
