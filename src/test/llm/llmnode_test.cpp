@@ -3492,7 +3492,7 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
 }
 
@@ -3548,7 +3548,7 @@ void LLMNodeOptionsCheckHalfDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     LLMNodeOptionsCheckHalfDefault(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckHalfDefault) {
     LLMNodeOptionsCheckHalfDefault(modelsPath);
 }
 
@@ -3598,7 +3598,7 @@ void LLMNodeOptionsWrongPluginFormat(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     LLMNodeOptionsWrongPluginFormat(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsWrongPluginFormat) {
     LLMNodeOptionsWrongPluginFormat(modelsPath);
 }
 
@@ -3654,7 +3654,7 @@ void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
@@ -3718,7 +3718,7 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);
 }
-TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);
 }
 
