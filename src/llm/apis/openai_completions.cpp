@@ -874,7 +874,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {  // TODO separate common part with function implemented above
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -885,7 +885,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     writer.String("choices");
     writer.StartArray();  // [
     int index = 0;
-    usage.completionTokens = 0;
+    usage.completionTokens = completionTokens;
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& texts = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);

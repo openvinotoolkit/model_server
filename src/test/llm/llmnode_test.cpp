@@ -2221,7 +2221,8 @@ INSTANTIATE_TEST_SUITE_P(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
         TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false}));
+        TestParameters{"vlm_cb_regular", false, true, true, false},
+        TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
@@ -3095,7 +3096,8 @@ INSTANTIATE_TEST_SUITE_P(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
         TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false}));
+        TestParameters{"vlm_cb_regular", false, true, true, false},
+        TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
@@ -3418,7 +3420,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         std::make_tuple("LM_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
         std::make_tuple("LM", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
-        std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR)));
+        std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR),
+        std::make_tuple("VLM", ovms::StatusCode::INTERNAL_ERROR)));
 
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
