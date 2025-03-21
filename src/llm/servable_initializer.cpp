@@ -296,6 +296,7 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
         for (auto field : maxLengthFields) {
             if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
                 maxModelLength = modelConfig[field.c_str()].GetUint();
+                break;
             }
         }
     }

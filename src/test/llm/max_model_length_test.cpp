@@ -138,5 +138,5 @@ TEST_F(MaxModelLengthTest, maxModelLength_parsingOrder) {
     createConfigFileWithContent(modelConfigContent, configFilePath);
     auto maxModelLength = parseMaxModelLength(directoryPath);
     ASSERT_TRUE(maxModelLength.has_value());
-    EXPECT_EQ(maxModelLength.value(), 8);
+    EXPECT_EQ(maxModelLength.value(), 5);
 }
