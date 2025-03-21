@@ -3431,13 +3431,13 @@ public:
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/facebook/opt-125m";}
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/facebook/opt-125m"; }
 };
 
 class LLMOptionsHttpTestVlm : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B";}
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
@@ -3602,7 +3602,7 @@ TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsWrongPluginFormat) {
     LLMNodeOptionsWrongPluginFormat(modelsPath);
 }
 
-void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath){
+void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
