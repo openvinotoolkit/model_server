@@ -98,7 +98,7 @@ absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiS
         return absl::CancelledError();
     }
     legacyExecutionContext->finished.wait();
-    if(!legacyExecutionContext->success){
+    if (!legacyExecutionContext->success) {
         return absl::InvalidArgumentError("Request processing failed, check its correctness.");
     }
     return absl::OkStatus();
@@ -147,7 +147,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
-        if(!legacyExecutionContext->success){
+        if (!legacyExecutionContext->success) {
             return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");

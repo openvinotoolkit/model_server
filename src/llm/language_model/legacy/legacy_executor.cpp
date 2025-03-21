@@ -40,7 +40,6 @@ void LegacyExecutor::processRequest() {
     } catch (std::exception& e) {
         requests.front()->success = false;
         SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
-
     }
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     requests.front()->readySignal.set_value();
