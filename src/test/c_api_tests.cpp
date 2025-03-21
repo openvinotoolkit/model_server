@@ -1952,7 +1952,7 @@ TEST_F(CAPIInference, AsyncWithCallbackDummy) {
     std::vector<float> out(10, GARBAGE_VALUE);
     size_t inputByteSize = sizeof(float) * in.size();
     // start CAPI server
-    bool startGrpc = true;  // WA to be able to test async inference but do not encounter closure issues CVS-164617 
+    bool startGrpc = true;  // WA to be able to test async inference but do not encounter closure issues CVS-164617
     ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH, startGrpc);
     OVMS_Server* cserver = serverGuard.server;
     // prepare request
