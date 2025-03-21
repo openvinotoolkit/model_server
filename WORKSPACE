@@ -171,7 +171,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "8a7fff74151dd112d0aae87d8c74fb0d07e206ec", # Replace for windows (#105) 21/01/2025
+    commit = "32e74ceffe68b467933f06c2e7d83fe5df19c18e", # main as of 21 March 2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -255,6 +255,18 @@ new_local_repository(
     name = "windows_openvino",
     build_file = "@//third_party/openvino:openvino_windows.BUILD",
     path = "C:\\opt\\openvino\\runtime",
+)
+
+new_local_repository(
+    name = "windows_genai",
+    build_file = "@//third_party/genai:genai_windows.BUILD",
+    path = "C:\\opt\\openvino\\runtime",
+)
+
+new_local_repository(
+    name = "linux_genai",
+    build_file = "@//third_party/genai:BUILD",
+    path = "/opt/intel/openvino/runtime",
 )
 
 new_local_repository(
@@ -574,4 +586,19 @@ git_repository(
     remote = "https://github.com/yhirose/cpp-httplib/",
     tag = "v0.18.7",
     build_file = "@//third_party/cpp-httplib:BUILD"
+)
+
+new_git_repository(
+    name = "stb",
+    remote = "https://github.com/nothings/stb",
+    commit = "5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    build_file_content = """
+cc_library(
+    name = "image",
+    hdrs = ["stb_image.h"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
 )

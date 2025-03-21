@@ -20,25 +20,29 @@
 #include <string>
 #include <utility>
 
-#include <spdlog/spdlog.h>
-
 #pragma warning(push)
-#pragma warning(disable : 4624 6001 4324 6385 6386 6326 6011)
+#pragma warning(disable : 4624 6001 4324 6385 6386 6326 6011 4457 6308 6387 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "tensorflow/core/framework/tensor.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "tfs_frontend/tfs_utils.hpp"
+#include "tfs_frontend/deserialization.hpp"
+#include "tfs_frontend/tfs_request_utils.hpp"
+
 #include "dags/pipeline.hpp"
 #include "execution_context.hpp"
 #include "get_model_metadata_impl.hpp"
 #include "grpc_utils.hpp"
+#include "deserialization_main.hpp"
+#include "inference_executor.hpp"
+#include "logging.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
 #include "modelmanager.hpp"
 #include "ovinferrequestsqueue.hpp"
-#include "prediction_service_utils.hpp"
 #include "profiler.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
@@ -126,7 +130,7 @@ grpc::Status ovms::PredictionServiceImpl::Predict(
         status = pipelinePtr->execute(executionContext);
         INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
-        status = modelInstance->infer(request, response, modelInstanceUnloadGuard);
+        status = infer(*modelInstance, request, response, modelInstanceUnloadGuard);
         INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 

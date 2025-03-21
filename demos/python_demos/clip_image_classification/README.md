@@ -34,7 +34,7 @@ pip3 install -r download_model_requirements.txt
 ```
 
 ```bash
-python3 download_model.py
+python download_model.py
 ```
 
 ## Deploy OpenVINO Model Server with the CLIP graph
@@ -54,7 +54,7 @@ docker run -d --rm -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${
 
 Run the grpc client script
 ```bash
-python3 grpc_client.py --url localhost:9000
+python grpc_client.py --url localhost:9000
 ```
 
 Expected output:
@@ -85,7 +85,7 @@ time variance: 0.00
 
 Run the rest client script
 ```bash
-python3 rest_client.py --url localhost:8000
+python rest_client.py --url localhost:8000
 ```
 
 Expected output:

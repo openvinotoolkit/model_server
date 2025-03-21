@@ -43,12 +43,16 @@ private:
          */
     const std::string empty;
 
+protected:
     ModelsSettingsImpl modelsSettings;
     ServerSettingsImpl serverSettings;
 
 public:
     ServerSettingsImpl getServerSettings() {
         return serverSettings;
+    }
+    ModelsSettingsImpl& getModelSettings() {
+        return modelsSettings;
     }
     /**
          * @brief Gets the instance of the config
@@ -315,5 +319,8 @@ public:
          * @return const std::string& 
          */
     const std::string cacheDir() const;
+    bool startedFromCLI() {
+        return serverSettings.startedWithCLI;
+    }
 };
 }  // namespace ovms

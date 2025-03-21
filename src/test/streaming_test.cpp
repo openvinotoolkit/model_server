@@ -312,6 +312,7 @@ static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, fl
     };
 }
 
+#if (PYTHON_DISABLE == 0)
 static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, std::promise<void>& signalPromise) {
     return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, std::nullopt);
@@ -320,6 +321,7 @@ static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::s
         return true;
     };
 }
+#endif
 
 static auto SendError(const std::string& expectedMessage) {
     return [expectedMessage](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -450,6 +452,63 @@ public:
         server.setShutdownRequest(0);
     }
 };
+
+class StreamingWithOVMSCalculatorsCliTest : public StreamingTest {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+
+public:
+    void SetUpServer(const char* graphPath, const char* graphName) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
+    }
+
+    void TearDown() {
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSendSeparately) {
+    const std::string inputName{"in\""};
+    const std::string newInputName{"in2\""};
+    SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
+    const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
+    ModelManager& manager = smm->getServableManager();
+    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    auto definition = factory.findDefinitionByName(name);
+    ASSERT_NE(nullptr, definition);
+    ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
+    EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
+    EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
+    EXPECT_EQ(definition->getOutputsInfo().count("sum"), 1);
+
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    KFSRequest request;
+    KFSResponse response;
+    auto status = manager.createPipeline(executor, name);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    // Mock receiving 1 request with not all inputs (client)
+    prepareRequest(this->firstRequest, {{"in", 3.5f}, {"in2", 1.0f}}, 3);
+    EXPECT_CALL(this->stream, Read(_))
+        .WillOnce(ReceiveWithTimestamp({{"in", 7.2f}, {"in2", 1.0f}}, 12))   // this is correct because 12 > 3
+        .WillOnce(ReceiveWithTimestamp({{"in", 99.9f}, {"in2", 1.0f}}, 99))  // this is also correct because 99 > 12
+        .WillOnce(Disconnect());
+
+    // Expect 3 responses with correct timestamps
+    EXPECT_CALL(this->stream, Write(_, _))
+        .WillOnce(SendWithTimestamp({{"sum", 4.5f}}, 3))
+        .WillOnce(SendWithTimestamp({{"sum", 8.2f}}, 12))
+        .WillOnce(SendWithTimestamp({{"sum", 100.9f}}, 99));
+
+    // Expect no responses
+    status = executor->inferStream(this->firstRequest, this->stream, this->executionContext);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+}
 
 TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSeparately) {
     std::string configFilePath{getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_two_inputs.json")};

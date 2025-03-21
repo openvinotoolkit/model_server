@@ -34,6 +34,15 @@ alias(
 )
 
 alias(
+    name = "genai",
+    actual = select({
+        "//src:windows": "@windows_genai//:genai",
+        "//conditions:default": "@linux_genai//:genai",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+alias(
     name = "python3",
     actual = select({
         "//src:windows": "@python3_windows//:python3-lib",

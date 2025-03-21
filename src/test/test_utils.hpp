@@ -55,6 +55,8 @@
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
 
+#include "../kfs_frontend/validation.hpp"
+
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
 #endif
@@ -752,6 +754,18 @@ public:
     const ovms::Status mockValidate(const ovms::InferenceRequest* request) {
         return validate(request);
     }
+    template <typename RequestType>
+    ovms::Status validate(const RequestType* request) {
+        return ovms::request_validation_utils::validate(
+            *request,
+            this->getInputsInfo(),
+            this->getOutputsInfo(),
+            this->getName(),
+            this->getVersion(),
+            this->getOptionalInputNames(),
+            this->getModelConfig().getBatchingMode(),
+            this->getModelConfig().getShapes());
+    }
 };
 
 class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
@@ -1013,6 +1027,8 @@ extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath);
 
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName);
+
 class ConstructorEnabledConfig : public ovms::Config {
 public:
     ConstructorEnabledConfig() {}
@@ -1041,9 +1057,9 @@ public:
     }
 #endif
 
-    ovms::LLMNodeResources* getLLMNodeResources(const std::string& nodeName) {
-        auto it = this->llmNodeResourcesMap.find(nodeName);
-        if (it == std::end(llmNodeResourcesMap)) {
+    ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
+        auto it = this->genAiServableMap.find(nodeName);
+        if (it == std::end(genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1054,7 +1070,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::LLMNodeResourcesMap& getLLMNodeResourcesMap() { return this->llmNodeResourcesMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

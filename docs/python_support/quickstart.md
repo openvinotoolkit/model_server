@@ -224,7 +224,7 @@ Once you have model server up and running, let's send a text: `"Make this text u
 Simply run your `client.py` from the `workspace` catalog and see the results:
 
 ```bash
-python3 client.py
+python client.py
 MAKE THIS TEXT UPPERCASE.
 ```
 

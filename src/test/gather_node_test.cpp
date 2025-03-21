@@ -36,6 +36,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
@@ -219,14 +220,11 @@ public:
 };
 
 TEST_F(GatherNodeTest, FullFlowGatherInNonExitNode) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     // This test simulates node with multiple subsessions connected to following node
     // that should gather it results but is not exit node
     ConstructorEnabledModelManager manager;
     const std::string fileToReload = directoryPath + "/ovms_config_file.json";
-    createConfigFileWithContent(configDummy1BsDummy2Bs, fileToReload);
+    createConfigFileWithContent(adjustConfigForTargetPlatformCStr(configDummy1BsDummy2Bs), fileToReload);
     auto status = manager.loadConfig(fileToReload);
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     const std::string node1Name = "node1";

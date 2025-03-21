@@ -29,7 +29,7 @@
 #include "../status.hpp"
 #include "../timer.hpp"
 #pragma warning(push)
-#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005)
+#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -52,7 +52,8 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
 }
 
 #define OVMS_WRITE_ERROR_ON_FAIL_AND_CONTINUE(code, message, isSuccess)  \
-    {                                                                    \
+    _Pragma("warning(push)")                                             \
+        _Pragma("warning(disable : 4456 6246)") {                        \
         auto status = code;                                              \
         if (!status.ok()) {                                              \
             std::stringstream ss;                                        \
@@ -67,7 +68,8 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
         } else {                                                         \
             isSuccess = true;                                            \
         }                                                                \
-    }
+    }                                                                    \
+    _Pragma("warning(pop)")
 
 class MediapipeGraphExecutor {
     const std::string name;
@@ -79,7 +81,7 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> outputNames;
 
     PythonNodeResourcesMap pythonNodeResourcesMap;
-    LLMNodeResourcesMap llmNodeResourcesMap;
+    GenAiServableMap llmNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
@@ -96,7 +98,7 @@ public:
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
-        const LLMNodeResourcesMap& llmNodeResourcesMap,
+        const GenAiServableMap& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
@@ -132,7 +134,7 @@ public:
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
         inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
@@ -276,7 +278,7 @@ public:
 #if (PYTHON_DISABLE == 0)
                 inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
                                                                        .At(STARTING_TIMESTAMP);
-                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<LLMNodeResourcesMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
             }
 

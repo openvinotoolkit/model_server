@@ -20,7 +20,7 @@
 #include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005)
+#pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
@@ -42,7 +42,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> inputNames,
     std::vector<std::string> outputNames,
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
-    const LLMNodeResourcesMap& llmNodeResourcesMap,
+    const GenAiServableMap& llmNodeResourcesMap,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),

@@ -25,7 +25,21 @@ message LLMCalculatorOptions {
     // no rule to obtain this
     optional LLMCalculatorOptions ext = 113473750;
     }
-    required string models_path = 1;
+
+    enum PipelineType {
+      // Single modality (text only), text generation based on LLMPipeline
+      LM = 0;
+      // Multimodal (text and image), text generation based on LLMPipeline
+      VLM = 1;
+      // Single modality (text only), text generation based on ContinuousBatchingPipeline
+      LM_CB = 2;
+      // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
+      VLM_CB = 3;
+      // Default option. If selected, pipeline type will be inferred by the serving
+      AUTO = 4;
+    }
+
+    optional string models_path = 1;
 
     optional uint64 max_num_batched_tokens = 2 [default = 256];
 
@@ -62,4 +76,41 @@ message LLMCalculatorOptions {
     optional uint64 draft_max_num_seqs = 16;
 
     optional bool draft_dynamic_split_fuse = 17;
+
+    optional PipelineType pipeline_type = 18 [default = AUTO];
+    
+    // START EXPERIMENTAL OPTIONS
+    message PipelineConfig {
+      required string models_path = 1;
+      optional string device = 2 [default = "CPU"];
+      optional string plugin_config = 3 [default = ""];
+      optional uint64 max_num_batched_tokens = 4 [default = 256];
+      // model memory cache to allocate in GB
+      optional uint64 cache_size = 5 [default = 8];
+      optional uint64 max_num_seqs = 6 [default = 256];
+      optional bool dynamic_split_fuse = 7 [default = true];
+      optional uint32 best_of_limit = 8 [default = 20];
+      optional uint32 max_tokens_limit = 9 [default = 4096];
+      optional bool enable_prefix_caching = 10 [default = false];
+    }
+
+    message ContinuousBatchingPipelineConfig {
+      required PipelineConfig main_pipeline_config = 1;
+      optional PipelineConfig draft_pipeline_config = 2;
+    }
+
+    message VisualLanguageModelPipelineConfig {
+      required PipelineConfig pipeline_config = 1;
+    }
+
+    message LLMPipelineConfig {
+      required PipelineConfig pipeline_config = 1;
+    }
+
+    oneof pipeline_config {
+      ContinuousBatchingPipelineConfig continuous_batching_pipeline_config = 19;
+      VisualLanguageModelPipelineConfig visual_language_model_pipeline_config = 20;
+      LLMPipelineConfig llm_pipeline_config = 21;
+    }
+  // END EXPERIMENTAL OPTIONS
 }

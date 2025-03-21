@@ -73,8 +73,10 @@ public:
         adjustConfigForTargetPlatform(adjustedConfigContent);
         configFilePath = directoryPath + "/ovms_config.json";
         createConfigFileWithContent(adjustedConfigContent, configFilePath);
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configFilePath.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
-        int arg_count = 5;
+        std::string port{"9000"};
+        randomizePort(port);
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configFilePath.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
+        int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
 
@@ -97,8 +99,10 @@ public:
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
         this->modelPath = modelPath;
         this->modelName = modelName;
-        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)this->modelPath.data(), (char*)"--model_name", (char*)this->modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0"};
-        int arg_count = 7;
+        std::string port{"9000"};
+        randomizePort(port);
+        char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)this->modelPath.data(), (char*)"--model_name", (char*)this->modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
+        int arg_count = 9;
         ovms::Config::instance().parse(arg_count, n_argv);
     }
     struct TestHelper1 {

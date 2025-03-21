@@ -8,6 +8,9 @@ hidden:
 ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
+ovms_demos_continuous_batching_vlm
+ovms_demos_llm_npu
+ovms_demos_vlm_npu
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -41,9 +44,10 @@ ovms_string_output_model_demo
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
+ - [LLM Text Generation with continuous batching](continuous_batching/README.md)
+ - [VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)
  - [OpenAI API text embeddings ](embeddings/README.md)
  - [Reranking with Cohere API](rerank/README.md)
- - [Text Generation with continuous batching](continuous_batching/README.md)
  - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
@@ -94,8 +98,6 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 | Demo | Description |
 |---|---|
 |[C API applications](c_api_minimal_app/README.md)|How to use C API from the OpenVINO Model Server to create C and C++ application.|
-|[Image Classification](image_classification/cpp/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-|[Benchmark App](benchmark/cpp/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
 
 ## With Go Client
 | Demo | Description |

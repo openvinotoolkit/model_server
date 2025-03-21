@@ -1,25 +1,20 @@
 ## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
 It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu20, Ubuntu22, RHEL8 or Windows 11.
+To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
-or build it yourself:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1
-# Unpack the package
-tar -xzvf dist/ubuntu22/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22_python_on.tar.gz
+tar -xzvf ovms_ubuntu22_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -28,34 +23,26 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
-```
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_ubuntu22.tar.gz
-tar -xzvf ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
+tar -xzvf ovms_ubuntu24.tar.gz
 ```
-or build it yourself:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build PYTHON_DISABLE=1 RUN_TESTS=0
-# Unpack the package
-tar -xzvf dist/ubuntu22/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24_python_on.tar.gz
+tar -xzvf ovms_ubuntu24_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -64,35 +51,26 @@ sudo apt update -y && apt install -y libxml2 curl
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install libpython3.10
-```
-
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
+sudo apt -y install libpython3.12
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} RHEL 9.4
 :sync: rhel-9.4
-Download precompiled package:
+Download precompiled package (without python support):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2024.5/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-or build it yourself:
+or precompiled package (with python and LLM support):
 ```{code} sh
-# Clone the model server repository
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server
-# Build docker images (the binary is one of the artifacts)
-make docker_build BASE_OS=redhat PYTHON_DISABLE=1 RUN_TESTS=0
-# Unpack the package
-tar -xzvf dist/redhat/ovms.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat_python_on.tar.gz
+tar -xzvf ovms_redhat_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
@@ -101,16 +79,12 @@ sudo yum install compat-openssl11.x86_64
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH;${PWD}/ovms/bin
+export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the build with Python calculators for MediaPipe graphs (PYTHON_DISABLE=0), run also:
+In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
-```
-
-Additionally, to use text generation, for example, to run [text-generation demo](../demos/continuous_batching/README.md) you need to have `pip` installed and download following dependencies: 
-```
 pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
 ```
 :::
@@ -121,7 +95,7 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl <url_to_be_provided>
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
@@ -158,7 +132,7 @@ chmod -R 755 models
 ```
 Start the server:
 ```console
-ovms --model_name resnet --model_path models/resnet50
+ovms --port 9000 --model_name resnet --model_path models/resnet50
 ```
 
 or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.

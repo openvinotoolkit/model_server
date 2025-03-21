@@ -30,6 +30,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
 #include "../model_service.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
@@ -163,11 +164,8 @@ static const char* pipelineOneDummyConfig = R"(
 })";
 
 TYPED_TEST(ModelServiceTest, pipeline) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows";
-#endif
     std::string fileToReload = getGenericFullPathForTmp("/tmp/ovms_single_version_pipeline.json");
-    createConfigFileWithContent(pipelineOneDummyConfig, fileToReload);
+    createConfigFileWithContent(adjustConfigForTargetPlatformCStr(pipelineOneDummyConfig), fileToReload);
     ASSERT_EQ(this->manager.startFromFile(fileToReload), StatusCode::OK);
 
     const std::string name = "dummyPipeline";

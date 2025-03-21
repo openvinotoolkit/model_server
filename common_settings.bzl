@@ -35,6 +35,17 @@ def create_config_settings():
         negate = ":disable_mediapipe",
     )
     native.config_setting(
+        name = "genai_bin",
+        define_values = {
+            "GENAI_USE_BINARY": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+    more_selects.config_setting_negation(
+        name = "not_genai_bin",
+        negate = ":genai_bin",
+    )
+    native.config_setting(
         name = "enable_drogon",
         define_values = {
             "USE_DROGON": "1",
@@ -132,29 +143,17 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/GS",
                         "/DYNAMICBASE",
                         "/Qspectre",
-                        "/guard:cf",
-                        "/wd4018", # level 3
-                        "/wd4068", # level 1
-                        "/wd4458", # level 4
-                        "/wd4100", # level 4
-                        "/wd4267", # level 1
-                        "/wd4389", # level 4
-                        "/wd4127", # level 4
-                        "/wd4456", # level 4
-                        "/wd4673", # level 4
-                        "/wd4670", # level 4
-                        "/wd4244", # level 3
-                        "/wd4457", # level 4
-                        "/wd4505", # level 4
-                        "/wd6246", # level 3
-                        "/wd4702", # level 4
-                        "/wd4101", # level 3/4
-                        "/wd6387", # level 4
-                        "/wd6308", # level 4
-                        "/wd6319", # level 3/4
-                        "/wd4297", # level 3/4
-                        "/wd4701",
-                        "/wd4804",
+                        "/wd4068",
+                        "/wd4458",
+                        "/wd4100",
+                        "/wd4389",
+                        "/wd4127",
+                        "/wd4673",
+                        "/wd4670",
+                        "/wd4244",
+                        "/wd4297",
+                        "/wd4702",
+                        "/wd4267",
                     ],
                 })
 

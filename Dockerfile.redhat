@@ -98,6 +98,7 @@ ARG BASE_IMAGE
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 ARG JOBS=40
+ARG VERBOSE_LOGS=OFF
 
 # hadolint ignore=DL3041
 RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
@@ -298,7 +299,6 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-
 FROM $BUILD_IMAGE as capi-build
 # C api shared library
 ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
@@ -314,7 +314,7 @@ RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/s
 # C-api C/C++ app with gcc
 COPY MakefileCapi /ovms/
 RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
-    make -f MakefileCapi c CAPI_FLAGSs="${CAPI_FLAGS}"
+    make -f MakefileCapi c CAPI_FLAGS="${CAPI_FLAGS}"
 
 RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so'  -exec cp -v {} /ovms_release/lib/ \;
 
@@ -385,10 +385,10 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
 ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=build /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=build /usr/local/lib/python3.*/site-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
-COPY --from=build /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
-COPY --from=build /usr/local/lib64/python3.*/site-packages/markupsafe /ovms/python_deps/markupsafe
+COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
+COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
+COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
+COPY --from=pkg /usr/local/lib64/python3.*/site-packages/markupsafe /ovms/python_deps/markupsafe
 
 COPY --from=pkg /licenses /licenses
 USER ovms

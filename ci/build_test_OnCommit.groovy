@@ -4,6 +4,7 @@ def client_test_needed = "false"
 def shortCommit = ""
 def agent_name_windows = ""
 def agent_name_linux = ""
+def windows_success = ""
 
 pipeline {
     agent {
@@ -43,45 +44,35 @@ pipeline {
             }
           }
         }
-        stage('Style and clean') {
+        stage('Style, SDL and clean') {
           parallel {
             stage('Style check') {
-                steps {
-                  sh 'make style'
-                }
-            }
-            stage('Cleanup node') {
               agent {
-                label 'win_ovms'
+                label "${agent_name_linux}"
               }
               steps {
-                script {
-                    agent_name_windows = env.NODE_NAME
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        windows.cleanup_directories()
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
-                    }
-                }
+                sh 'make style'
               }
+            }
+            stage('Sdl check') {
+              agent {
+                label "${agent_name_linux}"
+              }
+              steps {
+                  sh 'make sdl-check'
+              }
+            }
+            stage('Client test') {
+              agent {
+                label "${agent_name_linux}"
+              }
+              when { expression { client_test_needed == "true" } }
+              steps {
+                    sh "make test_client_lib"
+                  }
             }
           }
         }
-
-        stage('Sdl check') {
-            steps {
-                sh 'make sdl-check'
-            }
-        }
-
-        stage('Client test') {
-          when { expression { client_test_needed == "true" } }
-          steps {
-                sh "make test_client_lib"
-              }
-        }
-
         stage('Build') {
           parallel {
             stage("Build linux") {
@@ -91,16 +82,17 @@ pipeline {
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
-                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                      sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
             stage('Build windows') {
               agent {
-                label "${agent_name_windows}"
+                label 'win_ovms'
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                      agent_name_windows = env.NODE_NAME
                       echo sh(script: 'env|sort', returnStdout: true)
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
@@ -111,6 +103,7 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          windows_success = "True"
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
@@ -139,13 +132,13 @@ pipeline {
               }
               } 
               }
-            } 
+            }
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
               }
               steps {
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                 sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
@@ -183,8 +176,21 @@ pipeline {
                       }
                   }
               }
-            }           
+            }
           }
+        }
+    }
+    post {
+        always {
+            node("${agent_name_windows}") {
+                script {
+                    if (env.BRANCH_NAME == "main" && windows_success == "True") {
+                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-main-latest.zip")
+                    } else {
+                        echo "Not a main branch, skipping copying artifacts."
+                    }
+                }
+            }
         }
     }
 }

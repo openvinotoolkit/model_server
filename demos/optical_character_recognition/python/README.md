@@ -179,7 +179,7 @@ Now you can create a directory for text images and run the client:
 mkdir results
 ```
 ```bash
-python3 optical_character_recognition.py --grpc_port 9000 --image_input_path demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/ --image_layout NHWC
+python optical_character_recognition.py --grpc_port 9000 --image_input_path demo_images/input.jpg --pipeline_name detect_text_images --text_images_save_path ./results/ --image_layout NHWC
 Output: name[confidence_levels]
     numpy => shape[(9, 1, 1)] data[float32]
 Output: name[texts]

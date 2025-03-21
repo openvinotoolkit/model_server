@@ -21,7 +21,7 @@ cd model_server/demos/image_classification_using_tf_model/python
 ## Download the InceptionResNetV2 model
 
 ```console
-curl --create-dirs -o model/1 https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
+curl --create-dirs -o model/1/inception_resnet_v2_2018_04_27.tgz https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/inception_resnet_v2_2018_04_27.tgz
 tar xzf model/1/inception_resnet_v2_2018_04_27.tgz -C model/1
 ```
 
@@ -55,7 +55,7 @@ pip3 install -r requirements.txt
 
 Now you can run the client:
 ```console
-python3 image_classification_using_tf_model.py --help
+python image_classification_using_tf_model.py --help
 usage: image_classification_using_tf_model.py [-h] [--grpc_address GRPC_ADDRESS] [--grpc_port GRPC_PORT] --image_input_path IMAGE_INPUT_PATH
 
 Client for OCR pipeline
@@ -72,6 +72,6 @@ optional arguments:
 
 Exemplary result of running the demo:
 ```console
-python3 image_classification_using_tf_model.py --grpc_port 9000 --image_input_path ../../common/static/images/zebra.jpeg
+python image_classification_using_tf_model.py --grpc_port 9000 --image_input_path ../../common/static/images/zebra.jpeg
 Image classified as zebra
 ```

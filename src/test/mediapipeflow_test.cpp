@@ -48,6 +48,7 @@
 #include "../metric_config.hpp"
 #include "../metric_module.hpp"
 #include "../model_service.hpp"
+#include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -77,6 +78,83 @@ using testing::HasSubstr;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
+
+class MediapipeCliFlowTest : public ::testing::TestWithParam<std::string> {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+
+    void SetUpServer(const char* graphPath, const char* graphName) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
+    }
+
+    void SetUp() override {
+    }
+    void TearDown() {
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+};
+
+class MediapipeCliFlowTestNegative : public ::testing::Test {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+
+    const Precision precision = Precision::FP32;
+    std::unique_ptr<std::thread> t;
+    std::string port = "9178";
+};
+
+class MediapipeCliFlowTestDummy : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/cli", "graphkfspass");
+    }
+};
+
+TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
+    server.setShutdownRequest(0);
+    randomizePort(this->port);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--model_name",
+        (char*)"graphkfspass",
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli").c_str(),
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--batch_size",
+        (char*)"10"};
+    int argc = 9;
+    t.reset(new std::thread([&argc, &argv, this]() {
+        EXPECT_EQ(OVMS_EX_USAGE, server.start(argc, argv));
+    }));
+
+    server.setShutdownRequest(1);
+    t->join();
+}
+
+TEST_F(MediapipeCliFlowTestDummy, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphkfspass";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
+    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
 
 class MediapipeFlowTest : public ::testing::TestWithParam<std::string> {
 protected:
@@ -481,6 +559,20 @@ public:
     }
 };
 
+class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfig : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config.json");
+    }
+};
+
+class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/relative_paths/graph_only_name/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
+    }
+};
+
 class MediapipeFlowDummySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -819,6 +911,26 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecified, Infer) {
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
 }
 
+TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfig, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphdummy";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphdummy";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
 TEST_F(MediapipeFlowDummyDefaultSubconfigTest, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
@@ -917,9 +1029,6 @@ public:
 };
 
 TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows - Custom Nodes for windows are unsupported";
-#endif
     std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<float> factors{1, 3, 2, 2};
 
@@ -2843,13 +2952,68 @@ protected:
         }
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
+        std::promise<void>().swap(unblockLoading2ndGraph);
+    }
+
+    // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
+    // 2nd thread as soon as sees that 1st MP graph is ready executest inference
+    void executeFlow(std::string& configContent, const std::string& waitForServable = "mediapipeDummy") {
+        std::string configFilePath = directoryPath + "/config.json";
+        adjustConfigForTargetPlatform(configContent);
+        createConfigFileWithContent(configContent, configFilePath);
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(0);
+        std::string port{"9000"};
+        randomizePort(port);
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configFilePath.c_str(),
+            (char*)"--port",
+            (char*)port.c_str()};
+        int argc = 5;
+        std::thread t([&argc, &argv, &server]() {
+            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        });
+
+        ::KFSRequest request;
+        ::KFSResponse response;
+        const std::string servableName{"mediapipeDummy"};
+        request.Clear();
+        response.Clear();
+        const Precision precision = Precision::FP32;
+        inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
+        std::vector<float> requestData{13.5, 0., 0, 0., 0., 0., 0., 0, 3., 67.};
+        preparePredictRequest(request, inputsMeta, requestData);
+        request.mutable_model_name()->assign(servableName);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        while (!isMpReady(waitForServable) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+        const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+        if (!grpcModule) {
+            this->stopServer();
+            t.join();
+            throw 42;
+        }
+        KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+        ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+        try {
+            unblockLoading2ndGraph.set_value();
+        } catch (const std::future_error& e) {
+            // Case where we already set the value before execute.
+            ASSERT_EQ(e.code(), std::future_errc::promise_already_satisfied);
+        }
+
+        size_t dummysInTheGraph = 1;
+        checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, servableName);
+        this->stopServer();
+        t.join();
     }
 };
 
 TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPass) {
-    // 1st thread starts to load OVMS with C-API but we make it stuck on 2nd graph
-    // 2nd thread as soon as sees that 1st MP graph is ready executest inference
-    std::string configFilePath = directoryPath + "/config.json";
     std::string configContent = R"(
 {
     "model_config_list": [
@@ -2872,51 +3036,95 @@ TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldP
 }
 )";
 
-    adjustConfigForTargetPlatform(configContent);
-    createConfigFileWithContent(configContent, configFilePath);
-    ovms::Server& server = ovms::Server::instance();
-    server.setShutdownRequest(0);
-    std::string port{"9000"};
-    randomizePort(port);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--config_path",
-        (char*)configFilePath.c_str(),
-        (char*)"--port",
-        (char*)port.c_str()};
-    int argc = 5;
-    std::thread t([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    });
+    executeFlow(configContent);
+}
 
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string servableName{"mediapipeDummy"};
-    request.Clear();
-    response.Clear();
-    const Precision precision = Precision::FP32;
-    inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData{13.5, 0., 0, 0., 0., 0., 0., 0, 3., 67.};
-    preparePredictRequest(request, inputsMeta, requestData);
-    request.mutable_model_name()->assign(servableName);
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfig) {
+    std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {"config": {
+            "name":"mediapipeDummy",
+            "base_path":"/ovms/src/test/mediapipe/",
+            "graph_path": "graphdummyadapterfull.pbtxt"
+            }
+        },
+        {"config": {
+            "name": "mediapipeLongLoading",
+            "base_path":"/ovms/src/test/mediapipe/negative",
+            "graph_path": "graph_long_loading.pbtxt"
+            }
+        }
+    ]
+}
+)";
 
-    auto start = std::chrono::high_resolution_clock::now();
-    while (!isMpReady(servableName) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
+    executeFlow(configContent);
+}
+
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfigFastLoading) {
+    std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {"config": {
+            "name":"mediapipeDummy",
+            "base_path":"/ovms/src/test/mediapipe/",
+            "graph_path": "graphdummyadapterfull.pbtxt"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name": "mediapipeLongLoading",
+        "base_path":"/ovms/src/test/mediapipe/negative",
+        "graph_path": "graph_long_loading.pbtxt"
     }
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    if (!grpcModule) {
-        this->stopServer();
-        t.join();
-        throw 42;
-    }
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    ]
+}
+)";
+    // Set value here to avoid deadlock when long loading is loaded first
     unblockLoading2ndGraph.set_value();
-    size_t dummysInTheGraph = 1;
-    checkDummyResponse("out", requestData, request, response, dummysInTheGraph, 1, servableName);
-    this->stopServer();
-    t.join();
+
+    executeFlow(configContent);
+}
+
+TEST_F(MediapipeFlowStartTest, AsSoonAsMediaPipeGraphDefinitionReadyInferShouldPassGraphInModelConfigLongLoading) {
+    std::string configContent = R"(
+{
+    "model_config_list": [
+        {"config": {
+            "name": "dummy",
+            "base_path": "/ovms/src/test/dummy"
+            }
+        },
+        {"config": {
+            "name": "mediapipeLongLoading",
+            "base_path":"/ovms/src/test/mediapipe/negative",
+            "graph_path": "graph_long_loading.pbtxt"
+            }
+        }
+    ],
+    "mediapipe_config_list": [
+    {
+        "name":"mediapipeDummy",
+        "base_path":"/ovms/src/test/mediapipe/",
+        "graph_path": "graphdummyadapterfull.pbtxt"
+    }
+    ]
+}
+)";
+
+    executeFlow(configContent);
 }
 
 std::unordered_map<std::type_index, ovms::Precision> TYPE_TO_OVMS_PRECISION{

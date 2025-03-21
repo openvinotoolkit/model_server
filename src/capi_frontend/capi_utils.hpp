@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../predict_request_validation_utils.hpp"
 #include "../ovms.h"  // NOLINT
 #include "../precision.hpp"
 #include "../shape.hpp"
@@ -28,17 +28,25 @@ class InferenceResponse;
 class InferenceTensor;
 class Status;
 
-OVMS_ServableState convertToServableState(PipelineDefinitionStateCode code);
-
+template <>
 std::string tensorShapeToString(const signed_shape_t& tensorShape);
 
-OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
 Precision getOVMSDataTypeAsPrecision(OVMS_DataType datatype);
+OVMS_DataType getPrecisionAsOVMSDataType(Precision precision);
+
 size_t DataTypeToByteSize(OVMS_DataType datatype);
 
-Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 const std::string& getRequestServableName(const ovms::InferenceRequest& request);
-Status prepareConsolidatedTensorImpl(InferenceResponse* response, const std::string& name, ov::element::Type_t precision, const ov::Shape& shape, char*& bufferOut, size_t size);
-bool requiresPreProcessing(const InferenceTensor& tensor);
+
 std::string& createOrGetString(InferenceTensor& proto, int index);
+
+bool requiresPreProcessing(const InferenceTensor& tensor);
+
+int getBinaryInputsSize(const InferenceTensor& tensor);
+const std::string& getBinaryInput(const InferenceTensor& tensor, size_t i);
+Status validateTensor(const TensorInfo& tensorInfo,
+    const InferenceTensor& src,
+    const std::string* buffer);
+
+Status isNativeFileFormatUsed(const InferenceRequest& request, const std::string& name, bool& nativeFileFormatUsed);
 }  // namespace ovms
