@@ -1,4 +1,4 @@
-# Serving for Text generation with Visual Languange Models with NPU acceleration #ovms_demos_vlm_npu
+# Serving for Text generation with Visual Language Models with NPU acceleration #ovms_demos_vlm_npu
 
 
 This demo shows how to deploy VLM models in the OpenVINO Model Server with NPU acceleration.
@@ -244,6 +244,14 @@ python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-pa
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+
+## Limitations
+
+- requests MUST include one and only one image in the messages context. Other request will be rejected. 
+- beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
+- models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
+- log_probs are not supported
+- finish reason is always set to "stop".
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)

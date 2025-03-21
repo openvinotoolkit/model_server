@@ -319,6 +319,14 @@ python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/com
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
 
+
+## Limitations
+
+- beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
+- models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
+- log_probs are not supported
+- finish reason is always set to "stop".
+
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)
