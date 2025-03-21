@@ -1313,6 +1313,70 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptExceedsModelMaxLength) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string prompt;
+    for(int i = 0; i< 1024; i++){
+        prompt += "prompt";
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": ")" + prompt + R"("
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string prompt;
+    for(int i = 0; i< 1023; i++){
+        prompt += "prompt";
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "messages": [
+            {
+                "role": "user",
+                "content": ")" + prompt + R"("
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+        parsedResponse.Parse(response.c_str());
+        ASSERT_TRUE(parsedResponse["usage"].IsObject());
+        ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+        EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2046);
+        ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+        EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 2);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringEmpty) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
