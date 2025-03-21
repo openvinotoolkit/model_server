@@ -38,7 +38,9 @@ void LegacyExecutor::processRequest() {
         requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
         pipe->finish_chat();
     } catch (std::exception& e) {
-        requests.front()->errorMessage = e.what();
+        requests.front()->success = false;
+        SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
+
     }
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     requests.front()->readySignal.set_value();

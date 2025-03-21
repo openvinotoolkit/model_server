@@ -98,8 +98,8 @@ absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std
         return absl::CancelledError();
     }
     legacyExecutionContext->finished.wait();
-    if(legacyExecutionContext->errorMessage.size() > 0){
-        return absl::InvalidArgumentError(legacyExecutionContext->errorMessage);
+    if(!legacyExecutionContext->success){
+        return absl::InvalidArgumentError("Request processing failed, check its correctness.");
     }
     return absl::OkStatus();
 }
@@ -147,8 +147,8 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
-        if(legacyExecutionContext->errorMessage.size() > 0){
-            return absl::InvalidArgumentError(legacyExecutionContext->errorMessage);
+        if(!legacyExecutionContext->success){
+            return absl::InvalidArgumentError("Request processing failed, check its correctness.");
         }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
