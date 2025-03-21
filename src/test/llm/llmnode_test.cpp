@@ -1319,7 +1319,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptExceedsModelMaxLe
         GTEST_SKIP();
     }
     std::string prompt;
-    for(int i = 0; i< 1024; i++){
+    for (int i = 0; i < 1024; i++) {
         prompt += "prompt";
     }
     std::string requestBody = R"(
@@ -1331,7 +1331,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptExceedsModelMaxLe
             "messages": [
             {
                 "role": "user",
-                "content": ")" + prompt + R"("
+                "content": ")" +
+                              prompt + R"("
             }
             ]
         }
@@ -1348,7 +1349,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength
         GTEST_SKIP();
     }
     std::string prompt;
-    for(int i = 0; i< 1023; i++){
+    for (int i = 0; i < 1023; i++) {
         prompt += "prompt";
     }
     std::string requestBody = R"(
@@ -1360,7 +1361,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength
             "messages": [
             {
                 "role": "user",
-                "content": ")" + prompt + R"("
+                "content": ")" +
+                              prompt + R"("
             }
             ]
         }
@@ -1369,12 +1371,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::OK);
-        parsedResponse.Parse(response.c_str());
-        ASSERT_TRUE(parsedResponse["usage"].IsObject());
-        ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-        EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2046);
-        ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-        EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 2);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["usage"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
+    EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2046);
+    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
+    EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 2);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringEmpty) {
