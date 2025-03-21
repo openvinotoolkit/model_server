@@ -69,12 +69,12 @@ TEST(OVInferRequestQueue, FullQueue) {
     }
     timer.start(QUEUE);
     std::thread th(&releaseStream, std::ref(inferRequestsQueue));
-    th.detach();
     reqid = inferRequestsQueue.getIdleStream().get();  // it should wait 0.5s for released request
     timer.stop(QUEUE);
 
     EXPECT_GT(timer.elapsed<std::chrono::microseconds>(QUEUE), 500'000);
     EXPECT_EQ(reqid, 3);
+    th.join();
 }
 
 static void inferenceSimulate(ovms::OVInferRequestsQueue& ms, std::vector<int>& tv) {

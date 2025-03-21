@@ -1354,6 +1354,9 @@ TEST_F(CAPIMetadata, Negative) {
 class CAPIState : public ::testing::Test {
 public:
     static std::shared_ptr<MockModelInstanceChangingStates> modelInstance;
+    static void TearDownTestSuite() {
+        modelInstance.reset();
+    }
     class MockModel : public Model {
     public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
