@@ -34,6 +34,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::vector<ov::Tensor> inputImages;
     std::condition_variable executionInProgress;
     std::string inputText;
+    bool success = true;
 };
 
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
