@@ -3422,14 +3422,25 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
-class LLMOptionsHttpTest : public ::testing::TestWithParam<std::string> {
+class LLMOptionsHttpTestPython : public ::testing::Test {
 public:
-    void SetUp() { py::initialize_interpreter(); }
-    void TearDown() { py::finalize_interpreter(); }
+    static void SetUpTestSuite() { py::initialize_interpreter(); }
+    static void TearDownTestSuite() { py::finalize_interpreter(); }
 };
 
-TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
-    std::string modelsPath = GetParam();
+class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
+public:
+    std::string modelsPath;
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/facebook/opt-125m"; }
+};
+
+class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
+public:
+    std::string modelsPath;
+    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+};
+
+void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3478,9 +3489,14 @@ TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     ASSERT_EQ(properties->device, "CPU");
     ASSERT_EQ(properties->pluginConfig.size(), 0);
 }
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
+    TestLLMNodeOptionsCheckDefault(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckDefault) {
+    TestLLMNodeOptionsCheckDefault(modelsPath);
+}
 
-TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
-    std::string modelsPath = GetParam();
+void LLMNodeOptionsCheckHalfDefault(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3529,9 +3545,14 @@ TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
     ASSERT_EQ(properties->schedulerConfig.max_num_seqs, 256);
 }
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
+    LLMNodeOptionsCheckHalfDefault(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckHalfDefault) {
+    LLMNodeOptionsCheckHalfDefault(modelsPath);
+}
 
-TEST_P(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
-    std::string modelsPath = GetParam();
+void LLMNodeOptionsWrongPluginFormat(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3574,9 +3595,14 @@ TEST_P(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::PLUGIN_CONFIG_WRONG_FORMAT);
 }
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
+    LLMNodeOptionsWrongPluginFormat(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsWrongPluginFormat) {
+    LLMNodeOptionsWrongPluginFormat(modelsPath);
+}
 
-TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
-    std::string modelsPath = GetParam();
+void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3625,9 +3651,14 @@ TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     ASSERT_EQ(properties->pluginConfig["PERFORMANCE_HINT"], "LATENCY");
     ASSERT_EQ(properties->pluginConfig["NUM_STREAMS"], "1");
 }
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
+    LLMNodeOptionsCheckPluginConfig(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
+    LLMNodeOptionsCheckPluginConfig(modelsPath);
+}
 
-TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
-    std::string modelsPath = GetParam();
+void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -3684,6 +3715,12 @@ TEST_P(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     ASSERT_EQ(properties->maxTokensLimit, 700);
     ASSERT_EQ(properties->bestOfLimit, 3);
 }
+TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
+    LLMNodeOptionsCheckNonDefault(modelsPath);
+}
+TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckNonDefault) {
+    LLMNodeOptionsCheckNonDefault(modelsPath);
+}
 
 // Speculative decoding is not supported in VLM pipelines, currently not using parameters for this test
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
@@ -3727,13 +3764,6 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsSpeculativeDecodingSanityCheck) {
     std::shared_ptr<GenAiServable> servable;
     ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    LLMOptionsHttpTestInstances,
-    LLMOptionsHttpTest,
-    ::testing::Values(
-        "/ovms/src/test/llm_testing/facebook/opt-125m",         // LM and LM_CB
-        "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"));  // VLM and VLM_CB
 
 class GetPromptTokensString : public ::testing::Test {
 public:
