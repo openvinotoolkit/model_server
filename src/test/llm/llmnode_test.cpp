@@ -1319,8 +1319,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptExceedsModelMaxLe
         GTEST_SKIP();
     }
     std::string prompt;
-    for (int i = 0; i < 1024; i++) {
-        prompt += "prompt";
+    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
+    for (int i = 0; i < 2048; i++) {
+        prompt += "it";
     }
     std::string requestBody = R"(
         {
@@ -1349,8 +1350,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength
         GTEST_SKIP();
     }
     std::string prompt;
-    for (int i = 0; i < 1023; i++) {
-        prompt += "prompt";
+    // creating prompt that will be tokenized to 2047 tokens when model max length is 2048
+    for (int i = 0; i < 2047; i++) {
+        prompt += "it";
     }
     std::string requestBody = R"(
         {
