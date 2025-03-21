@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -310,7 +310,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model mistralai/Mistral-7B-Instruct-v0.2 --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 100 --request-rate inf --max_concurrency 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model mistralai/Mistral-7B-Instruct-v0.2 --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 100 --request-rate inf --max-concurrency 1
 
 
 ```
