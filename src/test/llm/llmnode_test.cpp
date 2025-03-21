@@ -1313,7 +1313,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptExceedsModelMaxLength) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToModelMaxLength) {
     auto params = GetParam();
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
