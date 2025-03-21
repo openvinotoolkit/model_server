@@ -92,14 +92,20 @@ void* globalVaDisplay = nullptr;
 const uint32_t MAX_NIREQ_COUNT = 100000;
 const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
-ModelInstance::~ModelInstance() = default;
+ModelInstance::~ModelInstance() {
+    SPDLOG_ERROR("THIS:{}", (void*)this);
+        retireModel();
+    SPDLOG_ERROR("THIS:{}", (void*)this);
+    
+}
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
     Servable(name, version),
     ieCore(ieCore),
     subscriptionManager(std::string("model: ") + name + std::string(" version: ") + std::to_string(version)),
     status(name, version),
     reporter(std::make_unique<ModelMetricReporter>(metricConfig, registry, name, version)) {
-    isCustomLoaderConfigChanged = false;
+    SPDLOG_ERROR("THIS:{}", (void*)this);
+            isCustomLoaderConfigChanged = false;
 }
 
 void ModelInstance::subscribe(NotifyReceiver& pd) {

@@ -106,7 +106,7 @@ protected:
     /**
          * @brief OpenVINO Runtime Model object
          */
-    std::shared_ptr<ov::Model> model;
+    std::shared_ptr<ov::Model> model; // check if used
 
     /**
          * @brief OpenVINO Runtime CompiledModel object
