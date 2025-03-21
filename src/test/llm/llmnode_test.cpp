@@ -3434,7 +3434,7 @@ public:
     void SetUp() { modelsPath = "/ovms/src/test/llm_testing/facebook/opt-125m"; }
 };
 
-class LLMOptionsHttpTestVlm : public LLMOptionsHttpTestPython {
+class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
     void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
@@ -3492,7 +3492,7 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
 }
-TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsCheckDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckDefault) {
     TestLLMNodeOptionsCheckDefault(modelsPath);
 }
 
@@ -3548,7 +3548,7 @@ void LLMNodeOptionsCheckHalfDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     LLMNodeOptionsCheckHalfDefault(modelsPath);
 }
-TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsCheckHalfDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckHalfDefault) {
     LLMNodeOptionsCheckHalfDefault(modelsPath);
 }
 
@@ -3598,7 +3598,7 @@ void LLMNodeOptionsWrongPluginFormat(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     LLMNodeOptionsWrongPluginFormat(modelsPath);
 }
-TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsWrongPluginFormat) {
+TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsWrongPluginFormat) {
     LLMNodeOptionsWrongPluginFormat(modelsPath);
 }
 
@@ -3654,7 +3654,7 @@ void LLMNodeOptionsCheckPluginConfig(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
-TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsCheckPluginConfig) {
+TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
@@ -3718,7 +3718,7 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);
 }
-TEST_F(LLMOptionsHttpTestVlm, LLMNodeOptionsCheckNonDefault) {
+TEST_F(LLMVLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);
 }
 
