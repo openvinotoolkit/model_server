@@ -56,6 +56,34 @@ curl http://localhost/v3/chat/completions \
 }
 ```
 
+In case of VLM models, the request can include the images in base64 encoding. For example:
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llava",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "What is on the picture?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ..."
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
 
 ### Request
 
