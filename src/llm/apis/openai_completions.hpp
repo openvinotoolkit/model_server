@@ -26,7 +26,9 @@
 
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/visual_language/pipeline.hpp>
 #include <openvino/runtime/tensor.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -211,6 +213,8 @@ public:
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
+    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
+    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
     static void writeLogprob(Writer<StringBuffer>& writer, float logprob);

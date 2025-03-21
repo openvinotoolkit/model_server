@@ -32,10 +32,13 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
-#include "continuous_batching/servable.hpp"
-#include "continuous_batching/servable_initializer.hpp"
+#include "language_model/continuous_batching/servable.hpp"
+#include "language_model/continuous_batching/servable_initializer.hpp"
+#include "language_model/legacy/servable_initializer.hpp"
+#include "servable.hpp"
 #include "servable_initializer.hpp"
-#include "visual_language_model/servable.hpp"
+#include "visual_language_model/continuous_batching/servable.hpp"
+#include "visual_language_model/legacy/servable_initializer.hpp"
 
 namespace ovms {
 
@@ -160,33 +163,27 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             if (isVLM) {
                 pipelineType = PipelineType::VLM;
             } else {
-                pipelineType = PipelineType::TEXT;
+                pipelineType = PipelineType::LM;
             }
         } else {
             if (isVLM) {
                 pipelineType = PipelineType::VLM_CB;
             } else {
-                pipelineType = PipelineType::TEXT_CB;
+                pipelineType = PipelineType::LM_CB;
             }
         }
     } else {
         switch (nodeOptions.pipeline_type()) {
-        case mediapipe::LLMCalculatorOptions::TEXT:
-            pipelineType = PipelineType::TEXT;
+        case mediapipe::LLMCalculatorOptions::LM:
+            pipelineType = PipelineType::LM;
             break;
         case mediapipe::LLMCalculatorOptions::VLM:
             pipelineType = PipelineType::VLM;
             break;
-        case mediapipe::LLMCalculatorOptions::TEXT_CB:
-            pipelineType = PipelineType::TEXT_CB;
+        case mediapipe::LLMCalculatorOptions::LM_CB:
+            pipelineType = PipelineType::LM_CB;
             break;
         case mediapipe::LLMCalculatorOptions::VLM_CB:
-            pipelineType = PipelineType::VLM_CB;
-            break;
-        case mediapipe::LLMCalculatorOptions::CONTINUOUS_BATCHING:
-            pipelineType = PipelineType::TEXT_CB;
-            break;
-        case mediapipe::LLMCalculatorOptions::VISUAL_LANGUAGE_MODEL:
             pipelineType = PipelineType::VLM_CB;
             break;
         default:
@@ -213,13 +210,13 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     Status status;
     if (nodeOptions.has_models_path()) {  // Stable initialization
         // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
-        PipelineType pipelineType{PipelineType::TEXT_CB};
+        PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
             return status;
         }
-        if (pipelineType == PipelineType::TEXT_CB) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Continuous Batching servable");
+        if (pipelineType == PipelineType::LM_CB) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
@@ -230,7 +227,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::VLM_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model servable");
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
@@ -238,7 +235,22 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
             }
-
+        } else if (pipelineType == PipelineType::LM) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Legacy servable");
+            LegacyServableInitializer legacyServableInitializer;
+            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
+        } else if (pipelineType == PipelineType::VLM) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Legacy servable");
+            VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
+            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            if (status != StatusCode::OK) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
+                return status;
+            }
         } else {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
             return StatusCode::INTERNAL_ERROR;

@@ -200,9 +200,10 @@ cc_library(
             "statefulrequestprocessor",
             "modelinstanceunloadguard",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "capi_validation",
@@ -221,9 +222,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "predict_request_validation_utils",
@@ -236,14 +238,16 @@ cc_library(
             "requesttensorextractor",
             "predict_request_validation_utils_impl",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "anonymous_input_name",
     hdrs = ["anonymous_input_name.hpp"],
     srcs = ["anonymous_input_name.cpp"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
@@ -257,9 +261,10 @@ cc_library(
         "anonymous_input_name",
         "libovmslogging",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "predict_request_validation_utils_impl",
@@ -271,9 +276,10 @@ cc_library(
             "libovmsshape",
             "anonymous_input_name",
     ],
-    copts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "libovms_version",
@@ -1534,9 +1540,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "tfs_validation",
@@ -1551,9 +1558,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "kfs_serialization",
@@ -2745,9 +2753,9 @@ cc_test(
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
-                "test/llmnode_test.cpp",
-                "test/llmtemplate_test.cpp",
-                "test/text_streamer_test.cpp",
+                "test/llm/llmnode_test.cpp",
+                "test/llm/llmtemplate_test.cpp",
+                "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
             ],
@@ -2769,7 +2777,12 @@ cc_test(
         "test/configs/config_standard_scalar.json",
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
-        "test/llm/graphkfspass.pbtxt",
+        "test/llm/config.json",
+        "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_legacy_regular.pbtxt",
+        "test/llm/lm_cb_speculative.pbtxt",
+        "test/llm/visual_language_model/config.json",
+        "test/llm/visual_language_model/vlm_cb_regular.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",

@@ -28,21 +28,15 @@ message LLMCalculatorOptions {
 
     enum PipelineType {
       // Single modality (text only), text generation based on LLMPipeline
-      TEXT = 0;
+      LM = 0;
       // Multimodal (text and image), text generation based on LLMPipeline
       VLM = 1;
       // Single modality (text only), text generation based on ContinuousBatchingPipeline
-      TEXT_CB = 2;
+      LM_CB = 2;
       // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
       VLM_CB = 3;
       // Default option. If selected, pipeline type will be inferred by the serving
       AUTO = 4;
-
-      // Compatibility with current configurations, remove below in the next PR
-      // Continuous batching pipeline
-      CONTINUOUS_BATCHING = 5;
-      // Visual language model pipeline
-      VISUAL_LANGUAGE_MODEL = 6;
     }
 
     optional string models_path = 1;

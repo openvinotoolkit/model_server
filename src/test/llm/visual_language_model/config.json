@@ -2,8 +2,8 @@
     "model_config_list": [],
     "mediapipe_config_list": [
     {
-        "name":"dummyVLMServable",
-        "graph_path":"/ovms/src/test/llm/visual_language_model/graph.pbtxt"
+        "name":"vlm_cb_regular",
+        "graph_path":"/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt"
     }
     ]
 }
