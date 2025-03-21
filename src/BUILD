@@ -2771,6 +2771,7 @@ cc_test(
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
         "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_legacy_regular.pbtxt",
         "test/llm/lm_cb_speculative.pbtxt",
         "test/llm/visual_language_model/config.json",
         "test/llm/visual_language_model/vlm_cb_regular.pbtxt",

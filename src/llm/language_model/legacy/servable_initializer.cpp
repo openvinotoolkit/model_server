@@ -70,9 +70,10 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return status;
     }
 
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
+    // Enforce construction of stateful pipeline on any device selected (CPU and GPU by default construct CB pipeline through CB adapter)
+    properties->pluginConfig["ATTENTION_BACKEND"] = "SDPA";
     try {
-        properties->pipeline = std::make_shared<ov::genai::LLMPipeline>(parsedModelsPath, properties->device);
+        properties->pipeline = std::make_shared<ov::genai::LLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
