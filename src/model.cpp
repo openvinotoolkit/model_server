@@ -33,6 +33,10 @@
 
 namespace ovms {
 
+Model::~Model() {
+    this->retireAllVersions();
+}
+
 static StatusCode downloadModels(std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t> versions) {
     if (versions->size() == 0) {
         return StatusCode::OK;
