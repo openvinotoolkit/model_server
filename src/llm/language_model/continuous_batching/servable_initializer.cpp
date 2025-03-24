@@ -143,6 +143,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
 
     properties->device = nodeOptions.device();
     properties->isSpeculativePipeline = false;
+
     if (!nodeOptions.draft_models_path().empty()) {
         if (!servable->supportsSpeculativeDecoding()) {
             SPDLOG_ERROR("draft_models_path provided, but this servable does not support speculative decoding");
@@ -190,6 +191,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
 
     properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     properties->bestOfLimit = nodeOptions.best_of_limit();
+    properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
     return StatusCode::OK;

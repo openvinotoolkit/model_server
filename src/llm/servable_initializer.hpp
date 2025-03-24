@@ -57,4 +57,5 @@ public:
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
+std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 }  // namespace ovms

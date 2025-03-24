@@ -108,6 +108,7 @@ cc_library(
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",
         "//src:libovmsprofiler",
+        "//src:libovmsfilesystem",
         "llmcalculator_cc_proto",
         "//src/python:utils",
         ":text_processor",

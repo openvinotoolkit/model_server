@@ -102,6 +102,8 @@ struct OpenAIChatCompletionsRequest {
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
 
+    std::optional<uint32_t> maxModelLength;
+
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
 
@@ -111,7 +113,8 @@ struct OpenAIChatCompletionsRequest {
         config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
             config.max_new_tokens = maxTokens.value();
-        // TODO: max_length = ?
+        if (maxModelLength.has_value())
+            config.max_length = maxModelLength.value();
         if (ignoreEOS.has_value())
             config.ignore_eos = ignoreEOS.value();
 
@@ -182,7 +185,7 @@ class OpenAIChatCompletionsHandler {
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
-    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -209,7 +212,7 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
