@@ -88,6 +88,11 @@ public:
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
 
+        // This is a workaround needed due to increased number of servables used in the test.
+        // Tests might start before all servables are loaded.
+        // It's not done properly, but might not be needed after general factor.
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+
         try {
             plugin_config_t tokenizerPluginConfig = {};
             std::string device = "CPU";
