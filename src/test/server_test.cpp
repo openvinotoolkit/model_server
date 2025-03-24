@@ -366,6 +366,8 @@ TEST(Server, ProperShutdownInCaseOfStartError) {
     std::string restPort = "9000";
     randomizePort(port);
     randomizePort(restPort);
+    while (port == restPort)
+        randomizePort(restPort);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
