@@ -281,7 +281,10 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if task_parameters['extra_quantization_params'] is None:
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
+            if task_parameters['extra_quantization_params'] is None:
+                task_parameters['extra_quantization_params'] = ""
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
+            print(optimum_command)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
     ### Speculative decoding specific 
