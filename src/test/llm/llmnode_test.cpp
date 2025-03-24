@@ -88,6 +88,11 @@ public:
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
 
+        // This is a workaround needed due to increased number of servables used in the test.
+        // Tests might start before all servables are loaded.
+        // It's not done properly, but might not be needed after general factor.
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+
         try {
             plugin_config_t tokenizerPluginConfig = {};
             std::string device = "CPU";
@@ -2289,7 +2294,8 @@ INSTANTIATE_TEST_SUITE_P(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
         TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false}));
+        TestParameters{"vlm_cb_regular", false, true, true, false},
+        TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 const std::string validRequestBodyWithParameter(const std::string& modelName, const std::string& parameter, const std::string& value) {
     std::string requestBody = R"(
@@ -3163,7 +3169,8 @@ INSTANTIATE_TEST_SUITE_P(
         // params:     model name, generate expected output, check logprobs, check finish reason, test speculative decoding
         TestParameters{"lm_cb_regular", true, true, true, false},
         TestParameters{"lm_legacy_regular", false, false, false, false},
-        TestParameters{"vlm_cb_regular", false, true, true, false}));
+        TestParameters{"vlm_cb_regular", false, true, true, false},
+        TestParameters{"vlm_legacy_regular", false, false, false, false}));
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
@@ -3486,7 +3493,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         std::make_tuple("LM_CB", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
         std::make_tuple("LM", ovms::StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED),
-        std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR)));
+        std::make_tuple("VLM_CB", ovms::StatusCode::INTERNAL_ERROR),
+        std::make_tuple("VLM", ovms::StatusCode::INTERNAL_ERROR)));
 
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
