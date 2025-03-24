@@ -35,9 +35,6 @@ ${debug_bazel_flags} \
 LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
-echo "RUN_GPU_TESTS"
-echo $RUN_GPU_TESTS
-
 # Check if RUN_GPU_TESTS is set and add it to SHARED_OPTIONS
 if [ "$RUN_GPU_TESTS" == "1" ]; then
     if grep -q "ID=ubuntu" /etc/os-release; then
