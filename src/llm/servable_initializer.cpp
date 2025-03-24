@@ -21,6 +21,11 @@
 
 #include <spdlog/spdlog.h>
 
+#include <fstream>
+
+#include <rapidjson/error/en.h>
+#include <rapidjson/istreamwrapper.h>
+
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
@@ -32,6 +37,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
+#include "../filesystem.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
 #include "language_model/legacy/servable_initializer.hpp"
@@ -272,5 +278,28 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     }
     return StatusCode::OK;
 }
-
+std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
+    std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
+    std::optional<uint32_t> maxModelLength;
+    if (std::filesystem::exists(configPath.c_str())) {
+        std::ifstream ifs(configPath);
+        if (!ifs.is_open()) {
+            return maxModelLength;
+        }
+        rapidjson::Document modelConfig;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+        if (parseResult.Code()) {
+            return maxModelLength;
+        }
+        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
+        for (auto field : maxLengthFields) {
+            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
+                maxModelLength = modelConfig[field.c_str()].GetUint();
+                break;
+            }
+        }
+    }
+    return maxModelLength;
+}
 }  // namespace ovms
