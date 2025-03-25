@@ -2884,7 +2884,6 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
     ],
-    linkopts = LINKOPTS_ADJUSTED,
     deps = [
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
@@ -2918,6 +2917,8 @@ cc_test(
             ],
         }),
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -2934,12 +2935,13 @@ cc_library(
         ],
     data = [
     ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
     deps = [
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
 
 cc_library(
@@ -2952,12 +2954,13 @@ cc_library(
     srcs = [
         "test/environment.cpp",
         ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
     linkopts = [],
     deps = [
 	"libovmslogging",
         "@com_google_googletest//:gtest",
     ],
-    copts = COPTS_TESTS,
 )
 cc_library(
     name = "libtest_gpuenvironment",
@@ -2970,6 +2973,7 @@ cc_library(
             "libovmslogging",
             "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -3022,6 +3026,7 @@ cc_library(
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS + ["-lOpenCL",
         ] + select({
             "//:redhat_build": [],
