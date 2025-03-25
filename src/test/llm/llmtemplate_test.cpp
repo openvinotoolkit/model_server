@@ -622,10 +622,12 @@ protected:
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, ovmsConfigFilePath.c_str());
         auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
+        const int numberOfRetries = 20;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
+
+        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
     }
 
     void SetUp() override {
