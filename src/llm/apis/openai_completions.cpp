@@ -442,10 +442,11 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             request.stop = std::set<std::string>{it->value.GetString()};
         } else if (it->value.IsArray()) {
             auto stopArray = it->value.GetArray();
-            if (stopArray.Size() > DEFAULT_MAX_STOP_WORDS)
+            if (stopArray.Size() > DEFAULT_MAX_STOP_WORDS) {
                 std::stringstream ss;
                 ss << "stop array must have no more than " << DEFAULT_MAX_STOP_WORDS << " strings";
                 return absl::InvalidArgumentError(ss.str());
+            }
             if (!stopArray.Empty()) {
                 request.stop = std::set<std::string>{};
                 for (size_t i = 0; i < stopArray.Size(); i++) {
