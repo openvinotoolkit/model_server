@@ -1301,7 +1301,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize
             "model": ")" + params.modelName +
                               R"(",
             "stream": false,
-            "stop": ["a", "b", "c", "d", "e"],
+            "stop": ["a", "b", "c", "d", "1", "2", "3", "4", "x", "y", "z", "w", "9", "8", "7", "6", "exceeeded"],
             "seed" : 1,
             "max_tokens": 5,
             "messages": [
