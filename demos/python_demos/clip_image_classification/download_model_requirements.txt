@@ -3,6 +3,6 @@
 --pre
 openvino==2025.1.*
 numpy<2.0
-transformers==4.40.2
+transformers==4.49 # 4.50 has a bug
 pillow==10.3.0
 torch==2.2.0+cpu
