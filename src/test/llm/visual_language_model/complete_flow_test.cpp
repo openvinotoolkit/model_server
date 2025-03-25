@@ -86,11 +86,12 @@ public:
 
 std::unique_ptr<std::thread> VLMServableExecutionTest::t;
 
-std::string createRequestBody(const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, bool includeImage = true) {
+std::string createRequestBody(const std::string& modelName, const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, bool includeImage = true) {
     std::ostringstream oss;
     oss << R"(
         {
-            "model": "vlm_cb_regular",
+            "model": ")"
+        << modelName << R"(",
             "messages": [
             {
                 "role": "user",
@@ -127,15 +128,18 @@ std::string createRequestBody(const std::vector<std::pair<std::string, std::stri
     return oss.str();
 }
 
+class VLMServableExecutionTestParameterized : public VLMServableExecutionTest, public ::testing::WithParamInterface<std::string> {};
+
 // Unary flow
 
-TEST_F(VLMServableExecutionTest, unaryBasic) {
+TEST_P(VLMServableExecutionTestParameterized, unaryBasic) {
+    auto modelName = GetParam();
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "false"},
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
-    std::string requestBody = createRequestBody(fields);
+    std::string requestBody = createRequestBody(modelName, fields);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
@@ -145,10 +149,12 @@ TEST_F(VLMServableExecutionTest, unaryBasic) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (modelName.find("legacy") == std::string::npos) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
@@ -159,18 +165,19 @@ TEST_F(VLMServableExecutionTest, unaryBasic) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "vlm_cb_regular");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
 // Only image input is accepted, but expected output can't be predicted
-TEST_F(VLMServableExecutionTest, unaryBasicOnlyImage) {
+TEST_P(VLMServableExecutionTestParameterized, unaryBasicOnlyImage) {
+    auto modelName = GetParam();
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "false"},
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
-    std::string requestBody = createRequestBody(fields, false, true);
+    std::string requestBody = createRequestBody(modelName, fields, false, true);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
@@ -180,10 +187,12 @@ TEST_F(VLMServableExecutionTest, unaryBasicOnlyImage) {
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     int i = 0;
     for (auto& choice : parsedResponse["choices"].GetArray()) {
-        ASSERT_TRUE(choice["finish_reason"].IsString());
-        EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+        if (modelName.find("legacy") == std::string::npos) {
+            ASSERT_TRUE(choice["finish_reason"].IsString());
+            EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
+            ASSERT_FALSE(choice["logprobs"].IsObject());
+        }
         ASSERT_EQ(choice["index"], i++);
-        ASSERT_FALSE(choice["logprobs"].IsObject());
         ASSERT_TRUE(choice["message"].IsObject());
         ASSERT_TRUE(choice["message"]["content"].IsString());
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
@@ -194,19 +203,20 @@ TEST_F(VLMServableExecutionTest, unaryBasicOnlyImage) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), "vlm_cb_regular");
+    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
 
 // Stream flow
 
-TEST_F(VLMServableExecutionTest, streamBasic) {
+TEST_P(VLMServableExecutionTestParameterized, streamBasic) {
+    auto modelName = GetParam();
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "true"},
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
-    std::string requestBody = createRequestBody(fields);
+    std::string requestBody = createRequestBody(modelName, fields);
 
     std::vector<std::string> responses;
 
@@ -218,17 +228,20 @@ TEST_F(VLMServableExecutionTest, streamBasic) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (modelName.find("legacy") == std::string::npos) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
 
 // Only image input is accepted, but expected output can't be predicted
-TEST_F(VLMServableExecutionTest, streamBasicOnlyImage) {
+TEST_P(VLMServableExecutionTestParameterized, streamBasicOnlyImage) {
+    auto modelName = GetParam();
     std::vector<std::pair<std::string, std::string>> fields = {
         {"temperature", "0.0"},
         {"stream", "true"},
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
-    std::string requestBody = createRequestBody(fields, false, true);
+    std::string requestBody = createRequestBody(modelName, fields, false, true);
 
     std::vector<std::string> responses;
 
@@ -240,5 +253,12 @@ TEST_F(VLMServableExecutionTest, streamBasicOnlyImage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    if (modelName.find("legacy") == std::string::npos) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
+    }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    VLMServableExecutionTests,
+    VLMServableExecutionTestParameterized,
+    ::testing::Values("vlm_cb_regular", "vlm_legacy_regular"));
