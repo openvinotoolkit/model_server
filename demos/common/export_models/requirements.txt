@@ -12,3 +12,4 @@ transformers<4.48
 einops
 torchvision==0.21.0
 timm==1.0.15
+markupsafe<2.1.0
