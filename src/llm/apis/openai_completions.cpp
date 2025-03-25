@@ -235,7 +235,11 @@ ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() {
     return request.chatHistory;
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t maxTokensLimit) {
+std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
+    return request.maxTokens;
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit) {
     // messages: [{role: content}, {role: content}, ...]; required
     auto status = parseMessages();
     if (status != absl::OkStatus()) {
@@ -259,12 +263,8 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
                 return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
         }
-        if (!(it->value.GetUint() < maxTokensLimit))
-            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit));
-        if (request.ignoreEOS.value_or(false)) {
-            if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
-                return absl::InvalidArgumentError("when ignore_eos is true max_completion_tokens can not be greater than 4000");
-        }
+        if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
     }
     // specific part of max_tokens validation due to echo dependency
@@ -275,7 +275,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
@@ -338,17 +338,9 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
                 return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
         }
-        if (!(it->value.GetUint() < maxTokensLimit))
-            return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
+        if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+            return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
-    }
-    if (request.ignoreEOS.value_or(false)) {
-        if (request.maxTokens.has_value()) {
-            if (request.maxTokens.value() > IGNORE_EOS_MAX_TOKENS_LIMIT)
-                return absl::InvalidArgumentError("when ignore_eos is true max_tokens can not be greater than 4000");
-        } else {
-            request.maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
-        }
     }
 
     // frequency_penalty: float; optional - defaults to 0
@@ -583,7 +575,7 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength);
 
     if (status != absl::OkStatus())
