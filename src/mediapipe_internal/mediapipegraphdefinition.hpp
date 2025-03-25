@@ -42,6 +42,7 @@
 
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -97,8 +98,8 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
+    std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap;
+    std::shared_ptr<GenAiServableMap> genAiServableMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
@@ -135,7 +136,7 @@ protected:
     PipelineDefinitionStatus status;
 
     MediapipeGraphConfig mgconfig;
-    ::mediapipe::CalculatorGraphConfig config;
+    ::mediapipe::CalculatorGraphConfig config;  // TODO rename configs
 
     Status createInputsInfo();
     Status createOutputsInfo();
@@ -165,6 +166,7 @@ private:
     PythonBackend* pythonBackend;
 
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
+    std::shared_ptr<GraphQueue> queue;
 };
 
 class MediapipeGraphDefinitionUnloadGuard {
