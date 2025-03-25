@@ -43,7 +43,7 @@ using namespace rapidjson;
 
 namespace ovms {
 
-contexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
 
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
