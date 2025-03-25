@@ -263,7 +263,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
                 return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
         }
-        if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+        if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
             return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
     }
