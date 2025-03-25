@@ -46,12 +46,7 @@ public:
         std::string port = "9173";
         randomizePort(port);
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
+        ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str(), 15);
     }
 
     void SetUp() {

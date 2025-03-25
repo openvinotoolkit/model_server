@@ -620,12 +620,7 @@ protected:
         CreateSymbolicLinks(directoryPath);
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, ovmsConfigFilePath.c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
+        ::EnsureSetUpServer(t, server, port, ovmsConfigFilePath.c_str(), 15);
     }
 
     void SetUp() override {

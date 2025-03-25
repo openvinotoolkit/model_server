@@ -1025,7 +1025,9 @@ void randomizePorts(std::string& port1, std::string& port2);
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
+// legacy - avoid this to avoid data races in tests
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath);
+void EnsureSetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds);
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName);
 
