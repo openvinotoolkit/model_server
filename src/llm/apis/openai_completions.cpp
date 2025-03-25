@@ -43,6 +43,8 @@ using namespace rapidjson;
 
 namespace ovms {
 
+contexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
     auto it = doc.FindMember("prompt");
@@ -440,8 +442,10 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             request.stop = std::set<std::string>{it->value.GetString()};
         } else if (it->value.IsArray()) {
             auto stopArray = it->value.GetArray();
-            if (stopArray.Size() > 4)
-                return absl::InvalidArgumentError("stop array must have no more than 4 strings");
+            if (stopArray.Size() > DEFAULT_MAX_STOP_WORDS)
+                std::stringstream ss;
+                ss << "stop array must have no more than " << DEFAULT_MAX_STOP_WORDS << " strings";
+                return absl::InvalidArgumentError(ss.str());
             if (!stopArray.Empty()) {
                 request.stop = std::set<std::string>{};
                 for (size_t i = 0; i < stopArray.Size(); i++) {
