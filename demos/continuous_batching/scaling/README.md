@@ -44,7 +44,7 @@ Confirm in logs if the containers loaded the models successfully.
 
 ## Start Nginx load balancer
 
-The configuration below is a basic example distributing the clients between two started instances.
+The configuration below is a basic example distributing the clients between six started instances.
 ```
 events {
     worker_connections 10000;
