@@ -83,10 +83,7 @@ public:
         ovms::Server& server = ovms::Server::instance();
         ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 15);
 
-        // This is a workaround needed due to increased number of servables used in the test.
-        // Tests might start before all servables are loaded.
-        // It's not done properly, but might not be needed after general factor.
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
 
         try {
             plugin_config_t tokenizerPluginConfig = {};
@@ -1296,7 +1293,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize
             "model": ")" + params.modelName +
                               R"(",
             "stream": false,
-            "stop": ["a", "b", "c", "d", "e"],
+            "stop": ["a", "b", "c", "d", "1", "2", "3", "4", "x", "y", "z", "w", "9", "8", "7", "6", "exceeded"],
             "seed" : 1,
             "max_tokens": 5,
             "messages": [
