@@ -61,19 +61,19 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         { bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
-            //src:ovms_test ${debug_bazel_flags} > ${TEST_LOG} 2>&1 || \
+            //src:ovms_test ${SHARED_OPTIONS} > ${TEST_LOG} 2>&1 || \
             compress_logs && exit 1; } && \
             generate_coverage_report;
     fi
-    bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
-    bazel build --jobs=$JOBS ${debug_bazel_flags} //src:ovms_test || exit 1
+    bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
+    bazel build ${SHARED_OPTIONS} //src:ovms_test || exit 1
     echo "Executing unit tests"
     failed=0
     if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
         set +x
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
         for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
-            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
+            if bazel test ${SHARED_OPTIONS} --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
                 failed=1
@@ -83,7 +83,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             cat tmp.log >> ${TEST_LOG}
         done
         for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep '^  '` ; do
-            if bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=all --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
+            if bazel test ${SHARED_OPTIONS} --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
                 failed=1
@@ -101,7 +101,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
         fi
     else
         # For RH UBI and Ubuntu20
-        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
+        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" //src:ovms_test > ${TEST_LOG} 2>&1 ; then
             failed=1
         fi
         cat ${TEST_LOG} | tail -500
