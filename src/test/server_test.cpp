@@ -364,7 +364,7 @@ TEST(Server, ServerMetadata) {
 TEST(Server, GrpcWorkers) {
     std::string port = "9000";
     randomizePort(port);
-    int workers = 4;
+    std::string workers = "4";
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -374,13 +374,15 @@ TEST(Server, GrpcWorkers) {
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--grpc_workers",
-        (char*)workers,
+        (char*)workers.c_str(),
         (char*)"--log_level",
         (char*)"DEBUG",
         nullptr};
 
     ovms::Server& server = ovms::Server::instance();
-    ASSERT_EQ(EXIT_SUCCESS, server.start(11, argv));
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(11, argv));
+    });
     auto start = std::chrono::high_resolution_clock::now();
     while ((ovms::Server::instance().getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
@@ -392,6 +394,7 @@ TEST(Server, GrpcWorkers) {
     requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);
     checkServerMetadata(port.c_str(), grpc::StatusCode::OK);
     server.setShutdownRequest(1);
+    t.join();
     server.setShutdownRequest(0);
 }
 
