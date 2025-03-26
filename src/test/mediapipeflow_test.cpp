@@ -118,8 +118,16 @@ public:
 
 class MediapipeCliFlowTestDummyRelative : public MediapipeCliFlowTest {
 public:
+    std::filesystem::path originalCwd;
     void SetUp() {
+        // Workaround for bazel test execution from /root/ or bazel-out directory
+        originalCwd = std::filesystem::current_path();
+#ifdef __linux__
+        std::filesystem::path newCwd = "/ovms";
+        std::filesystem::current_path(newCwd);
+#endif
         SetUpServer("src/test/mediapipe/cli", "graphkfspass");
+        std::filesystem::current_path(originalCwd);
     }
 };
 
