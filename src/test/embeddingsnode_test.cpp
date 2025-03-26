@@ -40,14 +40,7 @@ public:
 
     static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, configPath.c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 20;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
-
-        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
+        ::EnsureSetUpServer(t, server, port, configPath.c_str(), 15);
     }
     static void SetUpTestSuite() {
     }
@@ -376,12 +369,11 @@ public:
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
         auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 20;
+        const int numberOfRetries = 15;
         while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
                (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
         }
-
-        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
+        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
     }
 
     void SetUp() {
