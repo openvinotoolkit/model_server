@@ -341,10 +341,8 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
             return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
-    }
-    else
-    {
-        if (maxTokensLimit.has_value()){
+    } else {
+        if (maxTokensLimit.has_value()) {
             request.maxTokens = maxTokensLimit.value();
         }
     }

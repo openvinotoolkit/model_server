@@ -511,7 +511,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
-  std::string json = R"({
+    std::string json = R"({
     "model": "llama",
     "messages": [
       {
