@@ -11,5 +11,5 @@ transformers==4.49 # 4.50 has a bug
 diffusers==0.26.3
 datasets==2.18.0
 numpy<2.0
-huggingface_hub==0.24.7
+huggingface_hub==0.26.0
 
