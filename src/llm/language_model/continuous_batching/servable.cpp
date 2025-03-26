@@ -91,10 +91,9 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
 static ov::genai::GenerationOutput prepareEmptyStopReasonOutput() {
     static ov::genai::GenerationOutput out = {
         std::vector<int64_t>(),  // generated_ids
-        std::vector<float>(),  // generated_log_probs
-        0.0f,  // score
-        ov::genai::GenerationFinishReason::STOP
-    };
+        std::vector<float>(),    // generated_log_probs
+        0.0f,                    // score
+        ov::genai::GenerationFinishReason::STOP};
     return out;
 }
 
