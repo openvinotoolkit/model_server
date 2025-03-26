@@ -510,6 +510,33 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "valid prompt"
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    uint32_t maxTokensLimit = 10;
+    uint32_t bestOfLimit = 0;
+    bool isSpeculativePipeline = false;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
+    EXPECT_EQ(apiHandler->getMaxTokens().value(), maxTokensLimit);
+}
+
 TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
     handler.reset();
     server.setShutdownRequest(1);
