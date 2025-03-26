@@ -676,7 +676,7 @@ void randomizePorts(std::string& port1, std::string& port2) {
     }
 }
 
-const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 5;
+const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 15;
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath) {
     server.setShutdownRequest(0);
@@ -690,19 +690,14 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     t.reset(new std::thread([&argc, &argv, &server]() {
         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (!server.isReady()) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-    }
+    EnsureServerStartedWithTimeout(server, SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 }
-void EnsureSetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
-    SetUpServer(t, server, port, configPath);
+void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
     }
-    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time. Check machine load";
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName) {
@@ -719,11 +714,7 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
     t.reset(new std::thread([&argc, &argv, &server]() {
         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (!server.isReady()) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
-    }
+    EnsureServerStartedWithTimeout(server, 15);
 }
 
 std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const TensorInfo> src, ovms::Precision newPrecision) {

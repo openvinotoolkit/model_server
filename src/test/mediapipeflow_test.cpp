@@ -278,12 +278,7 @@ public:
 };
 
 TEST_F(MediapipeEmbeddingsTest, startup) {
-    auto start = std::chrono::high_resolution_clock::now();
-    const int timeout = 5;
-    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
-    }
-
+    EnsureServerStartedWithTimeout(server, 5);
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ASSERT_TRUE(servableModule != nullptr);
     ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
@@ -293,12 +288,7 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
 }
 
 TEST_F(MediapipeEmbeddingsTest, grpcInference) {
-    auto start = std::chrono::high_resolution_clock::now();
-    const int timeout = 5;
-    while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeout)) {
-    }
-
+    EnsureServerStartedWithTimeout(server, 5);
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -2109,11 +2099,7 @@ protected:
         t.reset(new std::thread([&argc, &argv, this]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (!server.isReady()) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(server, 5);
     }
     void TearDown() {
         server.setShutdownRequest(1);

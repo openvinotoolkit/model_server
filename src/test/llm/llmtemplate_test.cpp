@@ -620,7 +620,7 @@ protected:
         CreateSymbolicLinks(directoryPath);
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, ovmsConfigFilePath.c_str(), 15);
+        ::SetUpServer(t, server, port, ovmsConfigFilePath.c_str());
     }
 
     void SetUp() override {
