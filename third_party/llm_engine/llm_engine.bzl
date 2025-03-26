@@ -66,6 +66,7 @@ def _impl(repository_ctx):
         "WIN32": "True",
         "X86_64": "True"
         """
+        jobs_param = "\"-j\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
     else:
         lib_name = "libopenvino_genai"
         out_dll_dir_win = ""
@@ -79,6 +80,7 @@ def _impl(repository_ctx):
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
         """
+        jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -112,7 +114,7 @@ cmake(
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant parallel compilation support - lets go with default - CORES + 2 for ninja
-        "-j 8",
+        {jobs_param}
     ],
     cache_entries = {{ 
         {cache_entries}
@@ -154,7 +156,8 @@ cc_library(
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
-                                                            out_dll_dir_win=out_dll_dir_win, out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static))
+                                                            out_dll_dir_win=out_dll_dir_win, out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static,
+                                                            jobs_param=jobs_param))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,
