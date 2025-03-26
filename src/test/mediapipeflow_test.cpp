@@ -116,6 +116,13 @@ public:
     }
 };
 
+class MediapipeCliFlowTestDummyRelative : public MediapipeCliFlowTest {
+    public:
+        void SetUp() {
+            SetUpServer("src/test/mediapipe/cli", "graphkfspass");
+        }
+    };
+
 TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     server.setShutdownRequest(0);
     randomizePort(this->port);
@@ -138,6 +145,25 @@ TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
 }
 
 TEST_F(MediapipeCliFlowTestDummy, Infer) {
+    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphkfspass";
+    request.Clear();
+    response.Clear();
+    inputs_info_t inputsMeta{
+        {"in", {DUMMY_MODEL_SHAPE, precision}}};
+    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
+    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
+    preparePredictRequest(request, inputsMeta, requestData1);
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
+    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeCliFlowTestDummyRelative, Infer) {
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
