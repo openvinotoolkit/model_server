@@ -37,7 +37,7 @@ def create_config_settings():
     native.config_setting(
         name = "genai_bin",
         define_values = {
-            "GENAI_USE_BINARY": "1",
+            "GENAI_USE_BINARY": "0",
         },
         visibility = ["//visibility:public"],
     )
