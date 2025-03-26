@@ -342,6 +342,12 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
             return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
     }
+    else
+    {
+        if (maxTokensLimit.has_value()){
+            request.maxTokens = maxTokensLimit.value();
+        }
+    }
 
     // frequency_penalty: float; optional - defaults to 0
     it = doc.FindMember("frequency_penalty");
