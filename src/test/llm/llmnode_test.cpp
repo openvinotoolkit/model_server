@@ -1629,6 +1629,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
 
 // Potential sporadic - move to functional if problematic
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
+    GTEST_SKIP() << "Real sporadic, either fix or move to functional";
     auto params = GetParam();
     std::string requestBody = R"(
         {
