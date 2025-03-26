@@ -60,7 +60,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     }
     // logprobs: int; 1 value allowed
     it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (it->value.IsNull()) {
             request.logprobs = 0;
         } else if (!it->value.IsInt()) {
@@ -77,7 +77,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
 
     // echo: bool; optional - defaults to false
     it = doc.FindMember("echo");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("echo accepts values true or false");
         request.echo = it->value.GetBool();
@@ -247,7 +247,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     }
     // logprobs: bool; optional - defaults to false
     auto it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("logprobs accepts values true or false");
         request.logprobschat = it->value.GetBool();
@@ -257,7 +257,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     }
     // max_completion_tokens: uint; optional
     it = doc.FindMember("max_completion_tokens");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint()) {
             if (it->value.IsUint64())
                 return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
@@ -281,14 +281,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     if (!doc.IsObject())
         return absl::InvalidArgumentError("Received json is not an object");
     auto it = doc.FindMember("stream");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("Stream is not bool");
         request.stream = it->value.GetBool();
     }
 
     it = doc.FindMember("stream_options");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!request.stream)
             return absl::InvalidArgumentError("stream_options provided, but stream not set to true");
         if (!it->value.IsObject())
@@ -322,7 +322,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // ignore_eos: bool; optional - defaults to false
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("ignore_eos");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("ignore_eos accepts values true or false");
         request.ignoreEOS = it->value.GetBool();
@@ -349,7 +349,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // frequency_penalty: float; optional - defaults to 0
     it = doc.FindMember("frequency_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("frequency_penalty is not a valid number");
         request.frequencyPenalty = it->value.GetDouble();
@@ -359,7 +359,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // presence_penalty: float; optional - defaults to 0
     it = doc.FindMember("presence_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("presence_penalty is not a valid number");
         request.presencePenalty = it->value.GetDouble();
@@ -370,7 +370,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // repetition_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("repetition_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("repetition_penalty is not a valid number");
         request.repetitionPenalty = it->value.GetDouble();
@@ -379,7 +379,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // diversity_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API and vLLM, however available in CB lib
     it = doc.FindMember("diversity_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("diversity_penalty is not a valid number");
         request.diversityPenalty = it->value.GetDouble();
@@ -388,7 +388,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // length_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
     it = doc.FindMember("length_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("length_penalty is not a valid number");
         request.lengthPenalty = it->value.GetDouble();
@@ -396,7 +396,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // temperature: float; optional - defaults to 1.0
     it = doc.FindMember("temperature");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("temperature is not a valid number");
         request.temperature = it->value.GetDouble();
@@ -406,7 +406,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // top_p: float; optional - defaults to 1
     it = doc.FindMember("top_p");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("top_p is not a valid number");
         request.topP = it->value.GetDouble();
@@ -417,7 +417,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // top_k: int; optional - defaults to 0
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("top_k");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_k is not an integer");
         request.topK = it->value.GetInt();
@@ -425,7 +425,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // seed: int; optional - defaults to 0 (not set)
     it = doc.FindMember("seed");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("seed is not an unsigned integer");
         request.seed = it->value.GetUint();
@@ -433,7 +433,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
     // stop: string or array; optional - defaults to null (not set)
     it = doc.FindMember("stop");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (it->value.IsString()) {
             request.stop = std::set<std::string>{it->value.GetString()};
         } else if (it->value.IsArray()) {
@@ -466,7 +466,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     }
 
     it = doc.FindMember("include_stop_str_in_output");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("include_stop_str_in_output accepts values true or false");
         if (!it->value.GetBool() && request.stream)
@@ -477,7 +477,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // best_of: int; optional - defaults to 1
     // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
     it = doc.FindMember("best_of");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("best_of is not an unsigned integer");
         if (it->value.GetUint() == 0)
@@ -492,7 +492,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     // n: int; optional - defaults to 1
     // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
     it = doc.FindMember("n");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("n is not an unsigned integer");
         if (it->value.GetUint() == 0)
@@ -509,24 +509,27 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
 
+    bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
+    bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
+
     if (isSpeculativePipeline) {
-        if (numAssistantTokensIt == doc.MemberEnd() && assistantConfidenceThresholdIt == doc.MemberEnd())
+        if (!numAssistantTokensItHasValue && !assistantConfidenceThresholdItHasValue)
             return absl::InvalidArgumentError("Speculative decoding requires either num_assistant_tokens or assistant_confidence_threshold to be set.");
 
-        if (numAssistantTokensIt != doc.MemberEnd() && assistantConfidenceThresholdIt != doc.MemberEnd())
+        if (numAssistantTokensItHasValue && assistantConfidenceThresholdItHasValue)
             return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
-    } else if (numAssistantTokensIt != doc.MemberEnd() || assistantConfidenceThresholdIt != doc.MemberEnd()) {
+    } else if (numAssistantTokensItHasValue || assistantConfidenceThresholdItHasValue) {
         return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
     }
     // num_assistant_tokens: uint;
-    if (numAssistantTokensIt != doc.MemberEnd()) {
+    if (numAssistantTokensItHasValue) {
         if (!numAssistantTokensIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
             return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer greater than 0");
         }
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
     }
     // assistant_confidence_threshold: float;
-    if (assistantConfidenceThresholdIt != doc.MemberEnd()) {
+    if (assistantConfidenceThresholdItHasValue) {
         if (!assistantConfidenceThresholdIt->value.IsDouble() && !assistantConfidenceThresholdIt->value.IsInt()) {
             return absl::InvalidArgumentError("assistant_confidence_threshold must be a positive number");
         }
