@@ -1,0 +1,21 @@
+{
+    "mediapipe_config_list": [
+        {
+            "name": "facebook/opt-125m",
+            "base_path": "src/test/llm_testing/facebook/opt-125m"
+        },
+        {
+            "name": "OpenGVLab/InternVL2-1B",
+            "base_path": "src/test/llm_testing/OpenGVLab/InternVL2-1B"
+        },
+        {
+            "name": "thenlper/gte-small",
+            "base_path": "src/test/llm_testing/thenlper/gte-small"
+        },
+        {
+            "name": "BAAI/bge-reranker-base",
+            "base_path": "src/test/llm_testing/BAAI/bge-reranker-base"
+        }
+    ],
+    "model_config_list": []
+}

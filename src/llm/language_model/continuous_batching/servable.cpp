@@ -101,6 +101,17 @@ absl::Status ContinuousBatchingServable::readCompleteExecutionResults(std::share
     return absl::OkStatus();
 }
 
+// This should probably be moved to GenAI
+static ov::genai::GenerationOutput prepareEmptyStopReasonOutput() {
+    static ov::genai::GenerationOutput out = {
+        std::vector<int64_t>(),  // generated_ids
+        std::vector<float>(),  // generated_log_probs
+        0.0f,  // score
+        ov::genai::GenerationFinishReason::STOP
+    };
+    return out;
+}
+
 absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {
@@ -117,8 +128,12 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
         // Subsequent iteration
         OVMS_PROFILE_SCOPE("Generation of subsequent streaming response");
         ov::genai::GenerationOutputs generationOutputs = cbExecutionContext->generationHandle->read();
-        RET_CHECK(generationOutputs.size() == 1);  // TODO: Support multiple generations
-        cbExecutionContext->generationOutputs = {generationOutputs.begin()->second};
+        RET_CHECK(generationOutputs.size() <= 1);  // TODO: Support multiple generations
+        if (generationOutputs.size() == 0) {
+            cbExecutionContext->generationOutputs = {prepareEmptyStopReasonOutput()};
+        } else {
+            cbExecutionContext->generationOutputs = {generationOutputs.begin()->second};
+        }
     }
     return absl::OkStatus();
 }
