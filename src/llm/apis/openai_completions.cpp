@@ -60,7 +60,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     }
     // logprobs: int; 1 value allowed
     it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+    if (it != doc.MemberEnd()) {
         if (it->value.IsNull()) {
             request.logprobs = 0;
         } else if (!it->value.IsInt()) {
