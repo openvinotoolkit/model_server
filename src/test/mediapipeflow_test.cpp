@@ -117,11 +117,11 @@ public:
 };
 
 class MediapipeCliFlowTestDummyRelative : public MediapipeCliFlowTest {
-    public:
-        void SetUp() {
-            SetUpServer("src/test/mediapipe/cli", "graphkfspass");
-        }
-    };
+public:
+    void SetUp() {
+        SetUpServer("src/test/mediapipe/cli", "graphkfspass");
+    }
+};
 
 TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     server.setShutdownRequest(0);
