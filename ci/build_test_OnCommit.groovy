@@ -87,7 +87,7 @@ pipeline {
             }
             stage('Build windows') {
               agent {
-                label 'win_ovms'
+                label 'win_build'
               }
               when { expression { win_image_build_needed == "true" } }
               steps {
