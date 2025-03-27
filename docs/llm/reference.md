@@ -83,7 +83,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
--    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
+-    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 
 
@@ -101,7 +101,7 @@ utilization of resource will be lower. Old cache will be cleared automatically b
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
 
-The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
+The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for `best_of_limit` or set `max_tokens_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
 
 
 ## Canceling the generation

@@ -8,8 +8,8 @@ pillow==10.3.0
 optimum[diffusers]==1.17.1
 tritonclient[grpc]==2.51.0  # Required to use batch string serialization/deserialization (4byte length prepend)
 transformers==4.49 # 4.50 has a bug
-diffusers==0.26.3
+diffusers==0.29.2
 datasets==2.18.0
 numpy<2.0
-huggingface_hub==0.24.7
+huggingface_hub==0.26.0
 

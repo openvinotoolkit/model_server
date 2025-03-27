@@ -84,7 +84,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
 
     loadTextProcessor(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
-    properties->maxTokensLimit = nodeOptions.max_tokens_limit();
+    if (nodeOptions.has_max_tokens_limit()) {
+        properties->maxTokensLimit = nodeOptions.max_tokens_limit();
+    }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
     return StatusCode::OK;
