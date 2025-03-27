@@ -1878,8 +1878,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
         ovms::StatusCode::PARTIAL_END);
     ASSERT_GE(responses.size(), 1);
-    for (const auto& res : responses)
-        SPDLOG_ERROR(res);
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
