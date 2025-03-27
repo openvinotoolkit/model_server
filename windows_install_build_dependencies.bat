@@ -124,65 +124,54 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
+set "genai_dir=openvino_genai_windows_2025.1.0.0rc2_x86_64"
+set "genai_ver=openvino_genai_windows_2025.1.0.0rc2_x86_64.zip"
+set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.1.0.0rc2/"
 
-:: For now we build GenAI from source
+set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
+set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
+set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
-::set "genai_dir=openvino_genai_windows_2025.1.0.0rc2_x86_64"
-::set "genai_ver=openvino_genai_windows_2025.1.0.0rc2_x86_64.zip"
-::set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.1.0.0rc2/"
-
-::set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
-::set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-::set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
-
-set "openvino_dir=openvino_toolkit_windows_2025.1.0.dev20250320_x86_64"
-set "openvino_ver=openvino_toolkit_windows_2025.1.0.dev20250320_x86_64.zip"
-set "openvino_http=https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.1.0rc2/"
-
-set "openvino_zip=%BAZEL_SHORT_PATH%\%openvino_ver%"
-set "openvino_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-set "openvino_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
-
-echo [INFO] Installing OpenVINO: %openvino_dir% ...
- :: Download OpenVINO
- IF /I EXIST %openvino_zip% (
+echo [INFO] Installing GenAI: %genai_dir% ...
+:: Download GenAi
+IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
-        del /S /Q %openvino_zip%
+        del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %openvino_zip% )
+    ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %openvino_http%%openvino_ver%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-:: Extract OpenVINO
-IF /I EXIST %BAZEL_SHORT_PATH%\%openvino_dir% (
+:: Extract GenAi
+IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
      if %expunge% EQU 1 (
-        rmdir /S /Q %BAZEL_SHORT_PATH%\%openvino_dir%
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+        C:\Windows\System32\tar.exe -xf "%genai_zip%" -C %BAZEL_SHORT_PATH%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%openvino_dir% )
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%genai_dir% )
     
 ) ELSE (
-    C:\Windows\System32\tar.exe -xf "%openvino_zip%" -C %BAZEL_SHORT_PATH%
+    C:\Windows\System32\tar.exe -xf "%genai_zip%" -C %BAZEL_SHORT_PATH%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-:: Create OpenVINO link - always to make sure it points to latest version
+:: Create GenAi link - always to make sure it points to latest version
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
-mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%openvino_dir%
+mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Replace path to OpenVINO in ovms WORKSPACE file
+:: Replace path to GenAi in ovms WORKSPACE file
 if "!output_user_root!" neq "opt" (
-    powershell -Command "(gc -Path WORKSPACE) -replace '%openvino_workspace%', '%openvino_new_workspace%' | Set-Content -Path WORKSPACE"
+    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-echo [INFO] OpenVINO installed: %BAZEL_SHORT_PATH%\%openvino_dir%
+echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
