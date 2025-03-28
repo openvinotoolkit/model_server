@@ -135,11 +135,11 @@ public:
 };
 
 class MediapipeConfigFlowTestDummyModelMeshNegative : public MediapipeCliFlowTest {
-    public:
-        void SetUp() {
-            SetUpServer("/ovms/src/test/mediapipe/model_mesh/Nonexisting/config.json");
-        }
-    };
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/Nonexisting/config.json");
+    }
+};
 
 class MediapipeCliFlowTestDummyRelative : public MediapipeCliFlowTest {
 public:
