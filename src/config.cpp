@@ -116,12 +116,6 @@ bool Config::validate() {
         return false;
     }
 
-#ifdef _WIN32
-    if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
-        std::cerr << "grpc_workers count can only be set to 1 on Windows." << std::endl;
-        return false;
-    }
-#endif
     // check rest_workers value
     if (((restWorkers() > MAX_REST_WORKERS) || (restWorkers() < 2))) {
         std::cerr << "rest_workers count should be from 2 to " << MAX_REST_WORKERS << std::endl;
@@ -132,6 +126,13 @@ bool Config::validate() {
         std::cerr << "rest_workers is set but rest_port is not set. rest_port is required to start rest servers" << std::endl;
         return false;
     }
+
+#ifdef _WIN32
+    if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
+        std::cerr << "grpc_workers count can only be set to 1 on Windows" << std::endl;
+        return false;
+    }
+#endif
 
     if (port() && (port() > MAX_PORT_NUMBER)) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
