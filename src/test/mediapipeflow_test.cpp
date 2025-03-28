@@ -91,6 +91,10 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
+     void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
+    }
+
     void SetUp() override {
     }
     void TearDown() {
@@ -117,9 +121,16 @@ public:
 };
 
 class MediapipeCliFlowTestDummyModelMesh : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/cli", "graphkfspass");
+    }
+};
+
+class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
     public:
         void SetUp() {
-            SetUpServer("/ovms/src/test/mediapipe/model_mesh/cli", "graphkfspass");
+            SetUpServer("/ovms/src/test/mediapipe/model_mesh/cli/config.json");
         }
     };
 
@@ -159,7 +170,8 @@ TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     t->join();
 }
 
-TEST_F(MediapipeCliFlowTestDummy, Infer) {
+void Infer(ovms::Server& server) {
+    const Precision precision = Precision::FP32;
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -176,44 +188,22 @@ TEST_F(MediapipeCliFlowTestDummy, Infer) {
     ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
     // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeCliFlowTestDummy, Infer) {
+    Infer(server);
 }
 
 TEST_F(MediapipeCliFlowTestDummyModelMesh, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = "graphkfspass";
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    Infer(server);
+}
+
+TEST_F(MediapipeConfigFlowTestDummyModelMesh, Infer) {
+    Infer(server);
 }
 
 TEST_F(MediapipeCliFlowTestDummyRelative, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = "graphkfspass";
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    Infer(server);
 }
 
 class MediapipeFlowTest : public ::testing::TestWithParam<std::string> {
