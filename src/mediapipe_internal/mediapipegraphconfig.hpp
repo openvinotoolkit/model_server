@@ -59,7 +59,7 @@ private:
      */
     std::string subconfigPath;
 
-     /**
+    /**
      * @brief Optional model mesh subconfig path
      */
     std::string modelMeshSubconfigPath;
