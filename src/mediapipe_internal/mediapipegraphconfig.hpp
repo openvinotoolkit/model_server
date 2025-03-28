@@ -168,16 +168,16 @@ public:
          *
          * @return const std::string&
          */
-        const std::string& getModelMeshSubconfigPath() const {
-          return this->subconfigPath;
-      }
-  
-      /**
+    const std::string& getModelMeshSubconfigPath() const {
+        return this->subconfigPath;
+    }
+
+    /**
            * @brief Set the Model Mesh Models Config Path
            *
            * @param subconfigPath
            */
-      void setModelMeshSubconfigPath(const std::string& subconfigPath);
+    void setModelMeshSubconfigPath(const std::string& subconfigPath);
 
     /**
          * @brief Set root directory path
