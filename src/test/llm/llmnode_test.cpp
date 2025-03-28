@@ -651,7 +651,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
             "max_tokens": 1000,
             "stop": " ",
             "include_stop_str_in_output": true,
-            "prompt": "What is"
+            "prompt": "                                   |                                |                             |  "
         }
     )";
 
@@ -1861,7 +1861,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
             "stop": " ",
             "temperature":0,
             "include_stop_str_in_output": true,
-            "prompt": "What is"
+            "prompt": "                 |                  |                   |  "
         }
     )";
 
