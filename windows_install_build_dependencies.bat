@@ -364,7 +364,7 @@ exit /b 0
 :install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
-set "opencv_ver=4.10.0"
+set "opencv_ver=4.11.0"
 set "opencv_dir=%opt_install_dir%\opencv_git"
 set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git"
 set "opencv_install=%opt_install_dir%\opencv"
