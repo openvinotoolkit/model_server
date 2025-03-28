@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.4 host
+1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.5 host
 1. make
 1. bash
 

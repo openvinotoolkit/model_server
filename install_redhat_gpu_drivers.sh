@@ -27,15 +27,6 @@ if [ -z "$DNF_TOOL" ]; then
 fi
 
 case $INSTALL_DRIVER_VERSION in \
-"22.10.22597") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.0.3-i699.3.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.10409-i699.3.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/level-zero-1.7.9-i699.3.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.10409-i699.3.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-ocloc-22.10.22597-i699.3.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.10.22597-i699.3.el8.x86_64.rpm ; \
-;; \
 "22.28.23726") \
         $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
@@ -71,6 +62,15 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-opencl-24.45.31740.15-1057.el9_4.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-level-zero-gpu-1.6.31740.15-1057.el9_4.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/l/level-zero-1.18.5.0-1055.el9_4.x86_64.rpm ; \
+;; \
+"24.52.32224") \
+        $DNF_TOOL install --nodocs -y libedit ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-24.52.32224.14-1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-gmmlib-22.5.5-i1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-core-2.5.12-1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-opencl-2.5.12-1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-level-zero-gpu-1.6.32224.14-1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/l/level-zero-1.19.2.0-1077.el9_5.x86_64.rpm ; \
 ;; \
 
         *) \
