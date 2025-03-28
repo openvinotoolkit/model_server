@@ -118,12 +118,12 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     }
 
     // Set SO_EXCLUSIVEADDRUSE  options
-    
+
     bool bOptVal = true;
-    int bOptLen = sizeof (bool);
+    int bOptLen = sizeof(bool);
     int iResult = 0;
 
-    iResult = setsockopt(this->sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE , (char *) &bOptVal, bOptLen);
+    iResult = setsockopt(this->sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&bOptVal, bOptLen);
     if (iResult == SOCKET_ERROR) {
         SPDLOG_ERROR("setsockopt for SO_EXCLUSIVEADDRUSE failed with error: {}\n", WSAGetLastError());
         return false;
@@ -179,7 +179,7 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsPredictService(this->server),
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
-    
+
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);

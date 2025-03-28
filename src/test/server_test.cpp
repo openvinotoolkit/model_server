@@ -380,7 +380,7 @@ TEST(Server, GrpcWorkers2) {
         nullptr};
 
     ovms::Server& server = ovms::Server::instance();
-    
+
 #ifdef __linux__
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(11, argv));
@@ -404,7 +404,7 @@ TEST(Server, GrpcWorkers2) {
         ASSERT_EQ(EXIT_FAILURE, server.start(11, argv));
     });
     t.join();
-#endif  
+#endif
 }
 
 TEST(Server, ProperShutdownInCaseOfStartError) {
