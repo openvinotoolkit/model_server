@@ -46,11 +46,7 @@ protected:
 
     void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
+        EnsureServerStartedWithTimeout(this->server, 5);
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
     }
 

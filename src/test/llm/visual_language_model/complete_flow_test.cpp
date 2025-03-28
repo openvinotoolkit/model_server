@@ -56,7 +56,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/visual_language_model/config.json").c_str(), 15);
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/visual_language_model/config.json").c_str());
     }
 
     void SetUp() {

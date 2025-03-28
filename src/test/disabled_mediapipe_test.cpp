@@ -46,7 +46,7 @@ public:
         std::string port = "9173";
         randomizePort(port);
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str(), 15);
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str());
     }
 
     void SetUp() {
