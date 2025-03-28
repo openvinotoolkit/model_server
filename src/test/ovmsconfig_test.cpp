@@ -385,7 +385,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.grpcWorkers(), 1);
 #else
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
-    
+
     EXPECT_EQ(config.grpcWorkers(), 2);
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
