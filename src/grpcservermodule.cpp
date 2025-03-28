@@ -127,9 +127,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
     if (iResult == SOCKET_ERROR) {
         SPDLOG_ERROR("setsockopt for SO_EXCLUSIVEADDRUSE failed with error: {}\n", WSAGetLastError());
         return false;
-    } else
-        SPDLOG_INFO("Set SO_EXCLUSIVEADDRUSE : ON\n");
-
+    }
     return true;
 }
 #endif  //  not __linux__
