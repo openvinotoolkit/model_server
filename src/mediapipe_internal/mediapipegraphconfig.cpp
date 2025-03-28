@@ -88,8 +88,9 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
                 this->setBasePath(providedBasePath);
             else
                 this->setBasePath(providedBasePath + FileSystem::getOsSeparator());
-        } else {
+        } else { // THIS IS SPECIAL CASE FOR MODEL MESH
             if (!getRootDirectoryPath().empty()) {
+                // check if pbtxt exist in eiter dir or dir/1
                 this->setBasePath(this->getGraphName() + FileSystem::getOsSeparator());
                 SPDLOG_DEBUG("base_path not defined in config so it will be set to default based on main config directory: {}", this->getBasePath());
             } else {

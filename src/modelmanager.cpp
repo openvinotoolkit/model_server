@@ -802,6 +802,42 @@ Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
     }
 }
 
+static bool tryToLoadMP(const std::string& rootDirectoryPath, const rapidjson::Value& configs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
+    // Check if config is present for mediapipe graph
+    MediapipeGraphConfig mpConfig;
+    // 1st try - no model mesh with version subdirectory
+    mpConfig.setRootDirectoryPath(rootDirectoryPath);
+    auto mpStatus = mpConfig.parseNode(configs["config"]);
+    if (!mpStatus.ok()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
+    } else {
+        std::ifstream ifs(mpConfig.getGraphPath());
+        if (ifs.is_open()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+            mediapipesInConfigFile.push_back(mpConfig);
+            return true;
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        }
+    }
+    // 2nd try with model mesh with version subdirectory
+    mpConfig.setRootDirectoryPath(rootDirectoryPath + std::to_string(1) + FileSystem::getOsSeparator());
+    mpStatus = mpConfig.parseNode(configs["config"]);
+    if (!mpStatus.ok()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
+    } else {
+        std::ifstream ifs(mpConfig.getGraphPath());
+        if (ifs.is_open()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+            mediapipesInConfigFile.push_back(mpConfig);
+            return true;
+        } else {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        }
+    }
+    return false;
+}
+
 #if (MEDIAPIPE_DISABLE == 1)
 Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
     std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath) {
@@ -814,22 +850,8 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
 
     for (const auto& configs : modelsConfigList->value.GetArray()) {
 #if (MEDIAPIPE_DISABLE == 0)
-        // Check if config is present for mediapipe graph
-        MediapipeGraphConfig mpConfig;
-        mpConfig.setRootDirectoryPath(rootDirectoryPath);
-        auto mpStatus = mpConfig.parseNode(configs["config"]);
-        if (!mpStatus.ok()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
-        } else {
-            std::ifstream ifs(mpConfig.getGraphPath());
-            if (ifs.is_open()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
-                mediapipesInConfigFile.push_back(mpConfig);
-                continue;
-            } else {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph.pbtxt not found for config {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
-            }
-        }
+        if (tryToLoadMP(rootDirectoryPath, configs, mediapipesInConfigFile))
+            continue;
 #endif
         ModelConfig modelConfig;
         modelConfig.setRootDirectoryPath(rootDirectoryPath);
