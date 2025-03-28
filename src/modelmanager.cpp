@@ -923,8 +923,8 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
                 subconfigPath, mediapipeConfig.getGraphName());
             std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
-            std::ifstream ifsmm(subconfigModelMeshPath);
-            if (!ifsmm.is_open()) {
+            ifs.open(subconfigModelMeshPath);
+            if (!ifs.is_open()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig model mesh path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
                     subconfigModelMeshPath, mediapipeConfig.getGraphName());
                 continue;
