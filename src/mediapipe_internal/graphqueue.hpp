@@ -42,14 +42,17 @@ namespace ovms {
 class OutputStreamObserverI;
 class NullOutputStreamObserver;
 struct GraphHelper {
-    std::shared_ptr<::mediapipe::CalculatorGraph> graph; // TODO FIXME this does not have to be shared_ptr
+    std::shared_ptr<::mediapipe::CalculatorGraph> graph;  // TODO FIXME this does not have to be shared_ptr
     std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
-    ::mediapipe::Timestamp currentTimestamp; // TODO FIXME const
+    ::mediapipe::Timestamp currentTimestamp;  // TODO FIXME const
     // TODO FIXME move constr/=
     GraphHelper() = default;
     GraphHelper(const GraphHelper&) = delete;
     GraphHelper& operator=(const GraphHelper&) = delete;
-    GraphHelper(GraphHelper&& gh) : graph(std::move(gh.graph)), outStreamObservers(std::move(gh.outStreamObservers)), currentTimestamp(gh.currentTimestamp) {}
+    GraphHelper(GraphHelper&& gh) :
+        graph(std::move(gh.graph)),
+        outStreamObservers(std::move(gh.outStreamObservers)),
+        currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&& gh) = default;
 };
 // we need to keep Graph alive during MP reload hence shared_ptr

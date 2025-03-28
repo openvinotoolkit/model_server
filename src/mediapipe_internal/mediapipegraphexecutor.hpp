@@ -144,7 +144,7 @@ public:
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
             }
-            SPDLOG_ERROR("ER XXX Will construct observer for guard:{}, helper:{}, graph:{}", (void*)&this->guard,(void*)this->guard.gh.get(),(void*)&graph);
+            SPDLOG_ERROR("ER XXX Will construct observer for guard:{}, helper:{}, graph:{}", (void*)&this->guard, (void*)this->guard.gh.get(), (void*)&graph);
             guard.gh->outStreamObservers[name] = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);  // TODO use at() FIXME
             /*
             ///////////////
@@ -189,7 +189,7 @@ public:
             this->pythonBackend,
             graph,
             this->guard.gh->currentTimestamp,
-//            this->currentStreamTimestamp,
+            //            this->currentStreamTimestamp,
             numberOfPacketsCreated);
         SPDLOG_ERROR("Current Timestamp pushed:{}", this->guard.gh->currentTimestamp.Value());
         if (!ovms_status.ok()) {
