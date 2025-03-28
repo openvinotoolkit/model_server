@@ -707,6 +707,7 @@ cc_library(
                 "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
                 "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
                 "libovmsmediapipe_utils",
+                "@mediapipe//mediapipe/framework:thread_pool_executor",
                 "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
                 "@mediapipe//mediapipe/calculators/geti/utils:utils",
                 "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
