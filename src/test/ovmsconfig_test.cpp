@@ -188,11 +188,7 @@ TEST_F(OvmsConfigDeathTest, negativeRestPortGrpcPortBothNotSet) {
 TEST_F(OvmsConfigDeathTest, restWorkersTooLarge) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--port", "8081", "--rest_workers", "100001"};
     int arg_count = 9;
-#ifdef __linux__
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_workers count should be from 2 to ");
-#else
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "grpc_workers count can only be set to 1 on Windows");
-#endif
 }
 
 TEST_F(OvmsConfigDeathTest, restWorkersDefinedRestPortUndefined) {
@@ -349,7 +345,7 @@ TEST(OvmsConfigTest, positiveMulti) {
 
     char* n_argv[] = {"ovms",
         "--port", "44",
-        "--grpc_workers", "2",
+        "--rest_workers", "46",
         "--grpc_bind_address", "1.1.1.1",
         "--rest_port", "45",
         "--rest_bind_address", "2.2.2.2",
@@ -358,11 +354,11 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
 #ifdef _WIN32
-        "--rest_workers", "1",
+        "--grpc_workers", "1",
         "--cpu_extension", "tmp_cpu_extension_library_dir",
 #else
         "--cpu_extension", "/ovms",
-        "--rest_workers", "46",
+        "--grpc_workers", "2",
 #endif
         "--cache_dir", "/tmp/model_cache",
         "--log_path", "/tmp/log_path",
@@ -376,7 +372,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     config.parse(arg_count, n_argv);
 
     EXPECT_EQ(config.port(), 44);
-    EXPECT_EQ(config.grpcWorkers(), 2);
+    EXPECT_EQ(config.restWorkers(), 46);
     EXPECT_EQ(config.grpcBindAddress(), "1.1.1.1");
     EXPECT_EQ(config.restPort(), 45);
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
@@ -386,10 +382,11 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
-    EXPECT_EQ(config.restWorkers(), 1);
+    EXPECT_EQ(config.grpcWorkers(), 1);
 #else
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
-    EXPECT_EQ(config.restWorkers(), 46);
+    
+    EXPECT_EQ(config.grpcWorkers(), 2);
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
@@ -413,8 +410,8 @@ TEST(OvmsConfigTest, positiveSingle) {
         "ovms",
         "--port",
         "44",
-        "--grpc_workers",
-        "2",
+        "--rest_workers",
+        "46",
         "--grpc_bind_address",
         "1.1.1.1",
         "--rest_port",
@@ -432,13 +429,13 @@ TEST(OvmsConfigTest, positiveSingle) {
 #ifdef _WIN32
         "--cpu_extension",
         "tmp_cpu_extension_library_dir",
-        "--rest_workers",
+        "--grpc_workers",
         "1",
 #else
         "--cpu_extension",
         "/ovms",
-        "--rest_workers",
-        "46",
+        "--grpc_workers",
+        "2",
 #endif
         "--cache_dir",
         "/tmp/model_cache",
@@ -478,7 +475,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     config.parse(arg_count, n_argv);
 
     EXPECT_EQ(config.port(), 44);
-    EXPECT_EQ(config.grpcWorkers(), 2);
+    EXPECT_EQ(config.restWorkers(), 46);
     EXPECT_EQ(config.grpcBindAddress(), "1.1.1.1");
     EXPECT_EQ(config.restPort(), 45);
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
@@ -488,10 +485,10 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
-    EXPECT_EQ(config.restWorkers(), 1);
+    EXPECT_EQ(config.grpcWorkers(), 1);
 #else
     EXPECT_EQ(config.cpuExtensionLibraryPath(), "/ovms");
-    EXPECT_EQ(config.restWorkers(), 46);
+    EXPECT_EQ(config.grpcWorkers(), 2);
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");

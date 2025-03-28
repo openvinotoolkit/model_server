@@ -129,7 +129,7 @@ bool Config::validate() {
 
 #ifdef _WIN32
     if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
-        std::cerr << "grpc_workers count can only be set to 1 on Windows" << std::endl;
+        std::cerr << "grpcWorkers count can only be set to 1 on Windows. Set " << grpcWorkers() << std::endl;
         return false;
     }
 #endif
