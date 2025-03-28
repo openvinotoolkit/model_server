@@ -227,18 +227,14 @@ Status ModelManager::startFromConfig() {
     Status status = StatusCode::OK;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    // Check if config is present for mediapipe graph
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
-    if (config.modelPath().back() == FileSystem::getOsSeparator().back()) {
-        mpConfig.setBasePath(config.modelPath());
-    } else {
-        mpConfig.setBasePath(config.modelPath() + FileSystem::getOsSeparator());
+    if (!CheckStartFromGraph(config, mpConfig, false)) {
+        CheckStartFromGraph(config, mpConfig, true);
     }
-    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
-    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
 
+    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
@@ -434,6 +430,24 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+bool ModelManager::CheckStartFromGraph(Config& config, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
+    // Check if config is present for mediapipe graph
+    std::string inputGraphDirectory = config.modelPath();
+    if (config.modelPath().back() != FileSystem::getOsSeparator().back()) {
+        inputGraphDirectory += FileSystem::getOsSeparator();
+    }
+
+    if (checkModelMeshPath) {
+        inputGraphDirectory += "1" + FileSystem::getOsSeparator();
+    }
+
+    mpConfig.setBasePath(inputGraphDirectory);
+    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+
+    std::ifstream ifs(mpConfig.getGraphPath());
+    return ifs.is_open();
+}
+
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
     std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
     std::vector<std::string> usedButdisallowedUserSettings;
