@@ -59,6 +59,11 @@ private:
      */
     std::string subconfigPath;
 
+     /**
+     * @brief Optional model mesh subconfig path
+     */
+    std::string modelMeshSubconfigPath;
+
     /**
      * @brief MD5 hash for graph pbtxt file
      */
@@ -169,7 +174,7 @@ public:
          * @return const std::string&
          */
     const std::string& getModelMeshSubconfigPath() const {
-        return this->subconfigPath;
+        return this->modelMeshSubconfigPath;
     }
 
     /**

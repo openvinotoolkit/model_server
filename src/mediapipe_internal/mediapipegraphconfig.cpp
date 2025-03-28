@@ -50,7 +50,7 @@ void MediapipeGraphConfig::setSubconfigPath(const std::string& subconfigPath) {
 }
 
 void MediapipeGraphConfig::setModelMeshSubconfigPath(const std::string& subconfigPath) {
-    FileSystem::setPath(this->subconfigPath, subconfigPath, this->basePath);
+    FileSystem::setPath(this->modelMeshSubconfigPath, subconfigPath, this->basePath);
 }
 
 bool MediapipeGraphConfig::isReloadRequired(const MediapipeGraphConfig& rhs) const {
