@@ -472,6 +472,10 @@ aws_sdk_cpp()
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
 
+### Libgit2
+load("@//third_party/libgt2:libgt2_engine.bzl", "libgt2_engine")
+libgt2_engine()
+
 load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
