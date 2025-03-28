@@ -29,7 +29,7 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Ubuntu 24.04
@@ -57,7 +57,7 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.12
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} RHEL 9.4
@@ -85,7 +85,7 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Windows
