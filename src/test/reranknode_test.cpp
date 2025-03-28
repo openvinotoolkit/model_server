@@ -43,7 +43,7 @@ public:
 
     static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, configPath.c_str(), 15);
+        ::SetUpServer(t, server, port, configPath.c_str());
     }
     static void SetUpTestSuite() {
     }

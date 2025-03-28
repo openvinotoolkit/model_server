@@ -347,11 +347,7 @@ TEST(Server, ServerMetadata) {
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(7, argv));
     });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((ovms::Server::instance().getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-    }
-
+    EnsureServerStartedWithTimeout(server, 5);
     grpc::ChannelArguments args;
     std::string address = std::string("localhost:") + port;
     requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);

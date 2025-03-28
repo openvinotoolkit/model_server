@@ -48,8 +48,6 @@ struct StreamOptions {
     bool includeUsage = false;
 };
 
-#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
-
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
@@ -184,8 +182,8 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
-    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
+    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -202,6 +200,7 @@ public:
     // User input might be modified by the servable logic, so it is not const
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
+    std::optional<int> getMaxTokens() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -212,7 +211,7 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);

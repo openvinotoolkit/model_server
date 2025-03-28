@@ -56,7 +56,7 @@ message LLMCalculatorOptions {
 
     optional uint32 best_of_limit = 8 [default = 20];
 
-    optional uint32 max_tokens_limit = 9 [default = 4096];
+    optional uint32 max_tokens_limit = 9;
 
     optional bool enable_prefix_caching = 10 [default = false];
 
@@ -90,7 +90,7 @@ message LLMCalculatorOptions {
       optional uint64 max_num_seqs = 6 [default = 256];
       optional bool dynamic_split_fuse = 7 [default = true];
       optional uint32 best_of_limit = 8 [default = 20];
-      optional uint32 max_tokens_limit = 9 [default = 4096];
+      optional uint32 max_tokens_limit = 9;
       optional bool enable_prefix_caching = 10 [default = false];
     }
 

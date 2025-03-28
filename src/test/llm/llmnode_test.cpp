@@ -81,9 +81,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 15);
-
-        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
 
         try {
             plugin_config_t tokenizerPluginConfig = {};
@@ -1310,7 +1308,71 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStopStringExceedingSize
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToModelMaxLength) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxTokensExceedsMaxModelLength) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string prompt;
+    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
+    for (int i = 0; i < 2044; i++) {
+        prompt += "hello ";
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "max_tokens" : 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": ")" +
+                              prompt + R"("
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxCompletionTokensExceedsMaxModelLength) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string prompt;
+    // creating prompt that will be tokenized to 2048 tokens when model max length is 2048
+    for (int i = 0; i < 2044; i++) {
+        prompt += "hello ";
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "max_completion_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": ")" +
+                              prompt + R"("
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxModelLength) {
     auto params = GetParam();
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
@@ -1341,7 +1403,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMode
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByModelMaxLength) {
+TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength) {
     auto params = GetParam();
     if (params.modelName.find("vlm") != std::string::npos) {
         GTEST_SKIP();
@@ -2356,29 +2418,6 @@ TEST_P(LLMHttpParametersValidationTest, maxTokensExceedsUint32Size) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, maxTokensExceeds4000WhenIgnoreEosTrue) {
-    auto params = GetParam();
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "stream": false,
-            "ignore_eos": true,
-            "max_tokens": 4001,
-            "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
-            ]
-        }
-    )";
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
 TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensInvalid) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -2409,29 +2448,6 @@ TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensExceedsUint32Size) {
                               R"(",
             "stream": false,
             "max_completion_tokens": 4294967296,
-            "messages": [
-            {
-                "role": "user",
-                "content": "What is OpenVINO?"
-            }
-            ]
-        }
-    )";
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
-TEST_P(LLMHttpParametersValidationTest, maxCompletionsTokensExceeds4000WhenIgnoreEosTrue) {
-    auto params = GetParam();
-    std::string requestBody = R"(
-        {
-            "model": ")" + params.modelName +
-                              R"(",
-            "stream": false,
-            "ignore_eos": true,
-            "max_completion_tokens": 4001,
             "messages": [
             {
                 "role": "user",
