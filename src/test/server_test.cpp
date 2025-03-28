@@ -357,6 +357,52 @@ TEST(Server, ServerMetadata) {
     server.setShutdownRequest(0);
 }
 
+TEST(Server, GrpcWorkers2) {
+    std::string port = "9000";
+    randomizePort(port);
+    std::string workers = "2";
+    char* argv[] = {
+        (char*)"OpenVINO Model Server",
+        (char*)"--model_name",
+        (char*)"dummy",
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/dummy").c_str(),
+        (char*)"--port",
+        (char*)port.c_str(),
+        (char*)"--grpc_workers",
+        (char*)workers.c_str(),
+        (char*)"--log_level",
+        (char*)"DEBUG",
+        nullptr};
+
+    ovms::Server& server = ovms::Server::instance();
+
+#ifdef __linux__
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(11, argv));
+    });
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((ovms::Server::instance().getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
+    }
+
+    ASSERT_EQ(ovms::Server::instance().getModuleState(ovms::GRPC_SERVER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Server not started error.";
+
+    grpc::ChannelArguments args;
+    std::string address = std::string("localhost:") + port;
+    requestServerAlive(port.c_str(), grpc::StatusCode::OK, true);
+    checkServerMetadata(port.c_str(), grpc::StatusCode::OK);
+    server.setShutdownRequest(1);
+    t.join();
+    server.setShutdownRequest(0);
+#elif _WIN32
+    std::thread t([&argv, &server]() {
+        ASSERT_EQ(EXIT_FAILURE, server.start(11, argv));
+    });
+    t.join();
+#endif
+}
+
 TEST(Server, ProperShutdownInCaseOfStartError) {
     std::string port = "9000";
     std::string restPort = "9000";
