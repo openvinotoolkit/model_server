@@ -106,19 +106,13 @@ absl::Status VisualLanguageModelLegacyServable::scheduleExecution(std::shared_pt
 
 absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
-    SPDLOG_ERROR("Checking for disconnection...");
     if (legacyExecutionContext->payload.client->isDisconnected()) {
-        SPDLOG_ERROR("Disconnected!");
         return absl::CancelledError();
     }
-    SPDLOG_ERROR("Still connected. Waiting to finish...");
     legacyExecutionContext->finished.wait();
-    SPDLOG_ERROR("Finished waiting, checking if success");
     if (!legacyExecutionContext->success) {
-        SPDLOG_ERROR("error");
         return absl::InvalidArgumentError("Request processing failed, check its correctness.");
     }
-    SPDLOG_ERROR("success!");
     return absl::OkStatus();
 }
 

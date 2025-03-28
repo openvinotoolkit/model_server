@@ -99,20 +99,14 @@ static ov::genai::GenerationOutput prepareEmptyStopReasonOutput() {
 
 absl::Status ContinuousBatchingServable::readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
-    SPDLOG_ERROR("Checking if disconnected...");
     if (cbExecutionContext->payload.client->isDisconnected()) {
-        SPDLOG_ERROR("Disconnected!");
         return absl::CancelledError();
     }
 
-    SPDLOG_ERROR("Before read_all");
     cbExecutionContext->generationOutputs = cbExecutionContext->generationHandle->read_all();
-    SPDLOG_ERROR("After read all");
     if (cbExecutionContext->generationHandle->get_status() == ov::genai::GenerationStatus::STOP) {
-        SPDLOG_ERROR("Stopped!");
         return absl::CancelledError();
     }
-    SPDLOG_ERROR("Not stopped. Work was done. Outputs: {}", cbExecutionContext->generationOutputs.size());
     if (cbExecutionContext->generationOutputs.size() == 0) {
         cbExecutionContext->generationOutputs = {prepareEmptyStopReasonOutput()};
     }

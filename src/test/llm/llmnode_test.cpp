@@ -2320,10 +2320,11 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsUnaryClientDisconnected
         }
     )";
 
+    EXPECT_CALL(*writer, IsDisconnected())
+        .Times(::testing::AnyNumber())
+        .WillRepeatedly(::testing::Return(false));  // let cb->stop() be called in callback, dont break it earlier
     EXPECT_CALL(*writer, RegisterDisconnectionCallback(::testing::_)).WillOnce([](std::function<void()> fn) {
-        SPDLOG_ERROR("About to disconnect immediately, before read_all");
         fn();  // disconnect immediately, even before read_all is called
-        SPDLOG_ERROR("Disconnected immediately, before read_all");
     });
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
