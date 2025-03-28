@@ -72,7 +72,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Running this command starts the container with NPU enabled:
 ```bash
-docker run -d --rm --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
@@ -118,16 +118,18 @@ curl http://localhost:8000/v1/config
 
 ## Request Generation
 
-
-:::{dropdown} **Unary call with python requests library**
 ```console
 pip3 install requests
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
+![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg)
+
+:::{dropdown} **Unary call with python requests library**
+
 ```python
 import requests
 import base64
-base_url='http://localhost:8080/v3'
+base_url='http://localhost:8000/v3'
 model_name = "microsoft/Phi-3.5-vision-instruct"
 
 def convert_image(Image):
@@ -191,7 +193,7 @@ pip3 install openai
 ```python
 from openai import OpenAI
 import base64
-base_url='http://localhost:8080/v3'
+base_url='http://localhost:8000/v3'
 model_name = "OpenGVLab/InternVL2_5-8B"
 
 client = OpenAI(api_key='unused', base_url=base_url)
