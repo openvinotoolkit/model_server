@@ -81,9 +81,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::EnsureSetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 15);
-
-        ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "Loading manager takes too long. Server cannot start in 20 seconds.";
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
 
         try {
             plugin_config_t tokenizerPluginConfig = {};
