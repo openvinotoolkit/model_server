@@ -443,6 +443,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     mpConfig.setBasePath(inputGraphDirectory);
     mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
     mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
 
     std::ifstream ifs(mpConfig.getGraphPath());
     return ifs.is_open();
@@ -921,7 +922,21 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         if (!ifs.is_open()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
                 subconfigPath, mediapipeConfig.getGraphName());
-            continue;
+            std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
+            std::ifstream ifsmm(subconfigModelMeshPath);
+            if (!ifsmm.is_open()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig model mesh path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
+                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
+                continue;
+            } else {
+                // Switch to model mesh path for subconfig
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from model mesh subconfig path: {} provided for graph: {}",
+                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
+                
+                subconfigPath = subconfigModelMeshPath;
+                mediapipeConfig.setSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+            }
+
         } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from subconfig path: {} provided for graph: {}",
                 subconfigPath, mediapipeConfig.getGraphName());
