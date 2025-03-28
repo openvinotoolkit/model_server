@@ -98,11 +98,7 @@ public:
         serverThread.reset(new std::thread([&argc, &argv]() {
             EXPECT_EQ(EXIT_SUCCESS, ovms::Server::instance().start(argc, argv));
         }));
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((ovms::Server::instance().getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (!ovms::Server::instance().isReady()) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(ovms::Server::instance(), 5);
     }
     static void TearDownTestSuite() {
         ovms::Server::instance().setShutdownRequest(1);
