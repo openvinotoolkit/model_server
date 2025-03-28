@@ -230,8 +230,8 @@ Status ModelManager::startFromConfig() {
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
-    if (!CheckStartFromGraph(config, mpConfig, false)) {
-        CheckStartFromGraph(config, mpConfig, true);
+    if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
+        CheckStartFromGraph(config.modelPath(), mpConfig, true);
     }
 
     std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
@@ -242,7 +242,6 @@ Status ModelManager::startFromConfig() {
         if (!status.ok())
             return status;
 
-        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
         mediapipesInConfigFile.push_back(mpConfig);
         std::vector<ModelConfig> gatedModelConfigs;
@@ -430,10 +429,10 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
-bool ModelManager::CheckStartFromGraph(Config& config, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
+bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
     // Check if config is present for mediapipe graph
-    std::string inputGraphDirectory = config.modelPath();
-    if (config.modelPath().back() != FileSystem::getOsSeparator().back()) {
+    std::string inputGraphDirectory = inputPath;
+    if (inputPath.back() != FileSystem::getOsSeparator().back()) {
         inputGraphDirectory += FileSystem::getOsSeparator();
     }
 
@@ -443,6 +442,7 @@ bool ModelManager::CheckStartFromGraph(Config& config, MediapipeGraphConfig& mpC
 
     mpConfig.setBasePath(inputGraphDirectory);
     mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
 
     std::ifstream ifs(mpConfig.getGraphPath());
     return ifs.is_open();
@@ -835,6 +835,9 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         if (!mpStatus.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
         } else {
+            if (!CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, false)) {
+                CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, true);
+            }
             std::ifstream ifs(mpConfig.getGraphPath());
             if (ifs.is_open()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());

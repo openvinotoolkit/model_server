@@ -91,7 +91,7 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
-     void SetUpServer(const char* configPath) {
+    void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
     }
 
@@ -128,9 +128,16 @@ public:
 };
 
 class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json");
+    }
+};
+
+class MediapipeConfigFlowTestDummyModelMeshNegative : public MediapipeCliFlowTest {
     public:
         void SetUp() {
-            SetUpServer("/ovms/src/test/mediapipe/model_mesh/cli/config.json");
+            SetUpServer("/ovms/src/test/mediapipe/model_mesh/Nonexisting/config.json");
         }
     };
 

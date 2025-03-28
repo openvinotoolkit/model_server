@@ -1,7 +1,7 @@
 {
     "model_config_list": [{"config": {
                 "name":"graphkfspass",
-                "base_path":"/ovms/src/test/mediapipe/model_mesh/cli"
+                "base_path":"/ovms/src/test/mediapipe/model_mesh/config"
             }
     }]
 }
