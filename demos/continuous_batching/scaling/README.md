@@ -46,6 +46,8 @@ Confirm in logs if the containers loaded the models successfully.
 
 The configuration below is a basic example distributing the clients between six started instances.
 ```
+worker_processes 16;
+worker_rlimit_nofile 40000;
 events {
     worker_connections 10000;
 }
@@ -103,24 +105,31 @@ Similarity to multi NUMA node servers, scalability can be achieved on multi GPU 
 
 ## Start the Model Server instances
 
-Let's assume we have two CPU sockets server with two NUMA nodes. 
+The example below shows the system with 4 GPU cards installed. 
 ```bash
 ls -1 /dev/dri/
 by-path
 card0
 card1
+card2
+card3
+card4
 renderD128
 renderD129
+renderD130
+renderD131
 ```
 
 Export the model:
 ```bash
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model Meta-Llama-3-8B-Instruct_INT4 --weight-format int4 --model_repository_path models --target_device GPU --cache 2
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model Meta-Llama-3-8B-Instruct_INT4 --weight-format int4 --model_repository_path models --target_device GPU --cache 4
 ```
 
 ```bash
 docker run --device /dev/dri/renderD128 -d --rm -p 8003:8003 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8003 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
 docker run --device /dev/dri/renderD129 -d --rm -p 8004:8004 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8004 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD130 -d --rm -p 8005:8005 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8005 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD131 -d --rm -p 8006:8006 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8006 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
 ```
 Confirm in logs if the containers loaded the models successfully.
 
@@ -128,6 +137,8 @@ Confirm in logs if the containers loaded the models successfully.
 
 The configuration below is a basic example distributing the clients between two started instances.
 ```
+worker_processes 16;
+worker_rlimit_nofile 40000;
 events {
     worker_connections 10000;
 }
@@ -136,6 +147,8 @@ stream {
         least_conn;
         server localhost:8003;
         server localhost:8004;
+        server localhost:8005;
+        server localhost:8006;        
     }
     server {
         listen 80;
@@ -153,26 +166,26 @@ docker run -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -d --net=host -p 80:80 
 
 Start benchmarking script like in [demo](../README.md), pointing to the load balancer port and host.
 ```bash
-python benchmark_serving.py --host localhost --port 80 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 2000 --request-rate 20
+python benchmark_serving.py --host localhost --port 909 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 4000 --request-rate 20
 Initial test run completed. Starting main benchmark run...
 Traffic request rate: 20
 
 ============ Serving Benchmark Result ============
-Successful requests:                     2000
-Benchmark duration (s):                  203.92
-Total input tokens:                      430392
-Total generated tokens:                  369419
-Request throughput (req/s):              9.88
-Output token throughput (tok/s):         1963.46
-Total Token throughput (tok/s):          4020.90
+Successful requests:                     4000
+Benchmark duration (s):                  241.01
+Total input tokens:                      888467
+Total generated tokens:                  729546
+Request throughput (req/s):              16.60
+Output token throughput (tok/s):         3027.02
+Total Token throughput (tok/s):          6713.44
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          27419.09
-Median TTFT (ms):                        27605.88
-P99 TTFT (ms):                           64154.36
+Mean TTFT (ms):                          1286.58
+Median TTFT (ms):                        931.86
+P99 TTFT (ms):                           4392.03
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          97.58
-Median TPOT (ms):                        104.11
-P99 TPOT (ms):                           114.94
+Mean TPOT (ms):                          92.25
+Median TPOT (ms):                        97.33
+P99 TPOT (ms):                           122.52
 ```
 
 
