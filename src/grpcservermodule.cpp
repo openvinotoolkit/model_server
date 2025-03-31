@@ -117,17 +117,6 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
         return false;
     }
 
-    // Set SO_EXCLUSIVEADDRUSE  options
-
-    bool bOptVal = true;
-    int bOptLen = sizeof(bool);
-    int iResult = 0;
-
-    iResult = setsockopt(this->sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&bOptVal, bOptLen);
-    if (iResult == SOCKET_ERROR) {
-        SPDLOG_ERROR("setsockopt for SO_EXCLUSIVEADDRUSE failed with error: {}\n", WSAGetLastError());
-        return false;
-    }
     return true;
 }
 #endif  //  not __linux__
