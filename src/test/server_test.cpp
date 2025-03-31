@@ -31,6 +31,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../module_names.hpp"
+#include "../ovms_exit_codes.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -397,7 +398,8 @@ TEST(Server, GrpcWorkers2) {
     server.setShutdownRequest(0);
 #elif _WIN32
     std::thread t([&argv, &server]() {
-        ASSERT_EQ(EXIT_FAILURE, server.start(11, argv));
+        // EXIT_FAILURE when we do not return error on argument passing and try to start grpc
+        ASSERT_EQ(OVMS_EX_USAGE, server.start(11, argv));
     });
     t.join();
 #endif
