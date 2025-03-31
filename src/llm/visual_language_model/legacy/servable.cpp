@@ -196,19 +196,15 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
         const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
         size_t imageIndex = 0;
-        std::unordered_map<size_t, std::string> tags;
+        std::unordered_map<size_t, std::string> imageTags;
         for (const auto& image : imageHistory) {
             const auto& [chatTurnIndex, imageTensor] = image;
             std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            tags[chatTurnIndex] = tags[chatTurnIndex] + imageTag;
+            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
             vlmExecutionContext->inputImages.push_back(imageTensor);
         }
-        for (const auto& [chatTurnIndex, imageTagString] : tags) {
-            if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
-                chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
-            } else {
-                chatHistory[chatTurnIndex]["content"] = imageTagString;
-            }
+        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
