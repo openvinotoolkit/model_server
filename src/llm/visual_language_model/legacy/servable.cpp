@@ -194,6 +194,16 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+
+        // Validate chat history for restricted tags
+        for (const auto& historyEntry : chatHistory) {
+            for (const auto& [_, content] : historyEntry) {
+                if (content.find("<ov_genai_image_") != std::string::npos) {
+                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                }
+            }
+        }
+
         const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
         size_t imageIndex = 0;
         std::unordered_map<size_t, std::string> imageTags;
