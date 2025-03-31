@@ -12,4 +12,4 @@ transformers<=4.49 # 4.50 has a bug
 einops
 torchvision==0.21.0
 timm==1.0.15
-gptqmodel==0.2.1
+auto-gptq==0.7.1
