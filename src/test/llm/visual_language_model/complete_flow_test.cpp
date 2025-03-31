@@ -95,7 +95,9 @@ static std::string createRequestBody(const std::string& modelName, const std::ve
         oss << R"(
                     {
                         "type": "text",
-                        "text": ")"; oss << message; oss << R"("
+                        "text": ")";
+        oss << message;
+        oss << R"("
                     })";
         if (numberOfImages > 0) {
             oss << ",";
