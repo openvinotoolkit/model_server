@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 9.4
+BASE_OS_TAG_REDHAT ?= 9.5
 
 INSTALL_RPMS_FROM_URL ?=
 BUILD_IMAGE ?= build
@@ -174,8 +174,8 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "24.45.31740"
   DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.1.0rc3/openvino_toolkit_rhel8_2025.1.0.dev20250328_x86_64.tgz
+  INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -417,7 +417,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi9-minimal:9.4 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.5 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
