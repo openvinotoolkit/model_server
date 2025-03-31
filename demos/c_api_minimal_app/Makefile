@@ -30,7 +30,7 @@ ifeq ($(BASE_OS),ubuntu24)
   DIST_OS=ubuntu
 endif
 ifeq ($(BASE_OS),redhat)
-  BASE_OS_TAG_REDHAT ?= 9.4
+  BASE_OS_TAG_REDHAT ?= 9.5
   PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz"
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
