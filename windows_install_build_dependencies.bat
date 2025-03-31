@@ -124,9 +124,9 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.1.0.0rc2_x86_64"
-set "genai_ver=openvino_genai_windows_2025.1.0.0rc2_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.1.0.0rc2/"
+set "genai_dir=openvino_genai_windows_2025.1.0.0rc3_x86_64"
+set "genai_ver=openvino_genai_windows_2025.1.0.0rc3_x86_64.zip"
+set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.1.0.0rc3/"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"

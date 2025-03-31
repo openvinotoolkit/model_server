@@ -1,11 +1,10 @@
-#
-# Copyright (c) 2024 Intel Corporation
+# Copyright 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG  IMAGE_NAME=registry.connect.redhat.com/intel/openvino-model-server:latest
-FROM ${IMAGE_NAME}
-USER root
-ENV LD_LIBRARY_PATH=/ovms/lib
-ENV PYTHONPATH=/ovms/lib/python
-RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-	$DNF_TOOL install -y python3-pip git
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-USER ovms
-ENTRYPOINT [ "/ovms/bin/ovms" ]
+input_stream: "REQUEST:in"
+output_stream: "RESPONSE:out"
+node {
+  calculator: "OVMSTestKFSPassCalculator"
+  input_stream: "REQUEST:in"
+  output_stream: "RESPONSE:out"
+}
