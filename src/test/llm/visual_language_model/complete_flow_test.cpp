@@ -81,7 +81,7 @@ public:
 
 std::unique_ptr<std::thread> VLMServableExecutionTest::t;
 
-static std::string createRequestBody(const std::string& modelName, const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, int numberOfImages = 1, const std::string message = "What is in this image?") {
+static std::string createRequestBody(const std::string& modelName, const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, int numberOfImages = 1, const std::string contentOfTheFirstMessage = "What is in this image?") {
     std::ostringstream oss;
     oss << R"(
         {
@@ -96,9 +96,8 @@ static std::string createRequestBody(const std::string& modelName, const std::ve
                     {
                         "type": "text",
                         "text": ")";
-        oss << message;
-        oss << R"("
-                    })";
+        oss << contentOfTheFirstMessage;
+        oss << R"("})";
         if (numberOfImages > 0) {
             oss << ",";
         }
@@ -253,7 +252,6 @@ TEST_P(VLMServableExecutionTestParameterized, UnaryRestrictedTagUsed) {
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
     std::string requestBody = createRequestBody(modelName, fields, true, 1, "<ov_genai_image_2>");
-    SPDLOG_INFO(requestBody);
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
@@ -320,7 +318,6 @@ TEST_P(VLMServableExecutionTestParameterized, streamMultipleImageTagOrderPasses)
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
     std::string requestBody = createRequestBody(modelName, fields, false, 3);  // 3=number of images
-    SPDLOG_INFO(requestBody);
 
     std::vector<std::string> responses;
 
@@ -345,7 +342,6 @@ TEST_P(VLMServableExecutionTestParameterized, streamRestrictedTagUsed) {
         {"max_tokens", "5"},
         {"ignore_eos", "true"}};
     std::string requestBody = createRequestBody(modelName, fields, true, 1, "<ov_genai_image_2>");
-    SPDLOG_INFO(requestBody);
 
     std::vector<std::string> responses;
 

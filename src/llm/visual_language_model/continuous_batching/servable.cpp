@@ -89,7 +89,6 @@ absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiSer
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-        SPDLOG_INFO("Input text:\n{}", vlmExecutionContext->inputText);
     } else {
         return absl::InvalidArgumentError("Unsupported endpoint");
     }
