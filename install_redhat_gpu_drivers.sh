@@ -64,11 +64,11 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/l/level-zero-1.18.5.0-1055.el9_4.x86_64.rpm ; \
 ;; \
 "24.52.32224") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-24.52.32224.14-1077.el9_5.x86_64.rpm ; \
+        $DNF_TOOL install --nodocs -y libedit libnl3; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-gmmlib-22.5.5-i1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-core-2.5.12-1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-opencl-2.5.12-1077.el9_5.x86_64.rpm ; \
+        rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-24.52.32224.14-1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-level-zero-gpu-1.6.32224.14-1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/l/level-zero-1.19.2.0-1077.el9_5.x86_64.rpm ; \
 ;; \
