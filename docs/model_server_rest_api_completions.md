@@ -68,7 +68,6 @@ curl http://localhost/v3/completions \
 |-------|----------|----------|----------|---------|-----|
 | n | ✅ | ✅ | ✅ | integer (default: `1`) | Number of output sequences to return for the given prompt. This value must be between `1 <= N <= BEST_OF`. |
 | best_of | ✅ | ✅ | ✅ | integer (default: `1`) | Number of output sequences that are generated from the prompt. From these _best_of_ sequences, the top _n_ sequences are returned. _best_of_ must be greater than or equal to _n_. This is treated as the beam width for beam search sampling.  |
-| diversity_penalty | ✅ | ❌ | ❌ | float (default: `1.0`) | This value is subtracted from a beam's score if it generates the same token as any beam from other group at a particular time. See [arXiv 1909.05858](https://arxiv.org/pdf/1909.05858). |
 | length_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while `length_penalty` < 0.0 encourages shorter sequences. |
 
 #### Multinomial sampling specific
