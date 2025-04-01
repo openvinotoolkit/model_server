@@ -376,15 +376,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         request.repetitionPenalty = it->value.GetDouble();
     }
 
-    // diversity_penalty: float; optional - defaults to 1.0
-    // Extension, unsupported by OpenAI API and vLLM, however available in CB lib
-    it = doc.FindMember("diversity_penalty");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsDouble() && !it->value.IsInt())
-            return absl::InvalidArgumentError("diversity_penalty is not a valid number");
-        request.diversityPenalty = it->value.GetDouble();
-    }
-
     // length_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
     it = doc.FindMember("length_penalty");

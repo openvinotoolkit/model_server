@@ -2687,24 +2687,6 @@ TEST_P(LLMHttpParametersValidationTest, repetitionPenaltyInvalid) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, diversityPenaltyValid) {
-    auto params = GetParam();
-    std::string requestBody = validRequestBodyWithParameter(params.modelName, "diversity_penalty", "2.0");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::OK);
-}
-
-TEST_P(LLMHttpParametersValidationTest, diversityPenaltyInvalid) {
-    auto params = GetParam();
-    std::string requestBody = validRequestBodyWithParameter(params.modelName, "diversity_penalty", "\"INVALID\"");
-
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-}
-
 TEST_P(LLMHttpParametersValidationTest, lengthPenaltyValid) {
     auto params = GetParam();
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "2.0");

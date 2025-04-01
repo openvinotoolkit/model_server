@@ -94,7 +94,6 @@ struct OpenAIChatCompletionsRequest {
     // Beam search specific
     std::optional<int> bestOf{std::nullopt};
     std::optional<float> lengthPenalty{std::nullopt};
-    std::optional<float> diversityPenalty{std::nullopt};
 
     // Speculative decoding specific (only with speculative decoding pipeline, see <docs> for reference)
     std::optional<int> numAssistantTokens{std::nullopt};
@@ -126,8 +125,6 @@ struct OpenAIChatCompletionsRequest {
         if (bestOf.has_value())
             config.num_beams = bestOf.value();
 
-        if (diversityPenalty.has_value())
-            config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
         // TODO: stop_criteria = ?
         if (numReturnSequences.has_value())
             config.num_return_sequences = numReturnSequences.value();
