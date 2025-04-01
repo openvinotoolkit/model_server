@@ -47,7 +47,7 @@ absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Ten
         }
     }
     return absl::OkStatus();
-}  
+}
 
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> LegacyServable::createExecutionContext() {
