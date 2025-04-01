@@ -3968,7 +3968,7 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
     // Create an ov::Tensor object with random data
     size_t dataSize = 1025;
     std::vector<float> randomData(dataSize);
-    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand_r()) / RAND_MAX; });
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
     executionContext.inputIds = tensor;
     auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
@@ -3982,7 +3982,7 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
     // Create an ov::Tensor object with random data
     size_t dataSize = 5025;
     std::vector<float> randomData(dataSize);
-    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand_r()) / RAND_MAX; });
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
     executionContext.inputIds = tensor;
     auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
@@ -3996,7 +3996,7 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
     // Create an ov::Tensor object with random data
     size_t dataSize = 3025;
     std::vector<float> randomData(dataSize);
-    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand_r()) / RAND_MAX; });
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
     ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
     executionContext.inputIds = tensor;
     auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
