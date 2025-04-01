@@ -43,10 +43,10 @@ struct LegacyServableProperties : public GenAiServableProperties {
 
 class LegacyServable : public GenAiServable {
     std::shared_ptr<LegacyServableProperties> properties;
-    int64_t getMaxPromptLength() const;
 
 protected:
     void notifyExecutorThread();
+    absl::Status validateInputComplianceWithProperties(const ov::Tensor& inputIds) const;
 
 public:
     LegacyServable() {

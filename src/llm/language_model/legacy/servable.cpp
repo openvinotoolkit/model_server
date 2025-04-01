@@ -38,9 +38,16 @@
 
 namespace ovms {
 
-int64_t LegacyServable::getMaxPromptLength() const {
-    return properties->maxPromptLength;
-}
+absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Tensor& inputIds) const {
+    if (properties->device == "NPU") {
+        int64_t inputLength = inputIds.get_size();
+        if (inputLength > properties->maxPromptLength) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Input length exceeds the maximum allowed length: {} > {}", inputLength, properties->maxPromptLength);
+            return absl::InvalidArgumentError("Input length exceeds the maximum allowed length");
+        }
+    }
+    return absl::OkStatus();
+}  
 
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> LegacyServable::createExecutionContext() {
@@ -91,17 +98,10 @@ absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutio
     // Use the base class implementation to prepare inputs
     auto status = GenAiServable::prepareInputs(executionContext);
     if (!status.ok()) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to prepare inputs: {}", status.message());
         return status;
     }
     // Additional validation layer for NPU specific properties
-    if (getProperties()->device == "NPU") {
-        int64_t inputLength = executionContext->inputIds.get_size();
-        if (inputLength > getMaxPromptLength()) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Input length exceeds the maximum allowed length: {} > {}", inputLength, getMaxPromptLength());
-            return absl::InvalidArgumentError("Input length exceeds the maximum allowed length");
-        }
-    }
+    status = validateInputComplianceWithProperties(executionContext->inputIds);
     return status;
 }
 

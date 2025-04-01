@@ -3938,3 +3938,68 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
         ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
     }
 }
+
+#include "../../llm/language_model/legacy/servable.hpp"
+
+class MockLegacyServable : public ovms::LegacyServable {
+public:
+    absl::Status callValidateInputComplianceWithProperties(const ov::Tensor& inputIds) {
+        return validateInputComplianceWithProperties(inputIds);
+    }
+};
+
+class IsolatedServableTests : public ::testing::Test {
+public:
+    MockLegacyServable legacyServable;
+protected:
+    void SetUp() override {
+        // Code here will be called immediately after the constructor (right before each test).
+    }
+
+    void TearDown() override {
+        // Code here will be called immediately after each test (right before the destructor).
+    }
+};
+
+TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU"; // Simulate NPU device
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 1025;
+    std::vector<float> randomData(dataSize);
+    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand()) / RAND_MAX; });
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
+}
+
+TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU"; // Simulate NPU device
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096; // Set max prompt length to 1024
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 5025;
+    std::vector<float> randomData(dataSize);
+    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand()) / RAND_MAX; });
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
+}
+
+TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU"; // Simulate NPU device
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096; // Set max prompt length to 1024
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 3025;
+    std::vector<float> randomData(dataSize);
+    std::generate(randomData.begin(), randomData.end(), []() { return static_cast<float>(rand()) / RAND_MAX; });
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::OkStatus());
+}
+
+// TODO: Add missing tests for reading max prompt len property from configuration
