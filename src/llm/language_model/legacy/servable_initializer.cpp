@@ -71,7 +71,6 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return status;
     }
 
-    properties->maxPromptLength = -1;
     auto it = properties->pluginConfig.find("MAX_PROMPT_LEN");
     if (it != properties->pluginConfig.end()) {
         try {
