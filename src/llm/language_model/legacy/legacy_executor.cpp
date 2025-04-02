@@ -26,7 +26,7 @@ bool LegacyExecutor::hasRequests() {
     return requests.size() > 0;
 }
 
-size_t LegacyExecutor::requestsQueueSize() {
+bool LegacyExecutor::requestsQueueSize() {
     return requests.size();
 }
 
@@ -66,10 +66,10 @@ void LegacyExecutorWrapper::run(LegacyExecutor* legacyExecutor, std::atomic<bool
     // TODO add metrics
     while (!(*receivedEndSignal)) {
         try {
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", legacyExecutor->requestsQueueSize());
             if (legacyExecutor->hasRequests()) {
                 legacyExecutor->processRequest();
             } else {
+                SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", legacyExecutor->requestsQueueSize());
                 legacyExecutor->waitForRequests(receivedEndSignal);
             }
         } catch (std::exception& e) {

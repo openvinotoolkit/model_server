@@ -47,7 +47,7 @@ struct LegacyExecutor {
 
     bool hasRequests();
 
-    size_t requestsQueueSize();
+    bool requestsQueueSize();
     void processRequest();
 
     void waitForRequests(std::atomic<bool>* receivedEndSignal);
