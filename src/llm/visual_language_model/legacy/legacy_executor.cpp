@@ -65,7 +65,7 @@ void VisualLanguageModelLegacyExecutorWrapper::run(VisualLanguageModelLegacyExec
     // TODO add metrics
     while (!(*receivedEndSignal)) {
         try {
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", executor->requestsQueueSize());
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {};", executor->requestsQueueSize());
             if (executor->hasRequests()) {
                 executor->processRequest();
             } else {

@@ -66,7 +66,7 @@ void LegacyExecutorWrapper::run(LegacyExecutor* legacyExecutor, std::atomic<bool
     // TODO add metrics
     while (!(*receivedEndSignal)) {
         try {
-            SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", legacyExecutor->requestsQueueSize());
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {};", legacyExecutor->requestsQueueSize());
             if (legacyExecutor->hasRequests()) {
                 legacyExecutor->processRequest();
             } else {
