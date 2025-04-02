@@ -49,7 +49,7 @@ TEST(NetworkUtils, IsPortAvailable_Negative) {
             SPDLOG_ERROR("Failed to create socket for test: {}", s);
             continue;
         }
-        randomizePort(portString);
+        randomizeAndEnsureFree(portString);
         takenPort = std::stoi(portString);
         sockaddr_in addr;
         memset(&addr, 0, sizeof(addr));
@@ -79,7 +79,7 @@ TEST(NetworkUtils, IsPortAvailable_Negative) {
             SPDLOG_ERROR("Failed to create socket for test");
             continue;
         }
-        randomizePort(portString);
+        randomizeAndEnsureFree(portString);
         takenPort = std::stoi(portString);
         sockaddr_in addr;
         memset(&addr, 0, sizeof(addr));

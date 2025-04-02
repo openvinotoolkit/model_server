@@ -661,7 +661,7 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
     request.setInputBuffer(name.c_str(), data.data(), dataSize, bufferType, deviceId);
 }
 
-void randomizePort(std::string& port) {
+void randomizeAndEnsureFree(std::string& port) {
     std::mt19937_64 eng{std::random_device{}()};
     std::uniform_int_distribution<> dist{0, 9};
     int tryCount = 3;
@@ -678,11 +678,11 @@ void randomizePort(std::string& port) {
     }
     EXPECT_TRUE(false) << "Could not find random available port";
 }
-void randomizePorts(std::string& port1, std::string& port2) {
-    randomizePort(port1);
-    randomizePort(port2);
+void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
+    randomizeAndEnsureFree(port1);
+    randomizeAndEnsureFree(port2);
     while (port2 == port1) {
-        randomizePort(port2);
+        randomizeAndEnsureFree(port2);
     }
 }
 
@@ -698,7 +698,7 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {(char*)"ovms",
         (char*)"--config_path",
         (char*)configPath,
@@ -712,7 +712,7 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
 }
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {(char*)"ovms",
         (char*)"--model_name",
         (char*)modelName,

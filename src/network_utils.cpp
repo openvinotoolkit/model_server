@@ -15,8 +15,6 @@
 //*****************************************************************************
 #include "network_utils.hpp"
 
-//#include <signal.h>
-//#include <stdlib.h>
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
