@@ -3977,7 +3977,7 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
 
 TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
     legacyServable.getProperties()->device = "NPU";                                                              // Simulate NPU device
-    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 1024
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 4096
     ovms::LegacyServableExecutionContext executionContext;
     // Create an ov::Tensor object with random data
     size_t dataSize = 5025;
@@ -3991,7 +3991,7 @@ TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
 
 TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNPU) {
     legacyServable.getProperties()->device = "NPU";                                                              // Simulate NPU device
-    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 1024
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 4096
     ovms::LegacyServableExecutionContext executionContext;
     // Create an ov::Tensor object with random data
     size_t dataSize = 3025;
