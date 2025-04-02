@@ -71,13 +71,16 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return status;
     }
 
-    auto it = properties->pluginConfig.find("MAX_PROMPT_LEN");
-    if (it != properties->pluginConfig.end()) {
-        try {
-            properties->maxPromptLength = it->second.as<int64_t>();
-        } catch (const std::exception& e) {
-            SPDLOG_ERROR("Error during MAX_PROMPT_LEN property read: {}", e.what());
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    // Max prompt len is NPU specific property
+    if (properties->device == "NPU") {
+        auto it = properties->pluginConfig.find("MAX_PROMPT_LEN");
+        if (it != properties->pluginConfig.end()) {
+            try {
+                properties->maxPromptLength = it->second.as<int64_t>();
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Error during MAX_PROMPT_LEN property read: {}", e.what());
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
         }
     }
 
