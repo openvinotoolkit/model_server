@@ -38,7 +38,7 @@ IF "%2"=="1" (
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
-:: Python 39 needs to be first in the windows path, as well as MSYS tools
+:: Python 312 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
@@ -312,10 +312,10 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
-%python_path%\python.exe -m ensurepip --upgrade
+%python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "numpy" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
 goto install_opencv
