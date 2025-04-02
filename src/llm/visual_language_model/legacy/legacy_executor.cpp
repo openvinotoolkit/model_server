@@ -27,7 +27,7 @@ bool VisualLanguageModelLegacyExecutor::hasRequests() {
     return (requests.size() > 0);
 }
 
-bool VisualLanguageModelLegacyExecutor::requestsQueueSize() {
+size_t VisualLanguageModelLegacyExecutor::requestsQueueSize() {
     return requests.size();
 }
 
@@ -65,10 +65,10 @@ void VisualLanguageModelLegacyExecutorWrapper::run(VisualLanguageModelLegacyExec
     // TODO add metrics
     while (!(*receivedEndSignal)) {
         try {
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", executor->requestsQueueSize());
             if (executor->hasRequests()) {
                 executor->processRequest();
             } else {
-                SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", executor->requestsQueueSize());
                 executor->waitForRequests(receivedEndSignal);
             }
         } catch (std::exception& e) {
