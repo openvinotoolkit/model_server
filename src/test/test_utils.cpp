@@ -24,6 +24,7 @@
 #include "../capi_frontend/capi_utils.hpp"
 #include "../capi_frontend/inferenceparameter.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
+#include "../network_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
@@ -663,10 +664,19 @@ void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::str
 void randomizePort(std::string& port) {
     std::mt19937_64 eng{std::random_device{}()};
     std::uniform_int_distribution<> dist{0, 9};
-    for (auto j : {1, 2, 3}) {
-        char* digitToRandomize = (char*)port.c_str() + j;
-        *digitToRandomize = '0' + dist(eng);
+    int tryCount = 3;
+    while (tryCount--) {
+        for (auto j : {1, 2, 3}) {
+            char* digitToRandomize = (char*)port.c_str() + j;
+            *digitToRandomize = '0' + dist(eng);
+        }
+        if (ovms::isPortAvailable(std::stoi(port))) {
+            return;
+        } else {
+            continue;
+        }
     }
+    EXPECT_TRUE(false) << "Could not find random available port";
 }
 void randomizePorts(std::string& port1, std::string& port2) {
     randomizePort(port1);
