@@ -40,7 +40,7 @@ class DrogonHttpServer {
         std::function<void(const drogon::HttpResponsePtr&)>)>
         dispatcher;
 
-    void dispatch(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
+    void dispatch(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& drogonResponseInitializeCallback);
 
 public:
     DrogonHttpServer(
