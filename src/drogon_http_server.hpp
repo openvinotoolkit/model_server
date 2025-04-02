@@ -37,7 +37,7 @@ class DrogonHttpServer {
     std::string address;
     std::function<void(
         const drogon::HttpRequestPtr&,
-        std::function<void(const drogon::HttpResponsePtr&)>&&)>
+        std::function<void(const drogon::HttpResponsePtr&)>)>
         dispatcher;
 
     void dispatch(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback);
@@ -57,7 +57,7 @@ public:
     void registerRequestDispatcher(
         std::function<void(
             const drogon::HttpRequestPtr&,
-            std::function<void(const drogon::HttpResponsePtr&)>&&)>
+            std::function<void(const drogon::HttpResponsePtr&)>)>
             dispatcher);
 };
 

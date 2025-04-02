@@ -51,7 +51,7 @@ enum : unsigned int {
 
 void DrogonHttpServer::dispatch(const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
     try {
-        this->dispatcher(req, std::move(callback));
+        this->dispatcher(req, callback);
     } catch (...) {
         SPDLOG_DEBUG("Exception caught in REST request handler");
         auto resp = drogon::HttpResponse::newHttpResponse();
@@ -164,7 +164,7 @@ void DrogonHttpServer::terminate() {
 void DrogonHttpServer::registerRequestDispatcher(
     std::function<void(
         const drogon::HttpRequestPtr&,
-        std::function<void(const drogon::HttpResponsePtr&)>&&)>
+        std::function<void(const drogon::HttpResponsePtr&)>)>
         dispatcher) {
     this->dispatcher = std::move(dispatcher);
 }
