@@ -21,13 +21,13 @@ The servable types are:
 - Visual Language Model Continuous Batching,
 - Visual Language Model Stateful.
 
-First part - Language Model / Visual Language Model - determines whever servable accepts only text or both text and images on the input.
+First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
 Seconds part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
 
 User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
 Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
 
-Stateful servables ommit most of the configuration used by Continuous Batching, but this will be mentioned later. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
+Stateful servables ignore most of the configuration used by Continuous Batching, but this will be mentioned later. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
 
 Despite all the differences, all servable types share the same LLM calculator which imposes certain flow in every GenAI-based endpoint.
 
@@ -157,7 +157,7 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
-Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxillary models.
+Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
 
 This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
 
