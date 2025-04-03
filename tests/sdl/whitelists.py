@@ -221,7 +221,6 @@ packages = {
         'nginx-common',
     },
     OvmsBaseImageType.REDHAT: {
-        'openssl-fips-provider-so',
     },
     OvmsBaseImageType.REDHAT_PYTHON: {
         'expat',
@@ -233,9 +232,11 @@ packages = {
         'intel-gmmlib',
         'intel-igc-core',
         'intel-igc-opencl',
+        'intel-level-zero-gpu',
         'intel-opencl',
         'level-zero',
         'libedit',
+        'libnl3',
         'ocl-icd',
     },
 }
