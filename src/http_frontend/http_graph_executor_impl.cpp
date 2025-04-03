@@ -96,6 +96,9 @@ Status createAndPushPacketsImpl(
         "failed to deserialize",
         StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
     numberOfPacketsCreated = 1;
+    // TODO FIXME @atobisze properly implement on all exit paths
+        auto now = std::chrono::system_clock::now();
+        currentTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
     return StatusCode::OK;
 }
 
