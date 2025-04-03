@@ -220,8 +220,7 @@ packages = {
         'nginx',
         'nginx-common',
     },
-    OvmsBaseImageType.REDHAT: {
-    },
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON: {
         'expat',
         'python3-libs',
