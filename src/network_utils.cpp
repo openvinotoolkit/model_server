@@ -61,6 +61,7 @@ struct SocketOpenCloseGuard {
     }
 };
 bool isPortAvailable(uint64_t port) {
+    SOCKET sock;
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         SPDLOG_ERROR("WSAStartup error.");
@@ -68,8 +69,8 @@ bool isPortAvailable(uint64_t port) {
     }
     WSAStartupCleanupGuard wsaGuard;
     // Create a socket
-    this->sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (this->sock == INVALID_SOCKET) {
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
         SPDLOG_ERROR("INVALID_SOCKET error.");
         return false;
     }
@@ -80,8 +81,8 @@ bool isPortAvailable(uint64_t port) {
 #pragma warning(disable : 4996)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(port);
-    SocketOpenCloseGuard socketGuard(this->sock);
-    if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+    SocketOpenCloseGuard socketGuard(sock);
+    if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
         return false;
     }
