@@ -162,6 +162,12 @@ context:
 - OpenVINO Model Server implements OpenAI API which allows to integrate with any tool that already uses ChatGPT
 
 
+## Troubleshooting
+
+OpenVINO Model Server uses python to apply chat templates. If you get an error during model loading, enable Unicode UTF-8 in your system settings:
+
+![utf8](utf8.png)
+
 ### TODO
 - rerank
 - embeddings
