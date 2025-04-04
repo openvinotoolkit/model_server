@@ -44,7 +44,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
 set "dest_dir=C:\opt"
-set "python_version=3.11.9"
+set "python_version=3.12.9"
 
 call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
 if !errorlevel! neq 0 (
