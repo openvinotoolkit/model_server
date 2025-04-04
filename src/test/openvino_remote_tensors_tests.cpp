@@ -431,7 +431,7 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
     GTEST_SKIP() << "Test not enabled on UBI images";
 #else
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1262,7 +1262,7 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummy) {
 }
 static OVMS_Server* startCAPIServerFromConfig(const std::string configPath) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     EXPECT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1450,7 +1450,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));

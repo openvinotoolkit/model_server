@@ -20,10 +20,6 @@
 
 #include <grpcpp/server.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#endif
-
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "model_service.hpp"
 #include "module.hpp"
@@ -39,9 +35,6 @@ class GRPCServerModule : public Module {
     ModelServiceImpl tfsModelService;
     mutable KFSInferenceServiceImpl kfsGrpcInferenceService;
     std::vector<std::unique_ptr<grpc::Server>> servers;
-#ifdef _WIN32
-    SOCKET sock;
-#endif
 
 public:
     GRPCServerModule(Server& server);
@@ -51,8 +44,5 @@ public:
 
     const GetModelMetadataImpl& getTFSModelMetadataImpl() const;
     KFSInferenceServiceImpl& getKFSGrpcImpl() const;
-
-private:
-    bool isPortAvailable(uint64_t port);
 };
 }  // namespace ovms

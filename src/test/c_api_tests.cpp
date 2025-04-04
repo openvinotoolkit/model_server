@@ -864,7 +864,7 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
 TEST_F(CAPIInference, NegativeInference) {
     // first start OVMS
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     // prepare options
     OVMS_ServerSettings* serverSettings = 0;
     OVMS_ModelsSettings* modelsSettings = 0;
@@ -1190,7 +1190,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         // prepare options
         OVMS_ServerSettings* serverSettings = nullptr;
         OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -1696,7 +1696,7 @@ protected:
     const char* outputName{nullptr};
     void SetUp() override {
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         // prepare options
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
         ASSERT_NE(serverSettings, nullptr);

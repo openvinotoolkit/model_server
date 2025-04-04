@@ -251,7 +251,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
     // purpose of this test is to ensure that the server responds with alive=true before loading any models.
     // this is to make sure that eg. k8s won't restart container until all models are loaded because of not being alivea
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
 
     char* argv[] = {
         (char*)"OpenVINO Model Server",
@@ -333,7 +333,7 @@ TEST(Server, ServerAliveBeforeLoadingModels) {
 
 TEST(Server, ServerMetadata) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -360,7 +360,7 @@ TEST(Server, ServerMetadata) {
 
 TEST(Server, GrpcWorkers2) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     std::string workers = "2";
     char* argv[] = {
         (char*)"OpenVINO Model Server",
@@ -408,10 +408,10 @@ TEST(Server, GrpcWorkers2) {
 TEST(Server, ProperShutdownInCaseOfStartError) {
     std::string port = "9000";
     std::string restPort = "9000";
-    randomizePort(port);
-    randomizePort(restPort);
+    randomizeAndEnsureFree(port);
+    randomizeAndEnsureFree(restPort);
     while (port == restPort)
-        randomizePort(restPort);
+        randomizeAndEnsureFree(restPort);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -438,7 +438,7 @@ TEST(Server, grpcArguments) {
     std::string channel_arguments_str = "grpc.max_connection_age_ms=2000,grpc.max_concurrent_streams=10";
     std::string grpc_max_threads = "8";
     std::string grpc_memory_quota = "100000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -484,7 +484,7 @@ TEST(Server, CAPIAliveGrpcNotHttpNot) {
 TEST(Server, CAPIAliveGrpcNotHttpYes) {
     GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon";  // TODO @dkalinow to enable drogon tests
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
