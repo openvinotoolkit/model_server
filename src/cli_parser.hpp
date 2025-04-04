@@ -23,6 +23,7 @@ namespace ovms {
 
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
+class HfDownloader;
 
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
@@ -32,7 +33,7 @@ public:
     CLIParser() = default;
     void parse(int argc, char** argv);
 
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*, HfDownloader*);
 };
 
 }  // namespace ovms

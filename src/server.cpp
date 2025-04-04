@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
+#include "libgt2/libgt2.hpp"
 #include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
@@ -383,8 +384,15 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
+        HfDownloader hfDownloader;
         parser.parse(argc, argv);
-        parser.prepare(&serverSettings, &modelsSettings);
+        parser.prepare(&serverSettings, &modelsSettings, &hfDownloader);
+
+        if (hfDownloader.isPullHfModelModeOn()) {
+            SPDLOG_INFO("OpenVino Model Server started in huggingface.co download mode.");
+            return hfDownloader.cloneRepository();
+        }
+
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
