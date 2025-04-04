@@ -42,7 +42,7 @@ Make sure to:
 on every shell that will start OpenVINO Model Server.
 
 And start Model Server using the following command:
-```console
+```bat
 ovms --model_name resnet --model_path model/ --port 9000
 ```
 

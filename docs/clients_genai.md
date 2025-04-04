@@ -74,6 +74,47 @@ curl http://localhost:8000/v3/chat/completions \
 :::
 ::::
 
+### Request chat completions with unary calls (with image input)
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+import base64
+from openai import OpenAI
+
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode("utf-8")
+
+image_path = "/path/to/image"
+image = encode_image(image_path)
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+response = client.chat.completions.create(
+  model="openbmb/MiniCPM-V-2_6",
+  messages=[
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?",
+        },
+        {
+          "type": "image_url",
+          "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+        },
+      ],
+    }
+  ],
+  stream=False,
+)
+print(response.choices[0].message)
+```
+:::
+::::
+
 Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request completions with unary calls
@@ -137,6 +178,52 @@ for chunk in stream:
 ```
 :::
 ::::
+
+### Request chat completions with streaming (with image input)
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+import base64
+from openai import OpenAI
+
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode("utf-8")
+
+image_path = "/path/to/image"
+image = encode_image(image_path)
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+
+stream = client.chat.completions.create(
+  model="openbmb/MiniCPM-V-2_6",
+  messages=[
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?",
+        },
+        {
+          "type": "image_url",
+          "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+        },
+      ],
+    }
+  ],
+  stream=True,
+)
+
+for chunk in stream:
+  if chunk.choices[0].delta.content is not None:
+    print(chunk.choices[0].delta.content, end="")
+```
+:::
+::::
+
 Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request completions with streaming
