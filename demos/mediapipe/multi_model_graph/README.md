@@ -99,7 +99,7 @@ xcopy /s /e /q /y ..\..\..\src\test\dummy .\dummyAdd\dummy\
 
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
-Prepare virtualenv according to [kserve samples readme](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/README.md)
+Prepare virtualenv according to [kserve samples readme](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/client/python/kserve-api/samples/README.md)
 ```bash
 docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```

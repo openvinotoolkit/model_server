@@ -12,7 +12,7 @@ That makes it easy to use and efficient especially on Intel® Xeon® processors 
 
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
@@ -24,8 +24,8 @@ Execution parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -78,7 +78,7 @@ models/
         └── tokenizer.model
 ```
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../../docs/llm/reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
@@ -109,7 +109,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
@@ -150,7 +150,7 @@ Let's send a request with text an image in the messages context.
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests
@@ -295,6 +295,6 @@ Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 
 
 ## References
-- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
-- [Writing client code](../../docs/clients_genai.md)
-- [LLM calculator reference](../../docs/llm/reference.md)
+- [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
+- [Writing client code](../../../docs/clients_genai.md)
+- [LLM calculator reference](../../../docs/llm/reference.md)

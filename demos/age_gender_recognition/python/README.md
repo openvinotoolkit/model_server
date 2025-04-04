@@ -53,7 +53,7 @@ Install python dependencies:
 ```console
 pip3 install -r requirements.txt
 ```
-Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/age_gender_recognition/python/age_gender_recognition.py) script to make an inference:
+Run [age_gender_recognition.py](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/demos/age_gender_recognition/python/age_gender_recognition.py) script to make an inference:
 ```console
 python age_gender_recognition.py --image_input_path age-gender-recognition-retail-0001.jpg --rest_port 8000
 ```

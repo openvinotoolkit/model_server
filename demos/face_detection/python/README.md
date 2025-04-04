@@ -8,7 +8,7 @@
 
 ## Overview
 
-The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
+The script [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/demos/face_detection/python/face_detection.py) runs face detection inference requests for all the images
 saved in `input_images_dir` directory.
 
 The script can adjust the input image size and change the batch size in the request. It demonstrates how to use

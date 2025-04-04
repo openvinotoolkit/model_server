@@ -26,7 +26,7 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
 
 # Compile API
-RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/main/src/kfserving_api/grpc_predict_v2.proto
+RUN wget https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/1/src/kfserving_api/grpc_predict_v2.proto
 RUN echo 'option go_package = "./grpc-client";' >> grpc_predict_v2.proto
 RUN protoc --go_out="./" --go-grpc_out="./" ./grpc_predict_v2.proto
 

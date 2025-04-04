@@ -9,7 +9,7 @@ This custom node takes image with dynamic shape (color, width, height) as an inp
 Important to note that this node uses OpenCV for processing so for good performance results prefers NHWC layout.
 In other cases conversion applies which reduces performance of this node.
 
-**NOTE** Exemplary configuration files are available in [onnx model with server preprocessing demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/using_onnx_model/python) and [config with single node](example_config.json).
+**NOTE** Exemplary configuration files are available in [onnx model with server preprocessing demo](https://github.com/openvinotoolkit/model_server/tree/releases/2025/1/demos/using_onnx_model/python) and [config with single node](example_config.json).
 
 # Building custom node library
 

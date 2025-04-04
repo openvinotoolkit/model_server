@@ -10,12 +10,12 @@ Requirements:
 
 1. Install python dependencies for the conversion script:
 ```console
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 ```
 
 2. Run optimum-cli to download and quantize the model:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
 python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-7B --weight-format int4 --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
 ```
