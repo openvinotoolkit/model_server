@@ -41,10 +41,11 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     stream_types_mapping_t outputTypes,
     std::vector<std::string> inputNames,
     std::vector<std::string> outputNames,
-    const PythonNodeResourcesMap& pythonNodeResourcesMap,
-    const GenAiServableMap& llmNodeResourcesMap,
+    const std::shared_ptr<PythonNodeResourcesMap>& pythonNodeResourcesMap,
+    const std::shared_ptr<GenAiServableMap>& llmNodeResourcesMap,
     PythonBackend* pythonBackend,
-    MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
+    MediapipeServableMetricReporter* mediapipeServableMetricReporter,
+    GraphIdGuard&& guard) :
     name(name),
     version(version),
     config(config),
@@ -56,10 +57,11 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     llmNodeResourcesMap(llmNodeResourcesMap),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
-    mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
+    mediapipeServableMetricReporter(mediapipeServableMetricReporter),
+    guard(std::move(guard)) {}
 
-const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
-const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
+const std::string MediapipeGraphExecutor::PYTHON_SIDE_PACKET_NAME = "py";
+const std::string MediapipeGraphExecutor::LLM_SESSION_PACKET_NAME = "llm";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms

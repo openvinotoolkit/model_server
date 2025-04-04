@@ -56,7 +56,6 @@ class RerankCalculator : public CalculatorBase {
     static const std::string OUTPUT_TAG_NAME;
     static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
 
-    mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
     int64_t bos_token{0};
@@ -403,7 +402,7 @@ public:
             if (!status.ok()) {
                 return status;
             }
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
             return absl::OkStatus();
         } catch (ov::AssertFailure& e) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "OpenVINO Assert Failure: {}", e.what());
