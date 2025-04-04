@@ -58,6 +58,7 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
 
     properties->device = nodeOptions.device();
     properties->isSpeculativePipeline = false;
+
     if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
@@ -70,9 +71,8 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return status;
     }
 
-    properties->pluginConfig["ATTENTION_BACKEND"] = "SDPA";
     try {
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
@@ -84,8 +84,11 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
 
     loadTextProcessor(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
-    properties->maxTokensLimit = nodeOptions.max_tokens_limit();
+    if (nodeOptions.has_max_tokens_limit()) {
+        properties->maxTokensLimit = nodeOptions.max_tokens_limit();
+    }
     properties->bestOfLimit = nodeOptions.best_of_limit();
+    properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
     return StatusCode::OK;
 }
 

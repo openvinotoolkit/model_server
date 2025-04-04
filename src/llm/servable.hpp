@@ -80,12 +80,13 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     // Sampling limits
-    uint32_t maxTokensLimit;
+    std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit;
     bool isSpeculativePipeline;  // sampling is generally common, but maybe we could avoid having this field at all
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     TextProcessor textProcessor;
+    std::optional<uint32_t> maxModelLength;
 };
 
 class GenAiServable {

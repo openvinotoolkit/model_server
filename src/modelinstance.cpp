@@ -92,7 +92,9 @@ void* globalVaDisplay = nullptr;
 const uint32_t MAX_NIREQ_COUNT = 100000;
 const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
 
-ModelInstance::~ModelInstance() = default;
+ModelInstance::~ModelInstance() {
+    retireModel();
+}
 ModelInstance::ModelInstance(const std::string& name, model_version_t version, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig) :
     Servable(name, version),
     ieCore(ieCore),

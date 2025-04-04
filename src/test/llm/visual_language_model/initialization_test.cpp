@@ -80,7 +80,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineTypeDefault) {
     ASSERT_EQ(pipelineType, PipelineType::VLM_CB);
 }
 
-TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_CB_Specified) {
+TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_Specified) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -99,7 +99,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_CB_Specified) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                pipeline_type: VLM_CB
+                pipeline_type: VLM
                 models_path: "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"
             }
         }
@@ -119,10 +119,10 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_VLM_CB_Specified) {
     PipelineType pipelineType;
     auto status = callDeterminePipelineType(pipelineType, testPbtxt);
     ASSERT_EQ(status, StatusCode::OK);
-    ASSERT_EQ(pipelineType, PipelineType::VLM_CB);
+    ASSERT_EQ(pipelineType, PipelineType::VLM);
 }
 
-TEST_F(VLMServableInitializationTest, determinePipelineType_TEXT_CB_Specified) {
+TEST_F(VLMServableInitializationTest, determinePipelineType_LM_CB_Specified) {
     std::string testPbtxt = R"(
         input_stream: "HTTP_REQUEST_PAYLOAD:input"
         output_stream: "HTTP_RESPONSE_PAYLOAD:output"
@@ -141,7 +141,7 @@ TEST_F(VLMServableInitializationTest, determinePipelineType_TEXT_CB_Specified) {
         }
         node_options: {
             [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-                pipeline_type: TEXT_CB
+                pipeline_type: LM_CB
                 models_path: "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"
             }
         }

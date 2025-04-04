@@ -34,6 +34,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::vector<ov::Tensor> inputImages;
     std::condition_variable executionInProgress;
     std::string inputText;
+    bool success = true;
 };
 
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
@@ -54,6 +55,7 @@ public:
     }
 
     // Interface methods
+    absl::Status loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload);
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     bool supportsSpeculativeDecoding() const override;

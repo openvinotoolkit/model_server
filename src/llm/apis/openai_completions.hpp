@@ -48,8 +48,6 @@ struct StreamOptions {
     bool includeUsage = false;
 };
 
-#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
-
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
@@ -96,11 +94,12 @@ struct OpenAIChatCompletionsRequest {
     // Beam search specific
     std::optional<int> bestOf{std::nullopt};
     std::optional<float> lengthPenalty{std::nullopt};
-    std::optional<float> diversityPenalty{std::nullopt};
 
     // Speculative decoding specific (only with speculative decoding pipeline, see <docs> for reference)
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
+
+    std::optional<uint32_t> maxModelLength;
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -111,7 +110,8 @@ struct OpenAIChatCompletionsRequest {
         config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
             config.max_new_tokens = maxTokens.value();
-        // TODO: max_length = ?
+        if (maxModelLength.has_value())
+            config.max_length = maxModelLength.value();
         if (ignoreEOS.has_value())
             config.ignore_eos = ignoreEOS.value();
 
@@ -125,8 +125,6 @@ struct OpenAIChatCompletionsRequest {
         if (bestOf.has_value())
             config.num_beams = bestOf.value();
 
-        if (diversityPenalty.has_value())
-            config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
         // TODO: stop_criteria = ?
         if (numReturnSequences.has_value())
             config.num_return_sequences = numReturnSequences.value();
@@ -181,8 +179,8 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
-    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
+    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -199,6 +197,7 @@ public:
     // User input might be modified by the servable logic, so it is not const
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
+    std::optional<int> getMaxTokens() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -209,12 +208,13 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
-    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results);
+    // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
+    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
     static void writeLogprob(Writer<StringBuffer>& writer, float logprob);

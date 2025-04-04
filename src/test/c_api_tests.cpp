@@ -180,10 +180,16 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
 
     // Test config parser
     ConstructorEnabledConfig cfg;
+#ifdef __linux__
     ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
+#elif _WIN32
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 1));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    EXPECT_EQ(cfg.grpcWorkers(), 1);
+#endif
     EXPECT_EQ(cfg.port(), 5555);
     EXPECT_EQ(cfg.restPort(), 6666);
-    EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
@@ -1354,6 +1360,9 @@ TEST_F(CAPIMetadata, Negative) {
 class CAPIState : public ::testing::Test {
 public:
     static std::shared_ptr<MockModelInstanceChangingStates> modelInstance;
+    static void TearDownTestSuite() {
+        modelInstance.reset();
+    }
     class MockModel : public Model {
     public:
         MockModel(const std::string& name, std::shared_ptr<ModelInstance> instance) :
@@ -1952,7 +1961,8 @@ TEST_F(CAPIInference, AsyncWithCallbackDummy) {
     std::vector<float> out(10, GARBAGE_VALUE);
     size_t inputByteSize = sizeof(float) * in.size();
     // start CAPI server
-    ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH);
+    bool startGrpc = true;  // WA to be able to test async inference but do not encounter closure issues CVS-164617
+    ServerGuard serverGuard(DUMMY_MODEL_CPU_CONFIG_PATH, startGrpc);
     OVMS_Server* cserver = serverGuard.server;
     // prepare request
     OVMS_InferenceRequest* request{nullptr};

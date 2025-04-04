@@ -38,6 +38,17 @@
 
 namespace ovms {
 
+absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Tensor& inputIds) const {
+    if (properties->device == "NPU") {
+        int64_t inputLength = inputIds.get_size();
+        if (inputLength > properties->maxPromptLength) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Input length exceeds the maximum allowed length: {} > {}", inputLength, properties->maxPromptLength);
+            return absl::InvalidArgumentError("Input length exceeds the maximum allowed length");
+        }
+    }
+    return absl::OkStatus();
+}
+
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> LegacyServable::createExecutionContext() {
     return std::make_shared<LegacyServableExecutionContext>();
@@ -61,7 +72,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -83,6 +94,17 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     return absl::OkStatus();
 }
 
+absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    // Use the base class implementation to prepare inputs
+    auto status = GenAiServable::prepareInputs(executionContext);
+    if (!status.ok()) {
+        return status;
+    }
+    // Additional validation layer for NPU specific properties
+    status = validateInputComplianceWithProperties(executionContext->inputIds);
+    return status;
+}
+
 absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
@@ -98,6 +120,9 @@ absl::Status LegacyServable::readCompleteExecutionResults(std::shared_ptr<GenAiS
         return absl::CancelledError();
     }
     legacyExecutionContext->finished.wait();
+    if (!legacyExecutionContext->success) {
+        return absl::InvalidArgumentError("Request processing failed, check its correctness.");
+    }
     return absl::OkStatus();
 }
 
@@ -130,6 +155,11 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             generationStatus = legacyExecutionContext->finished.wait_for(std::chrono::nanoseconds::zero());
         }
         lastTextChunk = executionContext->lastStreamerCallbackOutput;
+        if (!lastTextChunk.empty()) {
+            auto tokensTensor = properties->tokenizer.encode(lastTextChunk, ov::genai::add_special_tokens(false)).input_ids;
+            auto numTokens = tokensTensor.get_size();
+            executionContext->apiHandler->incrementProcessedTokens(numTokens);
+        }
         executionContext->lastStreamerCallbackOutput = "";
     }
     if (generationStatus != std::future_status::ready) {  // continue
@@ -139,6 +169,9 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
+        if (!legacyExecutionContext->success) {
+            return absl::InvalidArgumentError("Request processing failed, check its correctness.");
+        }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
@@ -150,7 +183,7 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", lastTextChunk);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
         return absl::OkStatus();
     }

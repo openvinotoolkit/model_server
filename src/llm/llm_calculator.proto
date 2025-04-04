@@ -28,21 +28,15 @@ message LLMCalculatorOptions {
 
     enum PipelineType {
       // Single modality (text only), text generation based on LLMPipeline
-      TEXT = 0;
+      LM = 0;
       // Multimodal (text and image), text generation based on LLMPipeline
       VLM = 1;
       // Single modality (text only), text generation based on ContinuousBatchingPipeline
-      TEXT_CB = 2;
+      LM_CB = 2;
       // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
       VLM_CB = 3;
       // Default option. If selected, pipeline type will be inferred by the serving
       AUTO = 4;
-
-      // Compatibility with current configurations, remove below in the next PR
-      // Continuous batching pipeline
-      CONTINUOUS_BATCHING = 5;
-      // Visual language model pipeline
-      VISUAL_LANGUAGE_MODEL = 6;
     }
 
     optional string models_path = 1;
@@ -62,7 +56,7 @@ message LLMCalculatorOptions {
 
     optional uint32 best_of_limit = 8 [default = 20];
 
-    optional uint32 max_tokens_limit = 9 [default = 4096];
+    optional uint32 max_tokens_limit = 9;
 
     optional bool enable_prefix_caching = 10 [default = false];
 
@@ -96,7 +90,7 @@ message LLMCalculatorOptions {
       optional uint64 max_num_seqs = 6 [default = 256];
       optional bool dynamic_split_fuse = 7 [default = true];
       optional uint32 best_of_limit = 8 [default = 20];
-      optional uint32 max_tokens_limit = 9 [default = 4096];
+      optional uint32 max_tokens_limit = 9;
       optional bool enable_prefix_caching = 10 [default = false];
     }
 

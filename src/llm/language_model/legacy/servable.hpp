@@ -31,12 +31,14 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     std::future<void> finished = readySignal.get_future();
     std::mutex mutex;
     std::condition_variable executionInProgress;
+    bool success = true;
 };
 
 struct LegacyServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::LLMPipeline> pipeline;
     std::shared_ptr<LegacyExecutorWrapper> legacyExecutor;
+    int64_t maxPromptLength = 1024;  // NPU property. 1024 is the default value in the plugin
 };
 
 class LegacyServable : public GenAiServable {
@@ -44,6 +46,7 @@ class LegacyServable : public GenAiServable {
 
 protected:
     void notifyExecutorThread();
+    absl::Status validateInputComplianceWithProperties(const ov::Tensor& inputIds) const;
 
 public:
     LegacyServable() {
@@ -55,6 +58,7 @@ public:
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     bool supportsSpeculativeDecoding() const override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

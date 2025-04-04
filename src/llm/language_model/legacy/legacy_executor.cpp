@@ -26,14 +26,19 @@ bool LegacyExecutor::hasRequests() {
     return requests.size() > 0;
 }
 
-bool LegacyExecutor::requestsQueueSize() {
+size_t LegacyExecutor::requestsQueueSize() {
     return requests.size();
 }
 
 void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
-    requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+    try {
+        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(), requests.front()->textStreamer);
+    } catch (std::exception& e) {
+        requests.front()->success = false;
+        SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());
+    }
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation ended");
     requests.front()->readySignal.set_value();
     requests.front()->executionInProgress.notify_one();
@@ -47,7 +52,7 @@ void LegacyExecutor::waitForRequests(std::atomic<bool>* receivedEndSignal) {
 }
 
 void LegacyExecutor::addRequest(std::shared_ptr<LegacyServableExecutionContext> request) {
-    std::lock_guard<std::mutex> guard(queueMutex);
+    std::unique_lock<std::mutex> lock(queueMutex);
     requests.push(request);
     cv.notify_one();
 }
@@ -61,10 +66,10 @@ void LegacyExecutorWrapper::run(LegacyExecutor* legacyExecutor, std::atomic<bool
     // TODO add metrics
     while (!(*receivedEndSignal)) {
         try {
+            SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {};", legacyExecutor->requestsQueueSize());
             if (legacyExecutor->hasRequests()) {
                 legacyExecutor->processRequest();
             } else {
-                SPDLOG_LOGGER_INFO(llm_executor_logger, "Awaiting requests: {};", legacyExecutor->requestsQueueSize());
                 legacyExecutor->waitForRequests(receivedEndSignal);
             }
         } catch (std::exception& e) {

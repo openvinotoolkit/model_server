@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -37,6 +38,18 @@
 #include "servable.hpp"
 
 namespace ovms {
+
+absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
+        executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
+    } else {
+        return absl::InvalidArgumentError("Wrong endpoint. VLM Servable allowed only on /v3/chat/completions endpoint");
+    }
+    executionContext->payload = payload;
+    return absl::OkStatus();
+}
 
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> VisualLanguageModelLegacyServable::createExecutionContext() {
@@ -61,7 +74,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -98,6 +111,9 @@ absl::Status VisualLanguageModelLegacyServable::readCompleteExecutionResults(std
         return absl::CancelledError();
     }
     legacyExecutionContext->finished.wait();
+    if (!legacyExecutionContext->success) {
+        return absl::InvalidArgumentError("Request processing failed, check its correctness.");
+    }
     return absl::OkStatus();
 }
 
@@ -106,7 +122,13 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    size_t completionTokens = 0;
+    for (std::string text : legacyExecutionContext->results.texts) {
+        auto tokensTensor = properties->tokenizer.encode(text, ov::genai::add_special_tokens(false)).input_ids;
+        completionTokens += tokensTensor.get_size();
+    }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated tokens number: {}", completionTokens);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, completionTokens);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -144,6 +166,9 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
+        if (!legacyExecutionContext->success) {
+            return absl::InvalidArgumentError("Request processing failed, check its correctness.");
+        }
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
@@ -169,22 +194,32 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+
+        // Validate chat history for restricted tags
+        for (const auto& historyEntry : chatHistory) {
+            for (const auto& [_, content] : historyEntry) {
+                if (content.find("<ov_genai_image_") != std::string::npos) {
+                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                }
+            }
+        }
+
         const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
         size_t imageIndex = 0;
+        std::unordered_map<size_t, std::string> imageTags;
         for (const auto& image : imageHistory) {
             const auto& [chatTurnIndex, imageTensor] = image;
             std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
-                chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];
-            } else {
-                chatHistory[chatTurnIndex]["content"] = imageTag;
-            }
+            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
             vlmExecutionContext->inputImages.push_back(imageTensor);
+        }
+        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-    } else if (executionContext->endpoint == Endpoint::COMPLETIONS) {
-        vlmExecutionContext->inputText = vlmExecutionContext->apiHandler->getPrompt().value();
+    } else {
+        return absl::InvalidArgumentError("Unsupported endpoint");
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.

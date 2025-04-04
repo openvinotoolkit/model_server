@@ -130,8 +130,8 @@ RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    python3.12 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
-RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir ; fi
+    python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
+RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir ; fi
 
 ARG JOBS=8
 ARG ov_use_binary=0
@@ -393,10 +393,10 @@ RUN apt-get update ; \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-driver-compiler-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-fw-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb    ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-level-zero-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.18.5/level-zero_1.18.5+u24.04_amd64.deb ; \ 
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.16.0/intel-driver-compiler-npu_1.16.0.20250328-14132024782_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.16.0/intel-fw-npu_1.16.0.20250328-14132024782_ubuntu24.04_amd64.deb   ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.16.0/intel-level-zero-npu_1.16.0.20250328-14132024782_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.20.2/level-zero_1.20.2+u24.04_amd64.deb ; \ 
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
@@ -409,7 +409,7 @@ RUN apt-get update ; \
 COPY --from=pkg /ovms_release /ovms
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
 # For image with Python enabled install Python library

@@ -116,6 +116,7 @@ bool GRPCServerModule::isPortAvailable(uint64_t port) {
         SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
         return false;
     }
+
     return true;
 }
 #endif  //  not __linux__
@@ -165,6 +166,7 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsPredictService(this->server),
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
+
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);

@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "e8aaedf3f0a89e975426e8f61914a9ef191fc5af", # releases/2025/1 2025-03-13
+        remote = "https://github.com/mzegla/openvino.genai",
+        commit = "ba00435c703743316db7650adeca676828916384", # based on releases/2025/1 2025-03-31
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -58,14 +58,16 @@ def _impl(repository_ctx):
         out_dll_dir_win = "out_dll_dir = \"runtime/bin/Release\","
         out_lib_dir = "out_lib_dir = \"runtime/lib/Release\""
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
-        out_libs = "out_shared_libs = [\"{lib_name}.dll\", \"{icudt}.dll\", \"{icuuc}.dll\", \"{tokenizers}.dll\"],".format(lib_name=lib_name, icuuc=icuuc, icudt=icudt, tokenizers=tokenizers)
+        out_libs = "out_shared_libs = [\"{lib_name}.dll\"],".format(lib_name=lib_name)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1",
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "runtime/bin/Release",
         "WIN32": "True",
-        "X86_64": "True"
+        "X86_64": "True",
+        "BUILD_TOKENIZERS": "OFF",
         """
+        jobs_param = "\"-j 8\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
     else:
         lib_name = "libopenvino_genai"
         out_dll_dir_win = ""
@@ -78,7 +80,9 @@ def _impl(repository_ctx):
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
+        "BUILD_TOKENIZERS": "OFF",
         """
+        jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -112,7 +116,7 @@ cmake(
         "--",  # <- Pass remaining options to the native tool.
         # https://github.com/bazelbuild/rules_foreign_cc/issues/329
         # there is no elegant parallel compilation support - lets go with default - CORES + 2 for ninja
-        "-j 8",
+        {jobs_param}
     ],
     cache_entries = {{ 
         {cache_entries}
@@ -154,7 +158,8 @@ cc_library(
 )
 """
     repository_ctx.file("BUILD", build_file_content.format(OpenVINO_DIR=OpenVINO_DIR, http_proxy=http_proxy, https_proxy=https_proxy,
-                                                            out_dll_dir_win=out_dll_dir_win, out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static))
+                                                            out_dll_dir_win=out_dll_dir_win, out_lib_dir=out_lib_dir, lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static,
+                                                            jobs_param=jobs_param))
 
 llm_engine_repository = repository_rule(
     implementation = _impl,

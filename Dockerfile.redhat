@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.5
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.4
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -137,7 +137,7 @@ RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packag
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 RUN python3 --version && python3 -m pip install "numpy<2.0.0" --no-cache-dir && \
-    python3 --version && python3 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir
+    python3 --version && python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 6.1.1
@@ -390,7 +390,7 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
+COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/markupsafe /ovms/python_deps/markupsafe
 

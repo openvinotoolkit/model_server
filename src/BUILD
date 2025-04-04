@@ -200,9 +200,10 @@ cc_library(
             "statefulrequestprocessor",
             "modelinstanceunloadguard",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "capi_validation",
@@ -221,9 +222,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "predict_request_validation_utils",
@@ -236,14 +238,16 @@ cc_library(
             "requesttensorextractor",
             "predict_request_validation_utils_impl",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "anonymous_input_name",
     hdrs = ["anonymous_input_name.hpp"],
     srcs = ["anonymous_input_name.cpp"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
@@ -257,9 +261,10 @@ cc_library(
         "anonymous_input_name",
         "libovmslogging",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "predict_request_validation_utils_impl",
@@ -271,9 +276,10 @@ cc_library(
             "libovmsshape",
             "anonymous_input_name",
     ],
-    copts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "libovms_version",
@@ -1535,9 +1541,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
 ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "tfs_validation",
@@ -1552,9 +1559,10 @@ cc_library(
             "libovms_tensorinfo",
             "libovmsprecision",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
     visibility = ["//visibility:public",],
-    linkopts = [],
 )
 cc_library(
     name = "kfs_serialization",
@@ -2747,6 +2755,7 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates
                 "test/llm/llmnode_test.cpp",
+                "test/llm/max_model_length_test.cpp",
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
@@ -2772,9 +2781,11 @@ cc_test(
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
         "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_legacy_regular.pbtxt",
         "test/llm/lm_cb_speculative.pbtxt",
         "test/llm/visual_language_model/config.json",
         "test/llm/visual_language_model/vlm_cb_regular.pbtxt",
+        "test/llm/visual_language_model/vlm_legacy_regular.pbtxt",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
         "test/dummy_fp64/1/saved_model.xml",
@@ -2874,7 +2885,6 @@ cc_test(
         "//src:libcustom_node_add_one.so",
         "//src:libcustom_node_horizontal_ocr.so",
     ],
-    linkopts = LINKOPTS_ADJUSTED,
     deps = [
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
@@ -2908,6 +2918,8 @@ cc_test(
             ],
         }),
     copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -2924,12 +2936,13 @@ cc_library(
         ],
     data = [
     ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
     deps = [
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
 )
 
 cc_library(
@@ -2942,12 +2955,13 @@ cc_library(
     srcs = [
         "test/environment.cpp",
         ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
     linkopts = [],
     deps = [
 	"libovmslogging",
         "@com_google_googletest//:gtest",
     ],
-    copts = COPTS_TESTS,
 )
 cc_library(
     name = "libtest_gpuenvironment",
@@ -2960,6 +2974,7 @@ cc_library(
             "libovmslogging",
             "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
@@ -3012,6 +3027,7 @@ cc_library(
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS + ["-lOpenCL",
         ] + select({
             "//:redhat_build": [],

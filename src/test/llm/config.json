@@ -2,16 +2,24 @@
     "model_config_list": [],
     "mediapipe_config_list": [
     {
+        "name":"vlm_cb_regular",
+        "graph_path":"/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt"
+    },
+    {
+        "name":"vlm_legacy_regular",
+        "graph_path":"/ovms/src/test/llm/visual_language_model/vlm_legacy_regular.pbtxt"
+    },
+    {
         "name":"lm_cb_regular",
         "graph_path":"/ovms/src/test/llm/lm_cb_regular.pbtxt"
     },
     {
-        "name":"lm_cb_speculative",
-        "graph_path":"/ovms/src/test/llm/lm_cb_speculative.pbtxt"
+        "name":"lm_legacy_regular",
+        "graph_path":"/ovms/src/test/llm/lm_legacy_regular.pbtxt"
     },
     {
-        "name":"vlm_cb_regular",
-        "graph_path":"/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt"
+        "name":"lm_cb_speculative",
+        "graph_path":"/ovms/src/test/llm/lm_cb_speculative.pbtxt"
     }
     ]
 }

@@ -40,6 +40,7 @@ parser_text = subparsers.add_parser('text_generation', help='export model for ch
 add_common_arguments(parser_text)
 parser_text.add_argument('--pipeline_type', default=None, help='Type of the pipeline to be used. Can be either TEXT_CB or VLM_CB. When undefined, it will be autodetected', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
+parser_text.add_argument('--extra_quantization_params', help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -273,7 +274,16 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         llm_model_path = os.path.join(model_repository_path, model_name)
         print("Exporting LLM model to ", llm_model_path)
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
-            optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
+            if task_parameters['target_device'] == 'NPU':
+                if precision != 'int4':
+                    print("NPU target device requires int4 precision. Changing to int4")
+                    precision = 'int4'
+                if task_parameters['extra_quantization_params'] is None:
+                    print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
+                    task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
+            if task_parameters['extra_quantization_params'] is None:
+                task_parameters['extra_quantization_params'] = ""
+            optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
     ### Speculative decoding specific 

@@ -50,7 +50,7 @@ cc_library(
         ":genai_servables",
         "//src:httppayload"
     ]+ select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
@@ -81,7 +81,7 @@ cc_library(
         "//third_party:opencv",
         "@stb//:image",
     ] + select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
@@ -108,6 +108,7 @@ cc_library(
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",
         "//src:libovmsprofiler",
+        "//src:libovmsfilesystem",
         "llmcalculator_cc_proto",
         "//src/python:utils",
         ":text_processor",
@@ -115,7 +116,7 @@ cc_library(
         "//src:httppayload",
         "//src:libhttpclientconnection",
     ] + PYBIND_DEPS + select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
