@@ -5,10 +5,6 @@ libazurestorage.so.7->libazurestorage.so
 libazurestorage.so.7.5->libazurestorage.so
 libcpprest.so
 libcpprest.so.2.10->libcpprest.so
-libface_detection_cc_proto.so
-libface_detection_options_registry.so
-libinference_calculator_cc_proto.so
-libinference_calculator_options_registry.so
 libopencv_calib3d.so->libopencv_calib3d.so.410
 libopencv_calib3d.so.4.10.0
 libopencv_calib3d.so.410->libopencv_calib3d.so.4.10.0

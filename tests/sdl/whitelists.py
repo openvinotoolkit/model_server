@@ -94,10 +94,6 @@ libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so',
         'libcpprest.so',
-        'libface_detection_cc_proto.so',
-        'libface_detection_options_registry.so',
-        'libinference_calculator_cc_proto.so',
-        'libinference_calculator_options_registry.so',
         'libOpenCL.so',
         'libopencv_calib3d.so',
         'libopencv_core.so',
@@ -133,7 +129,7 @@ libraries = {
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.UBUNTU24_PYTHON: set(),
-    OvmsBaseImageType.REDHAT: {'libpugixml.so',},
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON: set(),
 }
 
