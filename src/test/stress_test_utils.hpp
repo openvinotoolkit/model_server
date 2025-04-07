@@ -1152,7 +1152,7 @@ public:
         OVMS_ModelsSettings* modelsSettings = nullptr;
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
         ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-        randomizePorts(port, restPort);
+        randomizeAndEnsureFrees(port, restPort);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
 #if (USE_DROGON == 0)                                                                                  // when jusing drogon we cannot start rest server multiple times within the same process
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));  // required for metrics  - but disabled because drogon http server cannot be restarted

@@ -292,6 +292,18 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "network_utils",
+    hdrs = ["network_utils.hpp"],
+    srcs = ["network_utils.cpp"],
+    deps = [
+            "libovmslogging",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    visibility = ["//visibility:public",],
+)
+cc_library(
     name = "libovms_systeminfo",
     hdrs = ["systeminfo.hpp"],
     srcs = ["systeminfo.cpp"],
@@ -650,6 +662,7 @@ cc_library(
             "libovmslogging",
             "libovmsmetrics",
             "model_metric_reporter",
+            "network_utils",
             "libovms_ov_utils",
             "libovms_outputkeeper",
             "requestprocessor",
@@ -2894,6 +2907,7 @@ cc_test(
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
+            ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ] + select({
@@ -2937,6 +2951,7 @@ cc_library(
     ],
     deps = [
         "//src:ovms_lib",
+        "//src:network_utils",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -3032,6 +3047,19 @@ cc_library(
             "//:redhat_build": [],
             "//conditions:default": ["-DBUILD_VAAPITESTS=1"],
 	}), # + ["-isystem /usr/include"],
+)
+cc_library(
+    name = "network_utils_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/network_utils_test.cpp"],
+    deps = [
+        ":test_utils",
+        "//src:network_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
 )
 
 filegroup(

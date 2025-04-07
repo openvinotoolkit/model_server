@@ -71,6 +71,19 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return status;
     }
 
+    // Max prompt len is NPU specific property
+    if (properties->device == "NPU") {
+        auto it = properties->pluginConfig.find("MAX_PROMPT_LEN");
+        if (it != properties->pluginConfig.end()) {
+            try {
+                properties->maxPromptLength = it->second.as<int64_t>();
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Error during MAX_PROMPT_LEN property read: {}", e.what());
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
+        }
+    }
+
     // Enforce construction of stateful pipeline on any device selected (CPU and GPU by default construct CB pipeline through CB adapter)
     properties->pluginConfig["ATTENTION_BACKEND"] = "SDPA";
     try {
