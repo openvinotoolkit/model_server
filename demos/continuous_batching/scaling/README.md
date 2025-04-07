@@ -26,10 +26,10 @@ NUMA node5 CPU(s):                    160-191,352-383
 
 Export the model:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model Meta-Llama-3-8B-Instruct_FP16 --weight-format fp16 --model_repository_path models
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model_name Meta-Llama-3-8B-Instruct_FP16 --weight-format fp16 --model_repository_path models
 ```
 
 ```bash
@@ -101,11 +101,10 @@ P99 TPOT (ms):                           261.74
 
 # Scaling on a multi GPU host
 
-Similarity to multi NUMA node servers, scalability can be achieved on multi GPU systems. The commands below were executed on a host with dual Battlemage B580 GPU cards.
+Scalability on multi GPU systems can be achieved by starting multiple instances assigned to each card. The commands below were executed on a host with 4 Battlemage B580 GPU cards.
 
 ## Start the Model Server instances
 
-The example below shows the system with 4 GPU cards installed. 
 ```bash
 ls -1 /dev/dri/
 by-path
@@ -122,7 +121,7 @@ renderD131
 
 Export the model:
 ```bash
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model Meta-Llama-3-8B-Instruct_INT4 --weight-format int4 --model_repository_path models --target_device GPU --cache 4
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --model_name Meta-Llama-3-8B-Instruct_INT4 --weight-format int4 --model_repository_path models --target_device GPU --cache 4
 ```
 
 ```bash
@@ -166,7 +165,7 @@ docker run -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -d --net=host -p 80:80 
 
 Start benchmarking script like in [demo](../README.md), pointing to the load balancer port and host.
 ```bash
-python benchmark_serving.py --host localhost --port 909 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 4000 --request-rate 20
+python benchmark_serving.py --host localhost --port 80 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 4000 --request-rate 20
 Initial test run completed. Starting main benchmark run...
 Traffic request rate: 20
 
