@@ -399,7 +399,7 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 
 TEST_F(TFSModelServiceTest, config_reload) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",

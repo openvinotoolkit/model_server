@@ -86,7 +86,7 @@ public:
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/python/mediapipe_add_python_node.json");
         ovms::Server::instance().setShutdownRequest(0);
         std::string port = "9178";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath.c_str(),

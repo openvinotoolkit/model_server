@@ -100,7 +100,7 @@ struct ServerSettingsGuard {
         if (!startGrpc)
             return;
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         THROW_ON_ERROR_CAPI(OVMS_ServerSettingsSetGrpcPort(settings, std::stoi(port)));
     }
     ~ServerSettingsGuard() {

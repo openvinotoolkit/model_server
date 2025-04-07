@@ -34,14 +34,14 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
     if (!this->stream->send(message))
         this->isDisconnected = true;
 }
-void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> callback) {
+void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWorkloadCallback) {
     auto resp = drogon::HttpResponse::newAsyncStreamResponse(
-        [this, callback = std::move(callback)](drogon::ResponseStreamPtr stream) {
+        [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
-            this->pool.Schedule([callback = std::move(callback)] {
+            this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
-                    callback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
+                    actualWorkloadCallback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
                 } catch (...) {
                     SPDLOG_ERROR("Exception caught in REST request streaming handler");
                 }
@@ -57,7 +57,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> callback
         }
         resp->addHeader(key, value);
     }
-    this->callback(resp);
+    this->drogonResponseInitializeCallback(resp);
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();
@@ -75,11 +75,11 @@ bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
     return this->isDisconnected || !requestPtr->connected();
 }
 
-void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> callback) {
+void DrogonHttpAsyncWriterImpl::RegisterDisconnectionCallback(std::function<void()> onDisconnectedCallback) {
     const auto& weakConnPtr = requestPtr->getConnectionPtr();
     if (auto connPtr = weakConnPtr.lock()) {
-        connPtr->setCloseCallback([callback = std::move(callback)](const trantor::TcpConnectionPtr& conn) {
-            callback();
+        connPtr->setCloseCallback([onDisconnectedCallback = std::move(onDisconnectedCallback)](const trantor::TcpConnectionPtr& conn) {
+            onDisconnectedCallback();
         });
     }
 }

@@ -91,6 +91,10 @@ protected:
         ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(graphPath).c_str(), graphName);
     }
 
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, getGenericFullPathForSrcTest(configPath).c_str());
+    }
+
     void SetUp() override {
     }
     void TearDown() {
@@ -116,6 +120,27 @@ public:
     }
 };
 
+class MediapipeCliFlowTestDummyModelMesh : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/cli", "graphkfspass");
+    }
+};
+
+class MediapipeConfigFlowTestDummyModelMesh : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/config.json");
+    }
+};
+
+class MediapipeConfigFlowTestDummyModelMeshNegative : public MediapipeCliFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/mediapipe/model_mesh/Nonexisting/config.json");
+    }
+};
+
 class MediapipeCliFlowTestDummyRelative : public MediapipeCliFlowTest {
 public:
     std::filesystem::path originalCwd;
@@ -133,7 +158,7 @@ public:
 
 TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     server.setShutdownRequest(0);
-    randomizePort(this->port);
+    randomizeAndEnsureFree(this->port);
     char* argv[] = {(char*)"ovms",
         (char*)"--model_name",
         (char*)"graphkfspass",
@@ -152,7 +177,8 @@ TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     t->join();
 }
 
-TEST_F(MediapipeCliFlowTestDummy, Infer) {
+void Infer(ovms::Server& server) {
+    const Precision precision = Precision::FP32;
     const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
@@ -171,23 +197,20 @@ TEST_F(MediapipeCliFlowTestDummy, Infer) {
     checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
 }
 
+TEST_F(MediapipeCliFlowTestDummy, Infer) {
+    Infer(server);
+}
+
+TEST_F(MediapipeCliFlowTestDummyModelMesh, Infer) {
+    Infer(server);
+}
+
+TEST_F(MediapipeConfigFlowTestDummyModelMesh, Infer) {
+    Infer(server);
+}
+
 TEST_F(MediapipeCliFlowTestDummyRelative, Infer) {
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = "graphkfspass";
-    request.Clear();
-    response.Clear();
-    inputs_info_t inputsMeta{
-        {"in", {DUMMY_MODEL_SHAPE, precision}}};
-    std::vector<float> requestData1{1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-    std::vector<float> requestData2{0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    preparePredictRequest(request, inputsMeta, requestData1);
-    request.mutable_model_name()->assign(modelName);
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-    // Checking that KFSPASS calculator copies requestData1 to the response so that we expect requestData1 on output
-    checkAddResponse("out", requestData1, requestData2, request, response, 1, 1, modelName);
+    Infer(server);
 }
 
 class MediapipeFlowTest : public ::testing::TestWithParam<std::string> {
@@ -597,6 +620,13 @@ public:
     }
 };
 
+class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBaseMeshCase : public MediapipeFlowTest {
+public:
+    void SetUp() {
+        SetUpServer("/ovms/src/test/graph_mesh_case/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
+    }
+};
+
 class MediapipeFlowDummySubconfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -946,6 +976,15 @@ TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfig, Infer) {
 }
 
 TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBase, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphdummy";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+TEST_F(MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBaseMeshCase, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "graphdummy";
@@ -1817,7 +1856,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     std::string port{"5555"};
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
@@ -2087,7 +2126,7 @@ protected:
     std::string port = "9178";
     void SetUpServer(const char* configPath) {
         server.setShutdownRequest(0);
-        randomizePort(this->port);
+        randomizeAndEnsureFree(this->port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
@@ -2984,7 +3023,7 @@ protected:
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configFilePath.c_str(),
@@ -3208,7 +3247,7 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         request.Clear();
         request.mutable_model_name()->assign(servableName);
     }

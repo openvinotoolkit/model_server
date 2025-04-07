@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -193,22 +194,32 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
     }
     if (executionContext->endpoint == Endpoint::CHAT_COMPLETIONS) {
         ov::genai::ChatHistory& chatHistory = vlmExecutionContext->apiHandler->getChatHistory();
+
+        // Validate chat history for restricted tags
+        for (const auto& historyEntry : chatHistory) {
+            for (const auto& [_, content] : historyEntry) {
+                if (content.find("<ov_genai_image_") != std::string::npos) {
+                    return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
+                }
+            }
+        }
+
         const ImageHistory& imageHistory = vlmExecutionContext->apiHandler->getImageHistory();
         size_t imageIndex = 0;
+        std::unordered_map<size_t, std::string> imageTags;
         for (const auto& image : imageHistory) {
             const auto& [chatTurnIndex, imageTensor] = image;
             std::string imageTag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">\n";
-            if (chatHistory[chatTurnIndex].find("content") != chatHistory[chatTurnIndex].end()) {
-                chatHistory[chatTurnIndex]["content"] = imageTag + chatHistory[chatTurnIndex]["content"];
-            } else {
-                chatHistory[chatTurnIndex]["content"] = imageTag;
-            }
+            imageTags[chatTurnIndex] = imageTags[chatTurnIndex] + imageTag;
             vlmExecutionContext->inputImages.push_back(imageTensor);
+        }
+        for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
+            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
-    } else if (executionContext->endpoint == Endpoint::COMPLETIONS) {
-        vlmExecutionContext->inputText = vlmExecutionContext->apiHandler->getPrompt().value();
+    } else {
+        return absl::InvalidArgumentError("Unsupported endpoint");
     }
 
     // Below logic is used only for the statistics and debugging purposes and does not affect the model execution.

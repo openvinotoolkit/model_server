@@ -177,7 +177,7 @@ public:
 
     void SetUpSingleModel(std::string modelPath, std::string modelName) {
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)modelPath.data(), (char*)"--model_name", (char*)modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
         int arg_count = 9;
         ovms::Config::instance().parse(arg_count, n_argv);
@@ -247,7 +247,7 @@ public:
     TestEnabledConfig() :
         Config() {
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         this->serverSettings.grpcPort = std::stoul(port);
     }
 };

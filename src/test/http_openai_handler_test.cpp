@@ -534,7 +534,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
-    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty", "diversity_penalty",
+    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
         "logprobs", "max_completion_tokens"};
     std::optional<uint32_t> maxTokensLimit;
@@ -565,7 +565,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions) {
-    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty", "diversity_penalty",
+    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
         "logprobs", "echo"};
     std::optional<uint32_t> maxTokensLimit;

@@ -227,18 +227,14 @@ Status ModelManager::startFromConfig() {
     Status status = StatusCode::OK;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    // Check if config is present for mediapipe graph
     MediapipeGraphConfig mpConfig;
     mpConfig.setGraphName(config.modelName());
     mpConfig.setRootDirectoryPath(this->rootDirectoryPath);
-    if (config.modelPath().back() == FileSystem::getOsSeparator().back()) {
-        mpConfig.setBasePath(config.modelPath());
-    } else {
-        mpConfig.setBasePath(config.modelPath() + FileSystem::getOsSeparator());
+    if (!CheckStartFromGraph(config.modelPath(), mpConfig, false)) {
+        CheckStartFromGraph(config.modelPath(), mpConfig, true);
     }
-    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
-    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
 
+    std::vector<MediapipeGraphConfig> mediapipesInConfigFile;
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
@@ -246,7 +242,6 @@ Status ModelManager::startFromConfig() {
         if (!status.ok())
             return status;
 
-        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
         mediapipesInConfigFile.push_back(mpConfig);
         std::vector<ModelConfig> gatedModelConfigs;
@@ -434,6 +429,26 @@ static Status processCustomNodeConfig(const rapidjson::Value& nodeConfig, Custom
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath) {
+    // Check if config is present for mediapipe graph
+    std::string inputGraphDirectory = inputPath;
+    if (inputPath.back() != FileSystem::getOsSeparator().back()) {
+        inputGraphDirectory += FileSystem::getOsSeparator();
+    }
+
+    if (checkModelMeshPath) {
+        inputGraphDirectory += "1" + FileSystem::getOsSeparator();
+    }
+
+    mpConfig.setBasePath(inputGraphDirectory);
+    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+
+    std::ifstream ifs(mpConfig.getGraphPath());
+    return ifs.is_open();
+}
+
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
     std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
     std::vector<std::string> usedButdisallowedUserSettings;
@@ -821,6 +836,9 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         if (!mpStatus.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
         } else {
+            if (!CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, false)) {
+                CheckStartFromGraph(mpConfig.getBasePath(), mpConfig, true);
+            }
             std::ifstream ifs(mpConfig.getGraphPath());
             if (ifs.is_open()) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
@@ -904,7 +922,21 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         if (!ifs.is_open()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
                 subconfigPath, mediapipeConfig.getGraphName());
-            continue;
+            std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
+            ifs.open(subconfigModelMeshPath);
+            if (!ifs.is_open()) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig model mesh path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
+                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
+                continue;
+            } else {
+                // Switch to model mesh path for subconfig
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from model mesh subconfig path: {} provided for graph: {}",
+                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
+
+                subconfigPath = subconfigModelMeshPath;
+                mediapipeConfig.setSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+            }
+
         } else {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from subconfig path: {} provided for graph: {}",
                 subconfigPath, mediapipeConfig.getGraphName());
