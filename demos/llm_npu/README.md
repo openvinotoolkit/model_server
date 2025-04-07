@@ -81,7 +81,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Running this command starts the container with NPU enabled:
 ```bash
-docker run -d --rm --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
@@ -200,7 +200,7 @@ client = OpenAI(
   api_key="unused"
 )
 
-response = client.chat.completions.create(git add
+response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=False,
 )
