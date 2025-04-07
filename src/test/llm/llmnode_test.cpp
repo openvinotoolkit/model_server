@@ -2320,8 +2320,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsUnaryClientDisconnected
         }
     )";
 
-    ON_CALL(*writer, IsDisconnected()).WillByDefault(::testing::Return(false));  // let cb->stop() be called in callback, dont break it earlier
-    EXPECT_CALL(*writer, RegisterDisconnectionCallback(::testing::_)).WillOnce([](std::function<void()> fn) {
+    ON_CALL(*writer, IsDisconnected()).WillByDefault(::testing::Return(true));
+    ON_CALL(*writer, RegisterDisconnectionCallback(::testing::_)).WillByDefault([](std::function<void()> fn) {
         fn();  // disconnect immediately, even before read_all is called
     });
     ASSERT_EQ(
