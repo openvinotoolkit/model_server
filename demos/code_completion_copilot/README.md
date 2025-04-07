@@ -1,42 +1,45 @@
 # Code Completion and Copilot served via OpenVINO Model Server
 
 ## Intro
+With the rise of AI PC capabilities, hosting own local code completion/generation server becomes more and more available. In this demo, we will showcase how to configure one for Intel's desktop NPU, however similar steps can be applied to host on Intel's integrated/discrete GPU or server CPUs.
 
+# Requirements
+- Windows (for standalone app) or Linux (using Docker)
+- Python installed (for model preparation only)
+- Intel CPU, GPU or NPU
+- RAM? Disk? TODO
 
 ## Prepare Code Chat/Edit Model 
 We need to use medium size model in order to keep 50ms/word for human to feel the chat responsive.
-This will work in streaming mode.
+This will work in streaming mode, meaning we will see the chat response/code diff generation slowly roll out in real-time.
 
-Prepare export model tool:
-```bash
-git clone https://github.com/openvinotoolkit/model_server --branch releases/2025/1
-cd model_server/demos/common/export_models
-python3.10 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
+Download export script, install its dependencies and create directory for the models:
+```console
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
-```bash
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --cache_size 4 --overwrite_models
+```console
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 4 --overwrite_models
 ```
+
+> **Note:** Use `--target_device GPU` for Intel GPU or omit this parameter to run on Intel CPU
 
 ## Prepare Code Completion Model
-For that we need smaller, lighter model that will produce code quicker than chat.
-Code completion needs to be responsive enough in order not to wait for code to appear.
-Code completion works in non-streaming mode.
-
+For this task we need smaller, lighter model that will produce code quicker than chat task.
+Since we do not want to wait for the code to appear, we need to use smaller model. It should be responsive enough to generate multi-line blocks of code ahead of time as we type.
+Code completion works in non-streaming, unary mode. Do not use instruct model, there is no chat involved in the process.
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
-```bash
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --cache_size 4 --overwrite_models
+```baconsolesh
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 4 --overwrite_models
 ```
 
-Examine that workspace is set up properly:
-
-```bash
-cat models/config_all.json
+Examine that workspace is set up properly `models/config_all.json`:
+```
 {
     "mediapipe_config_list": [
         {
@@ -52,7 +55,7 @@ cat models/config_all.json
 }
 ```
 
-```bash
+```console
 tree models
 models
 ├── codellama
@@ -93,10 +96,18 @@ models
 ```
 
 ## Set Up Server
-Run OpenVINO Model Server with both models at the same time:
+Run OpenVINO Model Server with both models loaded at the same time:
 
+### Windows: deploying on bare metal
+Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
+
+```console
+ovms --rest_port 8080 --config_path ./models/config.json
+```
+
+### Linux: via Docker
 ```bash
-docker run -d --rm -v $(pwd)/:/workspace/ -p 4444:4444 code_completion_ovms_rc2 --rest_port 4444 --config_path /workspace/models/config_all.json
+docker run -d --rm -v $(pwd)/:/workspace/ -p 8080:8080 openvino/model_server:2025.1 --rest_port 8080 --config_path /workspace/models/config_all.json
 ```
 
 ## Set Up Visual Studio Code
@@ -107,7 +118,7 @@ docker run -d --rm -v $(pwd)/:/workspace/ -p 4444:4444 code_completion_ovms_rc2 
 
 ### Setup Local Assistant
 
-We need to point Continue plugin to our OpenVINO Model Server.
+We need to point Continue plugin to our OpenVINO Model Server instance.
 Open configuration file:
 
 ![setup_local_assistant](setup_local_assistant.png)
@@ -123,7 +134,7 @@ models:
     provider: openai
     model: codellama/CodeLlama-7b-Instruct-hf
     apiKey: unused
-    apiBase: http://ov-spr-28.sclab.intel.com:80/v3
+    apiBase: localhost:8080/v3
     roles:
       - chat
       - edit
@@ -133,7 +144,7 @@ models:
     provider: openai
     model: Qwen/Qwen2.5-Coder-1.5B
     apiKey: unused
-    apiBase: http://ov-spr-28.sclab.intel.com:80/v3
+    apiBase: localhost:8080/v3
     roles:
       - autocomplete
 context:
@@ -148,18 +159,12 @@ context:
 
 ## Have Fun
 
-- use chatting by clicking continue button in the left sidebar
+- to use chatting feature click continue button on the left sidebar
 - use `CTRL+I` to select and include source in chat message
 - use `CTRL+L` to select and edit the source via chat request
 - simply write code to see code autocompletion (NOTE: this is turned off by default)
 
 ![final](final.png)
-
-## Outtro
-- OVMS can be used as copilot service for any tool that uses OpenAI API
-- Leverage unused server Intel CPU 
-- Host own Copilot at home on desktop Intel CPU
-- OpenVINO Model Server implements OpenAI API which allows to integrate with any tool that already uses ChatGPT
 
 
 ## Troubleshooting
@@ -167,8 +172,3 @@ context:
 OpenVINO Model Server uses python to apply chat templates. If you get an error during model loading, enable Unicode UTF-8 in your system settings:
 
 ![utf8](utf8.png)
-
-### TODO
-- rerank
-- embeddings
-- model context protocol?
