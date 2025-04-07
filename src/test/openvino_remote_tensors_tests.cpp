@@ -314,11 +314,11 @@ public:
             throw std::runtime_error("Failed to initialize VA API");
         }
         this->vaDisplay = vaDisplay;
-        SPDLOG_TRACE("Initialized VADisplay: {}, with DRM device: {}, version:  {}.{}", (int)vaDisplay, drmFiledescriptor, majorVersion, minorVersion);
+        SPDLOG_TRACE("Initialized VADisplay: {}, with DRM device: {}, version:  {}.{}", vaDisplay, drmFiledescriptor, majorVersion, minorVersion);
     }
     ~VAHelper() {
         if (vaDisplay) {
-            SPDLOG_TRACE("Terminating vaDisplay:{}", (int)vaDisplay);
+            SPDLOG_TRACE("Terminating vaDisplay:{}", vaDisplay);
             vaTerminate(vaDisplay);
         }
         if (drmFiledescriptor) {
@@ -431,7 +431,7 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
     GTEST_SKIP() << "Test not enabled on UBI images";
 #else
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1089,7 +1089,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputTensor) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
-    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
+    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     OVMS_InferenceResponse* response = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
@@ -1193,7 +1193,7 @@ TEST_F(CAPINonCopy, SetOpenCLBufferAsInputAndOutputTensor) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
-    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
+    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));     // device id ?? TODO
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     OVMS_InferenceResponse* response = nullptr;
@@ -1240,7 +1240,7 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummy) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::array<float, DUMMY_MODEL_INPUT_SIZE> data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint32_t notUsedNum = 0;
-    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
+    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
     OVMS_InferenceResponse* response = nullptr;
@@ -1262,7 +1262,7 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummy) {
 }
 static OVMS_Server* startCAPIServerFromConfig(const std::string configPath) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     EXPECT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1312,7 +1312,7 @@ TEST_F(CAPINonCopy, OpenCL_SyncWithCallbackDummyCheckResetOutputGPU) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     uint32_t notUsedNum = 0;
-    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
+    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));
     OVMS_InferenceResponse* response = nullptr;
@@ -1450,7 +1450,7 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     EXPECT_EQ(0, queue.enqueueWriteBuffer(openCLCppInputBuffer, queueReadWriteBlockingTrue, 0, inputByteSize, inputBufferData));
     // start CAPI server
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     OVMS_ServerSettings* serverSettings = nullptr;
     OVMS_ModelsSettings* modelsSettings = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
@@ -1466,9 +1466,9 @@ TEST_F(CAPINonCopy, AsyncWithCallbackDummy) {
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, DUMMY_MODEL_INPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddOutput(request, DUMMY_MODEL_OUTPUT_NAME, OVMS_DATATYPE_FP32, DUMMY_MODEL_SHAPE.data(), DUMMY_MODEL_SHAPE.size()));
     std::vector<float> data(DUMMY_MODEL_INPUT_SIZE, INITIAL_VALUE);
-    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)openCLCppInputBuffer);
+    SPDLOG_DEBUG("openCLCppInputBuffer:{}", (void*)&openCLCppInputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, DUMMY_MODEL_INPUT_NAME, reinterpret_cast<void*>(&openCLCppInputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
-    SPDLOG_DEBUG("openCLCppOutputBuffer:{}", (void*)openCLCppOutputBuffer);
+    SPDLOG_DEBUG("openCLCppOutputBuffer:{}", (void*)&openCLCppOutputBuffer);
     ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestOutputSetData(request, DUMMY_MODEL_OUTPUT_NAME, reinterpret_cast<void*>(&openCLCppOutputBuffer), inputByteSize, OVMS_BUFFERTYPE_OPENCL, 1));  // device id ?? TODO
     // set callback
     CallbackUnblockingStructWithQueue callbackStruct;

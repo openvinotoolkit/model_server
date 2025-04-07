@@ -34,8 +34,6 @@ using namespace ovms;
 
 namespace mediapipe {
 
-#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
-
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
 class HttpLLMCalculator : public CalculatorBase {

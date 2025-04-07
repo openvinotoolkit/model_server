@@ -212,7 +212,7 @@ public:
     void SetUp() override {
         TestWithTempDir::SetUp();
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)"/path/to/model", (char*)"--model_name", (char*)"some_name", (char*)"--port", (char*)port.c_str()};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
@@ -2093,6 +2093,7 @@ TEST_F(GetModelInstanceTest, WithRequestedUnexistingVersionShouldReturnModelVers
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 2, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING) << "Should fail with no model with such name registered";
+    model.reset();
 }
 
 class MockModelInstanceFakeLoad : public ovms::ModelInstance {
@@ -2131,6 +2132,7 @@ TEST_F(GetModelInstanceTest, WithRequestedDefaultVersionUnloadedShouldReturnMode
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 0, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_MISSING);
+    model.reset();
 }
 
 TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoadedAnymore) {
@@ -2145,6 +2147,7 @@ TEST_F(GetModelInstanceTest, WithRequestedVersion1ShouldReturnModelVersionNotLoa
     std::unique_ptr<ovms::ModelInstanceUnloadGuard> modelInstanceUnloadGuardPtr;
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_ANYMORE);
+    model.reset();
 }
 
 class ModelInstanceLoadedStuckInLoadingState : public ovms::ModelInstance {
@@ -2185,22 +2188,25 @@ public:
     ModelInstanceLoadedWaitInLoadingState(ov::Core& ieCore, const uint32_t modelInstanceLoadDelayInMilliseconds) :
         ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore),
         modelInstanceLoadDelayInMilliseconds(modelInstanceLoadDelayInMilliseconds) {}
+    ~ModelInstanceLoadedWaitInLoadingState() {
+        this->thread->join();
+    }
 
 protected:
     ovms::Status loadModel(const ovms::ModelConfig& config) override {
         this->status = ovms::ModelVersionStatus(name, version);
         this->status.setLoading();
-        std::thread([this]() {
+        this->thread = std::make_unique<std::thread>([this]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(modelInstanceLoadDelayInMilliseconds));
             status.setAvailable();
             modelLoadedNotify.notify_all();
-        })
-            .detach();
+        });
         return ovms::StatusCode::OK;
     }
 
 private:
     const uint32_t modelInstanceLoadDelayInMilliseconds;
+    std::unique_ptr<std::thread> thread;
 };
 
 class ModelWithModelInstanceLoadedWaitInLoadingState : public ovms::Model {
@@ -2246,6 +2252,7 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInN
     auto status = manager.getModelInstance(config.getName(), 1, modelInstance, modelInstanceUnloadGuardPtr);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(ovms::ModelVersionState::AVAILABLE, modelInstance->getStatus().getState());
+    modelWithModelInstanceLoadedWaitInLoadingState.reset();
 }
 
 TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInReachingTimeoutShouldReturnModelNotLoadedYet) {
@@ -2268,4 +2275,5 @@ TEST_F(ModelInstanceModelLoadedNotify, WhenChangedStateFromLoadingToAvailableInR
     EXPECT_EQ(ovms::ModelVersionState::LOADING, modelInstance->getStatus().getState()) << "State:" << (int)modelInstance->getStatus().getState();
     spdlog::error("State: {}", (int)modelInstance->getStatus().getState());
     EXPECT_EQ(status, ovms::StatusCode::MODEL_VERSION_NOT_LOADED_YET);
+    modelWithModelInstanceLoadedWaitInLoadingState.reset();
 }

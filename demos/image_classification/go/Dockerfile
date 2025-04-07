@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-FROM golang:1.21.9
+FROM golang:1.23.0
 ARG http_proxy
 
 RUN echo "Acquire::http::Proxy \"$http_proxy\";" > /etc/apt/apt.conf.d/proxy.conf

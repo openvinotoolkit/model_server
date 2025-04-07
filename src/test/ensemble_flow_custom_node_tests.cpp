@@ -35,6 +35,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../cleaner_utils.hpp"
 #include "../dags/custom_node.hpp"
 #include "../dags/custom_node_library_manager.hpp"
 #include "../dags/dl_node.hpp"
@@ -5642,8 +5643,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
-    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
-    manager.startCleaner();
+    ovms::FunctorResourcesCleaner cleaner(manager);
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
@@ -5686,11 +5686,11 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, MultipleDeinitializeCallsOnR
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
-    waitForOVMSResourcesCleanup(manager);
+    cleaner.cleanup();
     ASSERT_EQ(manager.getResourcesSize(), 3);
 
     factory.retireOtherThan({}, manager);
-    waitForOVMSResourcesCleanup(manager);
+    cleaner.cleanup();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     manager.join();
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
@@ -5704,8 +5704,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     //  O--------->O--------->O--------->O---------->O
     //          add-sub    add-sub    add-sub
     ResourcesAccessModelManager manager;
-    manager.setResourcesCleanupIntervalMillisec(20);  // Mock cleaner to work in 20ms intervals instead of >1s
-    manager.startCleaner();
+    ovms::FunctorResourcesCleaner cleaner(manager);
+    cleaner.cleanup();
     ASSERT_EQ(manager.getResourcesSize(), 0);
     PipelineFactory factory;
 
@@ -5748,7 +5748,7 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
         {"custom_node_3", {{customNodeOutputName, pipelineOutputName}}}};
 
     ASSERT_EQ(factory.createDefinition("my_new_pipeline", info, connections, manager), StatusCode::OK);
-    waitForOVMSResourcesCleanup(manager);  // 20ms * 1.8 wait time
+    cleaner.cleanup();
     ASSERT_EQ(manager.getResourcesSize(), 3);
 
     // Nodes
@@ -5760,9 +5760,8 @@ TEST_F(EnsembleFlowCustomNodePipelineExecutionTest, ReloadPipelineWithoutNodeDei
     connections[EXIT_NODE_NAME] = {
         {"custom_node_2", {{customNodeOutputName, pipelineOutputName}}}};
     ASSERT_EQ(factory.reloadDefinition("my_new_pipeline", std::move(info), std::move(connections), manager), StatusCode::OK);
-    waitForOVMSResourcesCleanup(manager);  // 20ms * 1.8 wait time
+    cleaner.cleanup();
     ASSERT_EQ(manager.getResourcesSize(), 2);
-    manager.join();
     // Each custom node has effectively 1 internalManager initialized, because they use same library instance
     // in order to count whether deinitialize has been called expected number of times
     ASSERT_EQ(LibraryCountDeinitialize::deinitializeCounter, 3);
