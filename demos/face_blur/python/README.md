@@ -1,6 +1,6 @@
 # Face Blur Pipeline Demo with OVMS {#ovms_demo_face_blur_pipeline}
 
-This document demonstrates how to create pipelines using object detection models from OpenVINO Model Zoo in order to blur the image. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will blur it using [face_blur](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/face_blur) example custom node.
+This document demonstrates how to create pipelines using object detection models from OpenVINO Model Zoo in order to blur the image. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will blur it using [face_blur](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/src/custom_nodes/face_blur) example custom node.
 
 ## Pipeline Configuration Graph
 
@@ -10,7 +10,7 @@ Below is depicted graph implementing face blur pipeline execution.
 
 It include the following Nodes:
 - Model `face-detection-retail-0004` - deep learning model which takes user image as input. Its output contain information about faces coordinates and confidence levels.
-- Custom node `face_blur` - it includes C++ implementation of image blurring. By analysing the output it produces image blurred in spots detected by object detection model based on the configurable score level threshold. Custom node also resizes it to the target resolution. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [face_blur custom node](https://github.com/openvinotoolkit/model_server/blob/main/src/custom_nodes/face_blur).
+- Custom node `face_blur` - it includes C++ implementation of image blurring. By analysing the output it produces image blurred in spots detected by object detection model based on the configurable score level threshold. Custom node also resizes it to the target resolution. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [face_blur custom node](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/src/custom_nodes/face_blur).
 - Response - image blurred in spots detected by object detection model.
 
 ## Prepare workspace to run the demo

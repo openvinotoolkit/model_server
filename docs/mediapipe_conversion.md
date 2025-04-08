@@ -190,7 +190,7 @@ input_order_list: ["Identity","Identity_1","Identity_2","Identity_3"]
 ### 3. Adjust graph input/output streams
 
 This step is required if you plan to deploy the graph in OpenVINO Model Server and existing graph does not have supported input/output packet types. Check for supported input and output packet types [here](./mediapipe.md).
-In that cases you may need to add converter calculators as it was done [here](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection/graph.pbtxt#L31).
+In that cases you may need to add converter calculators as it was done [here](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/demos/mediapipe/object_detection/graph.pbtxt#L31).
 
 ### 4. Set the config.json file path in the session calculator
 
