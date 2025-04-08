@@ -2,7 +2,7 @@
 
 ## Overview
 
-With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in its [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
   - Continuous Batching
   - Paged Attention
   - Dynamic Split Fuse
@@ -32,7 +32,7 @@ Stateful servables ignore most of the configuration used by Continuous Batching,
 Despite all the differences, all servable types share the same LLM calculator which imposes certain flow in every GenAI-based endpoint.
 
 ## LLM Calculator
-As you can see in the quickstart, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/master/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
+As you can see in the quickstart, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/releases/2025/1/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
