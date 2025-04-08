@@ -71,7 +71,7 @@ def decode(text):
         if character == last_character:
             continue
         elif character == '#':
-            return word
+            last_character = None
         else:
             last_character = character
             word += character
@@ -80,12 +80,11 @@ def decode(text):
 def text_recognition_output_to_text(output_nd):
     for i in range(output_nd.shape[0]):
         data = output_nd[i]
-        alphabet = '#0123456789abcdefghijklmnopqrstuvwxyz'
+        alphabet = '0123456789abcdefghijklmnopqrstuvwxyz#'
         preds = data.argmax(2)
-        print(preds)
         word = ''
-        for i in range(preds.shape[1]):
-            word += alphabet[preds[0,i]]
+        for i in range(preds.shape[0]):
+            word += alphabet[preds[i,0]]
         print(decode(word))
 
 

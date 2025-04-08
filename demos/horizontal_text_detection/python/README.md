@@ -7,7 +7,7 @@ The client can work efficiently also over slow internet connection with long lat
 ### Download horizontal text detection model from OpenVINO Model Zoo
 
 ```bash
-curl -L --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.3/models_bin/1/horizontal-text-detection-0001/FP16-INT8/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.3/models_bin/1/horizontal-text-detection-0001/FP16-INT8/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
+curl -L --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
 ```
 
 ```bash
@@ -70,7 +70,7 @@ ThreadID:   3; Current FPS:    30.30; Average FPS:    25.73; Average latency:   
 > **NOTE**: Video source is cropped to 704x704 resolution to match model input size.
 
 ## Recognize Detected Text with OCR Pipeline
-Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/0/models/intel/horizontal-text-detection-0001/README.md) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014)
+Optical Character Recognition (OCR) pipeline based on [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2023/0/models/intel/horizontal-text-detection-0001/README.md) model, [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2023.0.0/models/intel/text-recognition-0012)
 combined with a custom node implementation can be used with the same python script used before. OCR pipeline provides location of detected text boxes on the image and additionally recognized text for each box.
 
 ![horizontal text detection using OCR pipeline](horizontal-text-detection-ocr.gif)
@@ -78,7 +78,7 @@ combined with a custom node implementation can be used with the same python scri
 ### Prepare workspace to run the demo
 
 To successfully deploy OCR pipeline you need to have a workspace that contains:
-- [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/horizontal-text-detection-0001/README.md) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) models
+- [horizontal text detection](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/horizontal-text-detection-0001/README.md) and [text recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2023.0.0/models/intel/text-recognition-0012) models
 - Custom node for image processing
 - Configuration file
 
@@ -108,10 +108,10 @@ workspace/
 │   └── 1
 │       ├── horizontal-text-detection-0001.bin
 │       └── horizontal-text-detection-0001.xml
-└── text-recognition-0014
+└── text-recognition-0012
     └── 1
-        ├── text-recognition-0014.bin
-        └── text-recognition-0014.xml
+        ├── text-recognition-0012.bin
+        └── text-recognition-0012.xml
 
 ```
 
@@ -134,10 +134,10 @@ workspace/
 │       └── horizontal-text-detection-0001.xml
 ├── lib
 │   └── libcustom_node_horizontal_ocr.so
-└── text-recognition-0014
+└── text-recognition-0012
     └── 1
-        ├── text-recognition-0014.bin
-        └── text-recognition-0014.xml
+        ├── text-recognition-0012.bin
+        └── text-recognition-0012.xml
 
 ```
 ## Deploying OVMS
