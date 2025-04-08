@@ -476,8 +476,8 @@ TEST(ModelConfig, plugin_config_number) {
     EXPECT_EQ(status, ovms::StatusCode::OK);
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_THAT(actualPluginConfig, UnorderedElementsAre(
-                                        Pair("OptionA", "1"),
-                                        Pair("OptionX", "2.450000")));
+                                        Pair("OptionA", (int64_t)1),
+                                        Pair("OptionX", (double)2.45)));
 }
 
 TEST(ModelConfig, plugin_config_string) {
@@ -528,7 +528,7 @@ TEST(ModelConfig, plugin_config_legacy_cpu_num) {
     auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
+    EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], (int64_t)5);
 }
 
 TEST(ModelConfig, plugin_config_legacy_cpu_str) {
@@ -558,7 +558,7 @@ TEST(ModelConfig, plugin_config_legacy_gpu_num) {
     auto status = config.parsePluginConfig(pluginConfig_str, config.getPluginConfig());
     auto actualPluginConfig = config.getPluginConfig();
     EXPECT_EQ(status, ovms::StatusCode::OK);
-    EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], "5");
+    EXPECT_EQ(actualPluginConfig["NUM_STREAMS"], (int64_t)5);
 }
 
 TEST(ModelConfig, mappingInputs) {

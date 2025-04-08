@@ -18,6 +18,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #pragma warning(push)
 #pragma warning(disable : 6326)
 #include <drogon/drogon.h>
@@ -29,7 +30,7 @@
 namespace ovms {
 
 class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
-    std::function<void(const drogon::HttpResponsePtr&)>& callback;
+    std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback;
     mediapipe::ThreadPool& pool;
     drogon::ResponseStreamPtr stream;
     bool isDisconnected = false;
@@ -38,17 +39,17 @@ class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
 
 public:
     DrogonHttpAsyncWriterImpl(
-        std::function<void(const drogon::HttpResponsePtr&)>& callback,
+        std::function<void(const drogon::HttpResponsePtr&)> callback,
         mediapipe::ThreadPool& pool,
         const drogon::HttpRequestPtr& requestPtr) :
-        callback(callback),
+        drogonResponseInitializeCallback(std::move(callback)),
         pool(pool),
         requestPtr(requestPtr) {}
 
     // Used by V3 handler
     void OverwriteResponseHeader(const std::string& key, const std::string& value) override;
     void PartialReplyWithStatus(std::string message, HTTPStatusCode status) override;
-    void PartialReplyBegin(std::function<void()> callback) override;
+    void PartialReplyBegin(std::function<void()> actualWorkloadCallback) override;
     void PartialReplyEnd() override;
 
     // Used by graph executor impl
@@ -56,7 +57,7 @@ public:
 
     // Used by calculator via HttpClientConnection
     bool IsDisconnected() const override;
-    void RegisterDisconnectionCallback(std::function<void()> callback) override;
+    void RegisterDisconnectionCallback(std::function<void()> onDisconnectedCallback) override;
 };
 
 }  // namespace ovms

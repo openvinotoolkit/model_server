@@ -57,7 +57,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -98,7 +98,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -123,7 +123,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -150,7 +150,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
