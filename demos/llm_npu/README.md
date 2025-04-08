@@ -201,6 +201,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
+    model="meta-llama/Llama-3.1-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=False,
 )
@@ -307,7 +308,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-3.1-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --request-rate inf --max-concurrency 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-3.1-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --max-concurrency 1
 Maximum request concurrency: 1
 
 ============ Serving Benchmark Result ============
