@@ -1,4 +1,4 @@
-# Text generation serving with NPU acceleration #ovms_demos_llm_npu
+# Text generation serving with NPU acceleration {#ovms_demos_llm_npu}
 
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server with NPU acceleration.

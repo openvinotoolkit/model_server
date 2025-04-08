@@ -1,4 +1,4 @@
-# Serving for Text generation with Visual Language Models with NPU acceleration #ovms_demos_vlm_npu
+# Serving for Text generation with Visual Language Models with NPU acceleration {#ovms_demos_vlm_npu}
 
 
 This demo shows how to deploy VLM models in the OpenVINO Model Server with NPU acceleration.
