@@ -178,5 +178,5 @@ cc_library(
 
 libgt2_repository = repository_rule(
     implementation = _impl,
-    local=True,
+    local=False,
 )
