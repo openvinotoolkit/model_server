@@ -102,7 +102,7 @@ Run OpenVINO Model Server with both models loaded at the same time:
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
 ```console
-ovms --rest_port 8080 --config_path ./models/config.json
+ovms --rest_port 8080 --config_path ./models/config_all.json
 ```
 
 ### Linux: via Docker
