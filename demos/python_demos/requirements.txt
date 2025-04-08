@@ -5,9 +5,9 @@ git+https://github.com/dtrawins/optimum-intel.git@concurrency_support_cloneall
 
 onnx==1.17.0
 pillow==10.3.0
-optimum[diffusers]==1.17.1
+optimum[diffusers]==1.18.1
 tritonclient[grpc]==2.51.0  # Required to use batch string serialization/deserialization (4byte length prepend)
-transformers==4.49 # 4.50 has a bug
+transformers<=4.49 # 4.50 has a bug
 diffusers==0.29.2
 datasets==2.18.0
 numpy<2.0
