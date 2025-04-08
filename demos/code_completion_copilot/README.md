@@ -1,7 +1,7 @@
 # Code Completion and Copilot served via OpenVINO Model Server
 
 ## Intro
-With the rise of AI PC capabilities, hosting own local code completion/generation server becomes more and more available. In this demo, we will showcase how to configure one for Intel's desktop NPU, however similar steps can be applied to host on Intel's integrated/discrete GPU or server CPUs.
+With the rise of AI PC capabilities, hosting own Visual Studio code assistant is at your reach. In this demo, we will showcase how to deploy local LLM serving with OVMS and integrate it with Continue extension. It will employ iGPU or NPU acceleration.
 
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
