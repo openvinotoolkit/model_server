@@ -65,7 +65,7 @@ docker run --rm -it  --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -u $(i
 Starting the server with GPU acceleration requires installation of runtime drivers and ocl-icd-libopencl1 package like described on [configuration guide](https://docs.openvino.ai/2025/get-started/install-openvino/configurations/configurations-intel-gpu.html)
 
 Start the model server with GPU accelerations using a command:
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --target_device GPU
 ```
 
@@ -83,7 +83,7 @@ docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/
 
 ### Binary package
 Start the model server with NPU accelerations using a command:
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --target_device NPU --batch_size 1
 ```
 
@@ -113,7 +113,7 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 
 ### Binary package
 
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --target_device "HETERO:GPU,CPU"
 ```
 
@@ -181,22 +181,22 @@ docker run --rm -d --device=/dev/dri --group-add=$(stat -c "%g" /dev/dri/render*
 Below is the equivalent of the deployment command with a binary package at below:
 
 AUTO
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --target_device AUTO:GPU,CPU
 ```
 
 THROUGHPUT
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"PERFORMANCE_HINT\": \"THROUGHPUT\"}" --target_device AUTO:GPU,CPU
 ```
 
 LATENCY
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"PERFORMANCE_HINT\": \"LATENCY\"}" --target_device AUTO:GPU,CPU
 ```
 
 CUMULATIVE_THROUGHPUT
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"PERFORMANCE_HINT\": \"CUMULATIVE_THROUGHPUT\"}" --target_device AUTO:GPU,CPU
 ```
 
@@ -223,6 +223,6 @@ In the example above, there will be 200ms timeout to wait for filling the batch 
 ### Binary package
 
 The same deployment with a binary package can be completed with a command:
-```console
+```bat
 ovms --model_path model --model_name resnet --port 9000 --plugin_config "{\"AUTO_BATCH_TIMEOUT\": 200}" --target_device "BATCH:CPU(16)"
 ```
