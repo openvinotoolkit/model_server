@@ -39,7 +39,7 @@ Make sure to:
 on every shell that will start OpenVINO Model Server.
 
 And start Model Server using the following command:
-```console
+```bat
 ovms --model_name mobile_net --model_path model/ --rest_port 8000
 ```
 
