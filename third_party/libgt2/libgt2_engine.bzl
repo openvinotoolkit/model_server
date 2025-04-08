@@ -45,40 +45,6 @@ def _impl(repository_ctx):
     if https_proxy == "":
         https_proxy = repository_ctx.os.environ.get("HTTPS_PROXY", "")
 
-    # Create the Python script dynamically
-    repository_ctx.file("remove_japanese_txt.py", """
-import shutil
-import os
-
-def remove_japanese_txt(directory):
-    try:
-        if os.path.exists(directory):
-            shutil.rmtree(directory)
-            print(f"Removed: {directory}")
-    except Exception as e:
-        print(f"Failed to remove {directory}: {e}", file=sys.stderr)
-
-if __name__ == "__main__":
-    directory = f"{os.getcwd()}/../libgt2_engine/tests/resources/status/"
-    print(f"Working in {directory}")
-    remove_japanese_txt(directory)
-""")
-
-    # Locate the Python binary
-    python_binary = repository_ctx.which("python3") or repository_ctx.which("python")
-    if not python_binary:
-        fail("Python interpreter not found in PATH")
-
-    # Execute the Python script
-    # This patches the libgit2 repo to remove txt files which break building, such as 中文.txt
-    result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
-    if result.return_code == 0:
-        print("remove_japanese_txt.py Command executed successfully")
-    else:
-        print("Command failed remove_japanese_txt.py with return code", result.return_code)
-        print("Output:", result.stdout)
-        print("Error:", result.stderr)
-
     if _is_windows(repository_ctx):
         lib_name = "git2"
         out_static = "out_interface_libs = [\"{lib_name}.lib\"],".format(lib_name=lib_name)
@@ -178,5 +144,5 @@ cc_library(
 
 libgt2_repository = repository_rule(
     implementation = _impl,
-    local=False,
+    local=True,
 )
