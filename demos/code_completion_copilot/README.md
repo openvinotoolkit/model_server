@@ -22,7 +22,7 @@ mkdir models
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
 ```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 4 --overwrite_models
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
 ```
 
 > **Note:** Use `--target_device GPU` for Intel GPU or omit this parameter to run on Intel CPU
@@ -34,7 +34,7 @@ Code completion works in non-streaming, unary mode. Do not use instruct model, t
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
 ```baconsolesh
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 4 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
 ```
 
 Examine that workspace is set up properly `models/config_all.json`:
@@ -101,12 +101,12 @@ Run OpenVINO Model Server with both models loaded at the same time:
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
 ```console
-ovms --rest_port 8080 --config_path ./models/config_all.json
+ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 
 ### Linux: via Docker
 ```bash
-docker run -d --rm -v $(pwd)/:/workspace/ -p 8080:8080 openvino/model_server:2025.1 --rest_port 8080 --config_path /workspace/models/config_all.json
+docker run -d --rm -v $(pwd)/:/workspace/ -p 8000:8000 openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 
 ## Set Up Visual Studio Code
@@ -133,7 +133,7 @@ models:
     provider: openai
     model: codellama/CodeLlama-7b-Instruct-hf
     apiKey: unused
-    apiBase: localhost:8080/v3
+    apiBase: localhost:8000/v3
     roles:
       - chat
       - edit
@@ -143,7 +143,7 @@ models:
     provider: openai
     model: Qwen/Qwen2.5-Coder-1.5B
     apiKey: unused
-    apiBase: localhost:8080/v3
+    apiBase: localhost:8000/v3
     roles:
       - autocomplete
 context:
