@@ -216,5 +216,5 @@ Some servable types introduce additional limitations:
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
-- [Demo](../../demos/continuous_batching/README.md)
-- [VLM Demo](../../demos/continuous_batching/vlm/README.md)
+- Demos on [CPU/GPU](../../demos/continuous_batching/README.md) and [NPU](../../demos/llm_npu/README.md)
+- VLM Demos on [CPU/GPU](../../demos/continuous_batching/vlm/README.md) and [NPU](../../demos/vlm_npu/README.md)
