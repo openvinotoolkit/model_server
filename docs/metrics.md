@@ -209,7 +209,7 @@ To use data from metrics endpoint you can use the curl command:
 ```bash
 curl http://localhost:8000/metrics
 ```
-[Example metrics output](https://raw.githubusercontent.com/openvinotoolkit/model_server/main/docs/metrics_output.out)
+[Example metrics output](https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/1/docs/metrics_output.out)
 
 ## Performance considerations
 Collecting metrics has negligible performance overhead when used with models of average size and complexity. However when used with very lightweight, fast models which inference time is very short, the metric incrementation can take noticeable proportion of the processing time. Consider it while enabling metrics for such models.
@@ -251,7 +251,7 @@ Exposing custom metrics in calculator implementations (MediaPipe graph nodes) is
 
 With server metrics being scraped by [Prometheus](https://prometheus.io/) it is possible to integrate [Grafana](https://grafana.com/) to visualize them on the dashboards. Once you have Grafana configured with Prometheus as a data source, you can create your own dashboard or import one. 
 
-In OpenVINO Model Server repository you can find [grafana_dashboard.json](https://github.com/openvinotoolkit/model_server/blob/main/extras/grafana_dashboard.json) file that can be used to visualize per model metrics like:
+In OpenVINO Model Server repository you can find [grafana_dashboard.json](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/extras/grafana_dashboard.json) file that can be used to visualize per model metrics like:
 - Throughput [RPS] - number of requests being processed by the model per second.
 - Mean Latency [ms] - latency averaged across all requests processed by the model in a certain timeframe.
 - Latency Quantile [ms] - value of latency for quantiles [0.75, 0.90, 0.99], meaning the latency that has NOT been exceeded by 75%, 90% and 99% of the requests.

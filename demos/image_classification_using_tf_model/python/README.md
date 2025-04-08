@@ -32,7 +32,7 @@ chmod -R 755 model
 docker run -d -v $PWD/model:/models -p 9000:9000 openvino/model_server:latest --model_path /models --model_name resnet --port 9000
 ```
 
-Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/main/docs/deploying_server_baremetal.md] for deployment on bare metal.
+Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/docs/deploying_server_baremetal.md] for deployment on bare metal.
 
 Make sure to:
 
