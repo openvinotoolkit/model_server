@@ -41,11 +41,6 @@ public:
     static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, configPath.c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
     }
     static void SetUpTestSuite() {
     }
@@ -361,7 +356,7 @@ public:
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
         const char* extensionPath = std::filesystem::exists("/opt/libcustom_relu_cpu_extension.so") ? "/opt/libcustom_relu_cpu_extension.so" : "/ovms/src/example/SampleCpuExtension/libcustom_relu_cpu_extension.so";
         server.setShutdownRequest(0);
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath.c_str(),
@@ -373,11 +368,7 @@ public:
         t.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
+        EnsureServerStartedWithTimeout(server, 15);
     }
 
     void SetUp() {

@@ -194,7 +194,7 @@ pip3 install openai
 from openai import OpenAI
 import base64
 base_url='http://localhost:8000/v3'
-model_name = "OpenGVLab/InternVL2_5-8B"
+model_name = "microsoft/Phi-3.5-vision-instruct"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 

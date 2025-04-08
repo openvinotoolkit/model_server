@@ -43,7 +43,7 @@ public:
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
         std::string port = "9187";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
@@ -53,11 +53,7 @@ public:
         thread.reset(new std::thread([&argc, &argv, &server]() {
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (!server.isReady()) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(server, 5);
     }
     void prepareSingleInput() {
         request.Clear();
