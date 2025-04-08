@@ -6,7 +6,7 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 # Requirements
 - Windows (for standalone app) or Linux (using Docker)
 - Python installed (for model preparation only)
-- Intel CPU, GPU or NPU
+- Intel MetorLake, LunarLake, ArrowLake or newer Intel CPU.
 - RAM? Disk? TODO
 
 ## Prepare Code Chat/Edit Model 
