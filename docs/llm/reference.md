@@ -118,7 +118,9 @@ utilization of resource will be lower. Old cache will be cleared automatically b
 
 `dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
 
-`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
+`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size `{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}`.
+
+**Important for NPU users**: NPU plugin sets a limitation on prompt (1024 tokens by default) that can be modified by setting `MAX_PROMPT_LEN` in `plugin_config`, for example to double that limit set: `{"MAX_PROMPT_LEN": 2048}`
 
 The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for `best_of_limit` or set `max_tokens_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
 
