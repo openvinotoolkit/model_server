@@ -1,4 +1,4 @@
-# Text generation serving with NPU acceleration #ovms_demos_llm_npu
+# Text generation serving with NPU acceleration {#ovms_demos_llm_npu}
 
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server with NPU acceleration.
@@ -38,7 +38,7 @@ Run `export_model.py` script to download and quantize the model:
 
 **LLM**
 ```console
-python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.2 --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
 ```
 Below is a list of tested models:
 - meta-llama/Meta-Llama-3-8B-Instruct
@@ -81,7 +81,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Running this command starts the container with NPU enabled:
 ```bash
-docker run -d --rm --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
@@ -110,7 +110,7 @@ curl http://localhost:8000/v1/config
 ```
 ```json
 {
-    "mistralai/Mistral-7B-Instruct-v0.2": {
+    "meta-llama/Llama-3.1-8B-Instruct": {
         "model_version_status": [
             {
                 "version": "1",
@@ -133,53 +133,51 @@ Completion endpoint should be used to pass the prompt directly by the client and
 
 :::{dropdown} **Unary call with cURL**
 ```console
-curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"mistralai/Mistral-7B-Instruct-v0.2\", \"max_tokens\":30,\"stream\":false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},{\"role\": \"user\",\"content\": \"What is OpenVINO?\"}]}"
+curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Llama-3.1-8B-Instruct\", \"max_tokens\":30,\"stream\":false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},{\"role\": \"user\",\"content\": \"What is OpenVINO?\"}]}"
 ```
 ```json
 {
   "choices": [
     {
-      "finish_reason": "length",
+      "finish_reason": "stop",
       "index": 0,
-      "logprobs": null,
       "message": {
-        "content": "OpenVINO is an open-source software framework developed by Intel for optimizing and deploying computer vision, machine learning, and deep learning models on various devices,",
+        "content": "OpenVINO (Open Visual Inference and Optimization for computational resources) is an open-source toolkit that automates neural network model computations across various platforms and",
         "role": "assistant"
       }
     }
   ],
-  "created": 1724405301,
-  "model": "mistralai/Mistral-7B-Instruct-v0.2",
+  "created": 1742944805,
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
   "object": "chat.completion",
   "usage": {
-    "prompt_tokens": 27,
+    "prompt_tokens": 47,
     "completion_tokens": 30,
-    "total_tokens": 57
+    "total_tokens": 77
   }
 }
 ```
 
 A similar call can be made with a `completion` endpoint:
 ```console
-curl http://localhost:8000/v3/completions -H "Content-Type: application/json"-d "{\"model\": \"mistralai/Mistral-7B-Instruct-v0.2\",\"max_tokens\":30,\"stream\":false,\"prompt\": \"You are a helpful assistant. What is OpenVINO? \"}"
+curl http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Llama-3.1-8B-Instruct\",\"max_tokens\":30,\"stream\":false,\"prompt\": \"You are a helpful assistant. What is OpenVINO? \"}"
 ```
 ```json
 {
   "choices": [
     {
-      "finish_reason": "length",
+      "finish_reason": "stop",
       "index": 0,
-      "logprobs": null,
-      "text": "\n\nOpenVINO is an open-source computer vision platform developed by Intel for deploying and optimizing computer vision, machine learning, and autonomous driving applications. It"
+      "text": " Introduction\nOpenVINO can be used in automation of various business processes, which brings timely assistance in operations with these models. Additionally OpenVINO simpl"
     }
   ],
-  "created": 1724405354,
-  "model": "mistralai/Mistral-7B-Instruct-v0.2",
+  "created": 1742944929,
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
   "object": "text_completion",
   "usage": {
-    "prompt_tokens": 23,
+    "prompt_tokens": 14,
     "completion_tokens": 30,
-    "total_tokens": 53
+    "total_tokens": 44
   }
 }
 ```
@@ -203,7 +201,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="mistralai/Mistral-7B-Instruct-v0.2",
+    model="meta-llama/Llama-3.1-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=False,
 )
@@ -212,7 +210,7 @@ print(response.choices[0].message.content)
 
 Output:
 ```
-It looks like you're testing me!
+This is only a test.
 ```
 
 A similar code can be applied for the completion endpoint:
@@ -228,7 +226,7 @@ client = OpenAI(
 )
 
 response = client.completions.create(
-    model="mistralai/Mistral-7B-Instruct-v0.2",
+    model="meta-llama/Llama-3.1-8B-Instruct",
     prompt="Say this is a test.",
     stream=False,
 )
@@ -237,7 +235,7 @@ print(response.choices[0].text)
 
 Output:
 ```
-It looks like you're testing me!
+This is only a test.
 ```
 :::
 
@@ -258,7 +256,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="mistralai/Mistral-7B-Instruct-v0.2",
+    model="meta-llama/Llama-3.1-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
     stream=True,
 )
@@ -269,7 +267,7 @@ for chunk in stream:
 
 Output:
 ```
-It looks like you're testing me!
+This is only a test.
 ```
 
 A similar code can be applied for the completion endpoint:
@@ -285,7 +283,7 @@ client = OpenAI(
 )
 
 stream = client.completions.create(
-    model="mistralai/Mistral-7B-Instruct-v0.2",
+    model="meta-llama/Llama-3.1-8B-Instruct",
     prompt="Say this is a test.",
     stream=True,
 )
@@ -296,7 +294,7 @@ for chunk in stream:
 
 Output:
 ```
-It looks like you're testing me!
+This is only a test.
 ```
 :::
 
@@ -310,14 +308,38 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model mistralai/Mistral-7B-Instruct-v0.2 --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 100 --request-rate inf --max-concurrency 1
+python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Llama-3.1-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 30 --max-concurrency 1
+Maximum request concurrency: 1
 
-
+============ Serving Benchmark Result ============
+Successful requests:                     30
+Benchmark duration (s):                  480.20
+Total input tokens:                      6434
+Total generated tokens:                  6113
+Request throughput (req/s):              0.06
+Output token throughput (tok/s):         12.73
+Total Token throughput (tok/s):          26.13
+---------------Time to First Token----------------
+Mean TTFT (ms):                          1922.09
+Median TTFT (ms):                        1920.85
+P99 TTFT (ms):                           1952.11
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          65.74
+Median TPOT (ms):                        68.95
+P99 TPOT (ms):                           70.40
+---------------Inter-token Latency----------------
+Mean ITL (ms):                           83.65
+Median ITL (ms):                         70.11
+P99 ITL (ms):                            212.48
+==================================================
 ```
 
 ## Testing the model accuracy over serving API
 
 Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2025/1/demos/continuous_batching/accuracy/README.md)
+
+> **Note:** Text generation on NPU is not returning the log_probs which are required to calculate some of the metrics. Only the tasks of type `generate_until` can be used.
+For example `--tasks leaderboard_ifeval`.
 
 
 ## Limitations
@@ -326,6 +348,7 @@ Check the [guide of using lm-evaluation-harness](https://github.com/openvinotool
 - models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 - log_probs are not supported
 - finish reason is always set to "stop".
+- only a single response can be returned. Parameter `n` is not supported.
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
