@@ -192,7 +192,7 @@ openvino
 pipeline
 2021
 intel
-rotations
+rotation
 Output: name[text_images]
     numpy => shape[(9, 1, 32, 128, 1)] data[float32]
 Output: name[text_coordinates]

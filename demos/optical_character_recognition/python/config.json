@@ -56,7 +56,7 @@
                         "target_image_layout": "NHWC",
                         "convert_to_gray_scale": "true",
                         "confidence_threshold": "0.9",
-                        "overlap_threshold": "0.2",
+                        "overlap_threshold": "0.1",
                         "max_output_batch": "100",
                         "box_width_adjustment": "0.1",
                         "box_height_adjustment": "0.0",
