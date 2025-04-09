@@ -36,7 +36,6 @@ ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
-ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
 
