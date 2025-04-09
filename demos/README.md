@@ -46,14 +46,14 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ### Check Out New Generative AI Demos
 | Demo | Description |
 |---|---|
-|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generated text with LLM models and continuous batching pipeline|
-|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generated text with VLM models and continuous batching pipeline|
-|[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings|
-|[Reranking with Cohere API](rerank/README.md)| Rerank documents|
-|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with all endpoints delegated to OVMS|
-|[LLM on NPU](./llm_npu/README.md)| Generated text with LLM models and NPU acceleration|
-|[VLM on NPU](./vlm_npu/README.md)| Generated text with VLM models and NPU acceleration|
-|[VisualCode assistant](./code_completion_copilot/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
+|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
+|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
+|[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
+|[Reranking with Cohere API](rerank/README.md)| Rerank documents via endpoint compatible with Cohere|
+|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
+|[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
+|[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
+|[Visual Studio Code assistant](./code_completion_copilot/README.md)|Use Continue extension in Visual Studio Code with local OVMS|
 
 
 

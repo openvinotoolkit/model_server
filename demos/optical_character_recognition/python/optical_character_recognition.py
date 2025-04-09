@@ -80,7 +80,7 @@ def decode(text):
 def text_recognition_output_to_text(output_nd):
     for i in range(output_nd.shape[0]):
         data = output_nd[i]
-        alphabet = '#1234567890abcdefghijklmnopqrstuvwxyz'
+        alphabet = '0123456789abcdefghijklmnopqrstuvwxyz#'
         preds = data.argmax(2)
         word = ''
         for i in range(preds.shape[0]):
