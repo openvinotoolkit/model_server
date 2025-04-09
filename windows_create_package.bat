@@ -80,7 +80,8 @@ copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %dest_dir%\git-lfs.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-
+copy C:\opt\curl-8.13.0_1-win64-mingw\bin\libcurl-x64.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
 if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms

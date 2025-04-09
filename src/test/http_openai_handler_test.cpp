@@ -249,7 +249,7 @@ protected:
     std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
 };
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -284,6 +284,41 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
     for (size_t i = 0; i < image.get_size(); i++) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrl) {
+    std::string json = R"({
+  "model": "llama",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+          }
+        }
+      ]
+    }
+  ]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
@@ -347,7 +382,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucce
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
@@ -477,7 +512,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyImageUrlFails) {
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageUrlNotBase64Fails) {
