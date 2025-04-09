@@ -122,9 +122,8 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
-# overriding GCS curl dependency to force using system provided openssl
 new_local_repository(
-    name = "libcurl",
+    name = "linux_curl",
     path = "/usr/",
     build_file_content = """
 cc_library(
@@ -136,6 +135,21 @@ cc_library(
 )
 """,
 )
+
+new_local_repository(
+    name = "windows_curl",
+    path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
+    build_file_content = """
+cc_library(
+    name = "curl",
+    hdrs = glob(["include/curl/curl.h"]),
+    srcs = glob(["lib/libcurl.dll.a"]),
+    includes = ["include/"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
 
 # Used for gRPC API protos only
 # Tensorflow serving
@@ -280,6 +294,19 @@ new_local_repository(
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
     path = "C:\\opt\\opencv",
 )
+
+# # overriding GCS curl dependency to force using system provided openssl
+# new_local_repository(
+#     name = "linux_curl",
+#     path = "/usr/",
+#     build_file = "@//third_party/curl:curl_linux.BUILD",
+# )
+
+# new_local_repository(
+#     name = "windows_curl",
+#     path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
+#     build_file = "@//third_party/curl:curl_windows.BUILD",
+# )
 
 new_local_repository(
     name = "windows_opencl",

@@ -69,7 +69,7 @@ cc_shared_library(
         "@aws-sdk-cpp//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
-        "@curl//:__subpackages__",
+        "//third_party:curl//:__subpackages__",
         "@com_github_google_crc32c//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
         "@com_github_libevent_libevent//:__subpackages__",
