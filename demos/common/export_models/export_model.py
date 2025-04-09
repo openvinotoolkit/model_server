@@ -50,6 +50,8 @@ parser_text.add_argument('--draft_source_model', required=False, default=None, h
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
                          'Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.', dest='draft_model_name')
+parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
+                         'Not effective if target device is not NPU', dest='max_prompt_len')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
@@ -148,7 +150,7 @@ node: {
           {%- if pipeline_type %}
           pipeline_type: {{pipeline_type}},{% endif %}
           models_path: "{{model_path}}",
-          plugin_config: '{ {% if kv_cache_precision %}"KV_CACHE_PRECISION": "{{kv_cache_precision}}"{% endif %}}',
+          plugin_config: '{{plugin_config}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
           {%- if max_num_batched_tokens %}
@@ -301,6 +303,17 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
     ###
+
+    # Prepare plugin config string for jinja rendering
+    plugin_config = {}
+    if task_parameters['kv_cache_precision'] is not None:
+        plugin_config['KV_CACHE_PRECISION'] = task_parameters['kv_cache_precision']
+    if task_parameters['max_prompt_len'] is not None:
+        plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
+
+    plugin_config_str = json.dumps(plugin_config)
+    task_parameters['plugin_config'] = plugin_config_str
+    
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
