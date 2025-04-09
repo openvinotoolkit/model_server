@@ -269,53 +269,7 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
 
 def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
-    ### Speculative decoding specific 
-    draft_source_model = task_parameters.get("draft_source_model", None)
-    draft_model_dir_name = None   
-    if draft_source_model:
-        draft_model_dir_name = draft_source_model.replace("/", "-") # flatten the name so we don't create nested directory structure
-        draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
-        if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
-                print("OV model is source folder. Skipping conversion.")
-        else: # assume HF model name or local pytorch model folder
-            print("Exporting LLM model to ", draft_llm_model_path)
-            if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
-                if os.system(optimum_command):
-                    raise ValueError("Failed to export llm model", source_model)
-    ###
-
-    ### Prepare plugin config string for jinja rendering
-    plugin_config = {}
-    if task_parameters['kv_cache_precision'] is not None:
-        plugin_config['KV_CACHE_PRECISION'] = task_parameters['kv_cache_precision']
-    if task_parameters['max_prompt_len'] is not None:
-        if task_parameters['target_device'] != 'NPU':
-            raise ValueError("max_prompt_len is only supported for NPU target device")
-        if task_parameters['max_prompt_len'] <= 0:
-            raise ValueError("max_prompt_len should be a positive integer")
-        plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
-    
-    # Additional plugin properties for HETERO
-    if "HETERO" in task_parameters['target_device']:
-        if task_parameters['pipeline_type'] is None:
-            raise ValueError("pipeline_type should be specified for HETERO target device. It should be set to either LM or VLM")
-        plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
-    ### 
-
-    plugin_config_str = json.dumps(plugin_config)
-    task_parameters['plugin_config'] = plugin_config_str
-    
-    os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
-    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
-    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
-                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
-        f.write(graph_content)
-    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
-
-    # Export model
+    ### Export model
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
             model_path = source_model
@@ -335,10 +289,53 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
+    ### Export draft model for speculative decoding 
+    draft_source_model = task_parameters.get("draft_source_model", None)
+    draft_model_dir_name = None   
+    if draft_source_model:
+        draft_model_dir_name = draft_source_model.replace("/", "-") # flatten the name so we don't create nested directory structure
+        draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
+        if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
+                print("OV model is source folder. Skipping conversion.")
+        else: # assume HF model name or local pytorch model folder
+            print("Exporting draft LLM model to ", draft_llm_model_path)
+            if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
+                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
+                if os.system(optimum_command):
+                    raise ValueError("Failed to export llm model", source_model)
 
+    ### Prepare plugin config string for jinja rendering
+    plugin_config = {}
+    if task_parameters['kv_cache_precision'] is not None:
+        plugin_config['KV_CACHE_PRECISION'] = task_parameters['kv_cache_precision']
+    if task_parameters['max_prompt_len'] is not None:
+        if task_parameters['target_device'] != 'NPU':
+            raise ValueError("max_prompt_len is only supported for NPU target device")
+        if task_parameters['max_prompt_len'] <= 0:
+            raise ValueError("max_prompt_len should be a positive integer")
+        plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
     
+    # Additional plugin properties for HETERO
+    if "HETERO" in task_parameters['target_device']:
+        if task_parameters['pipeline_type'] is None:
+            raise ValueError("pipeline_type should be specified for HETERO target device. It should be set to either LM or VLM")
+        if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
+            raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
+        plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
+    ### 
+
+    plugin_config_str = json.dumps(plugin_config)
+    task_parameters['plugin_config'] = plugin_config_str
     
-    
+    os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
+    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
+                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
