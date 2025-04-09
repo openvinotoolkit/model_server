@@ -28,6 +28,12 @@ void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, 
     this->additionalHeaders[key] = value;
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
+    if (!began) {
+        //std::string d = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\ntransfer-encoding: chunked\r\ncache-control: no-cache\r\nconnection: keep-alive\r\n\r\n";
+        //this->stream->send(d);
+
+        began = true;
+    }
     if (this->isDisconnected) {
         return;
     }
@@ -37,16 +43,20 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
 void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWorkloadCallback) {
     auto resp = drogon::HttpResponse::newAsyncStreamResponse(
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
+            SPDLOG_INFO("asyncStreamCallback begin...");
             this->stream = std::move(stream);
             this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule begin");
                 try {
+                    SPDLOG_INFO("actualWorkloadCallback begin...");
                     actualWorkloadCallback();  // run actual workload (mediapipe executor inferStream) which uses PartialReply
+                    SPDLOG_INFO("actualWorkloadCallback end...");
                 } catch (...) {
                     SPDLOG_ERROR("Exception caught in REST request streaming handler");
                 }
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule end");
             });
+            SPDLOG_INFO("asyncStreamCallback end...");
         });
 
     // Convert headers to drogon format
@@ -64,11 +74,12 @@ void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
 }
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
-    if (this->IsDisconnected()) {
-        return;
-    }
-    if (!this->stream->send(message))
-        this->isDisconnected = true;
+    return PartialReplyWithStatus(std::move(message), HTTPStatusCode::OK);
+    // if (this->IsDisconnected()) {
+    //     return;
+    // }
+    // if (!this->stream->send(message))
+    //     this->isDisconnected = true;
 }
 // Used by calculator via HttpClientConnection
 bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {

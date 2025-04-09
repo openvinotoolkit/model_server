@@ -1,3 +1,20 @@
+diff --git a/lib/inc/drogon/HttpResponse.h b/lib/inc/drogon/HttpResponse.h
+index 620577e5..cb26f267 100644
+--- a/lib/inc/drogon/HttpResponse.h
++++ b/lib/inc/drogon/HttpResponse.h
+@@ -93,7 +93,11 @@ class DROGON_EXPORT ResponseStream
+         std::ostringstream oss;
+         oss << std::hex << data.length() << "\r\n";
+         oss << data << "\r\n";
+-        return asyncStream_->send(oss.str());
++
++        std::string sss = oss.str();
++        LOG_ERROR << "Sending Partial: [" << sss << "]";
++
++        return asyncStream_->send(sss);
+     }
+ 
+     void close()
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
 index 4c49c259..058203c8 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
@@ -28,10 +45,21 @@ index 4c49c259..058203c8 100644
      {
          // go daemon!
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..ef784a68 100644
+index 51506f95..82865159 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -978,7 +978,10 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -971,18 +971,31 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+     auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
+     if (!isHeadMethod)
+     {
+-        auto httpString = respImplPtr->renderToBuffer();
+-        conn->send(httpString);
++        // auto httpString = respImplPtr->renderToBuffer();
++        // conn->send(httpString);
++        // LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
++        
+         if (!respImplPtr->contentLengthIsAllowed())
+             return;
          auto &asyncStreamCallback = respImplPtr->asyncStreamCallback();
          if (asyncStreamCallback)
          {
@@ -41,9 +69,21 @@ index 51506f95..ef784a68 100644
 +            //if (!respImplPtr->ifCloseConnection())
 +            if (true)
              {
++                LOG_ERROR << "Calling asyncStreamCallback";
                  asyncStreamCallback(
                      std::make_unique<ResponseStream>(conn->sendAsyncStream(
-@@ -1062,7 +1065,11 @@ void HttpServer::sendResponses(
+                         respImplPtr->asyncStreamKickoffDisabled())));
++                LOG_ERROR << "Finished calling asyncStreamCallback";
++
++                auto httpString = respImplPtr->renderToBuffer();
++                conn->send(httpString);
++                LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
++        
++
+             }
+             else
+             {
+@@ -1062,7 +1075,11 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -160,3 +200,83 @@ index 2aff5a0..145f9eb 100755
      }
  }
  int Socket::accept(InetAddress *peeraddr)
+diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
+index 6a75707..a82f70d 100644
+--- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
++++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
+@@ -384,6 +384,7 @@ void TcpConnectionImpl::sendInLoop(const void *buffer, size_t length)
+ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+ #endif
+ {
++    LOG_ERROR << "Sending in loop: [" << std::string((const char*)buffer, length) << "]";
+     loop_->assertInLoopThread();
+     if (status_ != ConnStatus::Connected)
+     {
+@@ -391,7 +392,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+         return;
+     }
+     ssize_t sendLen = 0;
+-    if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
++    LOG_ERROR << "Is Writing? " << ioChannelPtr_->isWriting() << " IsWriteBufferListEmpty " << writeBufferList_.size();
++    //if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
++    if (true)
+     {
+         // send directly
+         sendLen = writeInLoop(buffer, length);
+@@ -407,11 +410,13 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+         if (writeBufferList_.empty() || writeBufferList_.back()->isFile() ||
+             writeBufferList_.back()->isStream())
+         {
++            LOG_ERROR << "Pushing back new mem buffer node";
+             writeBufferList_.push_back(BufferNode::newMemBufferNode());
+         }
+         writeBufferList_.back()->append(static_cast<const char *>(buffer) +
+                                             sendLen,
+                                         length);
++        LOG_ERROR << "Appended " << length << " bytes to write node";
+         if (highWaterMarkCallback_ &&
+             writeBufferList_.back()->remainingBytes() >
+                 static_cast<long long>(highWaterMarkLen_))
+@@ -731,6 +736,7 @@ ssize_t TcpConnectionImpl::writeRaw(const void *buffer, size_t length)
+ ssize_t TcpConnectionImpl::writeRaw(const char *buffer, size_t length)
+ #endif
+ {
++    LOG_ERROR << "WriteRaw: [" << std::string((const char*)buffer, length) << "]";
+     // TODO: Abstract this away to support io_uring (and IOCP?)
+ #ifndef _WIN32
+     int nWritten = write(socketPtr_->fd(), buffer, length);
+@@ -969,15 +975,18 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
+                                             const char *data,
+                                             size_t len)
+ {
++    LOG_ERROR << "Sending async data in a loop: [" << std::string(data, len) << "]";
+     loop_->assertInLoopThread();
+     if (data)
+     {
+         if (len > 0)
+         {
+-            if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
+-                node->remainingBytes() == 0)
++            //if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
++            //    node->remainingBytes() == 0)
++            if (false)
+             {
+                 auto nWritten = writeInLoop(data, len);
++                LOG_ERROR << "Sent immediately " << nWritten << " bytes";
+                 if (nWritten < 0)
+                 {
+                     LOG_TRACE << "write error";
+@@ -985,11 +994,13 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
+                 }
+                 if (static_cast<size_t>(nWritten) < len)
+                 {
++                    LOG_ERROR << "Appending " << len - nWritten << " bytes to write buffer";
+                     node->append(data + nWritten, len - nWritten);
+                 }
+             }
+             else
+             {
++                LOG_ERROR << "Appending " << len << " bytes to write buffer";
+                 node->append(data, len);
+             }
+         }
