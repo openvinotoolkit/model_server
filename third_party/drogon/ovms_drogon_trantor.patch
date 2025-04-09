@@ -1,8 +1,31 @@
 diff --git a/lib/inc/drogon/HttpResponse.h b/lib/inc/drogon/HttpResponse.h
-index 620577e5..cb26f267 100644
+index 620577e5..7e0020c1 100644
 --- a/lib/inc/drogon/HttpResponse.h
 +++ b/lib/inc/drogon/HttpResponse.h
-@@ -93,7 +93,11 @@ class DROGON_EXPORT ResponseStream
+@@ -74,8 +74,8 @@ inline HttpResponsePtr toResponse<Json::Value &>(Json::Value &pJson)
+ class DROGON_EXPORT ResponseStream
+ {
+   public:
+-    explicit ResponseStream(trantor::AsyncStreamPtr asyncStream)
+-        : asyncStream_(std::move(asyncStream))
++    explicit ResponseStream(trantor::AsyncStreamPtr asyncStream, trantor::TcpConnectionPtr tcpConnection)
++        : asyncStream_(std::move(asyncStream)), tcpConnection_(std::move(tcpConnection))
+     {
+     }
+ 
+@@ -84,6 +84,11 @@ class DROGON_EXPORT ResponseStream
+         close();
+     }
+ 
++    void sendHeader(const std::string& data)
++    {
++        tcpConnection_->send(data);
++    }
++
+     bool send(const std::string &data)
+     {
+         if (!asyncStream_)
+@@ -93,7 +98,11 @@ class DROGON_EXPORT ResponseStream
          std::ostringstream oss;
          oss << std::hex << data.length() << "\r\n";
          oss << data << "\r\n";
@@ -15,8 +38,25 @@ index 620577e5..cb26f267 100644
      }
  
      void close()
+@@ -109,6 +118,7 @@ class DROGON_EXPORT ResponseStream
+ 
+   private:
+     trantor::AsyncStreamPtr asyncStream_;
++    trantor::TcpConnectionPtr tcpConnection_;
+ };
+ 
+ using ResponseStreamPtr = std::unique_ptr<ResponseStream>;
+@@ -315,6 +325,8 @@ class DROGON_EXPORT HttpResponse
+         return body();
+     }
+ 
++    virtual std:string renderHeaderToString() = 0;
++
+     /// Return the string of http version of request, such as HTTP/1.0,
+     /// HTTP/1.1, etc.
+     virtual const char *versionString() const = 0;
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 4c49c259..058203c8 100644
+index 623d906a..bd61837d 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
@@ -44,11 +84,41 @@ index 4c49c259..058203c8 100644
      if (runAsDaemon_)
      {
          // go daemon!
+diff --git a/lib/src/HttpResponseImpl.cc b/lib/src/HttpResponseImpl.cc
+index 5e9e46f1..2e511ca4 100644
+--- a/lib/src/HttpResponseImpl.cc
++++ b/lib/src/HttpResponseImpl.cc
+@@ -726,6 +726,12 @@ std::shared_ptr<trantor::MsgBuffer> HttpResponseImpl::renderToBuffer()
+     return httpString;
+ }
+ 
++std::string HttpResponseImpl::renderHeaderToString() override
++{
++    auto msg = this->renderToBuffer();
++    return std::string(msg->peek(), msg->readableBytes());
++}
++
+ std::shared_ptr<trantor::MsgBuffer> HttpResponseImpl::
+     renderHeaderForHeadMethod()
+ {
+diff --git a/lib/src/HttpResponseImpl.h b/lib/src/HttpResponseImpl.h
+index d6b949c8..fadb6e8b 100644
+--- a/lib/src/HttpResponseImpl.h
++++ b/lib/src/HttpResponseImpl.h
+@@ -177,6 +177,8 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
+ 
+     void addHeader(const char *start, const char *colon, const char *end);
+ 
++    std::string renderHeaderToString() override;
++
+     void addCookie(const std::string &key, const std::string &value) override
+     {
+         cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..82865159 100644
+index 257976b1..c4ca314a 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -971,18 +971,31 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -965,18 +965,32 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
      auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
      if (!isHeadMethod)
      {
@@ -72,18 +142,20 @@ index 51506f95..82865159 100644
 +                LOG_ERROR << "Calling asyncStreamCallback";
                  asyncStreamCallback(
                      std::make_unique<ResponseStream>(conn->sendAsyncStream(
-                         respImplPtr->asyncStreamKickoffDisabled())));
+-                        respImplPtr->asyncStreamKickoffDisabled())));
++                        respImplPtr->asyncStreamKickoffDisabled()),
++                        conn));
 +                LOG_ERROR << "Finished calling asyncStreamCallback";
 +
-+                auto httpString = respImplPtr->renderToBuffer();
-+                conn->send(httpString);
-+                LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
++                //auto httpString = respImplPtr->renderToBuffer();
++                //conn->send(httpString);
++                //LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
 +        
 +
              }
              else
              {
-@@ -1062,7 +1075,11 @@ void HttpServer::sendResponses(
+@@ -1056,11 +1070,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -96,6 +168,12 @@ index 51506f95..82865159 100644
                  {
                      asyncStreamCallback(
                          std::make_unique<ResponseStream>(conn->sendAsyncStream(
+-                            respImplPtr->asyncStreamKickoffDisabled())));
++                            respImplPtr->asyncStreamKickoffDisabled()),
++                            conn));
+                 }
+                 else
+                 {
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..8c55ed15 100644
 --- a/lib/src/Utilities.cc

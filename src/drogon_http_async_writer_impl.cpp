@@ -30,7 +30,10 @@ void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, 
 void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
     if (!began) {
         //std::string d = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\ntransfer-encoding: chunked\r\ncache-control: no-cache\r\nconnection: keep-alive\r\n\r\n";
-        //this->stream->send(d);
+        this->responsePtr->setCustomStatusCode(int(status));
+        //auto msg = this->responsePtr->renderToBuffer();
+        //std::string d = std::string(msg->peek(), msg->readableBytes());
+        this->stream->sendHeader(this->responsePtr->renderHeaderToString());
 
         began = true;
     }
@@ -41,7 +44,7 @@ void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTP
         this->isDisconnected = true;
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWorkloadCallback) {
-    auto resp = drogon::HttpResponse::newAsyncStreamResponse(
+    this->responsePtr = drogon::HttpResponse::newAsyncStreamResponse(
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
             SPDLOG_INFO("asyncStreamCallback begin...");
             this->stream = std::move(stream);
@@ -62,12 +65,12 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
     // Convert headers to drogon format
     for (const auto& [key, value] : this->additionalHeaders) {
         if (key == "Content-Type") {
-            resp->setContentTypeString(value);
+            this->responsePtr->setContentTypeString(value);
             continue;
         }
-        resp->addHeader(key, value);
+        this->responsePtr->addHeader(key, value);
     }
-    this->drogonResponseInitializeCallback(resp);
+    this->drogonResponseInitializeCallback(this->responsePtr);
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();
