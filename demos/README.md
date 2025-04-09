@@ -36,7 +36,6 @@ ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
-ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
 
@@ -77,7 +76,6 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |---|---|
 |[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
-|[Seq2seq translation](python_demos/seq2seq_translation/README.md) | Translate text using seq2seq model via gRPC API.|
 
 ## With MediaPipe Graphs
 | Demo | Description |
