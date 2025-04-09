@@ -1,4 +1,4 @@
-# Serving for Text generation with Visual Language Models with NPU acceleration #ovms_demos_vlm_npu
+# Serving for Text generation with Visual Language Models with NPU acceleration {#ovms_demos_vlm_npu}
 
 
 This demo shows how to deploy VLM models in the OpenVINO Model Server with NPU acceleration.
@@ -72,7 +72,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Running this command starts the container with NPU enabled:
 ```bash
-docker run -d --rm --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
@@ -118,16 +118,18 @@ curl http://localhost:8000/v1/config
 
 ## Request Generation
 
-
-:::{dropdown} **Unary call with python requests library**
 ```console
 pip3 install requests
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
+![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg)
+
+:::{dropdown} **Unary call with python requests library**
+
 ```python
 import requests
 import base64
-base_url='http://localhost:8080/v3'
+base_url='http://localhost:8000/v3'
 model_name = "microsoft/Phi-3.5-vision-instruct"
 
 def convert_image(Image):
@@ -136,7 +138,8 @@ def convert_image(Image):
     return base64_image
 
 import requests
-payload = {"model": "microsoft/Phi-3.5-vision-instruct", 
+payload = {
+    "model": model_name, 
     "messages": [
         {
             "role": "user",
@@ -191,8 +194,8 @@ pip3 install openai
 ```python
 from openai import OpenAI
 import base64
-base_url='http://localhost:8080/v3'
-model_name = "OpenGVLab/InternVL2_5-8B"
+base_url='http://localhost:8000/v3'
+model_name = "microsoft/Phi-3.5-vision-instruct"
 
 client = OpenAI(api_key='unused', base_url=base_url)
 
@@ -237,7 +240,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2_5-8B --endpoint /v1/chat/completions  --request-rate 1 --num-prompts 10 --trust-remote-code --max-concurrency 1
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model microsoft/Phi-3.5-vision-instruct --endpoint /v3/chat/completions  --num-prompts 10 --trust-remote-code --max-concurrency 1
 
 ```
 
@@ -252,6 +255,7 @@ Check the [guide of using lm-evaluation-harness](https://github.com/openvinotool
 - models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 - log_probs are not supported
 - finish reason is always set to "stop".
+- only a single response can be returned. Parameter `n` is not supported.
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
