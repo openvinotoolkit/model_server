@@ -2,7 +2,7 @@
 
 ## Overview
 
-With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/ilya-lavrenov/openvino.genai/tree/ct-beam-search/text_generation/causal_lm/cpp/continuous_batching/library) like:
+With rapid development of generative AI, new techniques and algorithms for performance optimization and better resource utilization are introduced to make best use of the hardware and provide best generation performance. OpenVINO implements those state of the art methods in it's [GenAI Library](https://github.com/openvinotoolkit/openvino.genai) like:
   - Continuous Batching
   - Paged Attention
   - Dynamic Split Fuse
@@ -12,8 +12,27 @@ It is now integrated into OpenVINO Model Server providing efficient way to run g
 
 Check out the [quickstart guide](quickstart.md) for a simple example that shows how to use this feature.
 
+## Servable Types
+
+Starting with 2025.1, we can highlight four servable types. Such distinction is made based on the input type and underlying GenAI pipeline.
+The servable types are:
+- Language Model Continuous Batching,
+- Language Model Stateful,
+- Visual Language Model Continuous Batching,
+- Visual Language Model Stateful.
+
+First part - Language Model / Visual Language Model - determines whether servable accepts only text or both text and images on the input.
+Seconds part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only on Stateful servable type.
+
+User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
+Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable. 
+
+Stateful servables ignore most of the configuration used by Continuous Batching, but this will be mentioned later. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
+
+Despite all the differences, all servable types share the same LLM calculator which imposes certain flow in every GenAI-based endpoint.
+
 ## LLM Calculator
-As you can see in the quickstart above, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/master/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
+As you can see in the quickstart, big part of the configuration resides in `graph.pbtxt` file. That's because model server text generation servables are deployed as MediaPipe graphs with dedicated LLM calculator that works with latest [OpenVINO GenAI](https://github.com/openvinotoolkit/openvino.genai/tree/master/src/cpp/include/openvino/genai) library. The calculator is designed to run in cycles and return the chunks of responses to the client.
 
 On the input it expects a HttpPayload struct passed by the Model Server frontend:
 ```cpp
@@ -83,7 +102,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU" [default = "CPU"]
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html). Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options) [default = "{}"]
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
--    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint [default = 4096];
+-    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 
 
@@ -99,9 +118,13 @@ utilization of resource will be lower. Old cache will be cleared automatically b
 
 `dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
 
-`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size '{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}'.
+`plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size `{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}`.
 
-The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for  `max_tokens_limit` and `best_of_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
+**Important for NPU users**: NPU plugin sets a limitation on prompt (1024 tokens by default) that can be modified by setting `MAX_PROMPT_LEN` in `plugin_config`, for example to double that limit set: `{"MAX_PROMPT_LEN": 2048}`
+
+The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for `best_of_limit` or set `max_tokens_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
+
+**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
 
 
 ## Canceling the generation
@@ -136,29 +159,11 @@ In node configuration we set `models_path` indicating location of the directory 
 
 Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
 
+Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
+
 This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
 
-In your python environment install required dependencies:
-```
-pip3 install "optimum-intel[nncf,openvino]
-```
-
-Because there is very dynamic development in optimum-intel and openvino, it is recommended to use the latest versions of the dependencies:
-```
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-pip3 install --pre "optimum-intel[nncf,openvino]"@git+https://github.com/huggingface/optimum-intel.git  openvino_tokenizers openvino
-```
-
-LLM model can be exported with a command:
-```
-optimum-cli export openvino --disable-convert-tokenizer --model {LLM model in HF hub or Pytorch model folder} --weight-format {fp32/fp16/int8/int4/int4_sym_g128/int4_asym_g128/int4_sym_g64/int4_asym_g64} {target folder name}
-```
-Precision parameter is important and can influence performance, accuracy and memory usage. It is recommended to start experiments with `fp16`. The precision `int8` can reduce the memory consumption and improve latency with low impact on accuracy. Try `int4` to minimize memory usage and check various algorithm to achieve optimal results.
-
-Export the tokenizer model with a command:
-```
-convert_tokenizer -o {target folder name} --utf8_replace_mode replace --with-detokenizer --skip-special-tokens --streaming-detokenizer --not-add-special-tokens {tokenizer model in HF hub or Pytorch model folder}
-```
+We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
@@ -190,8 +195,6 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
 
-
-
 ## Limitations
 
 There are several known limitations which are expected to be addressed in the coming releases:
@@ -201,7 +204,19 @@ There are several known limitations which are expected to be addressed in the co
 - `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
 - Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version.
 
+Some servable types introduce additional limitations:
+
+### Stateful servable limitations
+- `finish_reason` not supported (always set to `stop`),
+- `logprobs` not supported,
+- sequential request processing (only one request is handled at a time)
+
+### Visual Language servable limitations
+- works only on `/chat/completions` endpoint,
+- `image_url` input supports only base64 encoded image, not an actual URL
+
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
 - [Completions API](../model_server_rest_api_completions.md)
-- [Demo](../../demos/continuous_batching/README.md)
+- Demos on [CPU/GPU](../../demos/continuous_batching/README.md) and [NPU](../../demos/llm_npu/README.md)
+- VLM Demos on [CPU/GPU](../../demos/continuous_batching/vlm/README.md) and [NPU](../../demos/vlm_npu/README.md)

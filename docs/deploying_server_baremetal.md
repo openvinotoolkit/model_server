@@ -29,7 +29,7 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Ubuntu 24.04
@@ -57,11 +57,11 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.12
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
-:::{tab-item} RHEL 9.4
-:sync: rhel-9.4
+:::{tab-item} RHEL 9.5
+:sync: rhel-9.5
 Download precompiled package (without python support):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
@@ -85,7 +85,7 @@ In case of the version with python and LLM support run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Windows

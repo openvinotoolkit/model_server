@@ -38,6 +38,17 @@
 
 namespace ovms {
 
+absl::Status LegacyServable::validateInputComplianceWithProperties(const ov::Tensor& inputIds) const {
+    if (properties->device == "NPU") {
+        int64_t inputLength = inputIds.get_size();
+        if (inputLength > properties->maxPromptLength) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Input length exceeds the maximum allowed length: {} > {}", inputLength, properties->maxPromptLength);
+            return absl::InvalidArgumentError("Input length exceeds the maximum allowed length");
+        }
+    }
+    return absl::OkStatus();
+}
+
 // Node resources interface start
 std::shared_ptr<GenAiServableExecutionContext> LegacyServable::createExecutionContext() {
     return std::make_shared<LegacyServableExecutionContext>();
@@ -81,6 +92,17 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
     return absl::OkStatus();
+}
+
+absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    // Use the base class implementation to prepare inputs
+    auto status = GenAiServable::prepareInputs(executionContext);
+    if (!status.ok()) {
+        return status;
+    }
+    // Additional validation layer for NPU specific properties
+    status = validateInputComplianceWithProperties(executionContext->inputIds);
+    return status;
 }
 
 absl::Status LegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {

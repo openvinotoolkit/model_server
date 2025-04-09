@@ -97,8 +97,8 @@ curl http://localhost/v3/chat/completions \
 | stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
 | stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
 | messages | ✅ | ✅ | ✅ | array (required) | A list of messages comprising the conversation so far. Each object in the list should contain `role` and `content` - both of string type. [Example Python code](clients_genai.md) |
-| max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
-| ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
+| max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. If max_tokens_limit is set in graph.pbtxt it will be default value of max_tokens. |
+| ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. |
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | bool (default: `false`) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only info about selected tokens is returned _** |
 
@@ -107,7 +107,6 @@ curl http://localhost/v3/chat/completions \
 |-------|----------|----------|----------|---------|-----|
 | n | ✅ | ✅ | ✅ | integer (default: `1`) | Number of output sequences to return for the given prompt. This value must be between `1 <= N <= BEST_OF`. |
 | best_of | ✅ | ❌ | ✅ | integer (default: `1`) | Number of output sequences that are generated from the prompt. From these _best_of_ sequences, the top _n_ sequences are returned. _best_of_ must be greater than or equal to _n_. This is treated as the beam width for beam search sampling.  |
-| diversity_penalty | ✅ | ❌ | ❌ | float (default: `1.0`) | This value is subtracted from a beam's score if it generates the same token as any beam from other group at a particular time. See [arXiv 1909.05858](https://arxiv.org/pdf/1909.05858). |
 | length_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while `length_penalty` < 0.0 encourages shorter sequences. |
 
 #### Multinomial sampling specific

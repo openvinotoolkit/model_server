@@ -46,11 +46,7 @@ protected:
 
     void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
+        EnsureServerStartedWithTimeout(this->server, 5);
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
     }
 
@@ -508,6 +504,85 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
+    std::string json = R"({
+    "model": "llama",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "valid prompt"
+          }
+        ]
+      }
+    ]
+  })";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    uint32_t maxTokensLimit = 10;
+    uint32_t bestOfLimit = 0;
+    bool isSpeculativePipeline = false;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
+    EXPECT_EQ(apiHandler->getMaxTokens().value(), maxTokensLimit);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
+    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
+        "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
+        "logprobs", "max_completion_tokens"};
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    bool isSpeculativePipeline = false;
+    std::optional<uint32_t> maxModelLength;
+    for (auto param : chatParamsThatAcceptNull) {
+        std::string json = R"({
+      "model": "llama",
+      ")" + param + R"(": null,
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "valid prompt"
+            }
+          ]
+        }
+      ]
+    })";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions) {
+    std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
+        "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
+        "logprobs", "echo"};
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 0;
+    bool isSpeculativePipeline = false;
+    std::optional<uint32_t> maxModelLength;
+    for (auto param : chatParamsThatAcceptNull) {
+        std::string json = R"({
+      "model": "llama",
+      ")" + param + R"(": null,
+      "prompt": "valid prompt"
+    })";
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+    }
 }
 
 TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {

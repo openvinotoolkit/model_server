@@ -19,7 +19,7 @@ USER root
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PYTHONPATH=/ovms/lib/python
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; else export DNF_TOOL=microdnf ; fi ; \
-	$DNF_TOOL install -y python39-pip git
+	$DNF_TOOL install -y python3-pip git
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 USER ovms

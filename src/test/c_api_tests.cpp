@@ -180,10 +180,16 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
 
     // Test config parser
     ConstructorEnabledConfig cfg;
+#ifdef __linux__
     ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
+#elif _WIN32
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 1));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    EXPECT_EQ(cfg.grpcWorkers(), 1);
+#endif
     EXPECT_EQ(cfg.port(), 5555);
     EXPECT_EQ(cfg.restPort(), 6666);
-    EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
     EXPECT_EQ(cfg.grpcBindAddress(), "2.2.2.2");
     EXPECT_EQ(cfg.restWorkers(), 31);
     EXPECT_EQ(cfg.restBindAddress(), "3.3.3.3");
@@ -858,7 +864,7 @@ TEST_F(CAPIInference, ReuseRequestRemoveAndAddInput) {
 TEST_F(CAPIInference, NegativeInference) {
     // first start OVMS
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     // prepare options
     OVMS_ServerSettings* serverSettings = 0;
     OVMS_ModelsSettings* modelsSettings = 0;
@@ -1184,7 +1190,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         // prepare options
         OVMS_ServerSettings* serverSettings = nullptr;
         OVMS_ModelsSettings* modelsSettings = nullptr;
@@ -1690,7 +1696,7 @@ protected:
     const char* outputName{nullptr};
     void SetUp() override {
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         // prepare options
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
         ASSERT_NE(serverSettings, nullptr);

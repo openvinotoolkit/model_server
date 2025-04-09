@@ -44,11 +44,18 @@ ovms_string_output_model_demo
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
- - [LLM Text Generation with continuous batching](continuous_batching/README.md)
- - [VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)
- - [OpenAI API text embeddings ](embeddings/README.md)
- - [Reranking with Cohere API](rerank/README.md)
- - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+| Demo | Description |
+|---|---|
+|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
+|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
+|[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
+|[Reranking with Cohere API](rerank/README.md)| Rerank documents via endpoint compatible with Cohere|
+|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
+|[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
+|[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
+|[Visual Studio Code assistant](./code_completion_copilot/README.md)|Use Continue extension in Visual Studio Code with local OVMS|
+
+
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
