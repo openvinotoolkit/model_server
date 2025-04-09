@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS
 subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
-parser_text.add_argument('--pipeline_type', default=None, help='Type of the pipeline to be used. Can be either LM, LM_CB, VLM, VLM_CB or AUTO. When undefined, AUTO is used', dest='pipeline_type')
+parser_text.add_argument('--pipeline_type', default=None, choices=["LM", "LM_CB", "VLM", "VLM_CB", "AUTO"], help='Type of the pipeline to be used. AUTO is used by default', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
 parser_text.add_argument('--extra_quantization_params', help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
