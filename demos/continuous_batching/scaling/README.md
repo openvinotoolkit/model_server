@@ -77,8 +77,12 @@ docker run -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro -d --net=host -p 80:80 
 
 ### Testing the scalability
 
-Start benchmarking script like in [demo](../README.md), pointing to the load balancer port and host.
+Let's use the benchmark_serving script from vllm repository:
 ```bash
+git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
+cd vllm
+pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+cd benchmarks
 python benchmark_serving.py --host localhost --port 80 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 6000 --request-rate 20
 Initial test run completed. Starting main benchmark run...
 Traffic request rate: 20
