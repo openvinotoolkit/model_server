@@ -11,6 +11,7 @@ ovms_demos_continuous_batching
 ovms_demos_continuous_batching_vlm
 ovms_demos_llm_npu
 ovms_demos_vlm_npu
+ovms_demos_code_completion_vsc
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -53,7 +54,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with all endpoints delegated to OVMS|
 |[LLM on NPU](./llm_npu/README.md)| Generated text with LLM models and NPU acceleration|
 |[VLM on NPU](./vlm_npu/README.md)| Generated text with VLM models and NPU acceleration|
-|[VisualCode assistant](./code_completion_copilot/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
+|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
 
 
 
