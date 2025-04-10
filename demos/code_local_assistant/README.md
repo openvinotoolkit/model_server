@@ -54,7 +54,7 @@ Examine that workspace is set up properly `models/config_all.json`:
 }
 ```
 
-```console
+```bash
 tree models
 models
 ├── codellama
