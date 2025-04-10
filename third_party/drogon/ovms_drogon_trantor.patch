@@ -279,7 +279,7 @@ index 2aff5a0..145f9eb 100755
  }
  int Socket::accept(InetAddress *peeraddr)
 diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-index 6a75707..337c95f 100644
+index 6a75707..c45f550 100644
 --- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
 +++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
 @@ -384,6 +384,7 @@ void TcpConnectionImpl::sendInLoop(const void *buffer, size_t length)
@@ -335,7 +335,7 @@ index 6a75707..337c95f 100644
          {
              if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
                  node->remainingBytes() == 0)
-+            if (false)
++            //if (false)
              {
                  auto nWritten = writeInLoop(data, len);
 +                LOG_ERROR << "Sent immediately " << nWritten << " bytes";
