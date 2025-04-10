@@ -40,6 +40,9 @@ Run `export_model.py` script to download and quantize the model:
 ```console
 python export_model.py text_generation --source_model microsoft/Phi-3.5-vision-instruct --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
 ```
+
+Note that by default, NPU sets limitation on the prompt length (which in VLM also include image tokens) to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
+
 > **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/SUPPORTED_MODELS.md#visual-language-models) with OpenVINO.
 
 You should have a model folder like below:
@@ -138,7 +141,8 @@ def convert_image(Image):
     return base64_image
 
 import requests
-payload = {"model": "microsoft/Phi-3.5-vision-instruct", 
+payload = {
+    "model": model_name, 
     "messages": [
         {
             "role": "user",
@@ -239,7 +243,7 @@ cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2_5-8B --endpoint /v3/chat/completions  --request-rate 1 --num-prompts 10 --trust-remote-code --max-concurrency 1
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model microsoft/Phi-3.5-vision-instruct --endpoint /v3/chat/completions --num-prompts 10 --trust-remote-code --max-concurrency 1
 
 ```
 
