@@ -40,6 +40,9 @@ Run `export_model.py` script to download and quantize the model:
 ```console
 python export_model.py text_generation --source_model microsoft/Phi-3.5-vision-instruct --target_device NPU --config_file_path models/config.json --model_repository_path models  --overwrite_models
 ```
+
+Note that by default, NPU sets limitation on the prompt length (which in VLM also include image tokens) to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
+
 > **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/SUPPORTED_MODELS.md#visual-language-models) with OpenVINO.
 
 You should have a model folder like below:

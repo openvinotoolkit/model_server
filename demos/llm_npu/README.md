@@ -72,7 +72,9 @@ models
         └── tokenizer.json
 ```
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. 
+Note that by default, NPU sets limitation on the prompt length to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
+Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
