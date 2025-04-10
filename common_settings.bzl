@@ -130,7 +130,9 @@ COMMON_STATIC_LIBS_COPTS = select({
                     "-Wno-unknown-pragmas", 
                     "-Wno-sign-compare",
                     "-fvisibility=hidden", # Needed for pybind targets
-                    "-Werror",
+                    "-Werror", 
+                    # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
+                    "-Wno-deprecated-declarations",
                 ],
                 "//src:windows" : [
                         "/W4",
