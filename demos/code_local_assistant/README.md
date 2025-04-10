@@ -33,7 +33,7 @@ Since we do not want to wait for the code to appear, we need to use smaller mode
 Code completion works in non-streaming, unary mode. Do not use instruct model, there is no chat involved in the process.
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
-```baconsolesh
+```console
 python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
 ```
 
@@ -100,7 +100,7 @@ Run OpenVINO Model Server with both models loaded at the same time:
 ### Windows: deploying on bare metal
 Please refer to OpenVINO Model Server installation first: [link](../../docs/deploying_server_baremetal.md)
 
-```console
+```bat
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 
