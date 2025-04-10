@@ -106,7 +106,8 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 
 ### Linux: via Docker
 ```bash
-docker run -d --rm -v $(pwd)/:/workspace/ -p 8000:8000 openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 
 ## Set Up Visual Studio Code
