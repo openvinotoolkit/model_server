@@ -77,8 +77,8 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_INFO("Fail in Calculator::Process()");
-        return absl::InvalidArgumentError("Response generation failed");
+        //SPDLOG_INFO("Fail in Calculator::Process()");
+        //return absl::InvalidArgumentError("Response generation failed");
 
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();

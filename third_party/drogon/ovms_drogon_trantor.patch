@@ -1,5 +1,5 @@
 diff --git a/lib/inc/drogon/HttpResponse.h b/lib/inc/drogon/HttpResponse.h
-index 620577e5..7e0020c1 100644
+index 620577e5..3c9fe52c 100644
 --- a/lib/inc/drogon/HttpResponse.h
 +++ b/lib/inc/drogon/HttpResponse.h
 @@ -74,8 +74,8 @@ inline HttpResponsePtr toResponse<Json::Value &>(Json::Value &pJson)
@@ -50,7 +50,7 @@ index 620577e5..7e0020c1 100644
          return body();
      }
  
-+    virtual std:string renderHeaderToString() = 0;
++    virtual std::string renderHeaderToString() = 0;
 +
      /// Return the string of http version of request, such as HTTP/1.0,
      /// HTTP/1.1, etc.
@@ -85,14 +85,14 @@ index 623d906a..bd61837d 100644
      {
          // go daemon!
 diff --git a/lib/src/HttpResponseImpl.cc b/lib/src/HttpResponseImpl.cc
-index 5e9e46f1..2e511ca4 100644
+index 5e9e46f1..533d3581 100644
 --- a/lib/src/HttpResponseImpl.cc
 +++ b/lib/src/HttpResponseImpl.cc
 @@ -726,6 +726,12 @@ std::shared_ptr<trantor::MsgBuffer> HttpResponseImpl::renderToBuffer()
      return httpString;
  }
  
-+std::string HttpResponseImpl::renderHeaderToString() override
++std::string HttpResponseImpl::renderHeaderToString()
 +{
 +    auto msg = this->renderToBuffer();
 +    return std::string(msg->peek(), msg->readableBytes());
@@ -279,7 +279,7 @@ index 2aff5a0..145f9eb 100755
  }
  int Socket::accept(InetAddress *peeraddr)
 diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-index 6a75707..a82f70d 100644
+index 6a75707..337c95f 100644
 --- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
 +++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
 @@ -384,6 +384,7 @@ void TcpConnectionImpl::sendInLoop(const void *buffer, size_t length)
@@ -323,7 +323,7 @@ index 6a75707..a82f70d 100644
      // TODO: Abstract this away to support io_uring (and IOCP?)
  #ifndef _WIN32
      int nWritten = write(socketPtr_->fd(), buffer, length);
-@@ -969,15 +975,18 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
+@@ -969,6 +975,7 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
                                              const char *data,
                                              size_t len)
  {
@@ -331,12 +331,10 @@ index 6a75707..a82f70d 100644
      loop_->assertInLoopThread();
      if (data)
      {
-         if (len > 0)
+@@ -976,8 +983,10 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
          {
--            if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
--                node->remainingBytes() == 0)
-+            //if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
-+            //    node->remainingBytes() == 0)
+             if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
+                 node->remainingBytes() == 0)
 +            if (false)
              {
                  auto nWritten = writeInLoop(data, len);
