@@ -4,7 +4,7 @@
 --pre
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git@8fa4ebd9fb45349b16334a38409a4cfb40c2bc68
 openvino-tokenizers[transformers]<=2025.2.0.0.dev20250403
-openvino==2025.1.0rc3
+openvino<=2025.2.0.dev20250409
 nncf>=2.11.0 
 sentence_transformers==3.1.1 
 openai 

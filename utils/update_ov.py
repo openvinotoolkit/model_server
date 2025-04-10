@@ -147,7 +147,7 @@ def update_openvino():
         model_export_requirements_content = file.readlines()
     new_model_export_requirements_content = []
     for line in model_export_requirements_content:
-        if "openvino<=" in line:
+        if "openvino<=" in line or "openvino==" in line:
             print("Updating openvino in requirements.txt")
             new_line = f"openvino<={package_version}\n"
             print(new_line)
