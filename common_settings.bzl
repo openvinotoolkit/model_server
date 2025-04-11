@@ -156,6 +156,7 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/wd4297",
                         "/wd4702",
                         "/wd4267",
+                        "/wd4996",
                     ],
                 })
 
@@ -173,6 +174,7 @@ COMMON_STATIC_TEST_COPTS = select({
                 "//src:windows" : [
                         "-W0",
                         "-Isrc",
+                        "/wd4996",
                     ],
                 })
 

@@ -118,7 +118,6 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
     if (cbExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Relevant properties read");
     // Streaming scenario
     // Each iteration is single execution of Process() method in the calculator
     if (cbExecutionContext->generationHandle->get_status() == ov::genai::GenerationStatus::STOP) {
