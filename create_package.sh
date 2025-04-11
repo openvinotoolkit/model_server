@@ -70,6 +70,11 @@ patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf  --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
 
+wget https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/git-lfs-linux-arm64-v3.6.1.tar.gz
+tar -xf git-lfs-linux-arm64-v3.6.1.tar.gz
+cp git-lfs-3.6.1/git-lfs .
+rm -rf *-3.6.1*
+
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
 cp -v /ovms/release_files/metadata.json /ovms_release/
