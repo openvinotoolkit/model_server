@@ -91,7 +91,7 @@ config_setting(
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**"]),
+    srcs = glob(["**"], exclude = ["tests/**"]),
     visibility = ["//visibility:public"],
 )
 
