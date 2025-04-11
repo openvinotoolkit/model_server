@@ -56,7 +56,7 @@ index 620577e5..3c9fe52c 100644
      /// HTTP/1.1, etc.
      virtual const char *versionString() const = 0;
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 623d906a..bd61837d 100644
+index 4c49c259..058203c8 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
@@ -115,10 +115,10 @@ index d6b949c8..fadb6e8b 100644
      {
          cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 257976b1..c4ca314a 100644
+index 51506f95..a1d96d12 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -965,18 +965,32 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -971,24 +971,43 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
      auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
      if (!isHeadMethod)
      {
@@ -155,7 +155,18 @@ index 257976b1..c4ca314a 100644
              }
              else
              {
-@@ -1056,11 +1070,16 @@ void HttpServer::sendResponses(
+                 LOG_INFO << "Chunking Set CloseConnection !!!";
+             }
+         }
++        else
++        {
++            auto httpString = respImplPtr->renderToBuffer();
++            conn->send(httpString);
++        }
+         auto &streamCallback = respImplPtr->streamCallback();
+         const std::string &sendfileName = respImplPtr->sendfileName();
+         if (streamCallback || !sendfileName.empty())
+@@ -1062,11 +1081,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();

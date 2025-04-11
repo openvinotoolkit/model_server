@@ -29,10 +29,10 @@ void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, 
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
     if (!began) {
-        //std::string d = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\ntransfer-encoding: chunked\r\ncache-control: no-cache\r\nconnection: keep-alive\r\n\r\n";
+        // std::string d = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\ntransfer-encoding: chunked\r\ncache-control: no-cache\r\nconnection: keep-alive\r\n\r\n";
         this->responsePtr->setCustomStatusCode(int(status));
-        //auto msg = this->responsePtr->renderToBuffer();
-        //std::string d = std::string(msg->peek(), msg->readableBytes());
+        // auto msg = this->responsePtr->renderToBuffer();
+        // std::string d = std::string(msg->peek(), msg->readableBytes());
         this->stream->sendHeader(this->responsePtr->renderHeaderToString());
 
         began = true;
