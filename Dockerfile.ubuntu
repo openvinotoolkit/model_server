@@ -259,8 +259,8 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make && cp libcustom_relu_cpu_extension.so /opt
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.1.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.1' > /opt/intel/openvino/python/openvino-2025.1.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.2' > /opt/intel/openvino/python/openvino-2025.2.dist-info/METADATA
 
 WORKDIR /ovms
 

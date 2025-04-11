@@ -27,8 +27,8 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2510 ; ln -s libopenvino_genai.so.2025.1.0.0 libopenvino_genai.so.2510 ; fi
-if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so.* ; ln -s libopenvino_genai_c.so libopenvino_genai_c.so.2510 ; ln -s libopenvino_genai_c.so.2025.1.0.0 libopenvino_genai_c.so.2510 ; fi
+if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2520 ; ln -s libopenvino_genai.so.2025.2.0.0 libopenvino_genai.so.2520 ; fi
+if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so.* ; ln -s libopenvino_genai_c.so libopenvino_genai_c.so.2520 ; ln -s libopenvino_genai_c.so.2025.2.0.0 libopenvino_genai_c.so.2520 ; fi
 rm -f /ovms_release/lib/libssl.so
 
 # Remove coverage libraries
