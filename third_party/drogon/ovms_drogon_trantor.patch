@@ -1,5 +1,5 @@
 diff --git a/lib/inc/drogon/HttpResponse.h b/lib/inc/drogon/HttpResponse.h
-index 620577e5..3c9fe52c 100644
+index 620577e5..30798b59 100644
 --- a/lib/inc/drogon/HttpResponse.h
 +++ b/lib/inc/drogon/HttpResponse.h
 @@ -74,8 +74,8 @@ inline HttpResponsePtr toResponse<Json::Value &>(Json::Value &pJson)
@@ -25,20 +25,7 @@ index 620577e5..3c9fe52c 100644
      bool send(const std::string &data)
      {
          if (!asyncStream_)
-@@ -93,7 +98,11 @@ class DROGON_EXPORT ResponseStream
-         std::ostringstream oss;
-         oss << std::hex << data.length() << "\r\n";
-         oss << data << "\r\n";
--        return asyncStream_->send(oss.str());
-+
-+        std::string sss = oss.str();
-+        LOG_ERROR << "Sending Partial: [" << sss << "]";
-+
-+        return asyncStream_->send(sss);
-     }
- 
-     void close()
-@@ -109,6 +118,7 @@ class DROGON_EXPORT ResponseStream
+@@ -109,6 +114,7 @@ class DROGON_EXPORT ResponseStream
  
    private:
      trantor::AsyncStreamPtr asyncStream_;
@@ -46,7 +33,7 @@ index 620577e5..3c9fe52c 100644
  };
  
  using ResponseStreamPtr = std::unique_ptr<ResponseStream>;
-@@ -315,6 +325,8 @@ class DROGON_EXPORT HttpResponse
+@@ -315,6 +321,8 @@ class DROGON_EXPORT HttpResponse
          return body();
      }
  
@@ -115,18 +102,19 @@ index d6b949c8..fadb6e8b 100644
      {
          cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..a1d96d12 100644
+index 51506f95..6c99cb54 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -971,24 +971,43 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -971,24 +971,37 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
      auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
      if (!isHeadMethod)
      {
 -        auto httpString = respImplPtr->renderToBuffer();
 -        conn->send(httpString);
++        // It used to send http response header before we even have any streaming response or http status
++        // It is moved to ResponseStream API
 +        // auto httpString = respImplPtr->renderToBuffer();
 +        // conn->send(httpString);
-+        // LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
 +        
          if (!respImplPtr->contentLengthIsAllowed())
              return;
@@ -143,15 +131,7 @@ index 51506f95..a1d96d12 100644
                  asyncStreamCallback(
                      std::make_unique<ResponseStream>(conn->sendAsyncStream(
 -                        respImplPtr->asyncStreamKickoffDisabled())));
-+                        respImplPtr->asyncStreamKickoffDisabled()),
-+                        conn));
-+                LOG_ERROR << "Finished calling asyncStreamCallback";
-+
-+                //auto httpString = respImplPtr->renderToBuffer();
-+                //conn->send(httpString);
-+                //LOG_ERROR << "Sending Heander With Status Code: [" << std::string(httpString->peek(), httpString->readableBytes()) << "]";
-+        
-+
++                        respImplPtr->asyncStreamKickoffDisabled()), conn));
              }
              else
              {
@@ -160,13 +140,14 @@ index 51506f95..a1d96d12 100644
          }
 +        else
 +        {
++            // This is called for non-streaming scenarios, we do not need to delay
 +            auto httpString = respImplPtr->renderToBuffer();
 +            conn->send(httpString);
 +        }
          auto &streamCallback = respImplPtr->streamCallback();
          const std::string &sendfileName = respImplPtr->sendfileName();
          if (streamCallback || !sendfileName.empty())
-@@ -1062,11 +1081,16 @@ void HttpServer::sendResponses(
+@@ -1062,11 +1075,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -290,80 +271,18 @@ index 2aff5a0..145f9eb 100755
  }
  int Socket::accept(InetAddress *peeraddr)
 diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-index 6a75707..c45f550 100644
+index 6a75707..fafafdd 100644
 --- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
 +++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-@@ -384,6 +384,7 @@ void TcpConnectionImpl::sendInLoop(const void *buffer, size_t length)
- void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
- #endif
- {
-+    LOG_ERROR << "Sending in loop: [" << std::string((const char*)buffer, length) << "]";
-     loop_->assertInLoopThread();
-     if (status_ != ConnStatus::Connected)
-     {
-@@ -391,7 +392,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+@@ -391,7 +391,10 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
          return;
      }
      ssize_t sendLen = 0;
 -    if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
-+    LOG_ERROR << "Is Writing? " << ioChannelPtr_->isWriting() << " IsWriteBufferListEmpty " << writeBufferList_.size();
++
++    // Always send directly to avoid order issue: streaming response before unary one
 +    //if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
 +    if (true)
      {
          // send directly
          sendLen = writeInLoop(buffer, length);
-@@ -407,11 +410,13 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
-         if (writeBufferList_.empty() || writeBufferList_.back()->isFile() ||
-             writeBufferList_.back()->isStream())
-         {
-+            LOG_ERROR << "Pushing back new mem buffer node";
-             writeBufferList_.push_back(BufferNode::newMemBufferNode());
-         }
-         writeBufferList_.back()->append(static_cast<const char *>(buffer) +
-                                             sendLen,
-                                         length);
-+        LOG_ERROR << "Appended " << length << " bytes to write node";
-         if (highWaterMarkCallback_ &&
-             writeBufferList_.back()->remainingBytes() >
-                 static_cast<long long>(highWaterMarkLen_))
-@@ -731,6 +736,7 @@ ssize_t TcpConnectionImpl::writeRaw(const void *buffer, size_t length)
- ssize_t TcpConnectionImpl::writeRaw(const char *buffer, size_t length)
- #endif
- {
-+    LOG_ERROR << "WriteRaw: [" << std::string((const char*)buffer, length) << "]";
-     // TODO: Abstract this away to support io_uring (and IOCP?)
- #ifndef _WIN32
-     int nWritten = write(socketPtr_->fd(), buffer, length);
-@@ -969,6 +975,7 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
-                                             const char *data,
-                                             size_t len)
- {
-+    LOG_ERROR << "Sending async data in a loop: [" << std::string(data, len) << "]";
-     loop_->assertInLoopThread();
-     if (data)
-     {
-@@ -976,8 +983,10 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
-         {
-             if (!writeBufferList_.empty() && node == writeBufferList_.front() &&
-                 node->remainingBytes() == 0)
-+            //if (false)
-             {
-                 auto nWritten = writeInLoop(data, len);
-+                LOG_ERROR << "Sent immediately " << nWritten << " bytes";
-                 if (nWritten < 0)
-                 {
-                     LOG_TRACE << "write error";
-@@ -985,11 +994,13 @@ void TcpConnectionImpl::sendAsyncDataInLoop(const BufferNodePtr &node,
-                 }
-                 if (static_cast<size_t>(nWritten) < len)
-                 {
-+                    LOG_ERROR << "Appending " << len - nWritten << " bytes to write buffer";
-                     node->append(data + nWritten, len - nWritten);
-                 }
-             }
-             else
-             {
-+                LOG_ERROR << "Appending " << len << " bytes to write buffer";
-                 node->append(data, len);
-             }
-         }
