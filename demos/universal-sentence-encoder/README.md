@@ -17,7 +17,7 @@ chmod -R 755 universal-sentence-encoder-multilingual
 ```
 
 The model setup should look like this
-```console
+```bash
 tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
