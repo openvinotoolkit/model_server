@@ -275,7 +275,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, bool isPromptLookupPipeline, std::optional<uint32_t> maxModelLength) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
@@ -495,13 +495,15 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         request.numReturnSequences = it->value.GetUint();
     }
 
-    // Speculative decoding specific parameters
+    // Assisted decoding specific parameters
 
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
+    auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
+    bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
 
     if (isSpeculativePipeline) {
         if (!numAssistantTokensItHasValue && !assistantConfidenceThresholdItHasValue)
@@ -509,8 +511,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
 
         if (numAssistantTokensItHasValue && assistantConfidenceThresholdItHasValue)
             return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
-    } else if (numAssistantTokensItHasValue || assistantConfidenceThresholdItHasValue) {
-        return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
+    } else if (assistantConfidenceThresholdItHasValue) {
+        return absl::InvalidArgumentError("assistant_confidence_threshold is only supported when speculative decoding is enabled.");
+    }
+
+    if (isPromptLookupPipeline) {
+        if (!numAssistantTokensItHasValue || !maxNgramSizeItHasValue) {
+            return absl::InvalidArgumentError("Prompt lookup requires num_assistant_tokens and max_ngram_size to be set.");
+        }
     }
     // num_assistant_tokens: uint;
     if (numAssistantTokensItHasValue) {
@@ -528,6 +536,14 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         if (request.assistantConfidenceThreshold <= 0.0) {
             return absl::InvalidArgumentError("assistant_confidence_threshold must be greater than 0");
         }
+    }
+
+    // max_ngram_size: uint; optional - defaults to 0
+    if (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull()) {
+        if (!maxNgramSizeIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
+            return absl::InvalidArgumentError("max_ngram_size must be an unsigned integer greater than 0");
+        }
+        request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
     request.maxModelLength = maxModelLength;
 
@@ -573,8 +589,8 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
-    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength);
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, bool isPromptLookupPipeline, std::optional<uint32_t> maxModelLength) {
+    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, isPromptLookupPipeline, maxModelLength);
 
     if (status != absl::OkStatus())
         return status;

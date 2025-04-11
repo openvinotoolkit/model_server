@@ -82,7 +82,9 @@ struct GenAiServableProperties {
     // Sampling limits
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit;
-    bool isSpeculativePipeline;  // sampling is generally common, but maybe we could avoid having this field at all
+    // TODO (mzegla): perhaps we can remove below bools and rely on GenAI logic entirely
+    bool isSpeculativePipeline;   // sampling is generally common, but maybe we could avoid having this field at all
+    bool isPromptLookupPipeline;  // prompt lookup is generally common, but maybe we could avoid having this field at all
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     TextProcessor textProcessor;

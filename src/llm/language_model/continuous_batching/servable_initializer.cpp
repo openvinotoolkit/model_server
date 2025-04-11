@@ -40,16 +40,6 @@
 
 namespace ovms {
 
-ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfigExperimental(const mediapipe::LLMCalculatorOptions_PipelineConfig& draftPipelineConfig) {
-    ov::genai::SchedulerConfig config;
-    config.max_num_batched_tokens = draftPipelineConfig.max_num_batched_tokens();
-    config.cache_size = draftPipelineConfig.cache_size();
-    config.dynamic_split_fuse = draftPipelineConfig.dynamic_split_fuse();
-    config.max_num_seqs = draftPipelineConfig.max_num_seqs();
-    config.enable_prefix_caching = draftPipelineConfig.enable_prefix_caching();
-    return config;
-}
-
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
     ov::genai::SchedulerConfig config;
     config.max_num_batched_tokens = nodeOptions.has_draft_max_num_batched_tokens() ? nodeOptions.draft_max_num_batched_tokens() : nodeOptions.max_num_batched_tokens();
@@ -58,72 +48,6 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     config.max_num_seqs = nodeOptions.has_draft_max_num_seqs() ? nodeOptions.draft_max_num_seqs() : nodeOptions.max_num_seqs();
     config.enable_prefix_caching = nodeOptions.enable_prefix_caching();
     return config;
-}
-
-Status ContinuousBatchingServableInitializer::initializeExperimental(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
-    auto continousBatchingPipelineConfig = nodeOptions.continuous_batching_pipeline_config();
-    auto mainPipelineConfig = continousBatchingPipelineConfig.main_pipeline_config();
-    std::string parsedModelsPath;
-    auto status = parseModelsPath(parsedModelsPath, mainPipelineConfig.models_path(), graphPath);
-    if (!status.ok()) {
-        return status;
-    }
-    auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
-    properties->modelsPath = parsedModelsPath;
-
-    properties->schedulerConfig.max_num_batched_tokens = mainPipelineConfig.max_num_batched_tokens();
-    properties->schedulerConfig.cache_size = mainPipelineConfig.cache_size();
-    properties->schedulerConfig.dynamic_split_fuse = mainPipelineConfig.dynamic_split_fuse();
-    properties->schedulerConfig.max_num_seqs = mainPipelineConfig.max_num_seqs();
-    properties->schedulerConfig.enable_prefix_caching = mainPipelineConfig.enable_prefix_caching();
-
-    properties->device = mainPipelineConfig.device();
-
-    // Speculative decoding enabled
-    properties->isSpeculativePipeline = false;
-    if (continousBatchingPipelineConfig.has_draft_pipeline_config()) {
-        auto draftPipelineConfig = continousBatchingPipelineConfig.draft_pipeline_config();
-        auto fsDraftModelsPath = std::filesystem::path(draftPipelineConfig.models_path());
-        std::string draftPipelinePath;
-        if (fsDraftModelsPath.is_relative()) {
-            draftPipelinePath = (std::filesystem::path(graphPath) / fsDraftModelsPath).string();
-        } else {
-            draftPipelinePath = fsDraftModelsPath.string();
-        }
-        auto draftSchedulerConfig = prepareDraftPipelineSchedulerConfigExperimental(draftPipelineConfig);
-        auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftPipelineConfig.device(), ov::genai::scheduler_config(draftSchedulerConfig));
-        properties->pluginConfig.insert(draftPipeline);
-        properties->isSpeculativePipeline = true;
-    }
-
-    status = JsonParser::parsePluginConfig(mainPipelineConfig.plugin_config(), properties->pluginConfig);
-    if (!status.ok()) {
-        SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", mainPipelineConfig.plugin_config());
-        return status;
-    }
-
-    properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
-    try {
-        properties->pipeline = std::make_shared<ov::genai::ContinuousBatchingPipeline>(parsedModelsPath,
-            properties->schedulerConfig, properties->device,
-            properties->pluginConfig, properties->tokenizerPluginConfig);
-        properties->tokenizer = properties->pipeline->get_tokenizer();
-    } catch (const std::exception& e) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
-        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-    } catch (...) {
-        SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
-        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-    }
-
-    loadTextProcessor(properties, parsedModelsPath);
-    if (nodeOptions.has_max_tokens_limit()) {
-        properties->maxTokensLimit = nodeOptions.max_tokens_limit();
-    }
-    properties->bestOfLimit = mainPipelineConfig.best_of_limit();
-
-    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
-    return StatusCode::OK;
 }
 
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -173,6 +97,20 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
     }
+
+    std::cout << "Checking if prompt lookup is enabled" << std::endl;
+    // Check if prompt lookup is enabled
+    auto promptLookupPropertyIt = properties->pluginConfig.find("prompt_lookup");
+    if (promptLookupPropertyIt != properties->pluginConfig.end()) {
+        auto promptLookupProperty = promptLookupPropertyIt->second.as<bool>();
+        if (promptLookupProperty == true) {
+            properties->isPromptLookupPipeline = true;
+        } else {
+            properties->isPromptLookupPipeline = false;
+        }
+    }
+
+    std::cout << "properties->isPromptLookupPipeline: " << properties->isPromptLookupPipeline << std::endl;
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {

@@ -214,7 +214,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
-    if (nodeOptions.has_models_path()) {  // Stable initialization
+    if (nodeOptions.has_models_path()) {
         // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
         PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
@@ -262,22 +262,12 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             return StatusCode::INTERNAL_ERROR;
         }
     } else {
-        if (nodeOptions.has_continuous_batching_pipeline_config()) {  // Experimental initialization
-            ContinuousBatchingServableInitializer cbServableInitializer;
-            servable = std::make_shared<ContinuousBatchingServable>();
-            status = cbServableInitializer.initializeExperimental(servable, nodeOptions, graphPath);
-        } else {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
-            return StatusCode::INTERNAL_ERROR;
-        }
-
-        if (status != StatusCode::OK) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
-            return status;
-        }
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node requires models_path to be set.");
+        return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
 }
+
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
     std::optional<uint32_t> maxModelLength;

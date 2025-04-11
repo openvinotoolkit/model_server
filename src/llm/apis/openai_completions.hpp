@@ -95,9 +95,10 @@ struct OpenAIChatCompletionsRequest {
     std::optional<int> bestOf{std::nullopt};
     std::optional<float> lengthPenalty{std::nullopt};
 
-    // Speculative decoding specific (only with speculative decoding pipeline, see <docs> for reference)
+    // Assisted decoding specific (only with speculative decoding or prompt lookup pipeline)
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
+    std::optional<int> maxNgramSize{std::nullopt};
 
     std::optional<uint32_t> maxModelLength;
 
@@ -157,11 +158,13 @@ struct OpenAIChatCompletionsRequest {
 
         if (logprobschat || logprobs)
             config.logprobs = 1;
-        // Speculative decoding specific
+        // Assisted decoding specific
         if (numAssistantTokens.has_value())
             config.num_assistant_tokens = numAssistantTokens.value();
         if (assistantConfidenceThreshold.has_value())
             config.assistant_confidence_threshold = assistantConfidenceThreshold.value();
+        if (maxNgramSize.has_value())
+            config.max_ngram_size = maxNgramSize.value();
 
         return config;
     }
@@ -180,7 +183,7 @@ class OpenAIChatCompletionsHandler {
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
-    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
+    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, bool isPromptLookupPipeline, std::optional<uint32_t> maxModelLength);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -208,7 +211,7 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, bool isPromptLookupPipeline, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
