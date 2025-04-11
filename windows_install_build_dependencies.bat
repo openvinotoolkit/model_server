@@ -38,9 +38,9 @@ IF "%2"=="1" (
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
-:: Python 39 needs to be first in the windows path, as well as MSYS tools
+:: Python 311 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
-
+set "PYTHONHOME=C:\opt\Python311"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
@@ -247,6 +247,51 @@ IF /I EXIST %bazel_path% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
+
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git-lfs - reinstalled per worker
+set "gitlfs_dir=git-lfs-3.6.1"
+set "gitlfs_short_dir="
+set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
+set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
+
+set "gitlfs_zip=%BAZEL_SHORT_PATH%\%gitlfs_ver%"
+
+echo [INFO] Installing git-lfs: %gitlfs_dir% ...
+:: Download git-lfs
+IF /I EXIST %gitlfs_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %gitlfs_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %gitlfs_http%%gitlfs_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %gitlfs_zip% )
+    
+) ELSE (
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %gitlfs_http%%gitlfs_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract git-lfs
+IF /I EXIST %BAZEL_SHORT_PATH%\%gitlfs_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %BAZEL_SHORT_PATH%\%gitlfs_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %BAZEL_SHORT_PATH%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%gitlfs_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %BAZEL_SHORT_PATH%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Create git-lfs link - always to make sure it points to latest version
+IF /I EXIST %BAZEL_SHORT_PATH%\git-lfs.exe (
+    del /S /Q %BAZEL_SHORT_PATH%\git-lfs.exe
+)
+mklink %BAZEL_SHORT_PATH%\git-lfs.exe %BAZEL_SHORT_PATH%\%gitlfs_dir%\git-lfs.exe
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
 set "python_version=3.11.9"
