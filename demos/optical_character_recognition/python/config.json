@@ -12,7 +12,6 @@
         {
             "config": {
                 "name": "text-recognition",
-                "layout": "NHWC:NCHW",
                 "base_path": "/OCR/text-recognition"
             }
         }
@@ -52,12 +51,12 @@
                         "original_image_width": "1920",
                         "original_image_height": "1024",
                         "original_image_layout": "NHWC",
-                        "target_image_width": "128",
+                        "target_image_width": "120",
                         "target_image_height": "32",
                         "target_image_layout": "NHWC",
                         "convert_to_gray_scale": "true",
                         "confidence_threshold": "0.9",
-                        "overlap_threshold": "0.2",
+                        "overlap_threshold": "0.1",
                         "max_output_batch": "100",
                         "box_width_adjustment": "0.1",
                         "box_height_adjustment": "0.0",
@@ -86,11 +85,11 @@
                     "model_name": "text-recognition",
                     "type": "DL model",
                     "inputs": [
-                        {"imgs": {"node_name": "extract_node",
+                        {"Placeholder": {"node_name": "extract_node",
                             "data_item": "text_images"}}
                     ],
                     "outputs": [
-                        {"data_item": "logits",
+                        {"data_item": "shadow/LSTMLayers/transpose_time_major",
                             "alias": "texts"}
                     ]
                 }

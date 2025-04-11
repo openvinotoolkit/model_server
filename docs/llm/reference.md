@@ -200,7 +200,6 @@ Errors during configuration files processing (access issue, corrupted file, inco
 There are several known limitations which are expected to be addressed in the coming releases:
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md)
-- Multi modal models are not supported yet. Images can't be sent now as the context.
 - `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
 - Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version.
 
@@ -210,10 +209,14 @@ Some servable types introduce additional limitations:
 - `finish_reason` not supported (always set to `stop`),
 - `logprobs` not supported,
 - sequential request processing (only one request is handled at a time)
+- only a single response can be returned. Parameter `n` is not supported.
+- **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
+- **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
 - `image_url` input supports only base64 encoded image, not an actual URL
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
