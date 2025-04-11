@@ -256,7 +256,7 @@ set "gitlfs_short_dir="
 set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
 set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
 
-set "gitlfs_zip=%BAZEL_SHORT_PATH%\%gitlfs_ver%"
+set "gitlfs_zip=%opt_install_dir%\%gitlfs_ver%"
 
 echo [INFO] Installing git-lfs: %gitlfs_dir% ...
 :: Download git-lfs
@@ -264,32 +264,32 @@ IF /I EXIST %gitlfs_zip% (
     if %expunge% EQU 1 (
         del /S /Q %gitlfs_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %gitlfs_http%%gitlfs_ver%
+        %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %gitlfs_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %gitlfs_http%%gitlfs_ver%
+    %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract git-lfs
-IF /I EXIST %BAZEL_SHORT_PATH%\%gitlfs_dir% (
+IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
      if %expunge% EQU 1 (
-        rmdir /S /Q %BAZEL_SHORT_PATH%\%gitlfs_dir%
+        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %BAZEL_SHORT_PATH%
+        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %BAZEL_SHORT_PATH%\%gitlfs_dir% )
+    ) else ( echo [INFO] directory exists %opt_install_dir%\%gitlfs_dir% )
     
 ) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %BAZEL_SHORT_PATH%
+    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Create git-lfs link - always to make sure it points to latest version
-IF /I EXIST %BAZEL_SHORT_PATH%\git-lfs.exe (
-    del /S /Q %BAZEL_SHORT_PATH%\git-lfs.exe
+IF /I EXIST %opt_install_dir%\git-lfs.exe (
+    del /S /Q %opt_install_dir%\git-lfs.exe
 )
-mklink %BAZEL_SHORT_PATH%\git-lfs.exe %BAZEL_SHORT_PATH%\%gitlfs_dir%\git-lfs.exe
+mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
