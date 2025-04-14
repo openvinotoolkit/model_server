@@ -481,8 +481,10 @@ TEST(Server, CAPIAliveGrpcNotHttpNot) {
     requestServerAlive(portOldDefault.c_str(), grpc::StatusCode::UNAVAILABLE, false);
     requestRestServerAlive(typicalRestDefault.c_str(), httplib::StatusCode::NotFound_404, false);
 }
-TEST(Server, CAPIAliveGrpcNotHttpYes_TODO) {
-    GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon";  // TODO @dkalinow to enable drogon tests
+TEST(Server, CAPIAliveGrpcNotHttpYes_DROGON) {
+    if (!std::getenv("DROGON_RESTART")) {
+        GTEST_SKIP() << "Run with DROGON_RESTART to enable this test";
+    }
     std::string port = "9000";
     randomizeAndEnsureFree(port);
     char* argv[] = {
