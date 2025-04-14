@@ -32,7 +32,7 @@ usage: export_model.py text_generation [-h]
                                        [--config_file_path CONFIG_FILE_PATH]
                                        [--overwrite_models]
                                        [--target_device TARGET_DEVICE]
-                                       [--pipeline_type PIPELINE_TYPE]
+                                       [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}]
                                        [--kv_cache_precision {u8}]
                                        [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS]
                                        [--enable_prefix_caching]
@@ -42,6 +42,7 @@ usage: export_model.py text_generation [-h]
                                        [--cache_size CACHE_SIZE]
                                        [--draft_source_model DRAFT_SOURCE_MODEL]
                                        [--draft_model_name DRAFT_MODEL_NAME]
+                                       [--max_prompt_len MAX_PROMPT_LEN]
 
 options:
   -h, --help            show this help message and exit
@@ -60,10 +61,10 @@ options:
   --overwrite_models    Overwrite the model if it already exists in the models
                         repository
   --target_device TARGET_DEVICE
-                        CPU or GPU, default is CPU
-  --pipeline_type PIPELINE_TYPE
-                        Type of the pipeline to be used. Can be either TEXT_CB 
-                        or VLM_CB. When undefined, it will be autodetected
+                        CPU, GPU, NPU or HETERO, default is CPU
+  --pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}
+                        Type of the pipeline to be used. AUTO is used by
+                        default
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache
                         precision to u8 lowers the cache size consumption.
@@ -94,6 +95,10 @@ options:
                         deployment. Equal to draft_source_model if HF model
                         name is used. Available only in draft_source_model has
                         been specified.
+  --max_prompt_len MAX_PROMPT_LEN
+                        Sets NPU specific property for maximum number of
+                        tokens in the prompt. Not effective if target device
+                        is not NPU
 ```
 
 ## Examples how models can be exported
