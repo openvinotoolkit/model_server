@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "418a6710737bbcaa85556485a7b11b7bf206d4f1", # releases/2025/1 2025-04-04
+        commit = "4560c7d05ea54ea2e575c10a528ef2fa27fe09db", # master 2025-04-11
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -73,7 +73,7 @@ def _impl(repository_ctx):
         out_dll_dir_win = ""
         out_lib_dir = "out_lib_dir = \"runtime/lib/intel64\""
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so.2510\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.2520\"],".format(lib_name=lib_name)
         cache_entries = """
         "BUILD_SHARED_LIBS": "OFF",
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",

@@ -20,7 +20,7 @@ import subprocess
 
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
 VERSION_FILE = "src\\version.hpp"
-OVMS_PROJECT_VERSION="2025.1"
+OVMS_PROJECT_VERSION="2025.2"
 
 def help():
     print("Usage:\n\
