@@ -54,11 +54,11 @@ Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    ovms::HfDownloader hfDownloader;
+    ovms::HFSettingsImpl hfSettings;
     p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings, &hfDownloader);
+    p.prepare(&serverSettings, &modelsSettings, &hfSettings);
     // TODO: Validate Hf downloader
-    if (!this->parse(&serverSettings, &modelsSettings))
+    if (!this->parse(&serverSettings, &modelsSettings, &hfSettings))
 #ifdef __linux__
         exit(EX_USAGE);
 #elif _WIN32
@@ -67,9 +67,10 @@ Config& Config::parse(int argc, char** argv) {
     return *this;
 }
 
-bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, HFSettingsImpl* hfSettings) {
     this->serverSettings = *serverSettings;
     this->modelsSettings = *modelsSettings;
+    this->hfSettings = *hfSettings;
     return validate();
 }
 

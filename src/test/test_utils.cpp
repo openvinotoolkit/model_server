@@ -696,6 +696,21 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
+// --pull_hf_model --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --repo_path c:\download
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& repo_path, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull_hf_model",
+        (char*)"--source_model",
+        (char*)source_model.c_str(),
+        (char*)"--repo_path",
+        (char*)repo_path.c_str()};
+    int argc = 6;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+}
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);

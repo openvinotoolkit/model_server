@@ -46,10 +46,14 @@ private:
 protected:
     ModelsSettingsImpl modelsSettings;
     ServerSettingsImpl serverSettings;
+    HFSettingsImpl hfSettings;
 
 public:
     ServerSettingsImpl getServerSettings() {
         return serverSettings;
+    }
+    HFSettingsImpl& getHfSettings() {
+        return hfSettings;
     }
     ModelsSettingsImpl& getModelSettings() {
         return modelsSettings;
@@ -71,7 +75,7 @@ public:
          * @return Config& 
          */
     Config& parse(int argc, char** argv);
-    bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
+    bool parse(ServerSettingsImpl*, ModelsSettingsImpl*, HFSettingsImpl*);
 
     /**
          * @brief Validate passed arguments

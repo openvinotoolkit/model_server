@@ -20,6 +20,7 @@ const std::string PROFILER_MODULE_NAME = "ProfilerModule";
 const std::string GRPC_SERVER_MODULE_NAME = "GRPCServerModule";
 const std::string HTTP_SERVER_MODULE_NAME = "HTTPServerModule";
 const std::string SERVABLE_MANAGER_MODULE_NAME = "ServableManagerModule";
+const std::string HF_MODEL_PULL_MODULE_NAME = "HfModelPullsModule";
 const std::string METRICS_MODULE_NAME = "MetricsModule";
 const std::string PYTHON_INTERPRETER_MODULE_NAME = "PythonInterpreterModule";
 const std::string CAPI_MODULE_NAME = "C-APIModule";

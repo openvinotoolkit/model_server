@@ -54,6 +54,7 @@
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
+#include "hf_pull_model_module.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -251,6 +252,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<MetricModule>();
     if (name == CAPI_MODULE_NAME)
         return std::make_unique<CAPIModule>(*this);
+    if (name == HF_MODEL_PULL_MODULE_NAME)
+        return std::make_unique<HfPullModelModule>();
     return nullptr;
 }
 
@@ -293,6 +296,13 @@ Status Server::startModules(ovms::Config& config) {
     Status status;
     bool inserted = false;
     auto it = modules.end();
+
+    if (config.getHfSettings().pullHfModelMode) {
+        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+        START_MODULE(it);
+        return status;
+    }
+
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
         INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
@@ -384,16 +394,11 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-        HfDownloader hfDownloader;
+        HFSettingsImpl hfSettings;
         parser.parse(argc, argv);
-        parser.prepare(&serverSettings, &modelsSettings, &hfDownloader);
+        parser.prepare(&serverSettings, &modelsSettings, &hfSettings);
 
-        if (hfDownloader.isPullHfModelModeOn()) {
-            SPDLOG_INFO("OpenVino Model Server started in huggingface.co download mode.");
-            return hfDownloader.cloneRepository();
-        }
-
-        Status ret = start(&serverSettings, &modelsSettings);
+        Status ret = start(&serverSettings, &modelsSettings, &hfSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
@@ -414,7 +419,7 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, HFSettingsImpl* hfSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();
@@ -429,7 +434,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
         }
         lockModules.unlock();
         auto& config = ovms::Config::instance();
-        if (!config.parse(serverSettings, modelsSettings))
+        if (!config.parse(serverSettings, modelsSettings, hfSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);

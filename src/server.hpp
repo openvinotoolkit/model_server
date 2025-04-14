@@ -26,6 +26,7 @@
 namespace ovms {
 class Config;
 class Status;
+struct HFSettingsImpl;
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
 
@@ -41,7 +42,7 @@ protected:
 public:
     static Server& instance();
     int start(int argc, char** argv);
-    Status start(ServerSettingsImpl*, ModelsSettingsImpl*);
+    Status start(ServerSettingsImpl*, ModelsSettingsImpl*, HFSettingsImpl*);
     ModuleState getModuleState(const std::string& name) const;
     const Module* getModule(const std::string& name) const;
     bool isReady() const;

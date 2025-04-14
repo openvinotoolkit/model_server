@@ -181,11 +181,11 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     // Test config parser
     ConstructorEnabledConfig cfg;
 #ifdef __linux__
-    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, nullptr));
     EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
 #elif _WIN32
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 1));
-    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, nullptr));
     EXPECT_EQ(cfg.grpcWorkers(), 1);
 #endif
     EXPECT_EQ(cfg.port(), 5555);

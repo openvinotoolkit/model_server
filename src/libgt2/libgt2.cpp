@@ -233,6 +233,22 @@ HfDownloader::HfDownloader() {
     this->repoUrl = "";
 }
 
+HfDownloader::HfDownloader(const HfDownloader& hfDownloader) {
+    this->sourceModel = hfDownloader.sourceModel;
+    this->repoPath = hfDownloader.repoPath;
+    this->pullHfModelMode = hfDownloader.pullHfModelMode;
+    this->hfEndpoint = hfDownloader.hfEndpoint;
+    this->repoUrl = hfDownloader.repoUrl;
+}
+
+HfDownloader::HfDownloader(std::string& sourceModel, std::string& repoPath, bool pullHfModelMode) {
+    this->sourceModel = sourceModel;
+    this->repoPath = repoPath;
+    this->pullHfModelMode = pullHfModelMode;
+    this->hfEndpoint = "";
+    this->repoUrl = "";
+}
+
 int HfDownloader::cloneRepository() {
     std::unique_ptr<Libgt2InitGuard> initGuard = std::make_unique<Libgt2InitGuard>();
     if (initGuard->status < 0) {

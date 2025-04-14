@@ -66,4 +66,10 @@ struct ModelsSettingsImpl {
     std::string configPath;
 };
 
+struct HFSettingsImpl {
+    std::string sourceModel = "";
+    std::string repoPath = "";
+    bool pullHfModelMode = false;
+};
+
 }  // namespace ovms
