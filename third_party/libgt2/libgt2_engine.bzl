@@ -57,12 +57,12 @@ def _impl(repository_ctx):
         "X86_64": "True",
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
-        "BUILD_CLI": "ON"
+        "BUILD_CLI": "OFF"
         """
     else:
         lib_name = "libgit2"
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so\",\"{lib_name}.so.1.9\",\"{lib_name}.so.1.9.0\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so.1.9.0\"],".format(lib_name=lib_name)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
