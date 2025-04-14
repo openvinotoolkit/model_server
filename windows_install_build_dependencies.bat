@@ -285,9 +285,24 @@ IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
     C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+
+:: Check git-lfs.exe
+IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %opt_install_dir%\%gitlfs_dir%\git-lfs.exe )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 :: Create git-lfs link - always to make sure it points to latest version
 IF /I EXIST %opt_install_dir%\git-lfs.exe (
-    del /S /Q %opt_install_dir%\git-lfs.exe
+    del /Q %opt_install_dir%\git-lfs.exe
 )
 mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
 if !errorlevel! neq 0 exit /b !errorlevel!
