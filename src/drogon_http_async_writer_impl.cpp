@@ -55,7 +55,6 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
                 }
                 SPDLOG_DEBUG("DrogonHttpAsyncWriterImpl::PartialReplyBegin::Schedule end");
             });
-            SPDLOG_INFO("asyncStreamCallback end...");
         });
 
     // Convert headers to drogon format

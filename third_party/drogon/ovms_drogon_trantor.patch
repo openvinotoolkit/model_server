@@ -43,7 +43,7 @@ index 620577e5..30798b59 100644
      /// HTTP/1.1, etc.
      virtual const char *versionString() const = 0;
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 4c49c259..058203c8 100644
+index 623d906a..bd61837d 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
@@ -102,10 +102,10 @@ index d6b949c8..fadb6e8b 100644
      {
          cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..6c99cb54 100644
+index 257976b1..1d407514 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -971,24 +971,37 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -965,24 +965,36 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
      auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
      if (!isHeadMethod)
      {
@@ -127,7 +127,6 @@ index 51506f95..6c99cb54 100644
 +            //if (!respImplPtr->ifCloseConnection())
 +            if (true)
              {
-+                LOG_ERROR << "Calling asyncStreamCallback";
                  asyncStreamCallback(
                      std::make_unique<ResponseStream>(conn->sendAsyncStream(
 -                        respImplPtr->asyncStreamKickoffDisabled())));
@@ -147,7 +146,7 @@ index 51506f95..6c99cb54 100644
          auto &streamCallback = respImplPtr->streamCallback();
          const std::string &sendfileName = respImplPtr->sendfileName();
          if (streamCallback || !sendfileName.empty())
-@@ -1062,11 +1075,16 @@ void HttpServer::sendResponses(
+@@ -1056,11 +1068,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -271,10 +270,10 @@ index 2aff5a0..145f9eb 100755
  }
  int Socket::accept(InetAddress *peeraddr)
 diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-index 6a75707..fafafdd 100644
+index 6a75707..4b436b3 100644
 --- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
 +++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
-@@ -391,7 +391,10 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+@@ -391,7 +391,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
          return;
      }
      ssize_t sendLen = 0;
@@ -282,7 +281,6 @@ index 6a75707..fafafdd 100644
 +
 +    // Always send directly to avoid order issue: streaming response before unary one
 +    //if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
-+    if (true)
      {
          // send directly
          sendLen = writeInLoop(buffer, length);
