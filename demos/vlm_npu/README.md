@@ -11,7 +11,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**OVMS 2025.1**
+**OVMS 2025.1 or higher**
 
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
