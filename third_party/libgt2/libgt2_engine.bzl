@@ -62,7 +62,7 @@ def _impl(repository_ctx):
     else:
         lib_name = "libgit2"
         out_static = ""
-        out_libs = "out_shared_libs = [\"{lib_name}.so.1.9.0\"],".format(lib_name=lib_name)
+        out_libs = "out_shared_libs = [\"{lib_name}.so\"],".format(lib_name=lib_name)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
         "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
@@ -70,7 +70,7 @@ def _impl(repository_ctx):
         "CMAKE_INSTALL_LIBDIR": "lib",
         "BUILD_EXAMPLES": "OFF",
         "BUILD_TESTS": "OFF",
-        "BUILD_CLI": "OFF"
+        "BUILD_CLI": "OFF",
         """
 
     # Note that we need to escape '{/}' by doubling them due to call to format

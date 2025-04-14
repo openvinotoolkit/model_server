@@ -1,4 +1,4 @@
-commit 5871b7addf18e1b2270e3fa834ebc6392c136128
+commit 6f2dd11dc027fea06df949e215120c9926d05e56
 Author: rasapala <rafal.a.sapala@intel.com>
 Date:   Fri Mar 14 09:23:35 2025 +0100
 
@@ -56,6 +56,19 @@ index c18cb28d4..286fa7153 100644
  
  	if (!checkout)
  		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
+diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
+index a7d3c7ca4..f78a25e35 100644
+--- a/src/libgit2/CMakeLists.txt
++++ b/src/libgit2/CMakeLists.txt
+@@ -69,8 +69,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+ ide_split_sources(libgit2package)
+ 
+ if(SONAME)
+-	set_target_properties(libgit2package PROPERTIES VERSION ${libgit2_VERSION})
+-	set_target_properties(libgit2package PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+ 	if(LIBGIT2_FILENAME)
+ 		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+ 		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 diff --git a/src/libgit2/checkout.c b/src/libgit2/checkout.c
 index f4b1ea96f..d8d4dee35 100644
 --- a/src/libgit2/checkout.c
