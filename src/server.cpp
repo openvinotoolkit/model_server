@@ -300,6 +300,8 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getHfSettings().pullHfModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
+        ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
+        setShutdownRequest(1);
         return status;
     }
 

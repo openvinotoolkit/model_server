@@ -33,7 +33,9 @@ cc_library(
     hdrs = ["libgt2.hpp"],
     deps =  [
         "@libgt2_engine//:libgt2_engine",
-        "@ovms//src:libovmsstring_utils"
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

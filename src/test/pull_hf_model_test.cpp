@@ -25,22 +25,25 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& source_model) {
-        ::SetUpServerForDownload(this->t, this->server, source_model, directoryPath);
+    void ServerPullHfModel(std::string& sourceModel, std::string& repoPath) {
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, repoPath);
     }
     void TearDown() {
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
+        // Clone sets readonly - need to remove it before we can delete on windows
+        RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
     }
 };
 
 TEST_F(PullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    this->ServerPullHfModel(modelName);
-    std::string fullPath = ovms::FileSystem::appendSlash(this->directoryPath) + "openvino_model.bin";
-    ASSERT_EQ(std::filesystem::exists(fullPath), true);
-    ASSERT_EQ(std::filesystem::file_size(fullPath), 52417240);
+    std::string repoPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
+    this->ServerPullHfModel(modelName, repoPath);
+    std::string modelPath = ovms::FileSystem::appendSlash(repoPath) + "openvino_model.bin";
+    ASSERT_EQ(std::filesystem::exists(modelPath), true);
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
 }
 

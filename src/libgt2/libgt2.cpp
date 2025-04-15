@@ -28,6 +28,8 @@
 #include <sys/types.h>
 
 #include "../stringutils.hpp"
+#include "../logging.hpp"
+#include "../status.hpp"
 
 #ifndef PRIuZ
 /* Define the printf format specifier to use for size_t output */
@@ -145,26 +147,6 @@ int cred_acquire_cb(git_credential** out,
 }
 
 // C-style callback functions section used in libgt2 library ENDS ********************************
-
-class Libgt2InitGuard {
-public:
-    int status;
-    std::string errMsg;
-    Libgt2InitGuard() {
-        this->status = git_libgit2_init();
-        if (this->status < 0) {
-            const git_error* err = git_error_last();
-            const char* msg = err ? err->message : "unknown failure";
-            errMsg = std::string(msg);
-        } else {
-            errMsg = "";
-        }
-    }
-    ~Libgt2InitGuard() {
-        git_libgit2_shutdown();
-    }
-};
-
 void HfDownloader::setSourceModel(std::string inSourceModel) {
     this->sourceModel = inSourceModel;
 }
@@ -200,7 +182,7 @@ void HfDownloader::GetRepositoryUrlWithPassword(std::string& passRepoUrl) {
         std::string cred = std::string(envCred);
         passRepoUrl += cred + ":" + cred + "@";
     } else {
-        printf("Info: HF_TOKEN environment variable not set.\n");
+        SPDLOG_INFO("HF_TOKEN environment variable not set.");
     }
 
     passRepoUrl += this->hfEndpoint + this->sourceModel;
@@ -212,7 +194,7 @@ void HfDownloader::SetHfEndpoint() {
     if (envCred) {
         this->hfEndpoint = std::string(envCred);
     } else {
-        printf("Info: HF_ENDPOINT environment variable not set.\n");
+        SPDLOG_INFO("HF_ENDPOINT environment variable not set.");
     }
 
     if (!endsWith(this->hfEndpoint, "/")) {
@@ -241,7 +223,7 @@ HfDownloader::HfDownloader(const HfDownloader& hfDownloader) {
     this->repoUrl = hfDownloader.repoUrl;
 }
 
-HfDownloader::HfDownloader(std::string& sourceModel, std::string& repoPath, bool pullHfModelMode) {
+HfDownloader::HfDownloader(const std::string& sourceModel,const std::string& repoPath, bool pullHfModelMode) {
     this->sourceModel = sourceModel;
     this->repoPath = repoPath;
     this->pullHfModelMode = pullHfModelMode;
@@ -249,13 +231,21 @@ HfDownloader::HfDownloader(std::string& sourceModel, std::string& repoPath, bool
     this->repoUrl = "";
 }
 
-int HfDownloader::cloneRepository() {
-    std::unique_ptr<Libgt2InitGuard> initGuard = std::make_unique<Libgt2InitGuard>();
+Status HfDownloader::initLibGt2() {
+    initGuard = std::make_unique<Libgt2InitGuard>();
     if (initGuard->status < 0) {
-        fprintf(stderr, "Failed to init libgit2: %s\n", initGuard->errMsg.c_str());
-        return initGuard->status;
+        SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str()); 
+        return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
 
+    return StatusCode::OK;
+}
+
+void HfDownloader::shutdownLibGt2() {
+    initGuard.reset();
+}
+
+Status HfDownloader::cloneRepository() {
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -279,24 +269,25 @@ int HfDownloader::cloneRepository() {
 
     SetHfEndpoint();
     UpdateRepoUrl();
-    printf("Downloading from url: %s\n", this->repoUrl.c_str());
+    SPDLOG_INFO("Downloading from url: {}", this->repoUrl.c_str()); 
     std::string passRepoUrl;
     GetRepositoryUrlWithPassword(passRepoUrl);
     const char* url = passRepoUrl.c_str();
     const char* path = this->repoPath.c_str();
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
-    printf("\n");
     if (error != 0) {
         const git_error* err = git_error_last();
         if (err)
-            printf("ERROR %d: %s\n", err->klass, err->message);
+            SPDLOG_ERROR("Libgit2 clone error: {} message: {}", err->klass, err->message);
         else
-            printf("ERROR %d: no detailed info\n", error);
+            SPDLOG_ERROR("Libgit2 clone error: {}", error);
+
+        return StatusCode::HF_GIT_CLONE_FAILED;
     } else if (cloned_repo) {
         git_repository_free(cloned_repo);
     }
 
-    return error;
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

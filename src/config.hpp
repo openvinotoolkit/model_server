@@ -52,7 +52,7 @@ public:
     ServerSettingsImpl getServerSettings() {
         return serverSettings;
     }
-    HFSettingsImpl& getHfSettings() {
+    const HFSettingsImpl getHfSettings() const {
         return hfSettings;
     }
     ModelsSettingsImpl& getModelSettings() {

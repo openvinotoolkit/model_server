@@ -34,8 +34,18 @@ Status HfPullModelModule::start(const ovms::Config& config) {
 
     this->hfDownloader = std::make_unique<HfDownloader>(config.getHfSettings().sourceModel, config.getHfSettings().repoPath, config.getHfSettings().pullHfModelMode);
 
+    auto status = this->hfDownloader->initLibGt2();
+    if (!status.ok()) {
+        return status;
+    }
+
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HF_MODEL_PULL_MODULE_NAME);
+
+    status = this->hfDownloader->cloneRepository();
+    if (!status.ok()) {
+        return status;
+    }
 
     return StatusCode::OK;
 }
@@ -44,6 +54,7 @@ void HfPullModelModule::shutdown() {
         return;
     state = ModuleState::STARTED_SHUTDOWN;
     SPDLOG_INFO("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
+    this->hfDownloader->shutdownLibGt2();
     state = ModuleState::SHUTDOWN;
     SPDLOG_INFO("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
 }

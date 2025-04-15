@@ -16,6 +16,7 @@
 #ifndef SRC_LIBGT2_LIBGT2_HPP_
 #define SRC_LIBGT2_LIBGT2_HPP_
 #include <string>
+#include <memory>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -31,19 +32,43 @@ extern "C" {
 #endif
 
 namespace ovms {
+class Status;
+
+class Libgt2InitGuard {
+public:
+    int status;
+    std::string errMsg;
+    Libgt2InitGuard() {
+        this->status = git_libgit2_init();
+        if (this->status < 0) {
+            const git_error* err = git_error_last();
+            const char* msg = err ? err->message : "unknown failure";
+            errMsg = std::string(msg);
+        } else {
+            errMsg = "";
+        }
+    }
+    ~Libgt2InitGuard() {
+        git_libgit2_shutdown();
+		printf("git_libgit2_shutdown\n");
+    }
+};
 
 class HfDownloader {
 public:
     HfDownloader();
 	HfDownloader(const HfDownloader& hfDownloader);
-	HfDownloader(std::string& sourceModel, std::string& repoPath, bool pullHfModelMode);
-    int cloneRepository();
+	HfDownloader(const std::string& sourceModel,const std::string& repoPath, bool pullHfModelMode);
+    Status cloneRepository();
     void setSourceModel(std::string inSourceModel);
     void setRepositoryPath(std::string inRepoPath);
     void setPullHfModelMode(bool isOn);
     bool isPullHfModelModeOn();
+	Status initLibGt2();
+	void shutdownLibGt2();
 
 private:
+	std::unique_ptr<Libgt2InitGuard> initGuard;
     std::string sourceModel;
     std::string repoPath;
     bool pullHfModelMode;

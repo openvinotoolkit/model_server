@@ -57,7 +57,6 @@ Config& Config::parse(int argc, char** argv) {
     ovms::HFSettingsImpl hfSettings;
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings, &hfSettings);
-    // TODO: Validate Hf downloader
     if (!this->parse(&serverSettings, &modelsSettings, &hfSettings))
 #ifdef __linux__
         exit(EX_USAGE);
@@ -97,6 +96,10 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validate() {
+    // TODO: Add validation of all parameters once the CLI model export flags will be implemented
+    if (hfSettings.pullHfModelMode) {
+        return true;
+    }
     if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
         std::cerr << "Use either config_path or model_path with model_name" << std::endl;
         return false;

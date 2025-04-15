@@ -306,6 +306,12 @@ void checkIncrement4DimShape(const std::string outputName,
     }
 }
 
+void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_read | std::filesystem::perms::group_write | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
+    }
+}
+
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
@@ -696,6 +702,14 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds) {
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+    }
+    ASSERT_EQ(server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME), ovms::ModuleState::SHUTDOWN) << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load";
+}
+
 // --pull_hf_model --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --repo_path c:\download
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& repo_path, int timeoutSeconds) {
     server.setShutdownRequest(0);
@@ -709,7 +723,8 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
     t.reset(new std::thread([&argc, &argv, &server]() {
         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
-    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
     server.setShutdownRequest(0);
