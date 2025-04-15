@@ -29,19 +29,13 @@
 #include <grpcpp/server_context.h>
 #include <signal.h>
 #include <stdlib.h>
-#ifdef __linux__
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#elif _WIN32
-#include <winsock2.h>
-#endif
 
 #include "config.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
+#include "network_utils.hpp"
 #include "prediction_service.hpp"
 #include "servablemanagermodule.hpp"
 #include "server.hpp"
@@ -56,69 +50,6 @@ static const int GIGABYTE = 1024 * 1024 * 1024;
 // Default server shutdown deadline set to 5 seconds,
 // so it happens before docker container graceful stop.
 static const int SERVER_SHUTDOWN_DEADLINE_SECONDS = 5;
-
-#ifdef __linux__
-bool GRPCServerModule::isPortAvailable(uint64_t port) {
-    struct sockaddr_in addr;
-    int s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s == -1) {
-        return false;
-    }
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        close(s);
-        return false;
-    }
-    close(s);
-    return true;
-}
-#else  //  not __linux__
-
-struct WSAStartupCleanupGuard {
-    ~WSAStartupCleanupGuard() {
-        WSACleanup();
-    }
-};
-struct SocketOpenCloseGuard {
-    SOCKET socket;
-    SocketOpenCloseGuard(SOCKET socket) :
-        socket(socket) {}
-    ~SocketOpenCloseGuard() {
-        closesocket(socket);
-    }
-};
-bool GRPCServerModule::isPortAvailable(uint64_t port) {
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        SPDLOG_ERROR("WSAStartup error.");
-        return false;
-    }
-    WSAStartupCleanupGuard wsaGuard;
-    // Create a socket
-    this->sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (this->sock == INVALID_SOCKET) {
-        SPDLOG_ERROR("INVALID_SOCKET error.");
-        return false;
-    }
-
-    // Bind to port
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-#pragma warning(disable : 4996)
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_port = htons(port);
-    SocketOpenCloseGuard socketGuard(this->sock);
-    if (bind(this->sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-        SPDLOG_ERROR("Bind port {} error: {}", port, WSAGetLastError());
-        return false;
-    }
-    return true;
-}
-#endif  //  not __linux__
 
 static Status setDefaultGrpcChannelArgs(std::map<std::string, std::string>& result) {
     uint16_t cores = getCoreCount();
@@ -165,6 +96,7 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsPredictService(this->server),
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
+
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);

@@ -35,14 +35,6 @@
 #include "text_processor.hpp"
 
 namespace ovms {
-
-// TODO: Find better place for this function. It will need to be moved when other pipelines are introduced.
-static std::string wrapTextInServerSideEventMessage(const std::string& text) {
-    std::stringstream ss;
-    ss << "data: " << text << "\n\n";
-    return ss.str();
-}
-
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
@@ -66,7 +58,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -77,10 +69,10 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         auto callback = [& lastStreamerCallbackOutput = executionContext->lastStreamerCallbackOutput](std::string text) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Streamer callback executed with text: [{}]", text);
             lastStreamerCallbackOutput = text;
-            return false;
+            return ov::genai::StreamingStatus::RUNNING;
         };
 
-        executionContext->textStreamer = std::make_shared<ov::genai::TextCallbackStreamer>(getProperties()->tokenizer, callback);
+        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
     return absl::OkStatus();
 }
@@ -90,8 +82,12 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return absl::Status(absl::StatusCode::kInvalidArgument, "API handler is not initialized");
     }
 
-    std::string inputText;
+    // Base servable cannot process images
+    if (executionContext->apiHandler->getImageHistory().size() > 0) {
+        return absl::InternalError("This servable supports only text input, but image_url has been provided");
+    }
 
+    std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
         bool success;
@@ -115,6 +111,21 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
+    if (getProperties()->maxModelLength.has_value()) {
+        if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
+            std::stringstream ss;
+            ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " exceeds model max length: " << getProperties()->maxModelLength.value();
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
+        }
+        if (executionContext->apiHandler->getMaxTokens().has_value() && executionContext->inputIds.get_size() + executionContext->apiHandler->getMaxTokens().value() > getProperties()->maxModelLength.value()) {
+            std::stringstream ss;
+            ss << "Number of prompt tokens: " << executionContext->inputIds.get_size() << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value() << " exceeds model max length: " << getProperties()->maxModelLength.value();
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+            return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
+        }
+    }
+
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
@@ -133,13 +144,14 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     auto& generationOutput = executionContext->generationOutputs[0];
     executionContext->apiHandler->incrementProcessedTokens(generationOutput.generated_ids.size());
-    // This loop could be handled in the streamer, but for now we want to keep it identical with GenAI
-    // so such change should be done in GenAI first
+
     std::stringstream ss;
-    for (const auto& token : generationOutput.generated_ids) {
-        executionContext->textStreamer->put(token);
-        ss << executionContext->lastStreamerCallbackOutput;
-    }
+    executionContext->textStreamer->write(generationOutput.generated_ids);
+    ss << executionContext->lastStreamerCallbackOutput;
+    // OpenVINO GenAI TextStreamer dose not trigger callback if text is empty: https://github.com/openvinotoolkit/openvino.genai/blob/434c2a9494fb1ee83ca7a36fe8315cfc2691c232/src/cpp/src/text_streamer.cpp#L102-L108
+    // Reset lastStreamerCallbackOutput as "" to avoid repeated sending previous text if lastStreamerCallbackOutput not updated by callback
+    executionContext->lastStreamerCallbackOutput = "";
+
     std::string lastTextChunk = ss.str();
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
@@ -165,5 +177,17 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     }
     return absl::OkStatus();
 }
+
+#pragma warning(push)
+#pragma warning(disable : 4505)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function";
+std::string wrapTextInServerSideEventMessage(const std::string& text) {
+    std::stringstream ss;
+    ss << "data: " << text << "\n\n";
+    return ss.str();
+}
+#pragma GCC diagnostic pop
+#pragma warning(push)
 
 }  // namespace ovms

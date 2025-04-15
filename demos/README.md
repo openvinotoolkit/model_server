@@ -8,6 +8,10 @@ hidden:
 ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
+ovms_demos_continuous_batching_vlm
+ovms_demos_llm_npu
+ovms_demos_vlm_npu
+ovms_demos_code_completion_vsc
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -33,7 +37,6 @@ ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
-ovms_demo_python_seq2seq
 ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
 
@@ -41,10 +44,18 @@ ovms_string_output_model_demo
 
 OpenVINO Model Server demos have been created to showcase the usage of the model server as well as demonstrate it’s capabilities.
 ### Check Out New Generative AI Demos
- - [OpenAI API text embeddings ](embeddings/README.md)
- - [Reranking with Cohere API](rerank/README.md)
- - [Text Generation with continuous batching](continuous_batching/README.md)
- - [RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+| Demo | Description |
+|---|---|
+|[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
+|[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
+|[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
+|[Reranking with Cohere API](rerank/README.md)| Rerank documents via endpoint compatible with Cohere|
+|[RAG with OpenAI API endpoint and langchain](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)| Example how to use RAG with model server endpoints|
+|[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
+|[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
+|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
+
+
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
 
@@ -67,7 +78,6 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 |---|---|
 |[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
-|[Seq2seq translation](python_demos/seq2seq_translation/README.md) | Translate text using seq2seq model via gRPC API.|
 
 ## With MediaPipe Graphs
 | Demo | Description |

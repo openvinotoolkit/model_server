@@ -7,6 +7,7 @@ In one step it prepares a complete set of resources in the models repository for
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
+mkdir models
 python export_model.py --help
 usage: export_model.py [-h] {text_generation,embeddings,rerank} ...
 
@@ -31,7 +32,9 @@ usage: export_model.py text_generation [-h]
                                        [--config_file_path CONFIG_FILE_PATH]
                                        [--overwrite_models]
                                        [--target_device TARGET_DEVICE]
+                                       [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}]
                                        [--kv_cache_precision {u8}]
+                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS]
                                        [--enable_prefix_caching]
                                        [--disable_dynamic_split_fuse]
                                        [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS]
@@ -39,6 +42,7 @@ usage: export_model.py text_generation [-h]
                                        [--cache_size CACHE_SIZE]
                                        [--draft_source_model DRAFT_SOURCE_MODEL]
                                        [--draft_model_name DRAFT_MODEL_NAME]
+                                       [--max_prompt_len MAX_PROMPT_LEN]
 
 options:
   -h, --help            show this help message and exit
@@ -57,10 +61,18 @@ options:
   --overwrite_models    Overwrite the model if it already exists in the models
                         repository
   --target_device TARGET_DEVICE
-                        CPU or GPU, default is CPU
+                        CPU, GPU, NPU or HETERO, default is CPU
+  --pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}
+                        Type of the pipeline to be used. AUTO is used by
+                        default
   --kv_cache_precision {u8}
                         u8 or empty (model default). Reduced kv cache
                         precision to u8 lowers the cache size consumption.
+  --extra_quantization_params EXTRA_QUANTIZATION_PARAMS
+                        Add advanced quantization parameters. Check optimum-
+                        intel documentation. Example: "--sym --group-size -1
+                        --ratio 1.0 --awq --scale-estimation --dataset
+                        wikitext2"
   --enable_prefix_caching
                         This algorithm is used to cache the prompt tokens.
   --disable_dynamic_split_fuse
@@ -83,51 +95,48 @@ options:
                         deployment. Equal to draft_source_model if HF model
                         name is used. Available only in draft_source_model has
                         been specified.
+  --max_prompt_len MAX_PROMPT_LEN
+                        Sets NPU specific property for maximum number of
+                        tokens in the prompt. Not effective if target device
+                        is not NPU
 ```
 
 ## Examples how models can be exported
 
 Text generation for CPU target device:
 ```console
-mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models 
 ```
 
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```console
-mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 2
 ```
 
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
 ```console
-mkdir -p models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2
 ```
 
 Embeddings with deployment on a single CPU host:
 ```console
-mkdir -p models
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json
 ```
 
 Embeddings with deployment on a dual CPU host:
 ```console
-mkdir -p models
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
 ```console
-mkdir -p models
 python export_model.py embeddings --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --truncate
 ```
 Note, that truncating input will prevent errors but the accuracy might be impacted as only part of the input will be analyzed.
 
 Reranking:
 ```console
-mkdir -p models
 python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config_all.json --num_streams 2
 ```
 

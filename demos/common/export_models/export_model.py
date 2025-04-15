@@ -31,14 +31,16 @@ def add_common_arguments(parser):
     parser.add_argument('--weight-format', default='int8', help='precision of the exported model', dest='precision')
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
-    parser.add_argument('--target_device', default="CPU", help='CPU or GPU, default is CPU', dest='target_device')
+    parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
 subparsers = parser.add_subparsers(help='subcommand help', required=True, dest='task')
 parser_text = subparsers.add_parser('text_generation', help='export model for chat and completion endpoints')
 add_common_arguments(parser_text)
+parser_text.add_argument('--pipeline_type', default=None, choices=["LM", "LM_CB", "VLM", "VLM_CB", "AUTO"], help='Type of the pipeline to be used. AUTO is used by default', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
+parser_text.add_argument('--extra_quantization_params', help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -48,6 +50,8 @@ parser_text.add_argument('--draft_source_model', required=False, default=None, h
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
                          'Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.', dest='draft_model_name')
+parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
+                         'Not effective if target device is not NPU', dest='max_prompt_len')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
@@ -143,8 +147,10 @@ node: {
   }
   node_options: {
       [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+          {%- if pipeline_type %}
+          pipeline_type: {{pipeline_type}},{% endif %}
           models_path: "{{model_path}}",
-          plugin_config: '{ {% if kv_cache_precision %}"KV_CACHE_PRECISION": "{{kv_cache_precision}}"{% endif %}}',
+          plugin_config: '{{plugin_config}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
           {%- if max_num_batched_tokens %}
@@ -183,7 +189,7 @@ embeddings_subconfig_template = """{
                 "name": "{{model_name}}_embeddings_model",
                 "base_path": "embeddings",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": {{num_streams|default("1", true)}} }
+                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
             }
 	}
    ]
@@ -202,7 +208,7 @@ rerank_subconfig_template = """{
                 "name": "{{model_name}}_rerank_model",
                 "base_path": "rerank",
                 "target_device": "{{target_device|default("CPU", true)}}",
-                "plugin_config": { "NUM_STREAMS": {{num_streams|default("1", true)}} }
+                "plugin_config": { "NUM_STREAMS": "{{num_streams|default(1, true)}}" }
             }
 	}
    ]
@@ -263,6 +269,7 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
 
 def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
+    ### Export model
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
             model_path = source_model
@@ -270,10 +277,19 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         llm_model_path = os.path.join(model_repository_path, model_name)
         print("Exporting LLM model to ", llm_model_path)
         if not os.path.isdir(llm_model_path) or args['overwrite_models']:
-            optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, llm_model_path)
+            if task_parameters['target_device'] == 'NPU':
+                if precision != 'int4':
+                    print("NPU target device requires int4 precision. Changing to int4")
+                    precision = 'int4'
+                if task_parameters['extra_quantization_params'] is None:
+                    print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
+                    task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
+            if task_parameters['extra_quantization_params'] is None:
+                task_parameters['extra_quantization_params'] = ""
+            optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
-    ### Speculative decoding specific 
+    ### Export draft model for speculative decoding 
     draft_source_model = task_parameters.get("draft_source_model", None)
     draft_model_dir_name = None   
     if draft_source_model:
@@ -282,12 +298,35 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
                 print("OV model is source folder. Skipping conversion.")
         else: # assume HF model name or local pytorch model folder
-            print("Exporting LLM model to ", draft_llm_model_path)
+            print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
                 optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
-    ###
+
+    ### Prepare plugin config string for jinja rendering
+    plugin_config = {}
+    if task_parameters['kv_cache_precision'] is not None:
+        plugin_config['KV_CACHE_PRECISION'] = task_parameters['kv_cache_precision']
+    if task_parameters['max_prompt_len'] is not None:
+        if task_parameters['target_device'] != 'NPU':
+            raise ValueError("max_prompt_len is only supported for NPU target device")
+        if task_parameters['max_prompt_len'] <= 0:
+            raise ValueError("max_prompt_len should be a positive integer")
+        plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
+    
+    # Additional plugin properties for HETERO
+    if "HETERO" in task_parameters['target_device']:
+        if task_parameters['pipeline_type'] is None:
+            raise ValueError("pipeline_type should be specified for HETERO target device. It should be set to either LM or VLM")
+        if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
+            raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
+        plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
+    ### 
+
+    plugin_config_str = json.dumps(plugin_config)
+    task_parameters['plugin_config'] = plugin_config_str
+    
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
@@ -296,8 +335,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
-    
-    
+
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")

@@ -27,9 +27,9 @@ setup_repository:
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.bin -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.bin
 	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/horizontal-text-detection-0001/FP32/horizontal-text-detection-0001.xml -o workspace/horizontal-text-detection-0001/1/horizontal-text-detection-0001.xml
 # Download text recognition model
-	mkdir -p workspace/text-recognition-0014/1
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o workspace/text-recognition-0014/1/text-recognition-0014.bin
-	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o workspace/text-recognition-0014/1/text-recognition-0014.xml
+	mkdir -p workspace/text-recognition-0012/1
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/text-recognition-0012/FP32/text-recognition-0012.bin -o workspace/text-recognition-0012/1/text-recognition-0012.bin
+	curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/text-recognition-0012/FP32/text-recognition-0012.xml -o workspace/text-recognition-0012/1/text-recognition-0012.xml
 ifeq ($(BUILD_CUSTOM_NODE),true)
 # Build custom node
 	cd ../../../src/custom_nodes && \

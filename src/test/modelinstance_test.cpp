@@ -100,6 +100,8 @@ TEST_F(TestUnloadModel, CantUnloadModelWhilePredictPathAcquiredAndLockedInstance
     ASSERT_EQ(status, ovms::StatusCode::OK);
     modelInstance.increasePredictRequestsHandlesCount();
     EXPECT_FALSE(modelInstance.canUnloadInstance());
+    modelInstance.decreasePredictRequestsHandlesCount();
+    EXPECT_TRUE(modelInstance.canUnloadInstance());
 }
 
 TEST_F(TestUnloadModel, CanUnloadModelNotHoldingModelInstanceAtPredictPath) {
@@ -161,6 +163,7 @@ TEST_F(TestUnloadModel, UnloadWaitsUntilMetadataResponseIsBuilt) {
     EXPECT_EQ(outputs.size(), 1);
     EXPECT_EQ(inputs.begin()->second.name(), DUMMY_MODEL_INPUT_NAME);
     EXPECT_EQ(outputs.begin()->second.name(), DUMMY_MODEL_OUTPUT_NAME);
+    instance.reset();
 }
 
 TEST_F(TestUnloadModel, CheckIfCanUnload) {

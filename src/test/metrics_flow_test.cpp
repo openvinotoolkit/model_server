@@ -197,7 +197,9 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)"8080"};  // Workaround to have rest_port parsed in order to enable metrics
+        std::string port = "9000";
+        randomizeAndEnsureFree(port);
+        char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/unused", (char*)"--rest_port", (char*)port.c_str()};  // Workaround to have rest_port parsed in order to enable metrics
         int arg_count = 5;
         ovms::Config::instance().parse(arg_count, n_argv);
         std::string fileToReload = this->directoryPath + "/config.json";
@@ -207,9 +209,6 @@ protected:
 };
 
 TEST_F(MetricFlowTest, GrpcPredict) {
-#ifdef _WIN32
-    GTEST_SKIP() << "Test disabled on windows [SPORADIC] pipeline_config_list";
-#endif
     PredictionServiceImpl impl(server);
     tensorflow::serving::PredictRequest request;
     tensorflow::serving::PredictResponse response;

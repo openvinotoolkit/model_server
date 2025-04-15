@@ -155,12 +155,39 @@ Here is example of the `subconfig.json`:
 
 
 ### Starting OpenVINO Model Server with Mediapipe servables
-MediaPipe servables configuration is to be placed in the same json file like the
-[models config file](starting_server.md).
-While models are defined in section `model_config_list`, graphs are configured in
-the `mediapipe_config_list` section.
+Starting the single graph with `subconfig.json` is achieved by running the server in single model mode  (without `config.json`). Pass the model_path as the folder path with graph.pbtxt and the graph name to be exposed as a model:
+`docker run --rm -it -v <folder with graph.pbtxt>:/model openvino/model_server:latest --model_path /model --model_name mediapipe_graph_name`
 
-When the MediaPipe graphs artifacts are packaged like presented above, configuring the OpenVINO Model Server is very easy. Just a `config.json` needs to be prepared with a list of all the graphs to be deployed:
+This example command will load the `graph.pbtxt` and `subconfig.json` file from the mounted directory the container.
+
+For running multiple graphs in one server instance you must use the `config.json` configuration described below.
+
+MediaPipe servables configuration can also be placed in the same json file like the
+[models config file](starting_server.md).
+Graphs parameters can be defined in section `model_config_list` just like classic models (recommended) or in the section `mediapipe_config_list` which is deprecated now.
+
+Here is an example `config.json` file that defines two MediaPipe graphs. One with custom `graph_path` and one default:
+```json
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "mediapipe_graph_name",
+            }
+        },
+        {
+            "config": {
+                "name": "mediapipe_graph_name_for_default_name",
+                "base_path":"mediapipe_graph_name ",
+                "graph_path": " graph.pbtxt"
+            }
+        }
+    ]
+}
+```
+In case the `mediapipe_graph_name_for_default_name` above, ovms will search for the default graph name `graph.pbtxt` in the `mediapipe_graph_name` directory relative to the `config.json` location.
+
+Graphs can also be configured in the `mediapipe_config_list` section.
 ```json
 {
     "model_config_list": [],

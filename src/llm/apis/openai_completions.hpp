@@ -21,11 +21,14 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/visual_language/pipeline.hpp>
 #include <openvino/runtime/tensor.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -45,8 +48,6 @@ struct StreamOptions {
     bool includeUsage = false;
 };
 
-#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
-
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
@@ -61,10 +62,15 @@ struct CompletionUsageStatistics {
     }
 };
 
+// Type that holds vector of pairs where first element is chat turn index and second is image tensor
+// this way we store information about which image is associated with which chat turn
+using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
+
 // Class that maps OpenAI request content and provides methods to create GenerationConfig from it.
 struct OpenAIChatCompletionsRequest {
+    ov::genai::ChatHistory chatHistory;
     std::string processedJson;
-    std::vector<ov::Tensor> images;
+    ImageHistory imageHistory;
     std::optional<std::string> prompt{std::nullopt};
     bool stream{false};
     StreamOptions streamOptions;
@@ -88,22 +94,24 @@ struct OpenAIChatCompletionsRequest {
     // Beam search specific
     std::optional<int> bestOf{std::nullopt};
     std::optional<float> lengthPenalty{std::nullopt};
-    std::optional<float> diversityPenalty{std::nullopt};
 
     // Speculative decoding specific (only with speculative decoding pipeline, see <docs> for reference)
     std::optional<int> numAssistantTokens{std::nullopt};
     std::optional<float> assistantConfidenceThreshold{std::nullopt};
+
+    std::optional<uint32_t> maxModelLength;
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
 
     ov::genai::GenerationConfig createGenerationConfig() const {
         ov::genai::GenerationConfig config;
-
         // Generic
+        config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
             config.max_new_tokens = maxTokens.value();
-        // TODO: max_length = ?
+        if (maxModelLength.has_value())
+            config.max_length = maxModelLength.value();
         if (ignoreEOS.has_value())
             config.ignore_eos = ignoreEOS.value();
 
@@ -117,8 +125,6 @@ struct OpenAIChatCompletionsRequest {
         if (bestOf.has_value())
             config.num_beams = bestOf.value();
 
-        if (diversityPenalty.has_value())
-            config.diversity_penalty = diversityPenalty.value();  // TODO: Not available in OpenAI nor vLLM
         // TODO: stop_criteria = ?
         if (numReturnSequences.has_value())
             config.num_return_sequences = numReturnSequences.value();
@@ -173,8 +179,8 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(uint32_t maxTokensLimit);
-    absl::Status parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
+    absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -188,7 +194,10 @@ public:
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
-    const std::vector<ov::Tensor> getImages() const;
+    // User input might be modified by the servable logic, so it is not const
+    const ImageHistory& getImageHistory() const;
+    ov::genai::ChatHistory& getChatHistory();
+    std::optional<int> getMaxTokens() const;
 
     bool isStream() const;
     std::string getModel() const;
@@ -199,10 +208,13 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline);
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
+    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
+    // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
+    std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
     static void writeLogprob(Writer<StringBuffer>& writer, float logprob);

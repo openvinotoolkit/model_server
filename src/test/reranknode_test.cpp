@@ -45,11 +45,6 @@ public:
     static void SetUpSuite(std::string& port, std::string& configPath, std::unique_ptr<std::thread>& t) {
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, configPath.c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
     }
     static void SetUpTestSuite() {
     }

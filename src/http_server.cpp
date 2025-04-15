@@ -189,7 +189,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address);
     auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
     auto& pool = server->getPool();
-    server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+    server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
         //std::vector<std::pair<std::string, std::string>> headers;
@@ -209,7 +209,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         auto body = std::string(req->getBody());
         std::string output;
         HttpResponseComponents responseComponents;
-        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(callback, pool, req);
+        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(drogonResponseInitializeCallback, pool, req);
         std::shared_ptr<MultiPartParser> multiPartParser = std::make_shared<DrogonMultiPartParser>(req);
 
         const auto status = handler->processRequest(
@@ -260,7 +260,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         if (!status.ok()) {
             resp->setStatusCode(drogon::HttpStatusCode(http_status));
         }
-        callback(resp);
+        drogonResponseInitializeCallback(resp);
     });
     if (!server->startAcceptingRequests().ok()) {
         SPDLOG_ERROR("Failed to start Drogon server");

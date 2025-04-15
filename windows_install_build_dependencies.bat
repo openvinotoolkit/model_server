@@ -124,9 +124,9 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.1.0.0.dev20250304_x86_64"
-set "genai_ver=openvino_genai_windows_2025.1.0.0.dev20250304_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.1.0.0.dev20250304/"
+set "genai_dir=openvino_genai_windows_2025.2.0.0.dev20250411_x86_64"
+set "genai_ver=openvino_genai_windows_2025.2.0.0.dev20250411_x86_64.zip"
+set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.2.0.0.dev20250411/"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -315,7 +315,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 %python_path%\python.exe -m ensurepip --upgrade
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
 goto install_opencv

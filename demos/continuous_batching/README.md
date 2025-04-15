@@ -13,7 +13,7 @@ ovms_demos_continuous_batching_speculative_decoding
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
-That makes it easy to use and efficient especially on on Intel® Xeon® processors.
+That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
@@ -33,8 +33,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -336,6 +336,9 @@ Check the [guide of using lm-evaluation-harness](https://github.com/openvinotool
 
 Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
+## Check how to use text generation with visual language models
+
+Check the demo [text generation with visual model](./vlm/README.md)
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)

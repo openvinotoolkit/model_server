@@ -50,7 +50,7 @@ cc_library(
         ":genai_servables",
         "//src:httppayload"
     ]+ select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
@@ -81,7 +81,7 @@ cc_library(
         "//third_party:opencv",
         "@stb//:image",
     ] + select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
@@ -93,8 +93,12 @@ cc_library(
 cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp", "servable_initializer.hpp", 
-            "continuous_batching/servable.hpp", "continuous_batching/llm_executor.hpp", "continuous_batching/servable_initializer.hpp"],
-    srcs = ["servable.cpp", "servable_initializer.cpp", "continuous_batching/servable.cpp", "continuous_batching/servable_initializer.cpp"],
+            "language_model/continuous_batching/servable.hpp", "language_model/continuous_batching/llm_executor.hpp", "language_model/continuous_batching/servable_initializer.hpp",
+            "visual_language_model/continuous_batching/servable.hpp", "language_model/legacy/servable.hpp", "language_model/legacy/servable_initializer.hpp", "language_model/legacy/legacy_executor.hpp",
+            "visual_language_model/legacy/servable.hpp", "visual_language_model/legacy/servable_initializer.hpp", "visual_language_model/legacy/legacy_executor.hpp"],
+    srcs = ["servable.cpp", "servable_initializer.cpp", "language_model/continuous_batching/servable.cpp", "language_model/continuous_batching/servable_initializer.cpp",
+            "visual_language_model/continuous_batching/servable.cpp", "language_model/legacy/servable.cpp", "language_model/legacy/servable_initializer.cpp", "language_model/legacy/legacy_executor.cpp",
+            "visual_language_model/legacy/servable.cpp", "visual_language_model/legacy/servable_initializer.cpp", "visual_language_model/legacy/legacy_executor.cpp"],
     deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
@@ -104,6 +108,7 @@ cc_library(
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",
         "//src:libovmsprofiler",
+        "//src:libovmsfilesystem",
         "llmcalculator_cc_proto",
         "//src/python:utils",
         ":text_processor",
@@ -111,7 +116,7 @@ cc_library(
         "//src:httppayload",
         "//src:libhttpclientconnection",
     ] + PYBIND_DEPS + select({
-        "//conditions:default": ["//third_party:genai"],
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],

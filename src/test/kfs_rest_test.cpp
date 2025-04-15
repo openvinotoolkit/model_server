@@ -57,7 +57,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -75,10 +75,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
     void SetUp() override {
         handler = std::make_unique<HttpRestApiHandler>(*server, 5);
@@ -101,7 +98,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -117,10 +114,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -129,7 +123,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -147,10 +141,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -159,7 +150,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -175,10 +166,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -246,11 +234,6 @@ protected:
 
     void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
         handler = std::make_unique<HttpRestApiHandler>(server, 5);
     }
 

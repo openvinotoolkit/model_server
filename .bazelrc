@@ -254,7 +254,7 @@ build:windows --define=GENAI_USE_BINARY=1
 
 # Tests settings ############################################################################################################################
 # sometimes failed logs exceed this threshold
-test --experimental_ui_max_stdouterr_bytes=104857600
+test --experimental_ui_max_stdouterr_bytes=304857600
 
 # envs below are required to succesfully run binaries in bazel as bazel is very strict in sandboxing
 test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/

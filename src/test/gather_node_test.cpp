@@ -36,6 +36,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../logging.hpp"
 #include "../modelconfig.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"

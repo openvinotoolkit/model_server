@@ -43,6 +43,8 @@ using namespace rapidjson;
 
 namespace ovms {
 
+constexpr size_t DEFAULT_MAX_STOP_WORDS = 16;  // same as deep-seek
+
 absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     // prompt: string
     auto it = doc.FindMember("prompt");
@@ -75,7 +77,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
 
     // echo: bool; optional - defaults to false
     it = doc.FindMember("echo");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("echo accepts values true or false");
         request.echo = it->value.GetBool();
@@ -139,10 +141,14 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
+        // Add new message to chat history
+        request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
             if (member->value.IsString()) {
+                // Add new field to the last message in history
+                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -150,7 +156,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                         return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                     }
                     jsonChanged = true;
-                    Value contentText;
+                    Value contentText(rapidjson::kStringType);
+                    contentText.SetString("", doc.GetAllocator());
                     for (auto& v : member->value.GetArray()) {
                         if (!v.IsObject()) {
                             return absl::InvalidArgumentError("Invalid message structure - content array should contain objects");
@@ -186,16 +193,26 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 return absl::InvalidArgumentError("Invalid base64 string in request");
                             }
                             ov::Tensor tensor = load_image_stbi(decoded);
-                            request.images.push_back(tensor);
+                            request.imageHistory.push_back({i, tensor});
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
                     }
+                    // Pulling out text from nested structure to the "content" field for text and replace whole "content" value for image data
+                    // with empty string, since images are stored separately in request.images
                     member->value = contentText;
+                    // Add new field to the last message in history if content is text
+                    if (member->value.IsString()) {
+                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                    }
                 } else {
                     return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
             }
+        }
+        const auto& lastMessage = request.chatHistory.back();
+        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
         }
     }
     if (jsonChanged) {
@@ -210,11 +227,19 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
     return request.processedJson;
 }
-const std::vector<ov::Tensor> OpenAIChatCompletionsHandler::getImages() const {
-    return request.images;
+const ImageHistory& OpenAIChatCompletionsHandler::getImageHistory() const {
+    return request.imageHistory;
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t maxTokensLimit) {
+ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() {
+    return request.chatHistory;
+}
+
+std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
+    return request.maxTokens;
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit) {
     // messages: [{role: content}, {role: content}, ...]; required
     auto status = parseMessages();
     if (status != absl::OkStatus()) {
@@ -222,7 +247,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     }
     // logprobs: bool; optional - defaults to false
     auto it = doc.FindMember("logprobs");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("logprobs accepts values true or false");
         request.logprobschat = it->value.GetBool();
@@ -232,18 +257,14 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     }
     // max_completion_tokens: uint; optional
     it = doc.FindMember("max_completion_tokens");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint()) {
             if (it->value.IsUint64())
                 return absl::InvalidArgumentError("max_completion_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_completion_tokens is not an unsigned integer");
         }
-        if (!(it->value.GetUint() < maxTokensLimit))
-            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit));
-        if (request.ignoreEOS.value_or(false)) {
-            if (it->value.GetUint() > IGNORE_EOS_MAX_TOKENS_LIMIT)
-                return absl::InvalidArgumentError("when ignore_eos is true max_completion_tokens can not be greater than 4000");
-        }
+        if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
+            return absl::InvalidArgumentError(absl::StrCat("max_completion_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
     }
     // specific part of max_tokens validation due to echo dependency
@@ -254,20 +275,20 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(uint32_t max
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
         return absl::InvalidArgumentError("Received json is not an object");
     auto it = doc.FindMember("stream");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("Stream is not bool");
         request.stream = it->value.GetBool();
     }
 
     it = doc.FindMember("stream_options");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!request.stream)
             return absl::InvalidArgumentError("stream_options provided, but stream not set to true");
         if (!it->value.IsObject())
@@ -301,7 +322,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     // ignore_eos: bool; optional - defaults to false
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("ignore_eos");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("ignore_eos accepts values true or false");
         request.ignoreEOS = it->value.GetBool();
@@ -317,22 +338,18 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
                 return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
             return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
         }
-        if (!(it->value.GetUint() < maxTokensLimit))
-            return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit));
+        if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+            return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
         request.maxTokens = it->value.GetUint();
-    }
-    if (request.ignoreEOS.value_or(false)) {
-        if (request.maxTokens.has_value()) {
-            if (request.maxTokens.value() > IGNORE_EOS_MAX_TOKENS_LIMIT)
-                return absl::InvalidArgumentError("when ignore_eos is true max_tokens can not be greater than 4000");
-        } else {
-            request.maxTokens = IGNORE_EOS_MAX_TOKENS_LIMIT;
+    } else {
+        if (maxTokensLimit.has_value()) {
+            request.maxTokens = maxTokensLimit.value();
         }
     }
 
     // frequency_penalty: float; optional - defaults to 0
     it = doc.FindMember("frequency_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("frequency_penalty is not a valid number");
         request.frequencyPenalty = it->value.GetDouble();
@@ -342,7 +359,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // presence_penalty: float; optional - defaults to 0
     it = doc.FindMember("presence_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("presence_penalty is not a valid number");
         request.presencePenalty = it->value.GetDouble();
@@ -353,25 +370,16 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     // repetition_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("repetition_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("repetition_penalty is not a valid number");
         request.repetitionPenalty = it->value.GetDouble();
     }
 
-    // diversity_penalty: float; optional - defaults to 1.0
-    // Extension, unsupported by OpenAI API and vLLM, however available in CB lib
-    it = doc.FindMember("diversity_penalty");
-    if (it != doc.MemberEnd()) {
-        if (!it->value.IsDouble() && !it->value.IsInt())
-            return absl::InvalidArgumentError("diversity_penalty is not a valid number");
-        request.diversityPenalty = it->value.GetDouble();
-    }
-
     // length_penalty: float; optional - defaults to 1.0
     // Extension, unsupported by OpenAI API however supported by vLLM and CB lib
     it = doc.FindMember("length_penalty");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("length_penalty is not a valid number");
         request.lengthPenalty = it->value.GetDouble();
@@ -379,7 +387,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // temperature: float; optional - defaults to 1.0
     it = doc.FindMember("temperature");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("temperature is not a valid number");
         request.temperature = it->value.GetDouble();
@@ -389,7 +397,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // top_p: float; optional - defaults to 1
     it = doc.FindMember("top_p");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsDouble() && !it->value.IsInt())
             return absl::InvalidArgumentError("top_p is not a valid number");
         request.topP = it->value.GetDouble();
@@ -400,7 +408,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     // top_k: int; optional - defaults to 0
     // Extension, unsupported by OpenAI API, however supported by vLLM and CB lib
     it = doc.FindMember("top_k");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsInt())
             return absl::InvalidArgumentError("top_k is not an integer");
         request.topK = it->value.GetInt();
@@ -408,7 +416,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // seed: int; optional - defaults to 0 (not set)
     it = doc.FindMember("seed");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("seed is not an unsigned integer");
         request.seed = it->value.GetUint();
@@ -416,13 +424,16 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
 
     // stop: string or array; optional - defaults to null (not set)
     it = doc.FindMember("stop");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (it->value.IsString()) {
             request.stop = std::set<std::string>{it->value.GetString()};
         } else if (it->value.IsArray()) {
             auto stopArray = it->value.GetArray();
-            if (stopArray.Size() > 4)
-                return absl::InvalidArgumentError("stop array must have no more than 4 strings");
+            if (stopArray.Size() > DEFAULT_MAX_STOP_WORDS) {
+                std::stringstream ss;
+                ss << "stop array must have no more than " << DEFAULT_MAX_STOP_WORDS << " strings";
+                return absl::InvalidArgumentError(ss.str());
+            }
             if (!stopArray.Empty()) {
                 request.stop = std::set<std::string>{};
                 for (size_t i = 0; i < stopArray.Size(); i++) {
@@ -446,7 +457,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     }
 
     it = doc.FindMember("include_stop_str_in_output");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsBool())
             return absl::InvalidArgumentError("include_stop_str_in_output accepts values true or false");
         if (!it->value.GetBool() && request.stream)
@@ -457,7 +468,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     // best_of: int; optional - defaults to 1
     // Extension, unsupported by OpenAI API, however supported by vLLM, supported in CB lib by mapping to group_size param
     it = doc.FindMember("best_of");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("best_of is not an unsigned integer");
         if (it->value.GetUint() == 0)
@@ -472,7 +483,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     // n: int; optional - defaults to 1
     // Supported by OpenAI API and vLLM, supported in CB lib by mapping to num_return_sequences param
     it = doc.FindMember("n");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsUint())
             return absl::InvalidArgumentError("n is not an unsigned integer");
         if (it->value.GetUint() == 0)
@@ -489,24 +500,27 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
 
+    bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
+    bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
+
     if (isSpeculativePipeline) {
-        if (numAssistantTokensIt == doc.MemberEnd() && assistantConfidenceThresholdIt == doc.MemberEnd())
+        if (!numAssistantTokensItHasValue && !assistantConfidenceThresholdItHasValue)
             return absl::InvalidArgumentError("Speculative decoding requires either num_assistant_tokens or assistant_confidence_threshold to be set.");
 
-        if (numAssistantTokensIt != doc.MemberEnd() && assistantConfidenceThresholdIt != doc.MemberEnd())
+        if (numAssistantTokensItHasValue && assistantConfidenceThresholdItHasValue)
             return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
-    } else if (numAssistantTokensIt != doc.MemberEnd() || assistantConfidenceThresholdIt != doc.MemberEnd()) {
+    } else if (numAssistantTokensItHasValue || assistantConfidenceThresholdItHasValue) {
         return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
     }
     // num_assistant_tokens: uint;
-    if (numAssistantTokensIt != doc.MemberEnd()) {
+    if (numAssistantTokensItHasValue) {
         if (!numAssistantTokensIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
             return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer greater than 0");
         }
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
     }
     // assistant_confidence_threshold: float;
-    if (assistantConfidenceThresholdIt != doc.MemberEnd()) {
+    if (assistantConfidenceThresholdItHasValue) {
         if (!assistantConfidenceThresholdIt->value.IsDouble() && !assistantConfidenceThresholdIt->value.IsInt()) {
             return absl::InvalidArgumentError("assistant_confidence_threshold must be a positive number");
         }
@@ -515,6 +529,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(uint32_t maxTokensLim
             return absl::InvalidArgumentError("assistant_confidence_threshold must be greater than 0");
         }
     }
+    request.maxModelLength = maxModelLength;
 
     // use_beam_search: bool; optional - defaults to false
     // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
@@ -558,8 +573,8 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(uint32_t maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline) {
-    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline);
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength);
 
     if (status != absl::OkStatus())
         return status;
@@ -724,6 +739,176 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
             writer.String(completeResponse.c_str());
+        }
+
+        writer.EndObject();  // }
+    }
+    writer.EndArray();  // ]
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    writer.String("created");
+    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+
+    // model: string; copied from the request
+    writer.String("model");
+    writer.String(request.model.c_str());
+
+    // object: string; defined that the type is unary rather than streamed chunk
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion");
+    }
+
+    writer.String("usage");
+    writer.StartObject();  // {
+    writer.String("prompt_tokens");
+    writer.Int(usage.promptTokens);
+    writer.String("completion_tokens");
+    writer.Int(usage.completionTokens);
+    writer.String("total_tokens");
+    writer.Int(usage.calculateTotalTokens());
+    writer.EndObject();  // }
+
+    // TODO
+    // id: string; A unique identifier for the chat completion.
+
+    // TODO
+    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    writer.EndObject();  // }
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
+    OVMS_PROFILE_FUNCTION();
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+
+    writer.StartObject();  // {
+
+    // choices: array of size N, where N is related to n request parameter
+    writer.String("choices");
+    writer.StartArray();  // [
+    int index = 0;
+    usage.completionTokens = 0;
+    for (int i = 0; i < results.tokens.size(); i++) {
+        const std::vector<int64_t>& tokens = results.tokens[i];
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        usage.completionTokens += tokens.size();
+        if (request.echo)
+            usage.completionTokens -= usage.promptTokens;
+        std::string completeResponse = tokenizer.decode(tokens);
+        writer.StartObject();  // {
+        writer.String("finish_reason");
+        writer.String("stop");
+        // index: integer; Choice index, only n=1 supported anyway
+        writer.String("index");
+        writer.Int(index++);
+        // logprobs: object/null; Log probability information for the choice. TODO
+        // message: object
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            writer.String("message");
+            writer.StartObject();  // {
+            // content: string; Actual content of the text produced
+            writer.String("content");
+            writer.String(completeResponse.c_str());
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String("role");
+            writer.String("assistant");  // TODO - hardcoded
+            // TODO: tools_call
+            // TODO: function_call (deprecated)
+            writer.EndObject();  // }
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            writer.String("text");
+            writer.String(completeResponse.c_str());
+        }
+
+        writer.EndObject();  // }
+    }
+    writer.EndArray();  // ]
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    writer.String("created");
+    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+
+    // model: string; copied from the request
+    writer.String("model");
+    writer.String(request.model.c_str());
+
+    // object: string; defined that the type is unary rather than streamed chunk
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("object");
+        writer.String("chat.completion");
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        writer.String("object");
+        writer.String("text_completion");
+    }
+
+    writer.String("usage");
+    writer.StartObject();  // {
+    writer.String("prompt_tokens");
+    writer.Int(usage.promptTokens);
+    writer.String("completion_tokens");
+    writer.Int(usage.completionTokens);
+    writer.String("total_tokens");
+    writer.Int(usage.calculateTotalTokens());
+    writer.EndObject();  // }
+
+    // TODO
+    // id: string; A unique identifier for the chat completion.
+
+    // TODO
+    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    writer.EndObject();  // }
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {  // TODO separate common part with function implemented above
+    OVMS_PROFILE_FUNCTION();
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+
+    writer.StartObject();  // {
+
+    // choices: array of size N, where N is related to n request parameter
+    writer.String("choices");
+    writer.StartArray();  // [
+    int index = 0;
+    usage.completionTokens = completionTokens;
+    for (int i = 0; i < results.texts.size(); i++) {
+        const std::string& texts = results.texts[i];
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
+        writer.StartObject();  // {
+        writer.String("finish_reason");
+        writer.String("stop");
+        // index: integer; Choice index, only n=1 supported anyway
+        writer.String("index");
+        writer.Int(index++);
+        // logprobs: object/null; Log probability information for the choice. TODO
+        // message: object
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            writer.String("message");
+            writer.StartObject();  // {
+            // content: string; Actual content of the text produced
+            writer.String("content");
+            writer.String(texts.c_str());
+            // role: string; Role of the text producer
+            // Will make sense once we have chat templates? TODO(atobisze)
+            writer.String("role");
+            writer.String("assistant");  // TODO - hardcoded
+            // TODO: tools_call
+            // TODO: function_call (deprecated)
+            writer.EndObject();  // }
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            writer.String("text");
+            writer.String(texts.c_str());
         }
 
         writer.EndObject();  // }

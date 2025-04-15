@@ -17,7 +17,7 @@ chmod -R 755 universal-sentence-encoder-multilingual
 ```
 
 The model setup should look like this
-```console
+```bash
 tree universal-sentence-encoder-multilingual/
 
 universal-sentence-encoder-multilingual/
@@ -56,7 +56,7 @@ Make sure to:
 on every shell that will start OpenVINO Model Server.
 
 And start Model Server using the following command:
-```console
+```bat
 ovms --model_name usem --model_path universal-sentence-encoder-multilingual/ --plugin_config "{\"NUM_STREAMS\": 1}" --port 9000 --rest_port 8000
 ```
 

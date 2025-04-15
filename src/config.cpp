@@ -36,6 +36,7 @@
 namespace ovms {
 
 const uint32_t AVAILABLE_CORES = getCoreCount();
+const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 // For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
@@ -126,6 +127,13 @@ bool Config::validate() {
         return false;
     }
 
+#ifdef _WIN32
+    if (grpcWorkers() > WIN_MAX_GRPC_WORKERS) {
+        std::cerr << "grpcWorkers count can only be set to 1 on Windows. Set " << grpcWorkers() << std::endl;
+        return false;
+    }
+#endif
+
     if (port() && (port() > MAX_PORT_NUMBER)) {
         std::cerr << "port number out of range from 0 to " << MAX_PORT_NUMBER << std::endl;
         return false;
@@ -163,7 +171,7 @@ bool Config::validate() {
         return false;
     }
     // both ports cannot be unset
-    if ((restPort() == 0) && (port() == 0)) {
+    if (startedFromCLI() && ((restPort() == 0) && (port() == 0))) {
         std::cerr << "port and rest_port cannot both be unset" << std::endl;
         return false;
     }
