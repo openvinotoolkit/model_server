@@ -1,5 +1,49 @@
+diff --git a/lib/inc/drogon/HttpResponse.h b/lib/inc/drogon/HttpResponse.h
+index 620577e5..30798b59 100644
+--- a/lib/inc/drogon/HttpResponse.h
++++ b/lib/inc/drogon/HttpResponse.h
+@@ -74,8 +74,8 @@ inline HttpResponsePtr toResponse<Json::Value &>(Json::Value &pJson)
+ class DROGON_EXPORT ResponseStream
+ {
+   public:
+-    explicit ResponseStream(trantor::AsyncStreamPtr asyncStream)
+-        : asyncStream_(std::move(asyncStream))
++    explicit ResponseStream(trantor::AsyncStreamPtr asyncStream, trantor::TcpConnectionPtr tcpConnection)
++        : asyncStream_(std::move(asyncStream)), tcpConnection_(std::move(tcpConnection))
+     {
+     }
+ 
+@@ -84,6 +84,11 @@ class DROGON_EXPORT ResponseStream
+         close();
+     }
+ 
++    void sendHeader(const std::string& data)
++    {
++        tcpConnection_->send(data);
++    }
++
+     bool send(const std::string &data)
+     {
+         if (!asyncStream_)
+@@ -109,6 +114,7 @@ class DROGON_EXPORT ResponseStream
+ 
+   private:
+     trantor::AsyncStreamPtr asyncStream_;
++    trantor::TcpConnectionPtr tcpConnection_;
+ };
+ 
+ using ResponseStreamPtr = std::unique_ptr<ResponseStream>;
+@@ -315,6 +321,8 @@ class DROGON_EXPORT HttpResponse
+         return body();
+     }
+ 
++    virtual std::string renderHeaderToString() = 0;
++
+     /// Return the string of http version of request, such as HTTP/1.0,
+     /// HTTP/1.1, etc.
+     virtual const char *versionString() const = 0;
 diff --git a/lib/src/HttpAppFrameworkImpl.cc b/lib/src/HttpAppFrameworkImpl.cc
-index 4c49c259..058203c8 100644
+index 623d906a..bd61837d 100644
 --- a/lib/src/HttpAppFrameworkImpl.cc
 +++ b/lib/src/HttpAppFrameworkImpl.cc
 @@ -525,15 +525,15 @@ void HttpAppFrameworkImpl::run()
@@ -27,11 +71,53 @@ index 4c49c259..058203c8 100644
      if (runAsDaemon_)
      {
          // go daemon!
+diff --git a/lib/src/HttpResponseImpl.cc b/lib/src/HttpResponseImpl.cc
+index 5e9e46f1..533d3581 100644
+--- a/lib/src/HttpResponseImpl.cc
++++ b/lib/src/HttpResponseImpl.cc
+@@ -726,6 +726,12 @@ std::shared_ptr<trantor::MsgBuffer> HttpResponseImpl::renderToBuffer()
+     return httpString;
+ }
+ 
++std::string HttpResponseImpl::renderHeaderToString()
++{
++    auto msg = this->renderToBuffer();
++    return std::string(msg->peek(), msg->readableBytes());
++}
++
+ std::shared_ptr<trantor::MsgBuffer> HttpResponseImpl::
+     renderHeaderForHeadMethod()
+ {
+diff --git a/lib/src/HttpResponseImpl.h b/lib/src/HttpResponseImpl.h
+index d6b949c8..fadb6e8b 100644
+--- a/lib/src/HttpResponseImpl.h
++++ b/lib/src/HttpResponseImpl.h
+@@ -177,6 +177,8 @@ class DROGON_EXPORT HttpResponseImpl : public HttpResponse
+ 
+     void addHeader(const char *start, const char *colon, const char *end);
+ 
++    std::string renderHeaderToString() override;
++
+     void addCookie(const std::string &key, const std::string &value) override
+     {
+         cookies_[key] = Cookie(key, value);
 diff --git a/lib/src/HttpServer.cc b/lib/src/HttpServer.cc
-index 51506f95..ef784a68 100644
+index 257976b1..1d407514 100644
 --- a/lib/src/HttpServer.cc
 +++ b/lib/src/HttpServer.cc
-@@ -978,7 +978,10 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+@@ -965,24 +965,36 @@ void HttpServer::sendResponse(const TcpConnectionPtr &conn,
+     auto respImplPtr = static_cast<HttpResponseImpl *>(response.get());
+     if (!isHeadMethod)
+     {
+-        auto httpString = respImplPtr->renderToBuffer();
+-        conn->send(httpString);
++        // It used to send http response header before we even have any streaming response or http status
++        // It is moved to ResponseStream API
++        // auto httpString = respImplPtr->renderToBuffer();
++        // conn->send(httpString);
++        
+         if (!respImplPtr->contentLengthIsAllowed())
+             return;
          auto &asyncStreamCallback = respImplPtr->asyncStreamCallback();
          if (asyncStreamCallback)
          {
@@ -43,7 +129,24 @@ index 51506f95..ef784a68 100644
              {
                  asyncStreamCallback(
                      std::make_unique<ResponseStream>(conn->sendAsyncStream(
-@@ -1062,7 +1065,11 @@ void HttpServer::sendResponses(
+-                        respImplPtr->asyncStreamKickoffDisabled())));
++                        respImplPtr->asyncStreamKickoffDisabled()), conn));
+             }
+             else
+             {
+                 LOG_INFO << "Chunking Set CloseConnection !!!";
+             }
+         }
++        else
++        {
++            // This is called for non-streaming scenarios, we do not need to delay
++            auto httpString = respImplPtr->renderToBuffer();
++            conn->send(httpString);
++        }
+         auto &streamCallback = respImplPtr->streamCallback();
+         const std::string &sendfileName = respImplPtr->sendfileName();
+         if (streamCallback || !sendfileName.empty())
+@@ -1056,11 +1068,16 @@ void HttpServer::sendResponses(
              {
                  conn->send(buffer);
                  buffer.retrieveAll();
@@ -56,6 +159,12 @@ index 51506f95..ef784a68 100644
                  {
                      asyncStreamCallback(
                          std::make_unique<ResponseStream>(conn->sendAsyncStream(
+-                            respImplPtr->asyncStreamKickoffDisabled())));
++                            respImplPtr->asyncStreamKickoffDisabled()),
++                            conn));
+                 }
+                 else
+                 {
 diff --git a/lib/src/Utilities.cc b/lib/src/Utilities.cc
 index c6601f61..8c55ed15 100644
 --- a/lib/src/Utilities.cc
@@ -160,3 +269,18 @@ index 2aff5a0..145f9eb 100755
      }
  }
  int Socket::accept(InetAddress *peeraddr)
+diff --git a/trantor/trantor/net/inner/TcpConnectionImpl.cc b/trantor/trantor/net/inner/TcpConnectionImpl.cc
+index 6a75707..4b436b3 100644
+--- a/trantor/trantor/net/inner/TcpConnectionImpl.cc
++++ b/trantor/trantor/net/inner/TcpConnectionImpl.cc
+@@ -391,7 +391,9 @@ void TcpConnectionImpl::sendInLoop(const char *buffer, size_t length)
+         return;
+     }
+     ssize_t sendLen = 0;
+-    if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
++
++    // Always send directly to avoid order issue: streaming response before unary one
++    //if (!ioChannelPtr_->isWriting() && writeBufferList_.empty())
+     {
+         // send directly
+         sendLen = writeInLoop(buffer, length);
