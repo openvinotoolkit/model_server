@@ -98,19 +98,13 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    std::cout << "Checking if prompt lookup is enabled" << std::endl;
     // Check if prompt lookup is enabled
     auto promptLookupPropertyIt = properties->pluginConfig.find("prompt_lookup");
     if (promptLookupPropertyIt != properties->pluginConfig.end()) {
         auto promptLookupProperty = promptLookupPropertyIt->second.as<bool>();
-        if (promptLookupProperty == true) {
-            properties->isPromptLookupPipeline = true;
-        } else {
-            properties->isPromptLookupPipeline = false;
-        }
+	properties->isPromptLookupPipeline = promptLookupProperty;
     }
 
-    std::cout << "properties->isPromptLookupPipeline: " << properties->isPromptLookupPipeline << std::endl;
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {
