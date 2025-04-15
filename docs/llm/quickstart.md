@@ -1,6 +1,7 @@
 # QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
-Let's deploy [deepseek-ai/DeepSeek-R1-Distill-Qwen-7B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B) model and request generation on Intel iGPU or ARC GPU.
+Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
+It is quantized to INT4 precision and converted it IR format.
 
 Requirements:
 - Linux or Windows11
@@ -10,16 +11,17 @@ Requirements:
 
 1. Install python dependencies for the conversion script:
 ```console
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip3 install huggingface_hub
 ```
 
 2. Run optimum-cli to download and quantize the model:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/simpler-quick-start-llm/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
-python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-7B --weight-format int4 --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
+python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
 ```
 **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
+**Note:** If you want to export models outside of `OpenVINO` organization in HuggingFace, you need to install also the python dependencies via `pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/relases/2025/1/demos/common/export_models/requirements.txt` before running the export_models.py script.
  
 3. Deploy:
 
@@ -28,7 +30,7 @@ python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Di
 > Required: Docker Engine installed
 
 ```bash
-docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:latest-gpu --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
 ```
 :::
 
@@ -37,7 +39,7 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 > Required: OpenVINO Model Server package - see [deployment instruction](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --rest_port 8000 --config_path ./models/config.json
+ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
 ```
 :::
 
@@ -48,7 +50,7 @@ curl http://localhost:8000/v1/config
 ```
 ```json
 {
-  "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B": {
+  "Phi-3.5-mini-instruct": {
     "model_version_status": [
       {
         "version": "1",
@@ -65,22 +67,7 @@ curl http://localhost:8000/v1/config
 
 5. Run generation
 ```console
-curl -s http://localhost:8000/v3/chat/completions   -H "Content-Type: application/json"   -d '{
-    "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-    "max_tokens":30, "temperature":0,
-    "stream":false,
-    "messages": [
-      {
-        "role": "system",
-        "content": "You are a helpful assistant."
-      },
-      {
-        "role": "user",
-        "content": "What are the 3 main tourist attractions in Paris?"
-      }
-    ]
-  }'| jq .
-
+curl -s http://localhost:8000/v3/chat/completions   -H "Content-Type: application/json" -d "{\"model\": \"Phi-3.5-mini-instruct\",\"max_tokens\":30, \"messages\": [{\"role\": \"system\",\"content\": \"You are a helpful assistant.\" }, {\"role\": \"user\",\"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
 ```
 ```json
 {
@@ -90,18 +77,18 @@ curl -s http://localhost:8000/v3/chat/completions   -H "Content-Type: applicatio
       "index": 0,
       "logprobs": null,
       "message": {
-        "content": "The three main tourist attractions in Paris are the Eiffel Tower, the Louvre Museum, and the Paris RATP Metro.<｜User｜>",
+        "content": "Paris, the charming City of Light, is renowned for its rich history, iconic landmarks, architectural splendor, and artistic",
         "role": "assistant"
       }
     }
   ],
-  "created": 1738656445,
-  "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+  "created": 1744716414,
+  "model": "Phi-3.5-mini-instruct",
   "object": "chat.completion",
   "usage": {
-    "prompt_tokens": 37,
+    "prompt_tokens": 24,
     "completion_tokens": 30,
-    "total_tokens": 67
+    "total_tokens": 54
   }
 }
 
