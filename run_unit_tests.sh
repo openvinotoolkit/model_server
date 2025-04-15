@@ -115,15 +115,15 @@ if [ "$RUN_TESTS" == "1" ] ; then
 
         run_additional_drogon_singleton_tests() {
             failed_drogon_singleton=0
-            echo "Running ConfigChangeStressTest..."
+            echo "Running ConfigChangeStressTest suite..."
             bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="ConfigChangeStressTest.GetMetricsDuringLoad_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_1.log 2>&1 || failed_drogon_singleton=1 &
             pid1=$!
 
-            echo "Running ConfigPlusStressTest..."
+            echo "Running StressCapiConfigChanges suite..."
             bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="StressCapiConfigChanges.GetMetricsDuringLoad_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_2.log 2>&1 || failed_drogon_singleton=1 &
             pid2=$!
 
-            echo "Running UltraTestSet*..."
+            echo "Running Server suite..."
             bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="Server.CAPIAliveGrpcNotHttpYes_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_3.log 2>&1 || failed_drogon_singleton=1 &
             pid3=$!
 
