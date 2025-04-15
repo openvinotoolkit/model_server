@@ -77,9 +77,19 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             draftPipelinePath = fsDraftModelsPath.string();
         }
         auto draftSchedulerConfig = prepareDraftPipelineSchedulerConfig(nodeOptions);
-        auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device(),
-            ov::genai::scheduler_config(draftSchedulerConfig));
-        properties->pluginConfig.insert(draftPipeline);
+
+        try {
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device(),
+                ov::genai::scheduler_config(draftSchedulerConfig));
+            properties->pluginConfig.insert(draftPipeline);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error during draft model initialization for draft models_path: {} exception: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Error during draft model initialization for draft models_path: {}", draftPipelinePath);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
