@@ -1,7 +1,7 @@
 # QuickStart - LLM models {#ovms_docs_llm_quickstart}
 
 Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
-It is quantized to INT4 precision and converted it IR format.
+It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct) quantized to INT4 precision and converted to IR format.
 
 Requirements:
 - Linux or Windows11
@@ -18,10 +18,10 @@ pip3 install huggingface_hub
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/simpler-quick-start-llm/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
-python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --config_file_path models/config.json --model_repository_path models --target_device GPU --cache 2
+python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --target_device GPU --cache 2
 ```
 **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-**Note:** If you want to export models outside of `OpenVINO` organization in HuggingFace, you need to install also the python dependencies via `pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/relases/2025/1/demos/common/export_models/requirements.txt` before running the export_models.py script.
+**Note:** If you want to export models outside of `OpenVINO` organization in HuggingFace, you need to install also the python dependencies via `pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt` before running the export_models.py script.
  
 3. Deploy:
 
@@ -93,7 +93,38 @@ curl -s http://localhost:8000/v3/chat/completions   -H "Content-Type: applicatio
 }
 
 ```
-**Note:** If you want to get the response chunks streamed back as they are generated change `stream` parameter in the request to `true`.
+
+Alternatively, use OpenAI python client:
+
+Install the client library:
+```console
+pip3 install openai
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+
+stream = client.chat.completions.create(
+    model="Phi-3.5-mini-instruct",
+    messages=[{"role": "system", "content": "You are a helpful assistant."},
+              {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}
+    ],
+    max_tokens=30,
+    stream=True
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+Output:
+```
+Paris, the charming City of Light, is renowned for its rich history, iconic landmarks, architectural splendor, and artistic
+```
 
 
 ## References
