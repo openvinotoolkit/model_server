@@ -106,8 +106,7 @@ content-type: application/json
 :::{dropdown} **Requesting rerank score with cURL**
 
 ```bash
-curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
--d '{ "model": "BAAI/bge-reranker-large", "query": "welcome", "documents":["good morning","farewell"]}' | jq .
+curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"query\": \"welcome\", \"documents\":[\"good morning\",\"farewell\"]}"
 ```
 ```json
 {
