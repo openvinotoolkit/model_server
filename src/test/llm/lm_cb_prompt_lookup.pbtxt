@@ -1,4 +1,4 @@
-# Copyright 2025 Intel Corporation
+# Copyright 2024 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ node {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
           models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
           cache_size: 1
-          plugin_config: '{"prompt_lookup": true}'
+          plugin_config: '{"prompt_lookup": true, "INFERENCE_PRECISION_HINT": "fp32"}'
         }
     }
     input_stream_handler {

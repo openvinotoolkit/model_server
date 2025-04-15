@@ -58,10 +58,6 @@ std::shared_ptr<GenAiServableProperties> LegacyServable::getProperties() {
     return properties;
 }
 
-bool LegacyServable::supportsSpeculativeDecoding() const {
-    return false;
-}
-
 absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
@@ -72,8 +68,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline,
-        getProperties()->isPromptLookupPipeline, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

@@ -67,13 +67,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
 
     properties->device = nodeOptions.device();
-    properties->isSpeculativePipeline = false;
 
     if (!nodeOptions.draft_models_path().empty()) {
-        if (!servable->supportsSpeculativeDecoding()) {
-            SPDLOG_ERROR("draft_models_path provided, but this servable does not support speculative decoding");
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
         auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
         std::string draftPipelinePath;
         if (fsDraftModelsPath.is_relative()) {
@@ -85,7 +80,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device(),
             ov::genai::scheduler_config(draftSchedulerConfig));
         properties->pluginConfig.insert(draftPipeline);
-        properties->isSpeculativePipeline = true;
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
@@ -97,14 +91,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
         return status;
     }
-
-    // Check if prompt lookup is enabled
-    auto promptLookupPropertyIt = properties->pluginConfig.find("prompt_lookup");
-    if (promptLookupPropertyIt != properties->pluginConfig.end()) {
-        auto promptLookupProperty = promptLookupPropertyIt->second.as<bool>();
-	properties->isPromptLookupPipeline = promptLookupProperty;
-    }
-
 
     properties->tokenizerPluginConfig = {{"PERFORMANCE_HINT", "THROUGHPUT"}};
     try {

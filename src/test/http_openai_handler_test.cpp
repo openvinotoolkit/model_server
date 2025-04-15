@@ -525,11 +525,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
     ASSERT_FALSE(doc.HasParseError());
     uint32_t maxTokensLimit = 10;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
-    bool isPromptLookupPipeline = false;
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, isPromptLookupPipeline, maxModelLength), absl::OkStatus());
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
     EXPECT_EQ(apiHandler->getMaxTokens().value(), maxTokensLimit);
 }
@@ -540,8 +538,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
         "logprobs", "max_completion_tokens"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
-    bool isPromptLookupPipeline = false;
     std::optional<uint32_t> maxModelLength;
     for (auto param : chatParamsThatAcceptNull) {
         std::string json = R"({
@@ -562,7 +558,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
         doc.Parse(json.c_str());
         ASSERT_FALSE(doc.HasParseError());
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, isPromptLookupPipeline, maxModelLength), absl::OkStatus());
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
 }
 
@@ -572,8 +568,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         "logprobs", "echo"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
-    bool isPromptLookupPipeline = false;
     std::optional<uint32_t> maxModelLength;
     for (auto param : chatParamsThatAcceptNull) {
         std::string json = R"({
@@ -584,7 +578,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         doc.Parse(json.c_str());
         ASSERT_FALSE(doc.HasParseError());
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, isPromptLookupPipeline, maxModelLength), absl::OkStatus());
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
 }
 

@@ -60,10 +60,6 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelLegacyServable::getP
     return properties;
 }
 
-bool VisualLanguageModelLegacyServable::supportsSpeculativeDecoding() const {
-    return false;
-}
-
 absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
@@ -74,8 +70,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->isSpeculativePipeline,
-        getProperties()->isPromptLookupPipeline, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
