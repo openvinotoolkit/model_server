@@ -27,9 +27,24 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
+
 if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2520 ; ln -s libopenvino_genai.so.2025.2.0.0 libopenvino_genai.so.2520 ; fi
-if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so.* ; ln -s libopenvino_genai_c.so libopenvino_genai_c.so.2520 ; ln -s libopenvino_genai_c.so.2025.2.0.0 libopenvino_genai_c.so.2520 ; fi
-rm -f /ovms_release/lib/libssl.so
+if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so* ; fi
+
+# Remove GPU plugin for CPU images?
+# Remove OpenCL for CPU images?
+
+rm -rf \
+	/ovms_release/lib/libssl.so \
+	/ovms_release/lib/libexternal_Szlib_Slibzlib.so \
+	/ovms_release/lib/py_openvino_genai.cpython-312-x86_64-linux-gnu.so \
+	/ovms_release/lib/libinference_calculator_cc_proto.so \
+	/ovms_release/lib/libzlib.so \
+	/ovms_release/lib/libface_detection_cc_proto.so.so \
+	/ovms_release/lib/_crypt.cpython-312-x86_64-linux-gnu.so \
+	/ovms_release/lib/libface_detection_options_registry.so \
+	/ovms_release/lib/libinference_calculator_options_registry.so
+
 
 # Remove coverage libraries
 if [ -f /ovms_release/lib/libjava.so ] ; then cd /ovms_release/lib/ && \
@@ -55,7 +70,6 @@ if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/r
 if [[ $debug_bazel_flags == *"--copt=-g -c dbg"* ]]; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb_debug*' -exec cp -vP {} /ovms_release/lib/ \;; fi
 find /opt/opencv/lib/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 cp /opt/opencv/share/licenses/opencv4/* /ovms/release_files/thirdparty-licenses/
-if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libpugixml.so* /ovms_release/lib/ ; fi
 if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
 if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
 
