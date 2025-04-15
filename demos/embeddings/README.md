@@ -126,8 +126,7 @@ content-type: application/json
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v3/embeddings \
-  -H "Content-Type: application/json" -d '{ "model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}' | jq .
+curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"Alibaba-NLP/gte-large-en-v1.5\", \"input\": \"hello world\"}"
 ```
 ```json
 {

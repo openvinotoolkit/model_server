@@ -36,6 +36,7 @@ class DrogonHttpAsyncWriterImpl : public HttpAsyncWriter {
     bool isDisconnected = false;
     std::unordered_map<std::string, std::string> additionalHeaders;
     const drogon::HttpRequestPtr requestPtr{nullptr};
+    drogon::HttpResponsePtr responsePtr{nullptr};
 
 public:
     DrogonHttpAsyncWriterImpl(
@@ -58,6 +59,10 @@ public:
     // Used by calculator via HttpClientConnection
     bool IsDisconnected() const override;
     void RegisterDisconnectionCallback(std::function<void()> onDisconnectedCallback) override;
+
+private:
+    void sendHeaderIfFirstResponse(HTTPStatusCode status);
+    bool firstResponse{true};
 };
 
 }  // namespace ovms
