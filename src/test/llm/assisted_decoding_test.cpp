@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -370,4 +370,57 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
     ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+}
+
+// Consider parametrization of negative tests with request body and endpoint as parameters
+TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCompletions) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "prompt": "def",
+            "num_assistant_tokens": 5
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+
+    requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "prompt": "def",
+            "max_ngram_size": 3
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterChatCompletions) {
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "messages": [{"content": "def"}],
+            "num_assistant_tokens": 5
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+
+    requestBody = R"(
+        {
+            "model": "lm_cb_prompt_lookup",
+            "messages": [{"content": "def"}],
+            "max_ngram_size": 3
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }

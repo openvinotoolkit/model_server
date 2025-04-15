@@ -135,7 +135,6 @@ struct OpenAIChatCompletionsRequest {
             config.length_penalty = lengthPenalty.value();
         // TODO: no_repeat_ngram_size = ?
         // TODO: early_finish = ?
-        // TODO use_beam_search is unused ?
 
         // Multinomial sampling specific
         if (temperature.has_value())

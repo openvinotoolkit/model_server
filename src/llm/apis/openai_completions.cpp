@@ -538,7 +538,7 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         }
     }
 
-    // max_ngram_size: uint; optional - defaults to 0
+    // max_ngram_size: uint;
     if (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull()) {
         if (!maxNgramSizeIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
             return absl::InvalidArgumentError("max_ngram_size must be an unsigned integer greater than 0");
@@ -546,16 +546,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
     request.maxModelLength = maxModelLength;
-
-    // use_beam_search: bool; optional - defaults to false
-    // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
-    // Use best_of>1 to steer into beams search
-    // it = doc.FindMember("use_beam_search");
-    // if (it != doc.MemberEnd()) {
-    //     if (!it->value.IsBool())
-    //         return false;
-    //     request.useBeamSearch = it->value.GetBool();
-    // }
 
     // logit_bias TODO
     // top_logprobs TODO
