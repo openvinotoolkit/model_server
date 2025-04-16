@@ -30,7 +30,7 @@ python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-inst
 > ```
  
 ### 3. Deploy the Model
-:::{tab-set}
+::::{tab-set}
 
 :::{tab-item} With Docker
 **Required:** Docker Engine installed
@@ -47,8 +47,7 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
 ```
 :::
-
-:::
+::::
 
 ### 4. Check Model Readiness
 
@@ -79,10 +78,10 @@ curl http://localhost:8000/v1/config
 
 ### 5. Run Generation
 
-:::{tab-set}
+::::{tab-set}
 
 :::{tab-item} Linux
-```console
+```bash
 curl -s http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -105,12 +104,12 @@ curl -s http://localhost:8000/v3/chat/completions \
 :::
 
 :::{tab-item} Windows
-```console
+```bat
 curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Phi-3.5-mini-instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}" 
 ```
 :::
 
-:::
+::::
 
 :::{dropdown} Expected Response
 ```json
