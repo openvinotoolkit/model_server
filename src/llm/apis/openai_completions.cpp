@@ -209,7 +209,32 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 curl_handle = curl_easy_init();
                                 SPDLOG_DEBUG("Downloading image: {}", url);
                                 auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
-
+                                if (status == CURLE_OK) {
+                                    status = curl_easy_setopt(curl_handle, CURLOPT_HEADER, 1);
+                                }
+                                if (status == CURLE_OK) {
+                                    status = curl_easy_setopt(curl_handle, CURLOPT_NOBODY, 1);
+                                }
+                                if (status == CURLE_OK) {
+                                    status = curl_easy_perform(curl_handle);
+                                }
+                                if(status == CURLE_OK) {
+                                    /* check the size */
+                                    double fileSize;
+                                    status = curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
+                                    double sizeLimit = 10000;
+                                    if(status == CURLE_OK && fileSize > sizeLimit) {
+                                        std::stringstream ss;
+                                        ss << "Downloading image failed: image size: " << fileSize << " exceeds limit: " << sizeLimit;
+                                        SPDLOG_ERROR(ss.str());
+                                        return absl::InvalidArgumentError(ss.str());
+                                    }
+                                }
+                                curl_easy_cleanup(curl_handle);
+                                status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
+                                if (status == CURLE_OK) {
+                                    status = curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+                                }
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
                                 }
@@ -233,8 +258,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
 
                                 if (status != CURLE_OK) {
-                                    SPDLOG_ERROR("Downloading image failed: {}", curl_easy_strerror(status));
-                                    return absl::InvalidArgumentError("Downloading image failed");
+                                    std::stringstream ss;
+                                    ss << "Downloading image failed: " << curl_easy_strerror(status);
+                                    SPDLOG_ERROR(ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
                                 } else {
                                     SPDLOG_DEBUG("Downloading image succeeded, {} bytes retrieved", decoded.size());
                                 }
@@ -247,8 +274,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 ov::Tensor tensor = load_image_stbi(decoded);
                                 request.imageHistory.push_back({i, tensor});
                             } catch (std::runtime_error& e) {
-                                SPDLOG_ERROR("Image parsing failed: {}", e.what());
-                                return absl::InvalidArgumentError("Image parsing failed");
+                                std::stringstream ss;
+                                ss << "Image parsing failed: " << e.what();
+                                SPDLOG_ERROR(ss.str());
+                                return absl::InvalidArgumentError(ss.str());
                             }
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
