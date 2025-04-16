@@ -46,10 +46,11 @@ protected:
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers;
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
     rapidjson::Document parsedResponse;
     ovms::HttpResponseComponents responseComponents;
@@ -61,6 +62,7 @@ public:
 
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));  // make the streaming flow sequential
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
@@ -141,7 +143,7 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasic) {
     std::string requestBody = createRequestBody(modelName, fields);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -179,7 +181,7 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasicOnlyImage) {
     std::string requestBody = createRequestBody(modelName, fields, false, 1);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -217,7 +219,7 @@ TEST_P(VLMServableExecutionTestParameterized, unaryMultipleImageTagOrderPasses) 
     std::string requestBody = createRequestBody(modelName, fields, false, 3);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -254,7 +256,7 @@ TEST_P(VLMServableExecutionTestParameterized, UnaryRestrictedTagUsed) {
     std::string requestBody = createRequestBody(modelName, fields, true, 1, "<ov_genai_image_2>");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -277,7 +279,7 @@ TEST_P(VLMServableExecutionTestParameterized, streamBasic) {
         });
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
     if (modelName.find("legacy") == std::string::npos) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
@@ -302,7 +304,7 @@ TEST_P(VLMServableExecutionTestParameterized, streamBasicOnlyImage) {
         });
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
     if (modelName.find("legacy") == std::string::npos) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
@@ -327,7 +329,7 @@ TEST_P(VLMServableExecutionTestParameterized, streamMultipleImageTagOrderPasses)
         });
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
     if (modelName.find("legacy") == std::string::npos) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
@@ -355,7 +357,7 @@ TEST_P(VLMServableExecutionTestParameterized, streamRestrictedTagUsed) {
         });
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 }
 
