@@ -78,39 +78,4 @@ message LLMCalculatorOptions {
     optional bool draft_dynamic_split_fuse = 17;
 
     optional PipelineType pipeline_type = 18 [default = AUTO];
-    
-    // START EXPERIMENTAL OPTIONS
-    message PipelineConfig {
-      required string models_path = 1;
-      optional string device = 2 [default = "CPU"];
-      optional string plugin_config = 3 [default = ""];
-      optional uint64 max_num_batched_tokens = 4 [default = 256];
-      // model memory cache to allocate in GB
-      optional uint64 cache_size = 5 [default = 8];
-      optional uint64 max_num_seqs = 6 [default = 256];
-      optional bool dynamic_split_fuse = 7 [default = true];
-      optional uint32 best_of_limit = 8 [default = 20];
-      optional uint32 max_tokens_limit = 9;
-      optional bool enable_prefix_caching = 10 [default = false];
-    }
-
-    message ContinuousBatchingPipelineConfig {
-      required PipelineConfig main_pipeline_config = 1;
-      optional PipelineConfig draft_pipeline_config = 2;
-    }
-
-    message VisualLanguageModelPipelineConfig {
-      required PipelineConfig pipeline_config = 1;
-    }
-
-    message LLMPipelineConfig {
-      required PipelineConfig pipeline_config = 1;
-    }
-
-    oneof pipeline_config {
-      ContinuousBatchingPipelineConfig continuous_batching_pipeline_config = 19;
-      VisualLanguageModelPipelineConfig visual_language_model_pipeline_config = 20;
-      LLMPipelineConfig llm_pipeline_config = 21;
-    }
-  // END EXPERIMENTAL OPTIONS
 }

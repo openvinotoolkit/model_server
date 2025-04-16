@@ -57,7 +57,6 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
 
     properties->device = nodeOptions.device();
-    properties->isSpeculativePipeline = false;
 
     if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
         // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level

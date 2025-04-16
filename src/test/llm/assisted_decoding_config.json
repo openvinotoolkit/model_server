@@ -1,0 +1,13 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"lm_cb_speculative",
+        "graph_path":"/ovms/src/test/llm/lm_cb_speculative.pbtxt"
+    }, 
+    {
+        "name":"lm_cb_prompt_lookup",
+        "graph_path":"/ovms/src/test/llm/lm_cb_prompt_lookup.pbtxt"
+    }
+    ]
+}

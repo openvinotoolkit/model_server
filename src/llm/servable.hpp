@@ -82,7 +82,6 @@ struct GenAiServableProperties {
     // Sampling limits
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit;
-    bool isSpeculativePipeline;  // sampling is generally common, but maybe we could avoid having this field at all
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
     TextProcessor textProcessor;
@@ -111,9 +110,6 @@ public:
 
     // Returns properties of the servable
     virtual std::shared_ptr<GenAiServableProperties> getProperties() = 0;
-
-    // Return true if servable can load and use draft model in speculative decoding pipeline
-    virtual bool supportsSpeculativeDecoding() const = 0;
 
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.

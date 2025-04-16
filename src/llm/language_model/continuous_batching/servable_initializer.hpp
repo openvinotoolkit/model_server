@@ -33,11 +33,9 @@ namespace ovms {
 class Status;
 
 class ContinuousBatchingServableInitializer : public GenAiServableInitializer {
-    static ov::genai::SchedulerConfig prepareDraftPipelineSchedulerConfigExperimental(const mediapipe::LLMCalculatorOptions_PipelineConfig& draftModelConfig);
     static ov::genai::SchedulerConfig prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions);
 
 public:
-    Status initializeExperimental(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath);
     Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
 };
 }  // namespace ovms
