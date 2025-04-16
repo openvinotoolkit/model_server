@@ -34,8 +34,9 @@ class DrogonMultiPartParser : public MultiPartParser {
     const std::shared_ptr<drogon::MultiPartParser> parser{nullptr};
 
 public:
-    DrogonMultiPartParser(const drogon::HttpRequestPtr& request)
-        : request(request), parser(std::make_shared<drogon::MultiPartParser>()) {}
+    DrogonMultiPartParser(const drogon::HttpRequestPtr& request) :
+        request(request),
+        parser(std::make_shared<drogon::MultiPartParser>()) {}
 
     bool parse() override;
 
@@ -43,7 +44,6 @@ public:
 
     std::string getFieldByName(const std::string& name) const override;
     std::string_view getFileContentByName(const std::string& name) const override;
-
 };
 
 }  // namespace ovms

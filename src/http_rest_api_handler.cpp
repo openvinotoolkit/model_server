@@ -480,7 +480,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         if (isMultiPart) {
             if (!multiPartParser->parse()) {
-                return StatusCode::REST_INVALID_URL;  // TODO: Better errror?
+                return StatusCode::REST_INVALID_URL;  // TODO: Better error?
             }
             model_name = multiPartParser->getFieldByName("model");
             if (model_name.empty()) {
@@ -722,7 +722,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     const std::string& request_path,
     //const std::vector<std::pair<std::string, std::string>>& headers) {
     const std::unordered_map<std::string, std::string>& headers) {
-            std::smatch sm;
+    std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
         return StatusCode::REST_UNSUPPORTED_METHOD;

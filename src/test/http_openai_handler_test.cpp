@@ -80,7 +80,7 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(/v3/v1/completions/
-
+content-typeapplication/json
         {
             "model": "gpt",
             "stream": false,
@@ -106,7 +106,7 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(/v3/completions/
-test1headertest2header
+content-typeapplication/jsontest1headertest2header
         {
             "model": "gpt",
             "stream": false,

@@ -75,7 +75,18 @@ public:
             // - Request body
             // - timestamps 0-8 (appended in cycles)
             this->body = data.uri + std::string{"\n"};
-            for (auto header : data.headers) {
+
+            // Sort alphabetically to get determinism
+            std::vector<std::pair<std::string, std::string>> sorted_elements(
+                data.headers.begin(), data.headers.end());
+
+            // Sort the vector by key
+            std::sort(sorted_elements.begin(), sorted_elements.end(),
+                [](const auto& a, const auto& b) {
+                    return a.first < b.first;
+                });
+
+            for (auto header : sorted_elements) {
                 this->body += header.first;
                 this->body += header.second;
             }
