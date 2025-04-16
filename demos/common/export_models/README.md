@@ -24,81 +24,49 @@ For every use case subcommand there is adjusted list of parameters:
 
 ```console
 python export_model.py text_generation --help
-usage: export_model.py text_generation [-h]
-                                       [--model_repository_path MODEL_REPOSITORY_PATH]
-                                       --source_model SOURCE_MODEL
-                                       [--model_name MODEL_NAME]
-                                       [--weight-format PRECISION]
-                                       [--config_file_path CONFIG_FILE_PATH]
-                                       [--overwrite_models]
-                                       [--target_device TARGET_DEVICE]
-                                       [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}]
-                                       [--kv_cache_precision {u8}]
-                                       [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS]
-                                       [--enable_prefix_caching]
-                                       [--disable_dynamic_split_fuse]
-                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS]
-                                       [--max_num_seqs MAX_NUM_SEQS]
-                                       [--cache_size CACHE_SIZE]
-                                       [--draft_source_model DRAFT_SOURCE_MODEL]
-                                       [--draft_model_name DRAFT_MODEL_NAME]
-                                       [--max_prompt_len MAX_PROMPT_LEN]
+usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE]
+                                       [--ov_cache_dir OV_CACHE_DIR] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
+                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--max_prompt_len MAX_PROMPT_LEN]
 
 options:
   -h, --help            show this help message and exit
   --model_repository_path MODEL_REPOSITORY_PATH
                         Where the model should be exported to
   --source_model SOURCE_MODEL
-                        HF model name or path to the local folder with PyTorch
-                        or OpenVINO model
+                        HF model name or path to the local folder with PyTorch or OpenVINO model
   --model_name MODEL_NAME
-                        Model name that should be used in the deployment.
-                        Equal to source_model if HF model name is used
+                        Model name that should be used in the deployment. Equal to source_model if HF model name is used
   --weight-format PRECISION
                         precision of the exported model
   --config_file_path CONFIG_FILE_PATH
                         path to the config file
-  --overwrite_models    Overwrite the model if it already exists in the models
-                        repository
+  --overwrite_models    Overwrite the model if it already exists in the models repository
   --target_device TARGET_DEVICE
                         CPU, GPU, NPU or HETERO, default is CPU
+  --ov_cache_dir OV_CACHE_DIR
+                        Folder path for compilation cache to speedup initialization time
   --pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}
-                        Type of the pipeline to be used. AUTO is used by
-                        default
+                        Type of the pipeline to be used. AUTO is used by default
   --kv_cache_precision {u8}
-                        u8 or empty (model default). Reduced kv cache
-                        precision to u8 lowers the cache size consumption.
+                        u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.
   --extra_quantization_params EXTRA_QUANTIZATION_PARAMS
-                        Add advanced quantization parameters. Check optimum-
-                        intel documentation. Example: "--sym --group-size -1
-                        --ratio 1.0 --awq --scale-estimation --dataset
-                        wikitext2"
+                        Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"
   --enable_prefix_caching
                         This algorithm is used to cache the prompt tokens.
   --disable_dynamic_split_fuse
-                        The maximum number of tokens that can be batched
-                        together.
+                        The maximum number of tokens that can be batched together.
   --max_num_batched_tokens MAX_NUM_BATCHED_TOKENS
-                        empty or integer. The maximum number of tokens that
-                        can be batched together.
+                        empty or integer. The maximum number of tokens that can be batched together.
   --max_num_seqs MAX_NUM_SEQS
-                        256 by default. The maximum number of sequences that
-                        can be processed together.
+                        256 by default. The maximum number of sequences that can be processed together.
   --cache_size CACHE_SIZE
-                        cache size in GB
+                        KV cache size in GB
   --draft_source_model DRAFT_SOURCE_MODEL
-                        HF model name or path to the local folder with PyTorch
-                        or OpenVINO draft model. Using this option will create
-                        configuration for speculative decoding
+                        HF model name or path to the local folder with PyTorch or OpenVINO draft model. Using this option will create configuration for speculative decoding
   --draft_model_name DRAFT_MODEL_NAME
-                        Draft model name that should be used in the
-                        deployment. Equal to draft_source_model if HF model
-                        name is used. Available only in draft_source_model has
-                        been specified.
+                        Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
-                        Sets NPU specific property for maximum number of
-                        tokens in the prompt. Not effective if target device
-                        is not NPU
+                        Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
 ```
 
 ## Examples how models can be exported
@@ -116,6 +84,11 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
 ```console
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2
+```
+
+Text generation for NPU target device. Command below sets max allowed prompt size and configures model compilation directory to speedup initialization time:
+```console
+python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --config_file_path models/config_all.json --model_repository_path models --target_device NPU --max_prompt_len 2048 --ov_cache_dir ./models/.ov_cache
 ```
 
 Embeddings with deployment on a single CPU host:
