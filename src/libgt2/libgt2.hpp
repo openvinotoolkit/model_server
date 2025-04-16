@@ -50,7 +50,6 @@ public:
     }
     ~Libgt2InitGuard() {
         git_libgit2_shutdown();
-        printf("git_libgit2_shutdown\n");
     }
 };
 
@@ -68,7 +67,6 @@ public:
     void shutdownLibGt2();
 
 private:
-    std::unique_ptr<Libgt2InitGuard> initGuard;
     std::string sourceModel;
     std::string repoPath;
     bool pullHfModelMode;

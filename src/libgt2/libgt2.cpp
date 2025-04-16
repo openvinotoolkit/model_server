@@ -231,20 +231,6 @@ HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& re
     this->repoUrl = "";
 }
 
-Status HfDownloader::initLibGt2() {
-    initGuard = std::make_unique<Libgt2InitGuard>();
-    if (initGuard->status < 0) {
-        SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str());
-        return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
-    }
-
-    return StatusCode::OK;
-}
-
-void HfDownloader::shutdownLibGt2() {
-    initGuard.reset();
-}
-
 Status HfDownloader::cloneRepository() {
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;

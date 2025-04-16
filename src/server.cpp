@@ -300,6 +300,11 @@ Status Server::startModules(ovms::Config& config) {
     if (config.getServerSettings().hfSettings.pullHfModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
+        if (!status.ok()) {
+            return status;
+        }
+        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        status = hfModule->clone();
         ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
         setShutdownRequest(1);
         return status;

@@ -17,20 +17,20 @@
 #include <memory>
 
 #include "module.hpp"
+#include "capi_frontend/server_settings.hpp"
 
 namespace ovms {
-class HfDownloader;
 
 class HfPullModelModule : public Module {
 protected:
-    mutable std::unique_ptr<HfDownloader> hfDownloader;
+    mutable HFSettingsImpl hfSettings;
 
 public:
     HfPullModelModule();
     ~HfPullModelModule();
     Status start(const ovms::Config& config) override;
-
     void shutdown() override;
-    virtual HfDownloader& getHfDownloader() const;
+
+    Status clone() const;
 };
 }  // namespace ovms
