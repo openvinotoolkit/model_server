@@ -180,12 +180,13 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
 
     // Test config parser
     ConstructorEnabledConfig cfg;
+    ovms::HFSettingsImpl* hfSettings = new ovms::HFSettingsImpl;
 #ifdef __linux__
-    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, nullptr));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, hfSettings));
     EXPECT_EQ(cfg.grpcWorkers(), AVAILABLE_CORES);
 #elif _WIN32
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcWorkers(_serverSettings, 1));
-    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, nullptr));
+    ASSERT_TRUE(cfg.parse(serverSettings, modelsSettings, hfSettings));
     EXPECT_EQ(cfg.grpcWorkers(), 1);
 #endif
     EXPECT_EQ(cfg.port(), 5555);
