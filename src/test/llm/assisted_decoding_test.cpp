@@ -69,7 +69,7 @@ public:
     static void SetUpTestSuite() {
         std::string port = "9173";
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/assisted_decoding_config.json").c_str(), 60);
+        ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/assisted_decoding_config.json").c_str(), 15);
 
         try {
             plugin_config_t tokenizerPluginConfig = {};
@@ -80,7 +80,6 @@ public:
             schedulerConfig.dynamic_split_fuse = true;
             schedulerConfig.max_num_seqs = 256;
             plugin_config_t pluginConfig;
-            // Setting precision to f32 fails on SPR hosts - to be investigated??
             JsonParser::parsePluginConfig("{\"INFERENCE_PRECISION_HINT\":\"f32\"}", pluginConfig);
             cbPipe = std::make_shared<ov::genai::ContinuousBatchingPipeline>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"), schedulerConfig, device, pluginConfig, tokenizerPluginConfig);
             llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(cbPipe);
@@ -205,7 +204,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    GTEST_SKIP() << "Skip this test until strange tokenizer behavior is fixed";
+    GTEST_SKIP() << "Skip this test until tokenizer not respecting add_special_tokens parameter bug is fixed";
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -243,7 +242,6 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 
     // Dynamic number of candidates
-    /*
     requestBody = R"(
         {
             "model": "lm_cb_speculative",
@@ -259,7 +257,6 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
             ]
         }
     )";
-    */
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
