@@ -11,7 +11,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 ## Prerequisites
 
-**OVMS 2025.1**
+**OVMS 2025.1 or higher**
 
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 

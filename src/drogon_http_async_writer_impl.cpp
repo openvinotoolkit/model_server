@@ -27,15 +27,23 @@ namespace ovms {
 void DrogonHttpAsyncWriterImpl::OverwriteResponseHeader(const std::string& key, const std::string& value) {
     this->additionalHeaders[key] = value;
 }
+void DrogonHttpAsyncWriterImpl::sendHeaderIfFirstResponse(HTTPStatusCode status) {
+    if (firstResponse) {
+        firstResponse = false;
+        this->responsePtr->setCustomStatusCode(int(status));
+        this->stream->sendHeader(this->responsePtr->renderHeaderToString());
+    }
+}
 void DrogonHttpAsyncWriterImpl::PartialReplyWithStatus(std::string message, HTTPStatusCode status) {
     if (this->isDisconnected) {
         return;
     }
+    this->sendHeaderIfFirstResponse(status);
     if (!this->stream->send(message))
         this->isDisconnected = true;
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWorkloadCallback) {
-    auto resp = drogon::HttpResponse::newAsyncStreamResponse(
+    this->responsePtr = drogon::HttpResponse::newAsyncStreamResponse(
         [this, actualWorkloadCallback = std::move(actualWorkloadCallback)](drogon::ResponseStreamPtr stream) {
             this->stream = std::move(stream);
             this->pool.Schedule([actualWorkloadCallback = std::move(actualWorkloadCallback)] {
@@ -52,23 +60,22 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
     // Convert headers to drogon format
     for (const auto& [key, value] : this->additionalHeaders) {
         if (key == "Content-Type") {
-            resp->setContentTypeString(value);
+            this->responsePtr->setContentTypeString(value);
             continue;
         }
-        resp->addHeader(key, value);
+        this->responsePtr->addHeader(key, value);
     }
-    this->drogonResponseInitializeCallback(resp);
+
+    // Originally this also sent http response header (with status code)
+    // We have drogon patch that delays it till first streaming response
+    this->drogonResponseInitializeCallback(this->responsePtr);
 }
 void DrogonHttpAsyncWriterImpl::PartialReplyEnd() {
     this->stream->close();
 }
 // Used by graph executor impl
 void DrogonHttpAsyncWriterImpl::PartialReply(std::string message) {
-    if (this->IsDisconnected()) {
-        return;
-    }
-    if (!this->stream->send(message))
-        this->isDisconnected = true;
+    return PartialReplyWithStatus(std::move(message), HTTPStatusCode::OK);
 }
 // Used by calculator via HttpClientConnection
 bool DrogonHttpAsyncWriterImpl::IsDisconnected() const {
