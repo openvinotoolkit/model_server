@@ -243,21 +243,21 @@ void CLIParser::parse(int argc, char** argv) {
     }
 }
 
-void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, HFSettingsImpl* hfSettings) {
+void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     if (nullptr == result) {
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
 
     // Ovms Pull models mode
     if (result->count("pull_hf_model")) {
-        hfSettings->pullHfModelMode = result->operator[]("pull_hf_model").as<bool>();
+        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull_hf_model").as<bool>();
         if (result->count("source_model"))
-            hfSettings->sourceModel = result->operator[]("source_model").as<std::string>();
+            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
         if (result->count("repo_path"))
-            hfSettings->repoPath = result->operator[]("repo_path").as<std::string>();
+            serverSettings->hfSettings.repoPath = result->operator[]("repo_path").as<std::string>();
         return;
     } else {
-        hfSettings->pullHfModelMode = false;
+        serverSettings->hfSettings.pullHfModelMode = false;
     }
 
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();

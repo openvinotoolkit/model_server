@@ -297,7 +297,7 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 
-    if (config.getHfSettings().pullHfModelMode) {
+    if (config.getServerSettings().hfSettings.pullHfModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
         ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
@@ -396,11 +396,10 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-        HFSettingsImpl hfSettings;
         parser.parse(argc, argv);
-        parser.prepare(&serverSettings, &modelsSettings, &hfSettings);
+        parser.prepare(&serverSettings, &modelsSettings);
 
-        Status ret = start(&serverSettings, &modelsSettings, &hfSettings);
+        Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
@@ -421,7 +420,7 @@ int Server::start(int argc, char** argv) {
 }
 
 // C-API Start
-Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, HFSettingsImpl* hfSettings) {
+Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     try {
         std::unique_lock lock{this->startMtx, std::defer_lock};
         auto locked = lock.try_lock();
@@ -436,7 +435,7 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
         }
         lockModules.unlock();
         auto& config = ovms::Config::instance();
-        if (!config.parse(serverSettings, modelsSettings, hfSettings))
+        if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
         logConfig(config);

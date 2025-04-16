@@ -32,7 +32,7 @@ Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", HF_MODEL_PULL_MODULE_NAME);
 
-    this->hfDownloader = std::make_unique<HfDownloader>(config.getHfSettings().sourceModel, config.getHfSettings().repoPath, config.getHfSettings().pullHfModelMode);
+    this->hfDownloader = std::make_unique<HfDownloader>(config.getServerSettings().hfSettings.sourceModel, config.getServerSettings().hfSettings.repoPath, config.getServerSettings().hfSettings.pullHfModelMode);
 
     auto status = this->hfDownloader->initLibGt2();
     if (!status.ok()) {

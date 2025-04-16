@@ -54,10 +54,9 @@ Config& Config::parse(int argc, char** argv) {
     ovms::CLIParser p;
     ovms::ServerSettingsImpl serverSettings;
     ovms::ModelsSettingsImpl modelsSettings;
-    ovms::HFSettingsImpl hfSettings;
     p.parse(argc, argv);
-    p.prepare(&serverSettings, &modelsSettings, &hfSettings);
-    if (!this->parse(&serverSettings, &modelsSettings, &hfSettings))
+    p.prepare(&serverSettings, &modelsSettings);
+    if (!this->parse(&serverSettings, &modelsSettings))
 #ifdef __linux__
         exit(EX_USAGE);
 #elif _WIN32
@@ -66,10 +65,9 @@ Config& Config::parse(int argc, char** argv) {
     return *this;
 }
 
-bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings, HFSettingsImpl* hfSettings) {
+bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     this->serverSettings = *serverSettings;
     this->modelsSettings = *modelsSettings;
-    this->hfSettings = *hfSettings;
     return validate();
 }
 
@@ -97,7 +95,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 
 bool Config::validate() {
     // TODO: Add validation of all parameters once the CLI model export flags will be implemented
-    if (hfSettings.pullHfModelMode) {
+    if (this->serverSettings.hfSettings.pullHfModelMode) {
         return true;
     }
     if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {

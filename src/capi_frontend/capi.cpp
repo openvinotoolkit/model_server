@@ -366,8 +366,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* serve
     ovms::Server* srv = reinterpret_cast<ovms::Server*>(server);
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(server_settings);
     ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(models_settings);
-    ovms::HFSettingsImpl* hfSettings = new ovms::HFSettingsImpl;
-    auto res = srv->start(serverSettings, modelsSettings, hfSettings);
+    auto res = srv->start(serverSettings, modelsSettings);
     if (res.ok())
         return nullptr;
     return reinterpret_cast<OVMS_Status*>(new ovms::Status(std::move(res)));

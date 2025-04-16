@@ -46,14 +46,10 @@ private:
 protected:
     ModelsSettingsImpl modelsSettings;
     ServerSettingsImpl serverSettings;
-    HFSettingsImpl hfSettings;
 
 public:
-    ServerSettingsImpl getServerSettings() {
+    const ServerSettingsImpl getServerSettings() const {
         return serverSettings;
-    }
-    const HFSettingsImpl getHfSettings() const {
-        return hfSettings;
     }
     ModelsSettingsImpl& getModelSettings() {
         return modelsSettings;
@@ -75,7 +71,7 @@ public:
          * @return Config& 
          */
     Config& parse(int argc, char** argv);
-    bool parse(ServerSettingsImpl*, ModelsSettingsImpl*, HFSettingsImpl*);
+    bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
          * @brief Validate passed arguments
