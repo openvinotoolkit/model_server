@@ -42,6 +42,7 @@ TEST_F(PullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string repoPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
     this->ServerPullHfModel(modelName, repoPath);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED) << "OVMS started manager module, only hf module must be started";
     std::string modelPath = ovms::FileSystem::appendSlash(repoPath) + "openvino_model.bin";
     ASSERT_EQ(std::filesystem::exists(modelPath), true);
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);

@@ -27,6 +27,7 @@ def libgt2_engine():
         commit = "338e6fb681369ff0537719095e22ce9dc602dbf0", # Dec 28, 2024 - v1.9.0
         build_file = "@_libgt2_engine//:BUILD",
         patch_args = ["-p1"],
+        # Patch implements git-lfs filter, required for HF models download
         patches = ["lfs.patch"],
     )
 

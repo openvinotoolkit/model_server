@@ -91,6 +91,11 @@ static void logConfig(const Config& config) {
     SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
+    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+        SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
+        SPDLOG_DEBUG("repo_path: {}", config.getServerSettings().hfSettings.repoPath);
+        return;
+    }
     if (config.configPath().empty()) {
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
         SPDLOG_DEBUG("model_name: {}", config.modelName());

@@ -56,26 +56,18 @@ public:
 class HfDownloader {
 public:
     HfDownloader();
-    HfDownloader(const HfDownloader& hfDownloader);
     HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode);
     Status cloneRepository();
-    void setSourceModel(std::string inSourceModel);
-    void setRepositoryPath(std::string inRepoPath);
-    void setPullHfModelMode(bool isOn);
     bool isPullHfModelModeOn();
-    Status initLibGt2();
-    void shutdownLibGt2();
 
 private:
     std::string sourceModel;
     std::string repoPath;
     bool pullHfModelMode;
-    std::string hfEndpoint;
-    std::string repoUrl;
 
-    void UpdateRepoUrl();
-    void SetHfEndpoint();
-    void GetRepositoryUrlWithPassword(std::string& passRepoUrl);
+    std::string GetRepoUrl(std::string& hfEndpoint);
+    std::string GetHfEndpoint();
+    std::string GetRepositoryUrlWithPassword(std::string& hfEndpoint);
     bool CheckIfProxySet();
     bool CheckIfTokenSet();
 };

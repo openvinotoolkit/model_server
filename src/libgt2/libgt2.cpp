@@ -147,15 +147,6 @@ int cred_acquire_cb(git_credential** out,
 }
 
 // C-style callback functions section used in libgt2 library ENDS ********************************
-void HfDownloader::setSourceModel(std::string inSourceModel) {
-    this->sourceModel = inSourceModel;
-}
-void HfDownloader::setRepositoryPath(std::string inRepoPath) {
-    this->repoPath = inRepoPath;
-}
-void HfDownloader::setPullHfModelMode(bool isOn) {
-    this->pullHfModelMode = isOn;
-}
 bool HfDownloader::isPullHfModelModeOn() {
     return this->pullHfModelMode;
 }
@@ -174,8 +165,8 @@ bool HfDownloader::CheckIfTokenSet() {
     return true;
 }
 
-void HfDownloader::GetRepositoryUrlWithPassword(std::string& passRepoUrl) {
-    passRepoUrl = "https://";
+std::string HfDownloader::GetRepositoryUrlWithPassword(std::string& hfEndpoint) {
+    std::string passRepoUrl = "https://";
 
     const char* envCred = std::getenv("HF_TOKEN");
     if (envCred) {
@@ -185,50 +176,43 @@ void HfDownloader::GetRepositoryUrlWithPassword(std::string& passRepoUrl) {
         SPDLOG_INFO("HF_TOKEN environment variable not set.");
     }
 
-    passRepoUrl += this->hfEndpoint + this->sourceModel;
+    passRepoUrl += hfEndpoint + this->sourceModel;
+
+    return passRepoUrl;
 }
 
-void HfDownloader::SetHfEndpoint() {
+std::string HfDownloader::GetHfEndpoint() {
     const char* envCred = std::getenv("HF_ENDPOINT");
-    this->hfEndpoint = "huggingface.co";
+    std::string hfEndpoint = "huggingface.co";
     if (envCred) {
-        this->hfEndpoint = std::string(envCred);
+        hfEndpoint = std::string(envCred);
     } else {
         SPDLOG_INFO("HF_ENDPOINT environment variable not set.");
     }
 
-    if (!endsWith(this->hfEndpoint, "/")) {
-        this->hfEndpoint.append("/");
+    if (!endsWith(hfEndpoint, "/")) {
+        hfEndpoint.append("/");
     }
+
+    return hfEndpoint;
 }
 
-void HfDownloader::UpdateRepoUrl() {
-    this->repoUrl = "https://";
-    this->repoUrl += this->hfEndpoint + this->sourceModel;
+std::string HfDownloader::GetRepoUrl(std::string& hfEndpoint) {
+    std::string repoUrl = "https://";
+    repoUrl += hfEndpoint + this->sourceModel;
+    return repoUrl;
 }
 
 HfDownloader::HfDownloader() {
     this->sourceModel = "";
     this->repoPath = "";
     this->pullHfModelMode = false;
-    this->hfEndpoint = "";
-    this->repoUrl = "";
-}
-
-HfDownloader::HfDownloader(const HfDownloader& hfDownloader) {
-    this->sourceModel = hfDownloader.sourceModel;
-    this->repoPath = hfDownloader.repoPath;
-    this->pullHfModelMode = hfDownloader.pullHfModelMode;
-    this->hfEndpoint = hfDownloader.hfEndpoint;
-    this->repoUrl = hfDownloader.repoUrl;
 }
 
 HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode) {
     this->sourceModel = sourceModel;
     this->repoPath = repoPath;
     this->pullHfModelMode = pullHfModelMode;
-    this->hfEndpoint = "";
-    this->repoUrl = "";
 }
 
 Status HfDownloader::cloneRepository() {
@@ -253,11 +237,10 @@ Status HfDownloader::cloneRepository() {
         clone_opts.fetch_opts.proxy_opts.url = std::getenv("https_proxy");
     }
 
-    SetHfEndpoint();
-    UpdateRepoUrl();
-    SPDLOG_INFO("Downloading from url: {}", this->repoUrl.c_str());
-    std::string passRepoUrl;
-    GetRepositoryUrlWithPassword(passRepoUrl);
+    std::string hfEndpoint = GetHfEndpoint();
+    std::string repoUrl = GetRepoUrl(hfEndpoint);
+    SPDLOG_INFO("Downloading from url: {}", repoUrl.c_str());
+    std::string passRepoUrl = GetRepositoryUrlWithPassword(hfEndpoint);
     const char* url = passRepoUrl.c_str();
     const char* path = this->repoPath.c_str();
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
