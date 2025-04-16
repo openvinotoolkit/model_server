@@ -832,6 +832,7 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         std::string request = R"({"model": "dummy_gpt", "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
         auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
@@ -862,6 +863,7 @@ TEST_F(MetricFlowTest, RestV3UnaryError) {
         std::string request = R"({"model": "dummy_gpt", "prompt":"ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
         status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
@@ -886,6 +888,7 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
         auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
@@ -921,6 +924,7 @@ TEST_F(MetricFlowTest, RestV3StreamError) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
         status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);

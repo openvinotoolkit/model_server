@@ -37,7 +37,7 @@ protected:
     std::unique_ptr<std::thread> t;
     std::string port = "9173";
 
-    std::unordered_map<std::string, std::string> headers;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpoint = "/v3/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
