@@ -12,7 +12,7 @@ It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5
 
 ### 1. Install Python dependencies:
 ```console
-pip3 install huggingface_hub
+pip3 install huggingface_hub jinj2
 ```
 
 ### 2. Download and Prepare the Model:

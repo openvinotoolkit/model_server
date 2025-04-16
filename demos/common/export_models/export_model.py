@@ -16,13 +16,10 @@
 
 import argparse
 import os
-from openvino_tokenizers import convert_tokenizer, connect_models
-from transformers import AutoTokenizer
 import jinja2
 import json
 import shutil
 import tempfile
-import openvino as ov
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -216,6 +213,9 @@ rerank_subconfig_template = """{
 }"""
 
 def export_rerank_tokenizer(source_model, destination_path, max_length):
+    import openvino as ov
+    from openvino_tokenizers import convert_tokenizer
+    from transformers import AutoTokenizer
     hf_tokenizer = AutoTokenizer.from_pretrained(source_model)
     hf_tokenizer.model_max_length = max_length
     hf_tokenizer.save_pretrained(destination_path)
@@ -223,6 +223,7 @@ def export_rerank_tokenizer(source_model, destination_path, max_length):
     ov.save_model(ov_tokenizer, os.path.join(destination_path, "openvino_tokenizer.xml"))
 
 def set_rt_info(model_folder_path, model_filename, config_filename):
+    import openvino as ov
     model = ov.Core().read_model(os.path.join(model_folder_path, model_filename))
     with open(os.path.join(model_folder_path, config_filename), 'r') as config_file:
         config_data = json.load(config_file)
@@ -380,6 +381,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
             print("Exporting tokenizer to ", tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
+                from openvino_tokenizers import convert_tokenizer
                 convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length) 
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)

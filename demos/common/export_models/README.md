@@ -130,3 +130,12 @@ For baremetal deployment, the equivalent command would be:
 ```console
 ovms --port 9000 --rest_port 8000 --config_path models/config_all.json
 ```
+
+**Note** Exporting large models might consume a lot of host memory. On client machines with limited RAM, export with quantization may fail. In such situation it is recommended to configure swap space or virtual memory. On Windows it can be set in steps like below:
+- Open System by clicking the Start button, right-clicking Computer, and then clicking Properties.
+- In the left pane, click Advanced system settings. Administrator permission required If you're prompted for an administrator password or confirmation, type the password or provide confirmation.
+- On the Advanced tab, under Performance, click Settings.
+- Click the Advanced tab, and then, under Virtual memory, click Change.
+- Clear the Automatically manage paging file size for all drives check box.
+- Under Drive [Volume Label], click the drive that contains the paging file you want to change.
+- Click Custom size, type a new size in megabytes in the Initial size (2000MB) or Maximum size (20000MB) box, click Set, and then click OK.
