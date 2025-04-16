@@ -83,7 +83,7 @@ TEST_F(MediapipeDisabledTest, completionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
@@ -106,6 +106,6 @@ TEST_F(MediapipeDisabledTest, chatCompletionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }

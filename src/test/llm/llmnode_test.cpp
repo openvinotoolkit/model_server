@@ -230,7 +230,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
         EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
     } else {  // Completions endpoint not supported for VLM servable
         ASSERT_EQ(
-            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+            handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     }
 }
@@ -658,7 +658,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse.HasMember("choices"));
@@ -1369,7 +1369,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxToke
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1401,7 +1401,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensWithMaxComp
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1432,7 +1432,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsPromptTokensEqualToMaxM
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -1463,7 +1463,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     // parsedResponse.Parse(response.c_str());
     // ASSERT_TRUE(parsedResponse["usage"].IsObject());
@@ -1875,7 +1875,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
         });
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
     ASSERT_GE(responses.size(), 1);
     if (params.checkFinishReason) {
@@ -2764,7 +2764,7 @@ TEST_P(LLMHttpParametersValidationTest, lengthPenaltyValid) {
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "2.0");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
     requestBody = validRequestBodyWithParameter(params.modelName, "length_penalty", "2");
@@ -2794,7 +2794,7 @@ TEST_P(LLMHttpParametersValidationTest, temperatureValid) {
     requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "0");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
     requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "2");
@@ -2818,7 +2818,7 @@ TEST_P(LLMHttpParametersValidationTest, temperatureOutOfRange) {
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "temperature", "3.0");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -2980,7 +2980,7 @@ TEST_P(LLMHttpParametersValidationTest, bestOfNegative) {
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "-1");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -2989,7 +2989,7 @@ TEST_P(LLMHttpParametersValidationTest, bestOfExceedsLimit) {
     std::string requestBody = validRequestBodyWithParameter(params.modelName, "best_of", "40");
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
