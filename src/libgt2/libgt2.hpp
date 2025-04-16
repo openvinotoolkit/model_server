@@ -50,25 +50,25 @@ public:
     }
     ~Libgt2InitGuard() {
         git_libgit2_shutdown();
-		printf("git_libgit2_shutdown\n");
+        printf("git_libgit2_shutdown\n");
     }
 };
 
 class HfDownloader {
 public:
     HfDownloader();
-	HfDownloader(const HfDownloader& hfDownloader);
-	HfDownloader(const std::string& sourceModel,const std::string& repoPath, bool pullHfModelMode);
+    HfDownloader(const HfDownloader& hfDownloader);
+    HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode);
     Status cloneRepository();
     void setSourceModel(std::string inSourceModel);
     void setRepositoryPath(std::string inRepoPath);
     void setPullHfModelMode(bool isOn);
     bool isPullHfModelModeOn();
-	Status initLibGt2();
-	void shutdownLibGt2();
+    Status initLibGt2();
+    void shutdownLibGt2();
 
 private:
-	std::unique_ptr<Libgt2InitGuard> initGuard;
+    std::unique_ptr<Libgt2InitGuard> initGuard;
     std::string sourceModel;
     std::string repoPath;
     bool pullHfModelMode;

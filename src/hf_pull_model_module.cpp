@@ -19,10 +19,10 @@
 #include <utility>
 
 #include "config.hpp"
+#include "libgt2/libgt2.hpp"
 #include "logging.hpp"
 #include "server.hpp"
 #include "status.hpp"
-#include "libgt2/libgt2.hpp"
 
 namespace ovms {
 

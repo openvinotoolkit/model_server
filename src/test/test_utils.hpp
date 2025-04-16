@@ -1049,7 +1049,6 @@ void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::str
 class ConstructorEnabledConfig : public ovms::Config {
 public:
     ConstructorEnabledConfig() {}
-
 };
 
 std::shared_ptr<const ovms::TensorInfo> createTensorInfoCopyWithPrecision(std::shared_ptr<const ovms::TensorInfo> src, ovms::Precision precision);

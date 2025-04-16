@@ -46,4 +46,3 @@ TEST_F(PullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::exists(modelPath), true);
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
 }
-

@@ -223,7 +223,7 @@ HfDownloader::HfDownloader(const HfDownloader& hfDownloader) {
     this->repoUrl = hfDownloader.repoUrl;
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel,const std::string& repoPath, bool pullHfModelMode) {
+HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode) {
     this->sourceModel = sourceModel;
     this->repoPath = repoPath;
     this->pullHfModelMode = pullHfModelMode;
@@ -234,7 +234,7 @@ HfDownloader::HfDownloader(const std::string& sourceModel,const std::string& rep
 Status HfDownloader::initLibGt2() {
     initGuard = std::make_unique<Libgt2InitGuard>();
     if (initGuard->status < 0) {
-        SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str()); 
+        SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str());
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
 
@@ -269,7 +269,7 @@ Status HfDownloader::cloneRepository() {
 
     SetHfEndpoint();
     UpdateRepoUrl();
-    SPDLOG_INFO("Downloading from url: {}", this->repoUrl.c_str()); 
+    SPDLOG_INFO("Downloading from url: {}", this->repoUrl.c_str());
     std::string passRepoUrl;
     GetRepositoryUrlWithPassword(passRepoUrl);
     const char* url = passRepoUrl.c_str();

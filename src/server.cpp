@@ -31,8 +31,6 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "libgt2/libgt2.hpp"
-#include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -58,10 +56,12 @@
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "libgt2/libgt2.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
+#include "ovms_exit_codes.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
