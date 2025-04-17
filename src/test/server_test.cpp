@@ -482,8 +482,8 @@ TEST(Server, CAPIAliveGrpcNotHttpNot) {
     requestRestServerAlive(typicalRestDefault.c_str(), httplib::StatusCode::NotFound_404, false);
 }
 TEST(Server, CAPIAliveGrpcNotHttpYes_DROGON) {
-    if (!std::getenv("DROGON_RESTART")) {
-        GTEST_SKIP() << "Run with DROGON_RESTART to enable this test";
+    if (!std::getenv("TEST_DROGON_RESTART")) {
+        GTEST_SKIP() << "Run with TEST_DROGON_RESTART to enable this test";
     }
     std::string port = "9000";
     randomizeAndEnsureFree(port);

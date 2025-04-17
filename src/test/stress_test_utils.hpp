@@ -1154,7 +1154,7 @@ public:
         ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
         randomizeAndEnsureFrees(port, restPort);
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-        if (std::getenv("DROGON_RESTART")) {                                                                                                                                        // when using drogon we cannot start rest server multiple times within the same process
+        if (std::getenv("TEST_DROGON_RESTART")) {                                                                                                                                        // when using drogon we cannot start rest server multiple times within the same process
             ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetRestPort(serverSettings, std::stoi(restPort)));                                                                           // required for metrics  - but disabled because drogon http server cannot be restarted
             ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/emptyConfigWithMetrics.json").c_str()));  // the content of config json is irrelevant - we just need server to be ready for C-API use in mediapipe
         } else {

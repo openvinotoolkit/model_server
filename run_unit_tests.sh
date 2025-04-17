@@ -47,7 +47,7 @@ compress_logs() {
     tar -czf test_logs.tar.gz ${TEST_LOG} drogon_singleton_test_log_*.log
     rm -rf ${TEST_LOG}
     rm -rf tmp.log
-    #rm -rf drogon_singleton_test_log_*.log
+    rm -rf drogon_singleton_test_log_*.log
 } 
 
 generate_coverage_report() {
@@ -109,36 +109,45 @@ if [ "$RUN_TESTS" == "1" ] ; then
     fi
     grep -a " ms \| ms)" ${TEST_LOG} > linux_tests_summary.log
     echo "Tests completed:" `grep -a " ms \| ms)" ${TEST_LOG} | grep " OK " | wc -l`
-    
+
     if [ $failed -eq 0 ]; then
         echo "All main tests passed. Running drogon singleton tests..."
 
         run_additional_drogon_singleton_tests() {
-            failed_drogon_singleton=0
-            echo "Running ConfigChangeStressTest suite..."
-            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="ConfigChangeStressTest.GetMetricsDuringLoad_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_1.log 2>&1 || failed_drogon_singleton=1 &
-            pid1=$!
+            echo "Running drogon singleton tests sequentially..."
 
-            echo "Running StressCapiConfigChanges suite..."
-            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="StressCapiConfigChanges.GetMetricsDuringLoad_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_2.log 2>&1 || failed_drogon_singleton=1 &
-            pid2=$!
-
-            echo "Running Server suite..."
-            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="Server.CAPIAliveGrpcNotHttpYes_DROGON" --test_env=DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_3.log 2>&1 || failed_drogon_singleton=1 &
-            pid3=$!
-
-            wait $pid1
-            wait $pid2
-            wait $pid3
-
-            if [ $failed_drogon_singleton -ne 0 ]; then
-                echo "Some drogon singleton tests failed:"
-                cat drogon_singleton_test_log_*.txt
+            echo "1. Running ConfigChangeStressTest suite..."
+            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed \
+                --test_output=streamed --test_filter="ConfigChangeStressTest.GetMetricsDuringLoad_DROGON" \
+                --test_env=TEST_DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_1.log 2>&1
+            if [ $? -ne 0 ]; then
+                echo "ConfigChangeStressTest suite failed"
+                cat drogon_singleton_test_log_1.log
                 return 1
-            else
-                echo "All drogon singleton tests passed successfully."
-                return 0
             fi
+
+            echo "2. Running StressCapiConfigChanges suite..."
+            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed \
+                --test_output=streamed --test_filter="StressCapiConfigChanges.GetMetricsDuringLoad_DROGON" \
+                --test_env=TEST_DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_2.log 2>&1
+            if [ $? -ne 0 ]; then
+                echo "StressCapiConfigChanges suite failed"
+                cat drogon_singleton_test_log_2.log
+                return 1
+            fi
+
+            echo "3. Running Server suite..."
+            bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed \
+                --test_output=streamed --test_filter="Server.CAPIAliveGrpcNotHttpYes_DROGON" \
+                --test_env=TEST_DROGON_RESTART=1 //src:ovms_test > drogon_singleton_test_log_3.log 2>&1
+            if [ $? -ne 0 ]; then
+                echo "Server suite failed"
+                cat drogon_singleton_test_log_3.log
+                return 1
+            fi
+
+            echo "All drogon singleton tests passed successfully."
+            return 0
         }
 
         run_additional_drogon_singleton_tests || exit 1
