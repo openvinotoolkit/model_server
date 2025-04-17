@@ -41,4 +41,5 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
 )
