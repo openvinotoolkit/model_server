@@ -215,14 +215,6 @@ build:windows --host_copt=-DNOGDI
 build:windows --copt=/Zc:preprocessor
 build:windows --host_copt=/Zc:preprocessor
 
-# Misc build options we need for windows.
-build:windows --linkopt=/DEBUG
-build:windows --host_linkopt=/DEBUG
-build:windows --linkopt=/OPT:REF
-build:windows --host_linkopt=/OPT:REF
-build:windows --linkopt=/OPT:ICF
-build:windows --host_linkopt=/OPT:ICF
-
 build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python311/python.exe"
 build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python311/lib/site-packages"
 build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
