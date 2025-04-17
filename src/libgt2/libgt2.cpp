@@ -173,7 +173,7 @@ std::string HfDownloader::GetRepositoryUrlWithPassword(std::string& hfEndpoint) 
         std::string cred = std::string(envCred);
         passRepoUrl += cred + ":" + cred + "@";
     } else {
-        SPDLOG_INFO("HF_TOKEN environment variable not set.");
+        SPDLOG_DEBUG("HF_TOKEN environment variable not set.");
     }
 
     passRepoUrl += hfEndpoint + this->sourceModel;
@@ -187,7 +187,7 @@ std::string HfDownloader::GetHfEndpoint() {
     if (envCred) {
         hfEndpoint = std::string(envCred);
     } else {
-        SPDLOG_INFO("HF_ENDPOINT environment variable not set.");
+        SPDLOG_DEBUG("HF_ENDPOINT environment variable not set.");
     }
 
     if (!endsWith(hfEndpoint, "/")) {
@@ -235,6 +235,9 @@ Status HfDownloader::cloneRepository() {
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
         clone_opts.fetch_opts.proxy_opts.url = std::getenv("https_proxy");
+        SPDLOG_DEBUG("Download using https_proxy settings");
+    } else {
+        SPDLOG_DEBUG("Download with https_proxy not set");
     }
 
     std::string hfEndpoint = GetHfEndpoint();
