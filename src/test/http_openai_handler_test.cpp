@@ -276,7 +276,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrl) {
-  std::string json = R"({
+    std::string json = R"({
   "model": "llama",
   "messages": [
     {
@@ -289,25 +289,25 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrl) {
         {
           "type": "image_url",
           "image_url": {
-            "url":  "https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
           }
         }
       ]
     }
   ]
 })";
-  doc.Parse(json.c_str());
-  ASSERT_FALSE(doc.HasParseError());
-  std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-  ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
-  const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
-  ASSERT_EQ(imageHistory.size(), 1);
-  auto [index, image] = imageHistory[0];
-  EXPECT_EQ(index, 0);
-  EXPECT_EQ(image.get_element_type(), ov::element::u8);
-  EXPECT_EQ(image.get_size(), 225792);
-  json = apiHandler->getProcessedJson();
-  EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {

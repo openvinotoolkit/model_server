@@ -203,11 +203,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 CURL* curl_handle;
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger,"Curl initialization");
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Curl initialization");
                                 curl_global_init(CURL_GLOBAL_ALL);
 
                                 curl_handle = curl_easy_init();
-                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger,"Downloading image: {}", url);
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image: {}", url);
                                 auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_HEADER, 1);
