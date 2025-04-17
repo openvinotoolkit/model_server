@@ -203,8 +203,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 CURL* curl_handle;
-
+                                SPDLOG_DEBUG("Curl initialization");
+                                auto start = std::chrono::high_resolution_clock::now();
                                 curl_global_init(CURL_GLOBAL_ALL);
+                                auto stop = std::chrono::high_resolution_clock::now();
+                                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+                                SPDLOG_DEBUG("Curl init time: {} ms", duration);
 
                                 curl_handle = curl_easy_init();
                                 SPDLOG_DEBUG("Downloading image: {}", url);
@@ -245,7 +249,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
                                 }
                                 if (status == CURLE_OK) {
-                                    status = curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 100);
+                                    status = curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 20L);
                                 }
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
