@@ -36,3 +36,4 @@ out
 *.errors.txt
 tmp/
 *.zip
+*.tar.gz
