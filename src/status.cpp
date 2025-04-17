@@ -333,6 +333,10 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 
+    // Huggingface model download errors for libgit2
+    {StatusCode::HF_FAILED_TO_INIT_LIBGIT2, "Failed to initialize libgit2 library"},
+    {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
+
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
 };
 }  // namespace ovms

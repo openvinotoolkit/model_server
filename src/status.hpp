@@ -344,6 +344,10 @@ enum class StatusCode {
     SERVER_ALREADY_STARTING,
     MODULE_ALREADY_INSERTED,
 
+    // Huggingface model download errors for libgit2
+    HF_FAILED_TO_INIT_LIBGIT2,
+    HF_GIT_CLONE_FAILED,
+
     PARTIAL_END,
 
     STATUS_CODE_END

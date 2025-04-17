@@ -26,6 +26,7 @@
 #include <ntstatus.h>
 #endif
 #include "capi_frontend/server_settings.hpp"
+#include "libgt2/libgt2.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -125,6 +126,20 @@ void CLIParser::parse(int argc, char** argv) {
             ("config_path",
                 "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
+
+        options->add_options("pull hf model")
+            ("pull_hf_model",
+                "Pull model from HF",
+                cxxopts::value<bool>()->default_value("false"),
+                "PULL_HF")
+            ("source_model",
+                "HF source model path",
+                cxxopts::value<std::string>(),
+                "HF_SOURCE")
+            ("repo_path",
+                "HF model repo path",
+                cxxopts::value<std::string>(),
+                "REPO_PATH");
 
         options->add_options("single model")
             ("model_name",
@@ -232,6 +247,19 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (nullptr == result) {
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
+
+    // Ovms Pull models mode
+    if (result->count("pull_hf_model")) {
+        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull_hf_model").as<bool>();
+        if (result->count("source_model"))
+            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+        if (result->count("repo_path"))
+            serverSettings->hfSettings.repoPath = result->operator[]("repo_path").as<std::string>();
+        return;
+    } else {
+        serverSettings->hfSettings.pullHfModelMode = false;
+    }
+
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 
