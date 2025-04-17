@@ -222,12 +222,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 if (status == CURLE_OK) {
                                     status = curl_easy_perform(curl_handle);
                                 }
-                                if(status == CURLE_OK) {
+                                if (status == CURLE_OK) {
                                     /* check the size */
                                     double fileSize;
                                     status = curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
                                     double sizeLimit = 10000;
-                                    if(status == CURLE_OK && fileSize > sizeLimit) {
+                                    if (status == CURLE_OK && fileSize > sizeLimit) {
                                         std::stringstream ss;
                                         ss << "Downloading image failed: image size: " << fileSize << " exceeds limit: " << sizeLimit;
                                         SPDLOG_ERROR(ss.str());
