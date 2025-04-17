@@ -203,15 +203,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 CURL* curl_handle;
-                                SPDLOG_DEBUG("Curl initialization");
-                                auto start = std::chrono::high_resolution_clock::now();
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger,"Curl initialization");
                                 curl_global_init(CURL_GLOBAL_ALL);
-                                auto stop = std::chrono::high_resolution_clock::now();
-                                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-                                SPDLOG_DEBUG("Curl init time: {} ms", duration);
 
                                 curl_handle = curl_easy_init();
-                                SPDLOG_DEBUG("Downloading image: {}", url);
+                                SPDLOG_LOGGER_DEBUG(llm_calculator_logger,"Downloading image: {}", url);
                                 auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_HEADER, 1);
@@ -226,7 +222,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                     /* check the size */
                                     double fileSize;
                                     status = curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &fileSize);
-                                    double sizeLimit = 10000;
+                                    double sizeLimit = 512000000;
                                     if (status == CURLE_OK && fileSize > sizeLimit) {
                                         std::stringstream ss;
                                         ss << "Downloading image failed: image size: " << fileSize << " exceeds limit: " << sizeLimit;
@@ -235,10 +231,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                     }
                                 }
                                 curl_easy_cleanup(curl_handle);
+                                curl_handle = curl_easy_init();
                                 status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
-                                if (status == CURLE_OK) {
-                                    status = curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-                                }
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
                                 }
@@ -264,10 +258,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 if (status != CURLE_OK) {
                                     std::stringstream ss;
                                     ss << "Downloading image failed: " << curl_easy_strerror(status);
-                                    SPDLOG_ERROR(ss.str());
+                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 } else {
-                                    SPDLOG_DEBUG("Downloading image succeeded, {} bytes retrieved", decoded.size());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
                                 }
                                 curl_easy_cleanup(curl_handle);
                                 curl_global_cleanup();
@@ -280,7 +274,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             } catch (std::runtime_error& e) {
                                 std::stringstream ss;
                                 ss << "Image parsing failed: " << e.what();
-                                SPDLOG_ERROR(ss.str());
+                                SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                 return absl::InvalidArgumentError(ss.str());
                             }
                         } else {
