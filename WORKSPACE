@@ -295,19 +295,6 @@ new_local_repository(
     path = "C:\\opt\\opencv",
 )
 
-# # overriding GCS curl dependency to force using system provided openssl
-# new_local_repository(
-#     name = "linux_curl",
-#     path = "/usr/",
-#     build_file = "@//third_party/curl:curl_linux.BUILD",
-# )
-
-# new_local_repository(
-#     name = "windows_curl",
-#     path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
-#     build_file = "@//third_party/curl:curl_windows.BUILD",
-# )
-
 new_local_repository(
     name = "windows_opencl",
     build_file = "@//third_party/opencl:opencl_windows.BUILD",
