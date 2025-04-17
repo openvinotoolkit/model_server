@@ -46,7 +46,7 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{"Out!"}, cc->InputTimestamp());
         return absl::OkStatus();
     }
 };

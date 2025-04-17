@@ -2791,6 +2791,7 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
+                "test/multipart_calculator_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2858,6 +2859,7 @@ cc_test(
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_mediapipe_two_inputs.json",
         "test/mediapipe/config_mediapipe_two_outputs_dag.json",
+        "test/mediapipe/config_mediapipe_multipart_mock.json",
         "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
@@ -2876,6 +2878,7 @@ cc_test(
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/graph_multipart.pbtxt",
         "test/mediapipe/negative/config_exception_during_process.json",
         "test/mediapipe/negative/config_no_calc_output_stream.json",
         "test/mediapipe/negative/graph_exception_during_process.pbtxt",
