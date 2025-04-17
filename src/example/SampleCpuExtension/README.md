@@ -16,7 +16,7 @@ Shared library will be generated in the `lib` folder. Such library can be used t
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 # replace to 'redhat` if using UBI base image
-export BASE_OS=ubuntu
+export BASE_OS=ubuntu24
 make cpu_extension BASE_OS=${BASE_OS}
 ```
 
