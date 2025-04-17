@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <cstdlib>
 #include <random>
 #include <thread>
 

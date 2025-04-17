@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <memory>
 #include <regex>
 #include <set>
