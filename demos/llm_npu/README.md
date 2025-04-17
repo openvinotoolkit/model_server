@@ -86,7 +86,7 @@ Run the script with `--help` argument to check available parameters and see the 
 Running this command starts the container with NPU enabled:
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json
+-p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --config_path /models/config.json
 ```
 :::
 

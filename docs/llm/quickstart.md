@@ -173,7 +173,7 @@ for chunk in stream:
 ```
 
 Expected output:
-```console
+```
 Paris, the charming City of Light, is renowned for its rich history, iconic landmarks, architectural splendor, and artistic
 ```
 

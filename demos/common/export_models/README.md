@@ -26,7 +26,7 @@ positional arguments:
 ```
 For every use case subcommand there is adjusted list of parameters:
 
-```bash
+```console
 python export_model.py text_generation --help
 ```
 Expected Output:
@@ -81,68 +81,36 @@ options:
 ### Text Generation Models
 
 #### Text Generation CPU Deployment
-```bash
-python export_model.py text_generation \
-  --source_model meta-llama/Meta-Llama-3-8B-Instruct \
-  --weight-format fp16 \
-  --kv_cache_precision u8 \
-  --config_file_path models/config_all.json \
-  --model_repository_path models
+```console
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
 ```
 
 #### GPU Deployment (Low Concurrency, Limited Memory)
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
-```bash
-python export_model.py text_generation \
-  --source_model meta-llama/Meta-Llama-3-8B-Instruct \
-  --weight-format int4 \
-  --config_file_path models/config_all.json \
-  --model_repository_path models \
-  --target_device GPU \
-  --disable_dynamic_split_fuse \
-  --max_num_batched_tokens 8192 \
-  --cache_size 2
+```console
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 1
 ```
 #### GPU Deployment (High Concurrency, Dynamic Split Fuse Enabled)
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
-```bash
-python export_model.py text_generation \
-  --source_model meta-llama/Meta-Llama-3-8B-Instruct \
-  --weight-format int4 \
-  --config_file_path models/config_all.json \
-  --model_repository_path models \
-  --target_device GPU \
-  --cache_size 2
+```console
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 3
 ```
 #### NPU Deployment
 Text generation for NPU target device. Command below sets max allowed prompt size and configures model compilation directory to speedup initialization time:
-```bash
-python export_model.py text_generation \
-  --source_model meta-llama/Llama-3.2-3B-Instruct \
-  --config_file_path models/config_all.json \
-  --model_repository_path models \
-  --target_device NPU \
-  --max_prompt_len 2048 \
-  --ov_cache_dir ./models/.ov_cache
+```console
+python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --config_file_path models/config_all.json --model_repository_path models --target_device NPU --max_prompt_len 2048 --ov_cache_dir ./models/.ov_cache
 ```
 
 ### Embedding Models
 
 #### Embeddings with deployment on a single CPU host:
-```bash
-python export_model.py embeddings \
-    --source_model Alibaba-NLP/gte-large-en-v1.5 \
-    --weight-format int8 \
-    --config_file_path models/config_all.json
+```console
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
 ```
 
 #### Embeddings with deployment on a dual CPU host:
-```bash
-python export_model.py embeddings \
-    --source_model Alibaba-NLP/gte-large-en-v1.5 \
-    --weight-format int8 \
-    --config_file_path models/config_all.json \
-    --num_streams 2
+```console
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
 ```
 
 #### With Input Truncation
@@ -191,7 +159,7 @@ docker run -d --rm -p 8000:8000 \
 ```
 
 ### Baremetal Deployment
-```bash
+```bat
 ovms --port 9000 --rest_port 8000 --config_path models/config_all.json
 ```
 
