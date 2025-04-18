@@ -92,7 +92,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return("multipart"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([] (const std::string& name) {
+    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
     });
@@ -134,7 +134,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([] (const std::string& name) {
+    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
     });
@@ -223,5 +223,3 @@ It has two lines.
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::REST_INVALID_URL);
 }
-
-

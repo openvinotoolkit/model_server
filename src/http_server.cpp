@@ -192,7 +192,6 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
-        //std::vector<std::pair<std::string, std::string>> headers;
         std::unordered_map<std::string, std::string> headers;
 
         SPDLOG_ERROR("Drogon headers:");
@@ -239,8 +238,6 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
-            //std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
-            //headers.emplace_back(header);
             headers["inference-header-content-length"] = std::to_string(responseComponents.inferenceHeaderContentLength.value());
         }
         for (const auto& [key, value] : headers) {

@@ -698,7 +698,6 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 }
 
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
-    //const std::vector<std::pair<std::string, std::string>>& headers) {
     const std::unordered_map<std::string, std::string>& headers) {
     for (auto& header : headers) {
         if (toLower(header.first) == "inference-header-content-length") {  // drogon automatically converts all headers to lowercase, net_http does not
@@ -714,7 +713,6 @@ static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestCo
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
     const std::string& request_path,
-    //const std::vector<std::pair<std::string, std::string>>& headers) {
     const std::unordered_map<std::string, std::string>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
@@ -879,8 +877,7 @@ Status HttpRestApiHandler::processRequest(
 
     headers->clear();
     response->clear();
-    //headers->push_back({"Content-Type", "application/json"});
-    (*headers)["content-type"] = "application/json";  // ?
+    (*headers)["content-type"] = "application/json";
 
     if (!status.ok())
         return status;
