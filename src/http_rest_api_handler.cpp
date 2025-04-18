@@ -460,17 +460,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     std::shared_ptr<Document> doc = std::make_shared<Document>();
     std::shared_ptr<MediapipeGraphExecutor> executor;
     bool streamFieldVal = false;
-    // {
-    //     OVMS_PROFILE_SCOPE("rapidjson parse body");
-    //     doc->Parse(request_body.c_str());
-    // }
     {
-        SPDLOG_INFO("Headers in processV3:");
-
-        for (const auto& [key, value] : request_components.headers) {
-            SPDLOG_INFO("\t[{}]->[{}]", key, value);
-        }
-
         auto it = request_components.headers.find("content-type");
         bool isApplicationJson = it != request_components.headers.end() && it->second.find("application/json") != std::string::npos;
         bool isMultiPart = it != request_components.headers.end() && it->second.find("multipart/form-data") != std::string::npos;
@@ -478,19 +468,23 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         std::string model_name;
 
+        // TODO (dkalinow): Test new routing
         if (isMultiPart) {
+            OVMS_PROFILE_SCOPE("multipart parse");
             if (!multiPartParser->parse()) {
-                return StatusCode::REST_INVALID_URL;  // TODO: Better error?
+                return StatusCode::REST_INVALID_URL;
             }
             model_name = multiPartParser->getFieldByName("model");
             if (model_name.empty()) {
                 isDefault = true;
             } else {
-                SPDLOG_INFO("Model name from Multipart Field: {}", model_name);
+                SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", model_name);
             }
         } else if (isApplicationJson) {
-            doc->Parse(request_body.c_str());
-
+            {
+                OVMS_PROFILE_SCOPE("rapidjson parse");
+                doc->Parse(request_body.c_str());
+            }
             OVMS_PROFILE_SCOPE("rapidjson validate");
             if (doc->HasParseError()) {
                 return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
@@ -524,24 +518,24 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             if (model_name.empty()) {
                 isDefault = true;
             } else {
-                SPDLOG_INFO("Model name from Application Json: {}", model_name);
+                SPDLOG_DEBUG("Model name from deduced from JSON: {}", model_name);
             }
         }
 
-        // Deduce Graph Name from URI
+        // Deduce Graph Name from URI since there is no info in JSON or MultiPart
         if (isDefault) {
             if (uri.size() <= 4) {  // nothing after "/v3/..."
                 return StatusCode::REST_INVALID_URL;
             }
             model_name = std::string(uri.substr(4));
-            SPDLOG_INFO("Model name from URI: {}", model_name);
+            SPDLOG_DEBUG("Model name from deduced from URI: {}", model_name);
         }
 
         auto status = this->modelManager.createPipeline(executor, model_name);
         if (!status.ok()) {
             return status;
         }
-        // TODO: Possibly avoid making copy
+
         request.headers = request_components.headers;
         request.body = request_body;
         request.parsedJson = std::move(doc);
