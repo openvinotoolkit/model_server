@@ -16,13 +16,10 @@
 
 import argparse
 import os
-from openvino_tokenizers import convert_tokenizer, connect_models
-from transformers import AutoTokenizer
 import jinja2
 import json
 import shutil
 import tempfile
-import openvino as ov
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -32,6 +29,7 @@ def add_common_arguments(parser):
     parser.add_argument('--config_file_path', default='config.json', help='path to the config file', dest='config_file_path')
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
     parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
+    parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
@@ -45,7 +43,7 @@ parser_text.add_argument('--enable_prefix_caching', action='store_true', help='T
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
 parser_text.add_argument('--max_num_seqs', default=None, help='256 by default. The maximum number of sequences that can be processed together.', dest='max_num_seqs')
-parser_text.add_argument('--cache_size', default=10, type=int, help='cache size in GB', dest='cache_size')
+parser_text.add_argument('--cache_size', default=10, type=int, help='KV cache size in GB', dest='cache_size')
 parser_text.add_argument('--draft_source_model', required=False, default=None, help='HF model name or path to the local folder with PyTorch or OpenVINO draft model. '
                          'Using this option will create configuration for speculative decoding', dest='draft_source_model')
 parser_text.add_argument('--draft_model_name', required=False, default=None, help='Draft model name that should be used in the deployment. '
@@ -215,6 +213,9 @@ rerank_subconfig_template = """{
 }"""
 
 def export_rerank_tokenizer(source_model, destination_path, max_length):
+    import openvino as ov
+    from openvino_tokenizers import convert_tokenizer
+    from transformers import AutoTokenizer
     hf_tokenizer = AutoTokenizer.from_pretrained(source_model)
     hf_tokenizer.model_max_length = max_length
     hf_tokenizer.save_pretrained(destination_path)
@@ -222,6 +223,7 @@ def export_rerank_tokenizer(source_model, destination_path, max_length):
     ov.save_model(ov_tokenizer, os.path.join(destination_path, "openvino_tokenizer.xml"))
 
 def set_rt_info(model_folder_path, model_filename, config_filename):
+    import openvino as ov
     model = ov.Core().read_model(os.path.join(model_folder_path, model_filename))
     with open(os.path.join(model_folder_path, config_filename), 'r') as config_file:
         config_data = json.load(config_file)
@@ -270,9 +272,15 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
 def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
     ### Export model
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
-            print("OV model is source folder. Skipping conversion.")
-            model_path = source_model
+    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')) or os.path.isfile(os.path.join(source_model, 'openvino_language_model.xml')):
+        print("OV model is source folder. Skipping conversion.")
+        model_path = source_model
+    elif source_model.startswith("OpenVINO/"):
+        if precision:
+            print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
+        hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(model_repository_path, model_name))
+        if os.system(hugging_face_cmd):
+            raise ValueError("Failed to download llm model", source_model)
     else: # assume HF model name or local pytorch model folder
         llm_model_path = os.path.join(model_repository_path, model_name)
         print("Exporting LLM model to ", llm_model_path)
@@ -296,7 +304,13 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         draft_model_dir_name = draft_source_model.replace("/", "-") # flatten the name so we don't create nested directory structure
         draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
         if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
-                print("OV model is source folder. Skipping conversion.")
+            print("OV model is source folder. Skipping conversion.")
+        elif source_model.startswith("OpenVINO/"):
+            if precision:
+                print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
+            hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(model_repository_path, model_name))
+            if os.system(hugging_face_cmd):
+                raise ValueError("Failed to download llm model", source_model)    
         else: # assume HF model name or local pytorch model folder
             print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
@@ -314,6 +328,8 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if task_parameters['max_prompt_len'] <= 0:
             raise ValueError("max_prompt_len should be a positive integer")
         plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
+    if task_parameters['ov_cache_dir'] is not None:
+        plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
     
     # Additional plugin properties for HETERO
     if "HETERO" in task_parameters['target_device']:
@@ -365,6 +381,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
             print("Exporting tokenizer to ", tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
+                from openvino_tokenizers import convert_tokenizer
                 convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length) 
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)
