@@ -62,13 +62,30 @@ protected:
 };
 
 TEST_F(MultiPartCalculatorTest, Unary) {
+    headers["content-type"] = "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW";
+
+    comp = ovms::HttpRequestComponents();
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+
     std::string requestBody = R"(
-        {
-            "model": "multipart",
-            "stream": false,
-            "messages": []
-        }
-    )";
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="username"
+
+john_doe
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="email"
+
+john@example.com
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="model"
+
+multipart
+------WebKitFormBoundary7MA4YWxkTrZu0gW--)";
+
+    EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce([](const std::string& name) {
+        return "multipart";
+    });
 
     ASSERT_EQ(
         handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
