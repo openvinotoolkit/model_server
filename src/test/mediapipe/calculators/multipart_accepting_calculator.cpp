@@ -46,7 +46,13 @@ public:
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{"Out!"}, cc->InputTimestamp());
+        auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        RET_CHECK(payload.multipartParser != nullptr);
+        std::string email = payload.multipartParser->getFieldByName("email");
+        std::string username = payload.multipartParser->getFieldByName("username");
+        std::string_view fileContent = payload.multipartParser->getFileContentByName("file");
+
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{email + std::string{"+"} + username + std::string{"\n"} + std::string(fileContent)}, cc->InputTimestamp());
         return absl::OkStatus();
     }
 };

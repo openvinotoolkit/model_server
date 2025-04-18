@@ -80,17 +80,29 @@ john@example.com
 Content-Disposition: form-data; name="model"
 
 multipart
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="doc"; filename="notes.txt"
+Content-Type: text/plain
+
+this is file content
+It has two lines.
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--)";
 
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
-    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce([](const std::string& name) {
-        return "multipart";
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return("multipart"));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
+    EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
+    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([] (const std::string& name) {
+        static std::string retval{"this is file content\nIt has two lines."};
+        return std::string_view(retval);
     });
 
     ASSERT_EQ(
         handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(Out!)";
+    std::string expectedResponse = R"(john@example.com+john_doe
+this is file content
+It has two lines.)";
     ASSERT_EQ(response, expectedResponse);
 }
