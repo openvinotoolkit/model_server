@@ -3827,6 +3827,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ModelInferHttpRequestCalculator",
         "ModelInferRequestImageCalculator",
         "MotionAnalysisCalculator",
+        "MultipartAcceptingCalculator",
         "MuxCalculator",
         "NegativeCalculator",
         "NoOutputStreamsProducedCalculator",

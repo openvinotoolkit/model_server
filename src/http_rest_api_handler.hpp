@@ -21,6 +21,7 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -33,6 +34,7 @@
 #pragma warning(pop)
 
 #include "http_async_writer_interface.hpp"
+#include "multi_part_parser.hpp"
 #include "rest_parser.hpp"
 #include "status.hpp"
 
@@ -66,14 +68,21 @@ struct HttpRequestComponents {
     std::string processing_method;
     std::string model_subresource;
     std::optional<int> inferenceHeaderContentLength;
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers;
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
 };
 
-using HandlerCallbackFn = std::function<Status(const std::string_view, const HttpRequestComponents&, std::string&, const std::string&, HttpResponseComponents&, std::shared_ptr<HttpAsyncWriter>)>;
+using HandlerCallbackFn = std::function<Status(
+    const std::string_view,
+    const HttpRequestComponents&,
+    std::string&,
+    const std::string&,
+    HttpResponseComponents&,
+    std::shared_ptr<HttpAsyncWriter>,
+    std::shared_ptr<MultiPartParser>)>;
 
 std::string urlDecode(const std::string& encoded);
 
@@ -105,7 +114,7 @@ public:
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
         const std::string& request_path,
-        const std::vector<std::pair<std::string, std::string>>& headers = {});
+        const std::unordered_map<std::string, std::string>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
     static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
@@ -119,7 +128,8 @@ public:
         std::string* response,
         const HttpRequestComponents& request_components,
         HttpResponseComponents& response_components,
-        std::shared_ptr<HttpAsyncWriter> writer);
+        std::shared_ptr<HttpAsyncWriter> writer,
+        std::shared_ptr<MultiPartParser> multiPartParser);
 
     /**
      * @brief Process Request
@@ -136,10 +146,11 @@ public:
         const std::string_view http_method,
         const std::string_view request_path,
         const std::string& request_body,
-        std::vector<std::pair<std::string, std::string>>* headers,
+        std::unordered_map<std::string, std::string>* headers,
         std::string* response,
         HttpResponseComponents& responseComponents,
-        std::shared_ptr<HttpAsyncWriter> writer);
+        std::shared_ptr<HttpAsyncWriter> writer,
+        std::shared_ptr<MultiPartParser> multiPartParser);
 
     /**
      * @brief Process predict request
@@ -220,7 +231,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter);
+    Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
 
 private:
     const std::regex predictionRegex;

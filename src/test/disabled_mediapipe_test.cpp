@@ -33,7 +33,7 @@ protected:
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
     const std::string endpointCompletions = "/v3/completions";
@@ -83,7 +83,7 @@ TEST_F(MediapipeDisabledTest, completionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
@@ -106,6 +106,6 @@ TEST_F(MediapipeDisabledTest, chatCompletionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }

@@ -55,6 +55,7 @@
 #include <drogon/drogon.h>
 
 #include "drogon_http_async_writer_impl.hpp"
+#include "http_frontend/multi_part_parser_drogon_impl.hpp"  // TODO: net_http
 #endif
 
 namespace ovms {
@@ -191,10 +192,12 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
 
-        std::vector<std::pair<std::string, std::string>> headers;
+        std::unordered_map<std::string, std::string> headers;
 
+        SPDLOG_ERROR("Drogon headers:");
         for (const auto& header : req->headers()) {
-            headers.emplace_back(header.first, header.second);
+            SPDLOG_ERROR("\t[{}]->[{}]", header.first, header.second);
+            headers[header.first] = header.second;
         }
 
         SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
@@ -206,6 +209,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         std::string output;
         HttpResponseComponents responseComponents;
         std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<DrogonHttpAsyncWriterImpl>(drogonResponseInitializeCallback, pool, req);
+        std::shared_ptr<MultiPartParser> multiPartParser = std::make_shared<DrogonMultiPartParser>(req);
 
         const auto status = handler->processRequest(
             drogon::to_string_view(req->getMethod()),
@@ -214,7 +218,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             &headers,
             &output,
             responseComponents,
-            writer);
+            writer,
+            multiPartParser);
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.
@@ -233,8 +238,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
-            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
-            headers.emplace_back(header);
+            headers["inference-header-content-length"] = std::to_string(responseComponents.inferenceHeaderContentLength.value());
         }
         for (const auto& [key, value] : headers) {
             resp->addHeader(key, value);
@@ -318,7 +322,7 @@ private:
             body.size());
         HttpResponseComponents responseComponents;
         std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<NetHttpAsyncWriterImpl>(req);
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);  // TODO: vector of headers is no longer a vector
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.
