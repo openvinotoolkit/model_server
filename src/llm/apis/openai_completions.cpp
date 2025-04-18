@@ -232,8 +232,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                         SPDLOG_ERROR(ss.str());
                                         return absl::InvalidArgumentError(ss.str());
                                     }
-                                }
-                                else{
+                                } else {
                                     std::stringstream ss;
                                     ss << "Requesting metada from url failed: " << curl_easy_strerror(status);
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
