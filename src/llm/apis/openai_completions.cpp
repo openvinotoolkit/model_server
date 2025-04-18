@@ -208,11 +208,15 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 curl_handle = curl_easy_init();
                                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image: {}", url);
                                 auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url.c_str());
+                                curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_HEADER, 1);
                                 }
                                 if (status == CURLE_OK) {
                                     status = curl_easy_setopt(curl_handle, CURLOPT_NOBODY, 1);
+                                }
+                                if (status == CURLE_OK) {
+                                    status = curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
                                 }
                                 if (status == CURLE_OK) {
                                     status = curl_easy_perform(curl_handle);
@@ -228,6 +232,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                         SPDLOG_ERROR(ss.str());
                                         return absl::InvalidArgumentError(ss.str());
                                     }
+                                }
+                                else{
+                                    std::stringstream ss;
+                                    ss << "Requesting metada from url failed: " << curl_easy_strerror(status);
+                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
                                 }
                                 curl_easy_cleanup(curl_handle);
                                 curl_handle = curl_easy_init();
