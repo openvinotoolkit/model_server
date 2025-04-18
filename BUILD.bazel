@@ -44,6 +44,7 @@ cc_library(
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "//third_party:openvino",
         "//third_party:opencv",
+        "//third_party:curl",
         "@com_github_jupp0r_prometheus_cpp//core",
         ] + select({
             "//:not_disable_cloud": [

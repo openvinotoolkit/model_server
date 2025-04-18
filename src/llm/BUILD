@@ -79,6 +79,7 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:opencv",
+        "//third_party:curl",
         "@stb//:image",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
