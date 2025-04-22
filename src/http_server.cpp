@@ -55,7 +55,7 @@
 #include <drogon/drogon.h>
 
 #include "drogon_http_async_writer_impl.hpp"
-#include "http_frontend/multi_part_parser_drogon_impl.hpp"  // TODO: net_http
+#include "http_frontend/multi_part_parser_drogon_impl.hpp"  // At this point there is no going back to net_http
 #endif
 
 namespace ovms {
@@ -194,9 +194,7 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         std::unordered_map<std::string, std::string> headers;
 
-        SPDLOG_ERROR("Drogon headers:");
         for (const auto& header : req->headers()) {
-            SPDLOG_ERROR("\t[{}]->[{}]", header.first, header.second);
             headers[header.first] = header.second;
         }
 
@@ -322,7 +320,7 @@ private:
             body.size());
         HttpResponseComponents responseComponents;
         std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<NetHttpAsyncWriterImpl>(req);
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);  // TODO: vector of headers is no longer a vector
+        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);
         if (status == StatusCode::PARTIAL_END) {
             // No further messaging is required.
             // Partial responses were delivered via "req" object.

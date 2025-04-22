@@ -128,6 +128,11 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
 }
 
 absl::Status EmbeddingsHandler::parseRequest() {
+    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
+    if (this->doc.HasParseError()) {
+        return absl::InvalidArgumentError("Cannot parse JSON body");
+    }
+
     auto parsed = EmbeddingsRequest::fromJson(&(this->doc));
 
     if (auto error = std::get_if<std::string>(&parsed)) {

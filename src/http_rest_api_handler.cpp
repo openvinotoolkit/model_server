@@ -468,7 +468,6 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
         std::string model_name;
 
-        // TODO (dkalinow): Test new routing
         if (isMultiPart) {
             OVMS_PROFILE_SCOPE("multipart parse");
             if (!multiPartParser->parse()) {
@@ -858,7 +857,6 @@ Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,
     const std::string_view request_path,
     const std::string& request_body,
-    // std::vector<std::pair<std::string, std::string>>* headers,
     std::unordered_map<std::string, std::string>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
