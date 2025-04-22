@@ -4,7 +4,7 @@ This script automates exporting models from Hugging Faces hub or fine-tuned in P
 
 
 ## Quick Start
-```bash
+```console
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
 pip install -q -r requirements.txt
@@ -116,7 +116,7 @@ python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 -
 #### With Input Truncation
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
-```bash
+```console
 python export_model.py embeddings \
     --source_model BAAI/bge-large-en-v1.5 \
     --weight-format int8 \
@@ -126,7 +126,7 @@ python export_model.py embeddings \
 > **Note:** When using `--truncate`, inputs exceeding the model's context length will be automatically shortened rather than producing an error. While this prevents failures, it may impact accuracy as only a portion of the input is analyzed.
 
 ### Reranking Models
-```bash
+```console
 python export_model.py rerank \
     --source_model BAAI/bge-reranker-large \
     --weight-format int8 \

@@ -11,14 +11,14 @@ It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5
 ## Deployment Steps
 
 ### 1. Install Python dependencies:
-```bash
+```console
 pip3 install huggingface_hub jinja2
 ```
 
 ### 2. Download and Prepare the Model:
 Using `export_model.py` script, download the OpenVINO model and prepare models repository including all configuration required for deployment with OpenVINO Model Server. For details, see [Exporting GEN AI Models](../../demos/common/export_models/README.md).
 
-```bash
+```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/simpler-quick-start-llm/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
 python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --target_device GPU --cache 2
@@ -45,7 +45,7 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 :::{tab-item} On Baremetal Host
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
-```bash
+```bat
 ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
 ```
 :::
@@ -55,7 +55,7 @@ ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/Op
 
 Wait for the model to load. You can check the status with a simple command:
 
-```bash
+```console
 curl http://localhost:8000/v1/config
 ```
 
@@ -102,7 +102,6 @@ curl -s http://localhost:8000/v3/chat/completions \
 :::{tab-item} Windows
 
 Windows Powershell
-```bat
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
@@ -146,7 +145,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
 #### Using OpenAI Python Client:
 
 First, install the openai client library:
-```bash
+```console
 pip3 install openai
 ```
 Then run the following Python code:
