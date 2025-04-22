@@ -7,6 +7,9 @@ def agent_name_linux = ""
 def windows_success = ""
 
 pipeline {
+    options {
+        timeout(time: 2, unit: 'HOURS')
+    }
     agent {
       label 'ovmsbuilder'
     }
