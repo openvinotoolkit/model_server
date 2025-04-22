@@ -2810,6 +2810,12 @@ cc_test(
                 "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_python" : [],
+        }) + select({
+            "//:enable_drogon": [
+                "test/multi_part_parser_drogon_test.cpp",
+            ],
+            "//conditions:default" : [
+            ],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
