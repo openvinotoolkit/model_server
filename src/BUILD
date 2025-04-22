@@ -2715,7 +2715,6 @@ cc_test(
         "test/pipelinedefinitionstatus_test.cpp",
         "test/predict_validation_test.cpp",
         "test/prediction_service_test.cpp",
-        "test/pull_hf_model_test.cpp",
         "test/rest_utils_test.cpp",
         "test/schema_test.cpp",
         "test/sequence_manager_test.cpp",
@@ -2914,6 +2913,7 @@ cc_test(
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
+            ":pull_hf_model_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3012,6 +3012,21 @@ cc_library(
             ":inferenceresponse",
             "@com_google_googletest//:gtest",
     ],
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "pull_hf_model_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/pull_hf_model_test.cpp"],
+    linkopts = [],
+    deps = [
+        "//src/libgt2:libgt2",
+        ":test_utils",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(

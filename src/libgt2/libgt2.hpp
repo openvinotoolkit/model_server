@@ -55,16 +55,16 @@ public:
 
 class HfDownloader {
 public:
-    HfDownloader();
-    HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode);
+    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode);
     Status cloneRepository();
     bool isPullHfModelModeOn();
 
-private:
+protected:
     std::string sourceModel;
-    std::string repoPath;
+    std::string downloadPath;
     bool pullHfModelMode;
 
+    HfDownloader();
     std::string GetRepoUrl(std::string& hfEndpoint);
     std::string GetHfEndpoint();
     std::string GetRepositoryUrlWithPassword(std::string& hfEndpoint);

@@ -23,7 +23,7 @@ namespace ovms {
 
 struct HFSettingsImpl {
     std::string sourceModel = "";
-    std::string repoPath = "";
+    std::string downloadPath = "";
     bool pullHfModelMode = false;
 };
 

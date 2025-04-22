@@ -23,7 +23,7 @@ namespace ovms {
 
 class HfPullModelModule : public Module {
 protected:
-    mutable HFSettingsImpl hfSettings;
+    HFSettingsImpl hfSettings;
 
 public:
     HfPullModelModule();

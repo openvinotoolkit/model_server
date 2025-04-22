@@ -93,7 +93,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().hfSettings.pullHfModelMode) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
-        SPDLOG_DEBUG("repo_path: {}", config.getServerSettings().hfSettings.repoPath);
+        SPDLOG_DEBUG("download_path: {}", config.getServerSettings().hfSettings.downloadPath);
         return;
     }
     if (config.configPath().empty()) {

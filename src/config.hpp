@@ -48,7 +48,7 @@ protected:
     ServerSettingsImpl serverSettings;
 
 public:
-    const ServerSettingsImpl getServerSettings() const {
+    const ServerSettingsImpl& getServerSettings() const {
         return serverSettings;
     }
     ModelsSettingsImpl& getModelSettings() {

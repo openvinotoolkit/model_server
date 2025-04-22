@@ -153,16 +153,16 @@ bool HfDownloader::isPullHfModelModeOn() {
 
 bool HfDownloader::CheckIfProxySet() {
     const char* envCred = std::getenv("https_proxy");
-    if (!envCred)
-        return false;
-    return true;
+    if (envCred)
+        return true;
+    return false;
 }
 
 bool HfDownloader::CheckIfTokenSet() {
     const char* envCred = std::getenv("HF_TOKEN");
-    if (!envCred)
-        return false;
-    return true;
+    if (envCred)
+        return true;
+    return false;
 }
 
 std::string HfDownloader::GetRepositoryUrlWithPassword(std::string& hfEndpoint) {
@@ -205,13 +205,13 @@ std::string HfDownloader::GetRepoUrl(std::string& hfEndpoint) {
 
 HfDownloader::HfDownloader() {
     this->sourceModel = "";
-    this->repoPath = "";
+    this->downloadPath = "";
     this->pullHfModelMode = false;
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& repoPath, bool pullHfModelMode) {
+HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode) {
     this->sourceModel = sourceModel;
-    this->repoPath = repoPath;
+    this->downloadPath = downloadPath;
     this->pullHfModelMode = pullHfModelMode;
 }
 
@@ -245,7 +245,7 @@ Status HfDownloader::cloneRepository() {
     SPDLOG_DEBUG("Downloading from url: {}", repoUrl.c_str());
     std::string passRepoUrl = GetRepositoryUrlWithPassword(hfEndpoint);
     const char* url = passRepoUrl.c_str();
-    const char* path = this->repoPath.c_str();
+    const char* path = this->downloadPath.c_str();
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
     if (error != 0) {
         const git_error* err = git_error_last();

@@ -1,5 +1,5 @@
 //***************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,8 +52,8 @@ Status HfPullModelModule::clone() const {
         SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str());
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
-    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.repoPath, this->hfSettings.pullHfModelMode);
-    // TODO: Do we want to set timeout for this operation ?
+    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.pullHfModelMode);
+    // TODO: CVS-166568 Do we want to set timeout for this operation ?
     auto status = hfDownloader->cloneRepository();
     if (!status.ok()) {
         return status;

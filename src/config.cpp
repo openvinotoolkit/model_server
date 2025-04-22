@@ -30,7 +30,6 @@
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
-#include "libgt2/libgt2.hpp"
 #include "modelconfig.hpp"
 #include "systeminfo.hpp"
 
