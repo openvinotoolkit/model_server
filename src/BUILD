@@ -621,7 +621,7 @@ cc_library(
             ],
             "//conditions:default" : [
                 "libnet_http_server",
-                # TODO
+                # Add net-http implementation here if we ever want one
             ],
         }) + [
             "cpp_headers",

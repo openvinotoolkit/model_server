@@ -17,7 +17,6 @@
 
 namespace ovms {
 
-// TODO (dkalinow): Test actual drogon parser with mocked request
 bool DrogonMultiPartParser::parse() {
     this->hasParseError_ = this->parser->parse(request) != 0;
     return !this->hasParseError_;
