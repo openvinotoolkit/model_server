@@ -19,7 +19,7 @@ pip3 install huggingface_hub jinja2
 Using `export_model.py` script, download the OpenVINO model and prepare models repository including all configuration required for deployment with OpenVINO Model Server. For details, see [Exporting GEN AI Models](../../demos/common/export_models/README.md).
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/simpler-quick-start-llm/demos/common/export_models/export_model.py -o export_model.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 mkdir models
 python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --target_device GPU --cache 2
 ```
