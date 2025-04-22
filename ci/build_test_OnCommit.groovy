@@ -125,7 +125,7 @@ pipeline {
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
           options {
-            timeout(time: 4, unit: 'MINUTES')
+            timeout(time: 120, unit: 'MINUTES')
           }
           parallel {
             stage("Run unit tests") {
