@@ -10,6 +10,9 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
+    options {
+      timeout(time: 4, unit: 'HOURS')
+    }
     stages {
         stage('Configure') {
           steps {
@@ -45,6 +48,9 @@ pipeline {
           }
         }
         stage('Style, SDL and clean') {
+          options {
+            timeout(time: 20, unit: 'MINUTES')
+          }
           parallel {
             stage('Style check') {
               agent {
@@ -74,6 +80,9 @@ pipeline {
           }
         }
         stage('Build') {
+          options {
+            timeout(time: 4, unit: 'HOURS')
+          }
           parallel {
             stage("Build linux") {
               agent {
@@ -115,6 +124,9 @@ pipeline {
         }
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
+          options {
+            timeout(time: 4, unit: 'MINUTES')
+          }
           parallel {
             stage("Run unit tests") {
               agent {
