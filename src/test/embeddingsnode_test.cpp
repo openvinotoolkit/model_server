@@ -335,6 +335,24 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
     ASSERT_EQ(ok.Code(), 1);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
 }
+
+TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
+    std::string requestBody = R"(
+        {
+           WRONG JSON
+        }
+    )";
+
+    // new routing will forward invalid JSON to graph named "embeddings"
+    const std::string uriThatMatchesGraphName = "/v3/embeddings";
+
+    headers.clear();  // no sign of application/json
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(uriThatMatchesGraphName, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;

@@ -669,6 +669,23 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
     ASSERT_EQ(parsedResponse["choices"].GetArray()[0]["text"].GetString(), std::string{""});
 }
 
+TEST_P(LLMFlowHttpTestParameterized, defaultRoutingInvalidJson) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            INVALID JSON
+        }
+    )";
+
+    const std::string uriThatMatchesGraphName = std::string("/v3/") + params.modelName;
+
+    headers.clear();  // no sign of application/json
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(uriThatMatchesGraphName, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping

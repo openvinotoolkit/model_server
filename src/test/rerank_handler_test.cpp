@@ -111,6 +111,16 @@ TEST_F(RerankHandlerDeserializationTest, DocumentsArrayMixedElementTypes) {
     EXPECT_EQ(status, absl::InvalidArgumentError("all documents have to be the same type (string or objects)"));
 }
 
+TEST_F(RerankHandlerDeserializationTest, InvalidJson) {
+    json = R"({
+    INVALID JSON
+    })";
+
+    ASSERT_TRUE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::InvalidArgumentError("Non-json request received in rerank calculator"));
+}
+
 TEST_F(RerankHandlerDeserializationTest, InvalidDocuments) {
     json = R"({
     "model": "model",

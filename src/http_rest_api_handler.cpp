@@ -479,6 +479,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             } else {
                 SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", model_name);
             }
+            // Set json parser in invalid state in order to get HasParseError to respond with true
+            doc->Parse("error");
         } else if (isApplicationJson) {
             {
                 OVMS_PROFILE_SCOPE("rapidjson parse");
@@ -528,6 +530,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             }
             model_name = std::string(uri.substr(4));
             SPDLOG_DEBUG("Model name from deduced from URI: {}", model_name);
+            // Set json parser in invalid state in order to get HasParseError to respond with true
+            doc->Parse("error");
         }
 
         auto status = this->modelManager.createPipeline(executor, model_name);

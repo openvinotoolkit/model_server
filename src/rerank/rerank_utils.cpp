@@ -35,7 +35,7 @@ namespace ovms {
 absl::Status RerankHandler::parseRequest() {
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (doc.HasParseError()) {
-        return absl::InvalidArgumentError("Cannot parse JSON body");
+        return absl::InvalidArgumentError("Non-json request received in rerank calculator");
     }
 
     // model: string
