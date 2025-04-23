@@ -37,11 +37,12 @@ if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ;
 rm -rf \
 	/ovms_release/lib/libssl.so \
 	/ovms_release/lib/libexternal_Szlib_Slibzlib.so \
-	/ovms_release/lib/py_openvino_genai.cpython-312-x86_64-linux-gnu.so \
+	/ovms_release/lib/py_openvino_genai.cpython-*-x86_64-linux-gnu.so \
 	/ovms_release/lib/libinference_calculator_cc_proto.so \
 	/ovms_release/lib/libzlib.so \
-	/ovms_release/lib/libface_detection_cc_proto.so.so \
-	/ovms_release/lib/_crypt.cpython-312-x86_64-linux-gnu.so \
+	/ovms_release/lib/libface_detection_cc_proto.so \
+	/ovms_release/lib/_crypt.cpython-*-x86_64-linux-gnu.so \
+	/ovms_release/lib/_testclinic.cpython-*-x86_64-linux-gnu.so \
 	/ovms_release/lib/libface_detection_options_registry.so \
 	/ovms_release/lib/libinference_calculator_options_registry.so
 
