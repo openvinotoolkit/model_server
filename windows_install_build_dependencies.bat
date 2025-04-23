@@ -312,10 +312,12 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
+%python_path%\python.exe -m ensurepip
+if !errorlevel! neq 0 exit /b !errorlevel!
 %python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "numpy" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
 goto install_opencv
