@@ -80,6 +80,7 @@ export OPENAI_COMPATIBLE_API_URL=http://localhost:8000/v3
 export OPENAI_COMPATIBLE_API_KEY="unused"
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
+git checkout 4471ad311e620ed6cf3a0419d8ba6f18f8fb1cb3  # https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/625
 pip install -e . --extra-index-url "https://download.pytorch.org/whl/cpu"
 python -m lmms_eval \
     --model openai_compatible \
@@ -101,7 +102,7 @@ openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kw
 |--------|-------|------|-----:|--------------------|---|--------:|---|------|
 |mme     |Yaml   |none  |     0|mme_cognition_score |↑  | 600.3571|±  |   N/A|
 |mme     |Yaml   |none  |     0|mme_perception_score|↑  |1618.2984|±  |   N/A|
-|mmmu_val|      0|none  |     0|mmmu_acc            |↑  |   0.5100|±  |   N/A|
+|mmmu_val|      0|none  |     0|mmmu_acc            |↑  |   0.5322|±  |   N/A|
 
 ```
 

@@ -636,6 +636,37 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
     ASSERT_EQ(parsedResponse["object"], "text_completion");
 }
 
+TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "ignore_eos": false,
+            "max_tokens": 1000,
+            "stop": " ",
+            "include_stop_str_in_output": true,
+            "prompt": "                                   |                                |                             |  "
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse.HasMember("choices"));
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0].HasMember("text"));
+    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
+    ASSERT_EQ(parsedResponse["choices"].GetArray()[0]["text"].GetString(), std::string{""});
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonNFail) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
@@ -1813,6 +1844,44 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSingleStopString) {
     }
 }
 
+TEST_P(LLMFlowHttpTestParameterized, streamCompletionsSpaceStopString) {
+    auto params = GetParam();
+    // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "seed" : 1,
+            "ignore_eos": false,
+            "max_tokens": 1000,
+            "stop": " ",
+            "temperature":0,
+            "include_stop_str_in_output": true,
+            "prompt": "                 |                  |                   |  "
+        }
+    )";
+
+    std::vector<std::string> responses;
+
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([this, &responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_GE(responses.size(), 1);
+    if (params.checkFinishReason) {
+        ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
+    }
+    ASSERT_TRUE(responses.back().find("\"text\":\"\"") != std::string::npos);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -2251,7 +2320,8 @@ TEST_P(LLMFlowHttpTestParameterized, inferChatCompletionsUnaryClientDisconnected
         }
     )";
 
-    EXPECT_CALL(*writer, RegisterDisconnectionCallback(::testing::_)).WillOnce([](std::function<void()> fn) {
+    ON_CALL(*writer, IsDisconnected()).WillByDefault(::testing::Return(true));
+    ON_CALL(*writer, RegisterDisconnectionCallback(::testing::_)).WillByDefault([](std::function<void()> fn) {
         fn();  // disconnect immediately, even before read_all is called
     });
     ASSERT_EQ(
@@ -3938,3 +4008,69 @@ TEST_F(GetPromptTokensStringNegative, unsupportedTypesTestBool) {
         ASSERT_EQ(expectedTokensString, getPromptTokensString(tensor));
     }
 }
+
+#include "../../llm/language_model/legacy/servable.hpp"
+
+class MockLegacyServable : public ovms::LegacyServable {
+public:
+    absl::Status callValidateInputComplianceWithProperties(const ov::Tensor& inputIds) {
+        return validateInputComplianceWithProperties(inputIds);
+    }
+};
+
+class IsolatedServableTests : public ::testing::Test {
+public:
+    MockLegacyServable legacyServable;
+
+protected:
+    void SetUp() override {
+        // Code here will be called immediately after the constructor (right before each test).
+    }
+
+    void TearDown() override {
+        // Code here will be called immediately after each test (right before the destructor).
+    }
+};
+
+TEST_F(IsolatedServableTests, PromtSizeExceedsDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU";  // Simulate NPU device
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 1025;
+    std::vector<float> randomData(dataSize);
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
+}
+
+TEST_F(IsolatedServableTests, PromtSizeExceedsNonDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU";                                                              // Simulate NPU device
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 4096
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 5025;
+    std::vector<float> randomData(dataSize);
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Input length exceeds the maximum allowed length"));
+}
+
+TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNPU) {
+    legacyServable.getProperties()->device = "NPU";                                                              // Simulate NPU device
+    std::static_pointer_cast<LegacyServableProperties>(legacyServable.getProperties())->maxPromptLength = 4096;  // Set max prompt length to 4096
+    ovms::LegacyServableExecutionContext executionContext;
+    // Create an ov::Tensor object with random data
+    size_t dataSize = 3025;
+    std::vector<float> randomData(dataSize);
+    std::fill(randomData.begin(), randomData.end(), 1.0f);
+    ov::Tensor tensor(ov::element::f32, {1, dataSize}, randomData.data());
+    executionContext.inputIds = tensor;
+    auto status = legacyServable.callValidateInputComplianceWithProperties(executionContext.inputIds);
+    ASSERT_EQ(status, absl::OkStatus());
+}
+
+// TODO: Add missing tests for reading max prompt len property from configuration

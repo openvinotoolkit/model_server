@@ -130,7 +130,9 @@ COMMON_STATIC_LIBS_COPTS = select({
                     "-Wno-unknown-pragmas", 
                     "-Wno-sign-compare",
                     "-fvisibility=hidden", # Needed for pybind targets
-                    "-Werror",
+                    "-Werror", 
+                    # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
+                    "-Wno-deprecated-declarations",
                 ],
                 "//src:windows" : [
                         "/W4",
@@ -154,6 +156,7 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/wd4297",
                         "/wd4702",
                         "/wd4267",
+                        "/wd4996",
                     ],
                 })
 
@@ -162,6 +165,8 @@ COMMON_STATIC_TEST_COPTS = select({
                     "-Wall",
                     "-Wno-unknown-pragmas",
                     "-Werror",
+                    # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
+                    "-Wno-deprecated-declarations",
                     "-Isrc",
                     "-fconcepts", # for gmock related utils
                     "-fvisibility=hidden",# Needed for pybind targets
@@ -169,6 +174,7 @@ COMMON_STATIC_TEST_COPTS = select({
                 "//src:windows" : [
                         "-W0",
                         "-Isrc",
+                        "/wd4996",
                     ],
                 })
 

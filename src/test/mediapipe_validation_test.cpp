@@ -43,7 +43,7 @@ public:
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
         std::string port = "9187";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,

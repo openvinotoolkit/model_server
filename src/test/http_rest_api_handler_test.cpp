@@ -74,7 +74,7 @@ public:
         configFilePath = directoryPath + "/ovms_config.json";
         createConfigFileWithContent(adjustedConfigContent, configFilePath);
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)configFilePath.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
         int arg_count = 7;
         ovms::Config::instance().parse(arg_count, n_argv);
@@ -100,7 +100,7 @@ public:
         this->modelPath = modelPath;
         this->modelName = modelName;
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* n_argv[] = {(char*)"ovms", (char*)"--model_path", (char*)this->modelPath.data(), (char*)"--model_name", (char*)this->modelName.data(), (char*)"--file_system_poll_wait_seconds", (char*)"0", (char*)"--port", (char*)port.c_str()};
         int arg_count = 9;
         ovms::Config::instance().parse(arg_count, n_argv);

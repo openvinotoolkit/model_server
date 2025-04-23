@@ -10,6 +10,9 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
+    options {
+      timeout(time: 4, unit: 'HOURS')
+    }
     stages {
         stage('Configure') {
           steps {
@@ -29,7 +32,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
+              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
@@ -45,6 +48,9 @@ pipeline {
           }
         }
         stage('Style, SDL and clean') {
+          options {
+            timeout(time: 20, unit: 'MINUTES')
+          }
           parallel {
             stage('Style check') {
               agent {
@@ -74,6 +80,9 @@ pipeline {
           }
         }
         stage('Build') {
+          options {
+            timeout(time: 4, unit: 'HOURS')
+          }
           parallel {
             stage("Build linux") {
               agent {
@@ -115,6 +124,9 @@ pipeline {
         }
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
+          options {
+            timeout(time: 120, unit: 'MINUTES')
+          }
           parallel {
             stage("Run unit tests") {
               agent {

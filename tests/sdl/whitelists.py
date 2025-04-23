@@ -94,10 +94,6 @@ libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so',
         'libcpprest.so',
-        'libface_detection_cc_proto.so',
-        'libface_detection_options_registry.so',
-        'libinference_calculator_cc_proto.so',
-        'libinference_calculator_options_registry.so',
         'libOpenCL.so',
         'libopencv_calib3d.so',
         'libopencv_core.so',
@@ -133,7 +129,7 @@ libraries = {
     OvmsBaseImageType.UBUNTU20_PYTHON: set(),
     OvmsBaseImageType.UBUNTU22_PYTHON: set(),
     OvmsBaseImageType.UBUNTU24_PYTHON: set(),
-    OvmsBaseImageType.REDHAT: {'libpugixml.so',},
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON: set(),
 }
 
@@ -220,9 +216,7 @@ packages = {
         'nginx',
         'nginx-common',
     },
-    OvmsBaseImageType.REDHAT: {
-        'openssl-fips-provider-so',
-    },
+    OvmsBaseImageType.REDHAT: set(),
     OvmsBaseImageType.REDHAT_PYTHON: {
         'expat',
         'python3-libs',
@@ -233,9 +227,11 @@ packages = {
         'intel-gmmlib',
         'intel-igc-core',
         'intel-igc-opencl',
+        'intel-level-zero-gpu',
         'intel-opencl',
         'level-zero',
         'libedit',
+        'libnl3',
         'ocl-icd',
     },
 }

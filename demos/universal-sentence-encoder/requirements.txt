@@ -1,2 +1,2 @@
-tensorflow-serving-api==2.11.0
-numpy<2.0.0
+tensorflow-serving-api==2.18.1
+tensorflow==2.18.1

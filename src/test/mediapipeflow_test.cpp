@@ -158,7 +158,7 @@ public:
 
 TEST_F(MediapipeCliFlowTestNegative, UnsupportedCliParamBatchSize) {
     server.setShutdownRequest(0);
-    randomizePort(this->port);
+    randomizeAndEnsureFree(this->port);
     char* argv[] = {(char*)"ovms",
         (char*)"--model_name",
         (char*)"graphkfspass",
@@ -1856,7 +1856,7 @@ TEST(Mediapipe, AdapterRTInfo) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     std::string port{"5555"};
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     uint32_t portNum = ovms::stou32(port).value();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
     // we will use dummy model that will have mocked rt_info
@@ -2126,7 +2126,7 @@ protected:
     std::string port = "9178";
     void SetUpServer(const char* configPath) {
         server.setShutdownRequest(0);
-        randomizePort(this->port);
+        randomizeAndEnsureFree(this->port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configPath,
@@ -3023,7 +3023,7 @@ protected:
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(0);
         std::string port{"9000"};
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {(char*)"ovms",
             (char*)"--config_path",
             (char*)configFilePath.c_str(),
@@ -3247,7 +3247,7 @@ protected:
 
     void SetUp() override {
         TestWithTempDir::SetUp();
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         request.Clear();
         request.mutable_model_name()->assign(servableName);
     }
