@@ -38,8 +38,8 @@ IF "%2"=="1" (
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
-:: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+:: Python 312 needs to be first in the windows path, as well as MSYS tools
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
@@ -249,7 +249,7 @@ IF /I EXIST %bazel_path% (
 echo [INFO] Bazel installed: %bazel_file%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.11.9"
+set "python_version=3.12.9"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -258,7 +258,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
@@ -312,10 +312,12 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
-%python_path%\python.exe -m ensurepip --upgrade
+%python_path%\python.exe -m ensurepip
+if !errorlevel! neq 0 exit /b !errorlevel!
+%python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
 goto install_opencv

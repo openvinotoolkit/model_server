@@ -27,8 +27,8 @@ if "%~1"=="" (
 )
 
 if "%~2"=="" (
-    set "python_version=3.11.9"
-    echo Python version not specified. Using: 3.11.9
+    set "python_version=3.12.9"
+    echo Python version not specified. Using: 3.12.9
 ) else (
     set "python_version=%~2"
     echo User specified Python version: %2
