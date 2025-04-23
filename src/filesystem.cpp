@@ -92,7 +92,7 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     DWORD dwSize = 0;
     GetUserNameW(NULL, &dwSize);  // First call to get the required buffer size
     LPWSTR userName = new WCHAR[dwSize];
-    auto userNameDeleter = std::shared_ptr<int>(new int, [userName] (int*) { delete[] userName; });
+    auto userNameDeleter = std::shared_ptr<int>(new int, [userName](int*) { delete[] userName; });
     if (!GetUserNameW(userName, &dwSize)) {
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
@@ -115,7 +115,7 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         return StatusCode::FILESYSTEM_ERROR;
     }
 
-    auto pACLDeleter = std::shared_ptr<int>(new int, [pACL] (int*) { LocalFree(pACL); });
+    auto pACLDeleter = std::shared_ptr<int>(new int, [pACL](int*) { LocalFree(pACL); });
     // Create a Security Descriptor
     PSECURITY_DESCRIPTOR pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
     if (pSD == NULL) {
@@ -125,7 +125,7 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         return StatusCode::FILESYSTEM_ERROR;
     }
 
-    auto pSDDeleter = std::shared_ptr<int>(new int, [pSD] (int*) { LocalFree(pSD); });
+    auto pSDDeleter = std::shared_ptr<int>(new int, [pSD](int*) { LocalFree(pSD); });
     if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION)) {
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
