@@ -26,7 +26,7 @@ NUMA node4 CPU(s):                    128-159,320-351
 NUMA node5 CPU(s):                    160-191,352-383
 ```
 
-Download the export_model.py script and requirements.txt:
+Download the export_model.py script and install python dependencies:
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
