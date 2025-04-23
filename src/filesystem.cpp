@@ -87,7 +87,7 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         return StatusCode::FILESYSTEM_ERROR;
     }
 
-    // Setup proper access rights   
+    // Setup proper access rights
     // Get the current user
     DWORD dwSize = 0;
     GetUserNameW(NULL, &dwSize);  // First call to get the required buffer size
@@ -106,7 +106,8 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;  // Apply to subfolders/files
     ea.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
     ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
-    ea.Trustee.ptstrName = userName; PACL pACL = NULL;
+    ea.Trustee.ptstrName = userName;
+    PACL pACL = NULL;
     if (SetEntriesInAclW(1, &ea, NULL, &pACL) != ERROR_SUCCESS) {
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
@@ -130,21 +131,21 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to initialize security descriptor: {}", message);
         return StatusCode::FILESYSTEM_ERROR;
-    }    
+    }
     // Apply the ACL to the security descriptor
     if (!SetSecurityDescriptorDacl(pSD, TRUE, pACL, FALSE)) {
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set DACL: {}", message);
         return StatusCode::FILESYSTEM_ERROR;
-    }    
-    
+    }
+
     // Assign security attributes
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = pSD;
-    sa.bInheritHandle = FALSE;  // No handle inheritance    
-    
+    sa.bInheritHandle = FALSE;  // No handle inheritance
+
     // Create the directory with the security attributes
     if (!CreateDirectoryW(temp_file, &sa)) {
         SetLastError(0);

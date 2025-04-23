@@ -168,8 +168,8 @@ bool CanAccessFolder(LPCTSTR folderName, DWORD genericAccessRights) {
             if (::OpenProcessToken(::GetCurrentProcess(), TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_DUPLICATE | STANDARD_RIGHTS_READ, &hToken)) {
                 HANDLE hImpersonatedToken = NULL;
                 if (::DuplicateToken(hToken, SecurityImpersonation, &hImpersonatedToken)) {
-                    GENERIC_MAPPING mapping = { 0xFFFFFFFF };
-                    PRIVILEGE_SET privileges = { 0 };
+                    GENERIC_MAPPING mapping = {0xFFFFFFFF};
+                    PRIVILEGE_SET privileges = {0};
                     DWORD grantedAccess = 0, privilegesLength = sizeof(privileges);
                     BOOL result = FALSE;
 
@@ -214,7 +214,7 @@ TEST(FileSystem, CreateTempFolder) {
     EXPECT_TRUE(CanAccessFolder(lpsz, GENERIC_READ));
     EXPECT_FALSE(CanAccessFolder(lpsz, GENERIC_EXECUTE));
 #endif
-    
+
     fs::remove(local_path);
 }
 
