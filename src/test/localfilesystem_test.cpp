@@ -17,6 +17,10 @@
 #include <filesystem>
 #include <fstream>
 #include <thread>
+#ifdef _WIN32
+#include <windows.h>
+#include <iostream>
+#endif
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -153,6 +157,42 @@ TEST(LocalFileSystem, DestroyFileFolder) {
     EXPECT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
+#ifdef _WIN32
+bool CanAccessFolder(LPCTSTR folderName, DWORD genericAccessRights) {
+    bool bRet = false;
+    DWORD length = 0;
+    if (!::GetFileSecurity(folderName, OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, NULL, NULL, &length) && ERROR_INSUFFICIENT_BUFFER == ::GetLastError()) {
+        PSECURITY_DESCRIPTOR security = static_cast<PSECURITY_DESCRIPTOR>(::malloc(length));
+        if (security && ::GetFileSecurity(folderName, OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, security, length, &length)) {
+            HANDLE hToken = NULL;
+            if (::OpenProcessToken(::GetCurrentProcess(), TOKEN_IMPERSONATE | TOKEN_QUERY | TOKEN_DUPLICATE | STANDARD_RIGHTS_READ, &hToken)) {
+                HANDLE hImpersonatedToken = NULL;
+                if (::DuplicateToken(hToken, SecurityImpersonation, &hImpersonatedToken)) {
+                    GENERIC_MAPPING mapping = { 0xFFFFFFFF };
+                    PRIVILEGE_SET privileges = { 0 };
+                    DWORD grantedAccess = 0, privilegesLength = sizeof(privileges);
+                    BOOL result = FALSE;
+
+                    mapping.GenericRead = FILE_GENERIC_READ;
+                    mapping.GenericWrite = FILE_GENERIC_WRITE;
+                    mapping.GenericExecute = FILE_GENERIC_EXECUTE;
+                    mapping.GenericAll = FILE_ALL_ACCESS;
+
+                    ::MapGenericMask(&genericAccessRights, &mapping);
+                    if (::AccessCheck(security, hImpersonatedToken, genericAccessRights, &mapping, &privileges, &privilegesLength, &grantedAccess, &result)) {
+                        bRet = (result == TRUE);
+                    }
+                    ::CloseHandle(hImpersonatedToken);
+                }
+                ::CloseHandle(hToken);
+            }
+            ::free(security);
+        }
+    }
+    return bRet;
+}
+#endif
+
 TEST(FileSystem, CreateTempFolder) {
     std::string local_path;
     namespace fs = std::filesystem;
@@ -163,12 +203,19 @@ TEST(FileSystem, CreateTempFolder) {
     EXPECT_TRUE(status);
     EXPECT_EQ(sc, ovms::StatusCode::OK);
 
-#ifdef __linux__
     fs::perms p = fs::status(local_path).permissions();
+    EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
+#ifdef __linux__
     EXPECT_TRUE((p & fs::perms::group_read) == fs::perms::none);
     EXPECT_TRUE((p & fs::perms::others_read) == fs::perms::none);
-    EXPECT_TRUE((p & fs::perms::owner_read) != fs::perms::none);
+#elif _WIN32
+    LPCTSTR lpsz = TEXT(local_path.c_str());
+    EXPECT_TRUE(CanAccessFolder(lpsz, GENERIC_WRITE));
+    EXPECT_TRUE(CanAccessFolder(lpsz, GENERIC_READ));
+    EXPECT_FALSE(CanAccessFolder(lpsz, GENERIC_EXECUTE));
 #endif
+    
+    fs::remove(local_path);
 }
 
 TEST(FileSystem, CheckIfPathIsEscaped) {

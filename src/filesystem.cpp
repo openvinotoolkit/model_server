@@ -15,6 +15,11 @@
 //*****************************************************************************
 #include "filesystem.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <aclapi.h>
+#include <sddl.h>
+#endif
 #include "stringutils.hpp"
 
 namespace ovms {
@@ -82,7 +87,69 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         return StatusCode::FILESYSTEM_ERROR;
     }
 
-    if (!CreateDirectoryW(temp_file, NULL)) {
+    // Setup proper access rights   
+    // Get the current user
+    DWORD dwSize = 0;
+    GetUserNameW(NULL, &dwSize);  // First call to get the required buffer size
+    LPWSTR userName = new WCHAR[dwSize];
+    if (!GetUserNameW(userName, &dwSize)) {
+        delete[] userName;
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get username: {}", message);
+        return StatusCode::FILESYSTEM_ERROR;
+    }
+    // Set up the ACL
+    EXPLICIT_ACCESSW ea = {0};
+    ea.grfAccessPermissions = GENERIC_READ | GENERIC_WRITE;  // Allow only read & write
+    ea.grfAccessMode = SET_ACCESS;
+    ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;  // Apply to subfolders/files
+    ea.Trustee.TrusteeForm = TRUSTEE_IS_NAME;
+    ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
+    ea.Trustee.ptstrName = userName; PACL pACL = NULL;
+    if (SetEntriesInAclW(1, &ea, NULL, &pACL) != ERROR_SUCCESS) {
+        delete[] userName;
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create ACL: {}", message);
+        return StatusCode::FILESYSTEM_ERROR;
+    }
+    // Create a Security Descriptor
+    PSECURITY_DESCRIPTOR pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+    if (pSD == NULL) {
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to initialize security descriptor: {}", message);
+        return StatusCode::FILESYSTEM_ERROR;
+    }
+    if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION)) {
+        LocalFree(pSD);
+        LocalFree(pACL);
+        delete[] userName;
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to initialize security descriptor: {}", message);
+        return StatusCode::FILESYSTEM_ERROR;
+    }    
+    // Apply the ACL to the security descriptor
+    if (!SetSecurityDescriptorDacl(pSD, TRUE, pACL, FALSE)) {
+        LocalFree(pSD);
+        LocalFree(pACL);
+        delete[] userName;
+        DWORD error = GetLastError();
+        std::string message = std::system_category().message(error);
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set DACL: {}", message);
+        return StatusCode::FILESYSTEM_ERROR;
+    }    
+    
+    // Assign security attributes
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = pSD;
+    sa.bInheritHandle = FALSE;  // No handle inheritance    
+    
+    // Create the directory with the security attributes
+    if (!CreateDirectoryW(temp_file, &sa)) {
         SetLastError(0);
         DeleteFileW(temp_file);
         DWORD error = GetLastError();
@@ -92,6 +159,10 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     }
 
     *local_path = fs::path(temp_file).generic_string();
+
+    LocalFree(pSD);
+    LocalFree(pACL);
+    delete[] userName;
 
     return StatusCode::OK;
 }
