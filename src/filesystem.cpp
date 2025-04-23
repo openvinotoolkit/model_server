@@ -92,8 +92,8 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     DWORD dwSize = 0;
     GetUserNameW(NULL, &dwSize);  // First call to get the required buffer size
     LPWSTR userName = new WCHAR[dwSize];
+    auto userNameDeleter = std::shared_ptr<int>(new int, [userName] (int*) { delete[] userName; });
     if (!GetUserNameW(userName, &dwSize)) {
-        delete[] userName;
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get username: {}", message);
@@ -108,12 +108,13 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
     ea.Trustee.ptstrName = userName; PACL pACL = NULL;
     if (SetEntriesInAclW(1, &ea, NULL, &pACL) != ERROR_SUCCESS) {
-        delete[] userName;
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create ACL: {}", message);
         return StatusCode::FILESYSTEM_ERROR;
     }
+
+    auto pACLDeleter = std::shared_ptr<int>(new int, [pACL] (int*) { LocalFree(pACL); });
     // Create a Security Descriptor
     PSECURITY_DESCRIPTOR pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
     if (pSD == NULL) {
@@ -122,10 +123,9 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to initialize security descriptor: {}", message);
         return StatusCode::FILESYSTEM_ERROR;
     }
+
+    auto pSDDeleter = std::shared_ptr<int>(new int, [pSD] (int*) { LocalFree(pSD); });
     if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION)) {
-        LocalFree(pSD);
-        LocalFree(pACL);
-        delete[] userName;
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to initialize security descriptor: {}", message);
@@ -133,9 +133,6 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     }    
     // Apply the ACL to the security descriptor
     if (!SetSecurityDescriptorDacl(pSD, TRUE, pACL, FALSE)) {
-        LocalFree(pSD);
-        LocalFree(pACL);
-        delete[] userName;
         DWORD error = GetLastError();
         std::string message = std::system_category().message(error);
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to set DACL: {}", message);
@@ -159,10 +156,6 @@ StatusCode FileSystem::createTempPath(std::string* local_path) {
     }
 
     *local_path = fs::path(temp_file).generic_string();
-
-    LocalFree(pSD);
-    LocalFree(pACL);
-    delete[] userName;
 
     return StatusCode::OK;
 }
