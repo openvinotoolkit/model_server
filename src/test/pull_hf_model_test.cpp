@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <fstream>
 #include <memory>
 #include <string>
 #include <thread>
@@ -77,22 +76,25 @@ TEST(HfDownloaderClassTest, Methods) {
     std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, false);
     ASSERT_EQ(hfDownloader->isPullHfModelModeOn(), false);
 
+    std::string proxy_env = "https_proxy";
     std::string proxy = "https://proxy_test1:123";
-    ::unsetenv("https_proxy");
+    UnSetEnvironmentVar(proxy_env);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), false);
-    ::setenv("https_proxy", proxy.c_str(), 1);
+    SetEnvironmentVar(proxy_env, proxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
+    std::string token_env = "HF_TOKEN";
     std::string token = "123$$o_O123!AAbb";
-    ::unsetenv("HF_TOKEN");
+    UnSetEnvironmentVar(token_env);
     ASSERT_EQ(hfDownloader->CheckIfTokenSet(), false);
-    ::setenv("HF_TOKEN", token.c_str(), 1);
+    SetEnvironmentVar(token_env, token);
     ASSERT_EQ(hfDownloader->CheckIfTokenSet(), true);
 
+    std::string endpoint_env = "HF_ENDPOINT";
     std::string endpoint = "www.new_hf.com";
-    ::unsetenv("HF_ENDPOINT");
+    UnSetEnvironmentVar(endpoint_env);
     ASSERT_EQ(hfDownloader->GetHfEndpoint(), "huggingface.co/");
-    ::setenv("HF_ENDPOINT", endpoint.c_str(), 1);
+    SetEnvironmentVar(endpoint_env, endpoint);
 
     std::string hfEndpoint = hfDownloader->GetHfEndpoint();
     ASSERT_EQ(hfEndpoint, "www.new_hf.com/");

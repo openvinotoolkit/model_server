@@ -3021,8 +3021,8 @@ cc_library(
     srcs = ["test/pull_hf_model_test.cpp"],
     linkopts = [],
     deps = [
-        "//src/libgt2:libgt2",
         ":test_utils",
+        "//src/libgt2:libgt2",
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],

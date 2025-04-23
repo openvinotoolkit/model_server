@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <optional>
 #include <unordered_set>
@@ -628,6 +629,21 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
         content = request.mutable_raw_input_contents()->Mutable(bufferId);
     }
     return content;
+}
+
+void SetEnvironmentVar(const std::string& var, const std::string& val) {
+#ifdef _WIN32
+    _putenv_s(var.c_str(), val.c_str());
+#elif __linux__
+    ::setenv(var.c_str(), val.c_str(), 1);
+#endif
+}
+void UnSetEnvironmentVar(const std::string& var) {
+#ifdef _WIN32
+    _putenv_s(var.c_str(), "");
+#elif __linux__
+    ::unsetenv(var.c_str());
+#endif
 }
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
