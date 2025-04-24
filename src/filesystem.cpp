@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "filesystem.hpp"
 
+#include <memory>
 #ifdef _WIN32
 #include <windows.h>
 #include <aclapi.h>
