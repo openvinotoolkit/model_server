@@ -15,7 +15,7 @@
 ::
 @echo on
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -44,7 +44,7 @@ set "BAZEL_VC_FULL_VERSION=14.29.30133"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
-set "PYTHONHOME=C:\opt\Python311"
+set "PYTHONHOME=C:\opt\Python312"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH

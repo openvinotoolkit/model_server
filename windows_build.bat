@@ -36,8 +36,8 @@ set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
-set "PYTHONHOME=C:\opt\Python311"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PYTHONHOME=C:\opt\Python312"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"

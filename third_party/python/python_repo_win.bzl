@@ -15,8 +15,8 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    lib_path = "Python311"
-    version = "python311"
+    lib_path = "Python312"
+    version = "python312"
     build_file_content = """
 cc_library(
     name = "python3-lib",
