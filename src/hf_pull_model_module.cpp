@@ -23,6 +23,7 @@
 #include "logging.hpp"
 #include "server.hpp"
 #include "status.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 
@@ -52,7 +53,7 @@ Status HfPullModelModule::clone() const {
         SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str());
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
-    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.pullHfModelMode);
+    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.pullHfModelMode, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
     // TODO: CVS-166568 Do we want to set timeout for this operation ?
     auto status = hfDownloader->cloneRepository();
     if (!status.ok()) {
@@ -60,6 +61,38 @@ Status HfPullModelModule::clone() const {
     }
 
     return StatusCode::OK;
+}
+
+const std::string HfPullModelModule::GetProxy() const {
+    std::string proxy = "";
+    const char* envCred = std::getenv("https_proxy");
+    if (envCred)
+        proxy = std::string(envCred);
+    return proxy;
+}
+
+const std::string HfPullModelModule::GetHfToken() const {
+    std::string token = "";
+    const char* envCred = std::getenv("HF_TOKEN");
+    if (envCred)
+        token = std::string(envCred);
+    return token;
+}
+
+const std::string HfPullModelModule::GetHfEndpoint() const {
+    const char* envCred = std::getenv("HF_ENDPOINT");
+    std::string hfEndpoint = "huggingface.co";
+    if (envCred) {
+        hfEndpoint = std::string(envCred);
+    } else {
+        SPDLOG_DEBUG("HF_ENDPOINT environment variable not set");
+    }
+
+    if (!endsWith(hfEndpoint, "/")) {
+        hfEndpoint.append("/");
+    }
+
+    return hfEndpoint;
 }
 
 void HfPullModelModule::shutdown() {

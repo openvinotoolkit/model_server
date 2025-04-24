@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <memory>
+#include <string>
 
 #include "module.hpp"
 #include "capi_frontend/server_settings.hpp"
@@ -24,6 +25,9 @@ namespace ovms {
 class HfPullModelModule : public Module {
 protected:
     HFSettingsImpl hfSettings;
+    const std::string GetProxy() const;
+    const std::string GetHfToken() const;
+    const std::string GetHfEndpoint() const;
 
 public:
     HfPullModelModule();

@@ -310,8 +310,6 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
-        setShutdownRequest(1);
         return status;
     }
 
@@ -374,6 +372,7 @@ public:
 void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
+    ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
@@ -414,7 +413,7 @@ int Server::start(int argc, char** argv) {
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request) {
+        while (!shutdown_request && !serverSettings.hfSettings.pullHfModelMode) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

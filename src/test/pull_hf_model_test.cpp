@@ -17,12 +17,16 @@
 #include <string>
 #include <thread>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "test_utils.hpp"
 #include "../filesystem.hpp"
+#include "../hf_pull_model_module.hpp"
 #include "src/libgt2/libgt2.hpp"
 #include "../server.hpp"
 
-class PullHfModel : public TestWithTempDir {
+class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
@@ -40,7 +44,7 @@ protected:
     }
 };
 
-TEST_F(PullHfModel, PositiveDownload) {
+TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
     this->ServerPullHfModel(modelName, downloadPath);
@@ -52,54 +56,94 @@ TEST_F(PullHfModel, PositiveDownload) {
 TEST(HfDownloaderClassTest, Constructor) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
-    std::unique_ptr<ovms::HfDownloader> hfDownloader = std::make_unique<ovms::HfDownloader>(modelName, downloadPath, true);
+    std::string hfEndpoint = "www.new_hf.com";
+    std::string hfToken = "123$$o_O123!AAbb";
+    std::string httpProxy = "https://proxy_test1:123";
+    std::unique_ptr<ovms::HfDownloader> hfDownloader = std::make_unique<ovms::HfDownloader>(modelName, downloadPath, true, hfEndpoint, hfToken, httpProxy);
     ASSERT_EQ(hfDownloader->isPullHfModelModeOn(), true);
 }
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode) {
-        this->sourceModel = sourceModel;
-        this->downloadPath = downloadPath;
-        this->pullHfModelMode = pullHfModelMode;
-    }
-    std::string GetRepoUrl(std::string& hfEndpoint) { return HfDownloader::GetRepoUrl(hfEndpoint); }
-    std::string GetHfEndpoint() { return HfDownloader::GetHfEndpoint(); }
-    std::string GetRepositoryUrlWithPassword(std::string& hfEndpoint) { return HfDownloader::GetRepositoryUrlWithPassword(hfEndpoint); }
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) :
+        HfDownloader(sourceModel, downloadPath, false, hfEndpoint, hfToken, httpProxy) {}
+    std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
+    std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
-    bool CheckIfTokenSet() { return HfDownloader::CheckIfTokenSet(); }
+    void setProxy(const std::string& proxy) { this->httpProxy = proxy; }
+    void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
+    const std::string& getEndpoint() { return this->hfEndpoint; }
+    const std::string& getProxy() { return this->httpProxy; }
 };
 
 TEST(HfDownloaderClassTest, Methods) {
     std::string modelName = "model/name";
     std::string downloadPath = "/path/to/Download";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, false);
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "123$$o_O123!AAbb";
+    std::string httpProxy = "https://proxy_test1:123";
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, false, hfEndpoint, hfToken, httpProxy);
     ASSERT_EQ(hfDownloader->isPullHfModelModeOn(), false);
-
-    std::string proxy_env = "https_proxy";
-    std::string proxy = "https://proxy_test1:123";
-    UnSetEnvironmentVar(proxy_env);
-    ASSERT_EQ(hfDownloader->CheckIfProxySet(), false);
-    SetEnvironmentVar(proxy_env, proxy);
+    ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
+    hfDownloader->setProxy("");
+    ASSERT_EQ(hfDownloader->CheckIfProxySet(), false);
+    ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
+    ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+}
+
+class TestHfPullModelModule : public ovms::HfPullModelModule {
+public:
+    const std::string GetHfToken() const { return HfPullModelModule::GetHfToken(); }
+    const std::string GetHfEndpoint() const { return HfPullModelModule::GetHfEndpoint(); }
+    const std::string GetProxy() const { return HfPullModelModule::GetProxy(); }
+};
+
+class HfDownloaderHfEnvTest : public ::testing::Test {
+public:
+    std::string oldHfEndpoint = "";
+    std::string oldHfToken = "";
+    std::string oldHttpProxy = "";
+    std::string proxy_env = "https_proxy";
     std::string token_env = "HF_TOKEN";
+    std::string endpoint_env = "HF_ENDPOINT";
+    void SetUp() {
+        this->oldHttpProxy = GetEnvVar(proxy_env);
+        this->oldHfToken = GetEnvVar(token_env);
+        this->oldHfEndpoint = GetEnvVar(endpoint_env);
+    }
+
+    void TearDown() {
+        SetEnvironmentVar(proxy_env, oldHttpProxy);
+        SetEnvironmentVar(token_env, oldHfToken);
+        SetEnvironmentVar(endpoint_env, oldHfEndpoint);
+    }
+};
+
+TEST_F(HfDownloaderHfEnvTest, Methods) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::unique_ptr<TestHfPullModelModule> testHfPullModelModule = std::make_unique<TestHfPullModelModule>();
+
+    std::string proxy = "https://proxy_test1:123";
+    UnSetEnvironmentVar(proxy_env);
+    ASSERT_EQ(testHfPullModelModule->GetProxy(), "");
+    SetEnvironmentVar(proxy_env, proxy);
+    ASSERT_EQ(testHfPullModelModule->GetProxy(), proxy);
+
     std::string token = "123$$o_O123!AAbb";
     UnSetEnvironmentVar(token_env);
-    ASSERT_EQ(hfDownloader->CheckIfTokenSet(), false);
+    ASSERT_EQ(testHfPullModelModule->GetHfToken(), "");
     SetEnvironmentVar(token_env, token);
-    ASSERT_EQ(hfDownloader->CheckIfTokenSet(), true);
+    ASSERT_EQ(testHfPullModelModule->GetHfToken(), token);
 
-    std::string endpoint_env = "HF_ENDPOINT";
     std::string endpoint = "www.new_hf.com";
     UnSetEnvironmentVar(endpoint_env);
-    ASSERT_EQ(hfDownloader->GetHfEndpoint(), "huggingface.co/");
+    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "huggingface.co/");
     SetEnvironmentVar(endpoint_env, endpoint);
 
-    std::string hfEndpoint = hfDownloader->GetHfEndpoint();
+    std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();
     ASSERT_EQ(hfEndpoint, "www.new_hf.com/");
-
-    ASSERT_EQ(hfDownloader->GetRepoUrl(hfEndpoint), "https://www.new_hf.com/model/name");
-
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(hfEndpoint), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 }

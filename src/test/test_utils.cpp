@@ -645,6 +645,13 @@ void UnSetEnvironmentVar(const std::string& var) {
     ::unsetenv(var.c_str());
 #endif
 }
+const std::string GetEnvVar(const std::string& var) {
+    std::string val = "";
+    const char* envCred = std::getenv(var.c_str());
+    if (envCred)
+        val = std::string(envCred);
+    return val;
+}
 
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
