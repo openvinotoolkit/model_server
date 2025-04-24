@@ -280,7 +280,7 @@ WORKDIR /ovms
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh /ovms/
+COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh demos/common/export_models/export_model.py /ovms/
 
 ARG FUZZER_BUILD=0
 # Custom Nodes
@@ -295,7 +295,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
 
 ARG RUN_TESTS=0
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
 

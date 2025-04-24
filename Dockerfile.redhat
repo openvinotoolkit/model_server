@@ -283,8 +283,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms 
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=0
-COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh demos/common/export_models/export_model.py /ovms/
+RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 ARG ovms_metadata_file
 
