@@ -134,6 +134,7 @@ protected:
     std::unordered_map<std::string, mediapipe_packet_type_enum> inputTypes;
     std::unordered_map<std::string, mediapipe_packet_type_enum> outputTypes;
     PipelineDefinitionStatus status;
+    bool isUnloading = false;
 
     MediapipeGraphConfig mgconfig;
     ::mediapipe::CalculatorGraphConfig config;  // TODO rename configs
@@ -144,6 +145,7 @@ protected:
 
     std::condition_variable loadedNotify;
     mutable std::shared_mutex metadataMtx;
+    mutable std::shared_mutex graphQueueMtx;
 
 private:
     void increaseRequestsHandlesCount() {

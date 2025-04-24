@@ -108,7 +108,7 @@ public:
      * @brief Give InferRequest
      */
     T& getInferRequest(int streamID) {
-        return inferRequests[streamID];
+        return inferRequests.at(streamID);
     }
 
 protected:

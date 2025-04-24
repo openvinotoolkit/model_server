@@ -154,6 +154,7 @@ cc_library(
     copts = [],
     visibility = ["//visibility:public",],
     linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
 )
 cc_library(
     name = "mediapipe_internal_graphqueue",

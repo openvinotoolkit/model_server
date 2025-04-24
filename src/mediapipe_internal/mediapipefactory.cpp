@@ -69,11 +69,15 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
     }
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(pipelineName, config, manager.getMetricRegistry(), &manager.getMetricConfig(), pythonBackend);
     auto stat = graphDefinition->validate(manager);
+                SPDLOG_ERROR("ER");
     if (stat.getCode() == StatusCode::MEDIAPIPE_GRAPH_NAME_OCCUPIED) {
         return stat;
     }
+                SPDLOG_ERROR("ER");
     std::unique_lock lock(definitionsMtx);
+                SPDLOG_ERROR("ER");
     definitions.insert({pipelineName, std::move(graphDefinition)});
+                SPDLOG_ERROR("ER");
     return stat;
 }
 
@@ -113,6 +117,7 @@ Status MediapipeFactory::create(std::shared_ptr<MediapipeGraphExecutor>& pipelin
         return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
     }
     auto& definition = *definitions.at(name);
+    lock.unlock();
     return definition.create(pipeline);
 }
 

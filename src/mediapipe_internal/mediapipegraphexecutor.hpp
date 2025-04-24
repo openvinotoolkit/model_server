@@ -28,14 +28,18 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
+#endif
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
@@ -131,10 +135,11 @@ public:
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
-        MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
+        SPDLOG_ERROR("ER Executor::infer() using GraphHelper:{}", (void*)guard.gh.get());
+        MetricCounterGuard rejectedRequestGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
         MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
         ::mediapipe::CalculatorGraph& graph = this->guard.graph;
-        SPDLOG_ERROR("SetExecutor XXX");
+        //SPDLOG_ERROR("SetExecutor XXX");
         //std::ignore = graph.SetExecutor("", sharedThreadPool);  // TODO FIXME
         SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXbegin", this->name);
         //MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -206,7 +211,7 @@ public:
             return Status(StatusCode::INVALID_NO_OF_INPUTS, "Not all input packets created");
         }
 
-        failedRequestsGuard.disable();
+        rejectedRequestGuard.disable(); // @atobisze renamed
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
 
         // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
@@ -260,6 +265,9 @@ public:
         OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));*/
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
+        // FIXME @atobisze probably not all cases need ful reload of graph
+        // eg if we fail to push the packet into
+        //this->guard.success = true;
         return StatusCode::OK;
     }
 

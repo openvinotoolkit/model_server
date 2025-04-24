@@ -54,40 +54,55 @@ struct GraphHelper {
         outStreamObservers(std::move(gh.outStreamObservers)),
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&& gh) = default;
+    ~GraphHelper();
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
 //class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
 class GraphQueue : public Queue<std::shared_ptr<GraphHelper>> {
+    const std::shared_ptr<const ::mediapipe::CalculatorGraphConfig> config;
     std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap;
     std::shared_ptr<GenAiServableMap> genAiServableMap;
 
 public:
     GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap, std::shared_ptr<GenAiServableMap> genAiServableMap, int streamsLength);
     ~GraphQueue();
+     // FIXME @atobisze exception handling, make friend with guard? Need to ensure it is only called by someone having that id
+    void restoreStream(int streamId);
 };
 
 struct GraphIdGuard {
     std::weak_ptr<GraphQueue> weakQueue;
     const int id;
     std::shared_ptr<GraphHelper> gh;
+    bool success = false;
     // TODO FIXME shared_ptr
     ::mediapipe::CalculatorGraph& graph;
     GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :
         weakQueue(queue),
+        // TODO unloading graph will be blocked until all waiting requests will get their stream
         id(queue->getIdleStream().get()),
         gh((queue->getInferRequest(id))),
         graph(*gh->graph) {
-        SPDLOG_ERROR("ER Guard construct this:{}", (void*)this);
+        SPDLOG_ERROR("ER Guard construct this:{}, id:{}", (void*)this, this->id);
     }
     GraphIdGuard(GraphIdGuard&&) = default;
     GraphIdGuard(const GraphIdGuard&) = delete;
     ~GraphIdGuard() {
         auto existingQueue = weakQueue.lock();
         SPDLOG_ERROR("ER DEstroy Guard begin qu:{}", (void*)existingQueue.get());
-        if (existingQueue)
+        if (existingQueue) {
+            SPDLOG_ERROR("ER returning stream id:{}", this->id);
+            if (!success) {
+                SPDLOG_ERROR("ER restoring stream id:{}", this->id);
+                existingQueue->restoreStream(this->id);
+            }
             existingQueue->returnStream(this->id);
-        SPDLOG_ERROR("ER Destroy Guard end qu:{}", (void*)existingQueue.get());
-        SPDLOG_ERROR("ER Guard destroy this:{}", (void*)this);
+            SPDLOG_ERROR("ER returned stream id:{}", this->id);
+        } else {
+            SPDLOG_ERROR("ER XXX nonexistingqueue");
+        }
+        //SPDLOG_ERROR("ER Destroy Guard end qu:{}", (void*)existingQueue.get());
+        SPDLOG_ERROR("ER Guard destroy this:{}, graph:{}, ghCount:{}", (void*)this, (void*)&graph, gh.use_count());
     }
 };
 }  // namespace ovms
