@@ -53,20 +53,10 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
 }
 
-TEST(HfDownloaderClassTest, Constructor) {
-    std::string modelName = "model/name";
-    std::string downloadPath = "/path/to/Download";
-    std::string hfEndpoint = "www.new_hf.com";
-    std::string hfToken = "123$$o_O123!AAbb";
-    std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<ovms::HfDownloader> hfDownloader = std::make_unique<ovms::HfDownloader>(modelName, downloadPath, true, hfEndpoint, hfToken, httpProxy);
-    ASSERT_EQ(hfDownloader->isPullHfModelModeOn(), true);
-}
-
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) :
-        HfDownloader(sourceModel, downloadPath, false, hfEndpoint, hfToken, httpProxy) {}
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy) {}
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
     std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
@@ -82,13 +72,11 @@ TEST(HfDownloaderClassTest, Methods) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, false, hfEndpoint, hfToken, httpProxy);
-    ASSERT_EQ(hfDownloader->isPullHfModelModeOn(), false);
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy);
     ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
-    hfDownloader->setProxy("");
-    ASSERT_EQ(hfDownloader->CheckIfProxySet(), false);
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "").CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");

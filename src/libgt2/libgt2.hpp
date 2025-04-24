@@ -55,9 +55,8 @@ public:
 
 class HfDownloader {
 public:
-    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy);
+    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy);
     Status cloneRepository();
-    bool isPullHfModelModeOn();
 
 protected:
     std::string sourceModel;
@@ -65,7 +64,6 @@ protected:
     std::string hfEndpoint;
     std::string hfToken;
     std::string httpProxy;
-    bool pullHfModelMode;
 
     HfDownloader();
     std::string GetRepoUrl();

@@ -147,10 +147,6 @@ int cred_acquire_cb(git_credential** out,
 }
 
 // C-style callback functions section used in libgt2 library ENDS ********************************
-bool HfDownloader::isPullHfModelModeOn() {
-    return this->pullHfModelMode;
-}
-
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
         return true;
@@ -179,16 +175,14 @@ std::string HfDownloader::GetRepoUrl() {
 HfDownloader::HfDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
-    this->pullHfModelMode = false;
     this->hfEndpoint = "";
     this->hfToken = "";
     this->httpProxy = "";
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, bool pullHfModelMode, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
+HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
     this->sourceModel = sourceModel;
     this->downloadPath = downloadPath;
-    this->pullHfModelMode = pullHfModelMode;
     this->hfEndpoint = hfEndpoint;
     this->hfToken = hfToken;
     this->httpProxy = httpProxy;

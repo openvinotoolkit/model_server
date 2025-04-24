@@ -53,7 +53,7 @@ Status HfPullModelModule::clone() const {
         SPDLOG_ERROR("Failed to init libgit2 {}", initGuard->errMsg.c_str());
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
-    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.pullHfModelMode, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
+    std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
     // TODO: CVS-166568 Do we want to set timeout for this operation ?
     auto status = hfDownloader->cloneRepository();
     if (!status.ok()) {
