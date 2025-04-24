@@ -52,7 +52,7 @@
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
-#include "hf_pull_model_module.hpp"
+#include "libgt2/hf_pull_model_module.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"

@@ -26,7 +26,6 @@
 #include <ntstatus.h>
 #endif
 #include "capi_frontend/server_settings.hpp"
-#include "libgt2/libgt2.hpp"
 #include "version.hpp"
 
 namespace ovms {

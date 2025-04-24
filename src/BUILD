@@ -340,7 +340,6 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
-        "//src/libgt2:libgt2",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -550,8 +549,6 @@ cc_library(
         "get_model_metadata_impl.hpp",
         "global_sequences_viewer.hpp",
         "global_sequences_viewer.cpp",
-        "hf_pull_model_module.hpp",
-        "hf_pull_model_module.cpp",
         "http_server.hpp",
         "http_server.cpp",
         "http_rest_api_handler.hpp",
@@ -698,6 +695,7 @@ cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
+            "//src/libgt2:hf_pull_model_module",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
             "tfs_backend_impl",
@@ -3023,6 +3021,7 @@ cc_library(
     deps = [
         ":test_utils",
         "//src/libgt2:libgt2",
+        "//src/libgt2:hf_pull_model_module",
         "//src:ovms_lib",
         "@com_google_googletest//:gtest",
     ],

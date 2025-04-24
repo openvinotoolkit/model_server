@@ -33,9 +33,28 @@ cc_library(
     hdrs = ["libgt2.hpp"],
     deps =  [
         "@libgt2_engine//:libgt2_engine",
-        "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "hf_pull_model_module",
+    srcs = ["hf_pull_model_module.cpp"],
+    hdrs = ["hf_pull_model_module.hpp"],
+    deps =  [
+        ":libgt2",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovms_module",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

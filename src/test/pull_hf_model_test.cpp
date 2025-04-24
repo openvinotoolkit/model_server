@@ -22,7 +22,7 @@
 
 #include "test_utils.hpp"
 #include "../filesystem.hpp"
-#include "../hf_pull_model_module.hpp"
+#include "../libgt2/hf_pull_model_module.hpp"
 #include "src/libgt2/libgt2.hpp"
 #include "../server.hpp"
 
