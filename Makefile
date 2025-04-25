@@ -316,7 +316,11 @@ clang-format-check: clang-format
 	@git diff --exit-code --staged || (echo "clang-format changes not committed. Commit those changes first"; exit 1)
 
 .PHONY: docker_build
-docker_build: ovms_builder_image targz_package ovms_release_images
+docker_build: add_proxy ovms_builder_image targz_package ovms_release_images
+add_proxy:
+	@if ! grep -FRq "test:linux --test_env https_proxy=" .user.bazelrc; then\
+		echo test:linux --test_env https_proxy=${HTTPS_PROXY} >> .user.bazelrc;\
+	fi
 ovms_builder_image:
 ifeq ($(PYTHON_DISABLE),0)
   ifeq ($(MEDIAPIPE_DISABLE),1)
