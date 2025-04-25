@@ -93,6 +93,10 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validate() {
+    // TODO: Add validation of all parameters once the CLI model export flags will be implemented
+    if (this->serverSettings.hfSettings.pullHfModelMode) {
+        return true;
+    }
     if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
         std::cerr << "Use either config_path or model_path with model_name" << std::endl;
         return false;

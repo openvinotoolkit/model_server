@@ -695,6 +695,7 @@ cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
+            "//src/libgt2:hf_pull_model_module",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
             "tfs_backend_impl",
@@ -2910,6 +2911,7 @@ cc_test(
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
+            ":pull_hf_model_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3008,6 +3010,22 @@ cc_library(
             ":inferenceresponse",
             "@com_google_googletest//:gtest",
     ],
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "pull_hf_model_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/pull_hf_model_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/libgt2:libgt2",
+        "//src/libgt2:hf_pull_model_module",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(
