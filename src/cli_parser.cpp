@@ -126,6 +126,20 @@ void CLIParser::parse(int argc, char** argv) {
                 "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
 
+        options->add_options("pull hf model")
+            ("pull",
+                "Pull model from HF",
+                cxxopts::value<bool>()->default_value("false"),
+                "PULL_HF")
+            ("source_model",
+                "HF source model path",
+                cxxopts::value<std::string>(),
+                "HF_SOURCE")
+            ("download_path",
+                "HF model destination download path",
+                cxxopts::value<std::string>(),
+                "DOWNLOAD_PATH");
+
         options->add_options("single model")
             ("model_name",
                 "Name of the model",
@@ -232,6 +246,19 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (nullptr == result) {
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
+
+    // Ovms Pull models mode
+    if (result->count("pull")) {
+        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
+        if (result->count("source_model"))
+            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+        if (result->count("download_path"))
+            serverSettings->hfSettings.downloadPath = result->operator[]("download_path").as<std::string>();
+        return;
+    } else {
+        serverSettings->hfSettings.pullHfModelMode = false;
+    }
+
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
 

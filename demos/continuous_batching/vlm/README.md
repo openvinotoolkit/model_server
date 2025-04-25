@@ -12,7 +12,7 @@ That makes it easy to use and efficient especially on Intel® Xeon® processors 
 
 **Model preparation**: Python 3.9 or higher with pip and HuggingFace account
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
@@ -79,7 +79,7 @@ models/
         └── tokenizer.model
 ```
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../../docs/llm/reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
@@ -110,7 +110,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
@@ -296,6 +296,6 @@ Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 
 
 ## References
-- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
-- [Writing client code](../../docs/clients_genai.md)
-- [LLM calculator reference](../../docs/llm/reference.md)
+- [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
+- [Writing client code](../../../docs/clients_genai.md)
+- [LLM calculator reference](../../../docs/llm/reference.md)

@@ -21,6 +21,12 @@
 
 namespace ovms {
 
+struct HFSettingsImpl {
+    std::string sourceModel = "";
+    std::string downloadPath = "";
+    bool pullHfModelMode = false;
+};
+
 struct ServerSettingsImpl {
     uint32_t grpcPort = 0;
     uint32_t restPort = 0;
@@ -45,6 +51,7 @@ struct ServerSettingsImpl {
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
+    HFSettingsImpl hfSettings;
 };
 
 struct ModelsSettingsImpl {

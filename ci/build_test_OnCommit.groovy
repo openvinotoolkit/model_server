@@ -10,6 +10,9 @@ pipeline {
     agent {
       label 'ovmsbuilder'
     }
+    options {
+      timeout(time: 4, unit: 'HOURS')
+    }
     stages {
         stage('Configure') {
           steps {
@@ -45,6 +48,9 @@ pipeline {
           }
         }
         stage('Style, SDL and clean') {
+          options {
+            timeout(time: 20, unit: 'MINUTES')
+          }
           parallel {
             stage('Style check') {
               agent {
@@ -74,6 +80,9 @@ pipeline {
           }
         }
         stage('Build') {
+          options {
+            timeout(time: 4, unit: 'HOURS')
+          }
           parallel {
             stage("Build linux") {
               agent {
@@ -82,6 +91,7 @@ pipeline {
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
+                      sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
@@ -115,6 +125,9 @@ pipeline {
         }
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
+          options {
+            timeout(time: 120, unit: 'MINUTES')
+          }
           parallel {
             stage("Run unit tests") {
               agent {

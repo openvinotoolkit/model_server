@@ -31,7 +31,6 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "ovms_exit_codes.hpp"
 #ifdef __linux__
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -53,13 +52,16 @@
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
+#include "libgt2/hf_pull_model_module.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "libgt2/libgt2.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "model_service.hpp"
 #include "modelmanager.hpp"
+#include "ovms_exit_codes.hpp"
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
@@ -89,6 +91,11 @@ static void logConfig(const Config& config) {
     SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
+    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+        SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
+        SPDLOG_DEBUG("download_path: {}", config.getServerSettings().hfSettings.downloadPath);
+        return;
+    }
     if (config.configPath().empty()) {
         SPDLOG_DEBUG("model_path: {}", config.modelPath());
         SPDLOG_DEBUG("model_name: {}", config.modelName());
@@ -250,6 +257,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<MetricModule>();
     if (name == CAPI_MODULE_NAME)
         return std::make_unique<CAPIModule>(*this);
+    if (name == HF_MODEL_PULL_MODULE_NAME)
+        return std::make_unique<HfPullModelModule>();
     return nullptr;
 }
 
@@ -292,6 +301,18 @@ Status Server::startModules(ovms::Config& config) {
     Status status;
     bool inserted = false;
     auto it = modules.end();
+
+    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+        INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
+        START_MODULE(it);
+        if (!status.ok()) {
+            return status;
+        }
+        auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
+        status = hfModule->clone();
+        return status;
+    }
+
 #if (PYTHON_DISABLE == 0)
     if (config.getServerSettings().withPython) {
         INSERT_MODULE(PYTHON_INTERPRETER_MODULE_NAME, it);
@@ -351,6 +372,7 @@ public:
 void Server::shutdownModules() {
     // we want very precise order of modules shutdown
     // first we should stop incoming new requests
+    ensureModuleShutdown(HF_MODEL_PULL_MODULE_NAME);
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
@@ -385,12 +407,13 @@ int Server::start(int argc, char** argv) {
         ModelsSettingsImpl modelsSettings;
         parser.parse(argc, argv);
         parser.prepare(&serverSettings, &modelsSettings);
+
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request) {
+        while (!shutdown_request && !serverSettings.hfSettings.pullHfModelMode) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

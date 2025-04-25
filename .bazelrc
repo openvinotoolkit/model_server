@@ -223,10 +223,10 @@ build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
 build:windows --host_linkopt=/OPT:ICF
 
-build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python311/python.exe"
-build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python311/lib/site-packages"
-build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python311/python.exe
-build:windows --python_path="C:/opt/Python311/python.exe"
+build:windows --action_env PYTHON_BIN_PATH="C:/opt/Python312/python.exe"
+build:windows --action_env PYTHON_LIB_PATH="C:/opt/Python312/lib/site-packages"
+build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python312/python.exe
+build:windows --python_path="C:/opt/Python312/python.exe"
 build:windows:opt --copt=/arch:AVX
 build:windows:opt --host_copt=/arch:AVX
 build:windows --define=override_eigen_strong_inline=true
@@ -248,7 +248,7 @@ build:windows --define=MEDIAPIPE_DISABLE=0
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
 build:windows --action_env OpenCV_DIR="c:/opt/opencv"
 
-build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.11
+build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
 build:windows --define=USE_DROGON=1
 build:windows --define=GENAI_USE_BINARY=1
 
@@ -261,6 +261,7 @@ test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runti
 # genai hardcodes path during build time so without this so is not visible
 test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+test:linux --test_env no_proxy=localhost
 
 # Bazelrc imports ############################################################################################################################
 # file below should contain sth like

@@ -1,0 +1,389 @@
+commit aef9047d67d08027afe0417d6c681bfdc4666f5e
+Author: rasapala <rafal.a.sapala@intel.com>
+Date:   Fri Mar 14 09:23:35 2025 +0100
+
+    Lfs
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 31da49a88..d61c9735e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -121,11 +121,6 @@ include(ExperimentalFeatures)
+ 
+ add_subdirectory(src)
+ 
+-if(BUILD_TESTS)
+-	enable_testing()
+-	add_subdirectory(tests)
+-endif()
+-
+ if(BUILD_EXAMPLES)
+ 	add_subdirectory(examples)
+ endif()
+diff --git a/include/git2/sys/filter.h b/include/git2/sys/filter.h
+index 60466d173..a35ad5f98 100644
+--- a/include/git2/sys/filter.h
++++ b/include/git2/sys/filter.h
+@@ -32,11 +32,19 @@ GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
+ /** The "ident" filter */
+ #define GIT_FILTER_IDENT "ident"
+ 
++/** The "lfs" filter */
++#define GIT_FILTER_LFS "lfs"
++
+ /**
+  * This is priority that the internal CRLF filter will be registered with
+  */
+ #define GIT_FILTER_CRLF_PRIORITY 0
+ 
++/**
++ * This is priority that the internal CRLF filter will be registered with
++ */
++#define GIT_FILTER_LFS_PRIORITY 199
++
+ /**
+  * This is priority that the internal ident filter will be registered with
+  */
+diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
+index c18cb28d4..286fa7153 100644
+--- a/src/cli/cmd_clone.c
++++ b/src/cli/cmd_clone.c
+@@ -146,6 +146,7 @@ int cmd_clone(int argc, char **argv)
+ 	clone_opts.bare = !!bare;
+ 	clone_opts.checkout_branch = branch;
+ 	clone_opts.fetch_opts.depth = compute_depth(depth);
++	clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
+ 
+ 	if (!checkout)
+ 		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
+diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
+index a7d3c7ca4..f78a25e35 100644
+--- a/src/libgit2/CMakeLists.txt
++++ b/src/libgit2/CMakeLists.txt
+@@ -69,8 +69,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+ ide_split_sources(libgit2package)
+ 
+ if(SONAME)
+-	set_target_properties(libgit2package PROPERTIES VERSION ${libgit2_VERSION})
+-	set_target_properties(libgit2package PROPERTIES SOVERSION "${libgit2_VERSION_MAJOR}.${libgit2_VERSION_MINOR}")
+ 	if(LIBGIT2_FILENAME)
+ 		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+ 		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
+diff --git a/src/libgit2/checkout.c b/src/libgit2/checkout.c
+index f4b1ea96f..d8d4dee35 100644
+--- a/src/libgit2/checkout.c
++++ b/src/libgit2/checkout.c
+@@ -1529,6 +1529,7 @@ static int blob_content_to_file(
+ 	mode_t file_mode = data->opts.file_mode ?
+ 		data->opts.file_mode : entry_filemode;
+ 	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
++
+ 	struct checkout_stream writer;
+ 	mode_t mode;
+ 	git_filter_list *fl = NULL;
+diff --git a/src/libgit2/filter.c b/src/libgit2/filter.c
+index 9e0910c8c..a27b55340 100644
+--- a/src/libgit2/filter.c
++++ b/src/libgit2/filter.c
+@@ -190,7 +190,7 @@ static int filter_registry_insert(
+ 
+ int git_filter_global_init(void)
+ {
+-	git_filter *crlf = NULL, *ident = NULL;
++	git_filter *crlf = NULL, *ident = NULL, *lfs = NULL;
+ 	int error = 0;
+ 
+ 	if (git_rwlock_init(&filter_registry.lock) < 0)
+@@ -205,7 +205,11 @@ int git_filter_global_init(void)
+ 			GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0 ||
+ 		(ident = git_ident_filter_new()) == NULL ||
+ 		filter_registry_insert(
+-			GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
++			GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0 ||
++		(lfs = git_lfs_filter_new()) == NULL ||
++		filter_registry_insert(
++			GIT_FILTER_LFS, lfs, GIT_FILTER_LFS_PRIORITY) < 0
++			)
+ 		error = -1;
+ 
+ 	if (!error)
+@@ -215,6 +219,7 @@ done:
+ 	if (error) {
+ 		git_filter_free(crlf);
+ 		git_filter_free(ident);
++		git_filter_free(lfs);
+ 	}
+ 
+ 	return error;
+diff --git a/src/libgit2/filter.h b/src/libgit2/filter.h
+index 58cb4b424..00ddee9f3 100644
+--- a/src/libgit2/filter.h
++++ b/src/libgit2/filter.h
+@@ -72,6 +72,7 @@ extern int git_filter_list__apply_to_file(
+ 
+ extern git_filter *git_crlf_filter_new(void);
+ extern git_filter *git_ident_filter_new(void);
++extern git_filter *git_lfs_filter_new(void);
+ 
+ extern int git_filter_buffered_stream_new(
+ 	git_writestream **out,
+diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
+new file mode 100644
+index 000000000..aac0d6dda
+--- /dev/null
++++ b/src/libgit2/lfs_filter.c
+@@ -0,0 +1,254 @@
++/*
++/ Copyright 2025 Intel Corporation
++/
++/ Licensed under the Apache License, Version 2.0 (the "License");
++/ you may not use this file except in compliance with the License.
++/ You may obtain a copy of the License at
++/
++/     http://www.apache.org/licenses/LICENSE-2.0
++/
++/ Unless required by applicable law or agreed to in writing, software
++/ distributed under the License is distributed on an "AS IS" BASIS,
++/ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++/ See the License for the specific language governing permissions and
++/ limitations under the License.
++*/
++
++#include "common.h"
++
++#include "git2/sys/filter.h"
++#include "filter.h"
++#include "str.h"
++#include "process.h"
++#include "repository.h"
++
++#ifndef GIT_WIN32
++#include <signal.h>
++#endif
++
++typedef struct lfs_attrs
++{
++	const char *path;
++	const char* full_path;
++	const char* workdir;
++} lfs_attrs;
++
++char *appendCharToBuffer(char *existingBuffer, char additionalChar)
++{
++	size_t existingLength = strlen(existingBuffer);
++	char *newBuffer = (char *)malloc((existingLength + 2) * sizeof(char));
++	if (newBuffer == NULL) {
++		return NULL;
++	}
++	strcpy(newBuffer, existingBuffer);
++	newBuffer[existingLength] = additionalChar;
++	newBuffer[existingLength + 1] = '\0';
++	return newBuffer;
++}
++
++static int lfs_insert_id(
++	git_str *to, const git_str *from, const git_filter_source *src, void** payload)
++{
++	git_repository *repo = git_filter_source_repo(src);
++	const char *path = git_filter_source_path(src);
++
++	git_str full_path = GIT_STR_INIT;
++	if (git_repository_workdir_path(&full_path, repo, path) < 0)
++		return -1;
++
++	size_t workdir_size = strlen(git_repository_workdir(repo));
++
++	const char *workdir = git_repository_workdir(repo);
++	struct lfs_attrs la = { path, full_path.ptr, workdir };
++
++	*payload = git__malloc(sizeof(la));
++	GIT_ERROR_CHECK_ALLOC(*payload);
++	memcpy(*payload, &la, sizeof(la));
++
++	/*Just write the oryginal lfs file contents */ 
++	return git_str_set(to, from->ptr, from->size);
++}
++
++static int lfs_apply(
++	git_filter     *self,
++	void          **payload,
++	git_str        *to,
++	const git_str  *from,
++	const git_filter_source *src)
++{
++	GIT_UNUSED(self); GIT_UNUSED(payload);
++
++	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
++		return lfs_insert_id(to, from, src, payload);
++	/*else
++	* PATH for upload lfs files not needed
++		return lfs_remove_id(to, from);
++		*/
++	return 0;
++}
++
++static int lfs_check(
++        git_filter *self,
++        void **payload, /* points to NULL ptr on entry, may be set */
++        const git_filter_source *src,
++        const char **attr_values)
++{
++	const char *value;
++
++	git_repository *repo = git_filter_source_repo(src);
++	const char *path = git_filter_source_path(src);
++
++	git_attr_get(
++	        &value, repo, GIT_ATTR_CHECK_NO_SYSTEM, path, "filter");
++
++	if (value && *value) {
++		if (strcmp(value, "lfs") == 0) {
++			return 0;
++		}
++	} else {
++		return GIT_PASSTHROUGH;
++	}
++
++	GIT_UNUSED(self);
++
++	return 0;
++}
++
++static int lfs_stream(
++	git_writestream **out,
++	git_filter *self,
++	void **payload,
++	const git_filter_source *src,
++	git_writestream *next)
++{
++	return git_filter_buffered_stream_new(out,
++		self, lfs_apply, NULL, payload, src, next);
++}
++
++static void lfs_download(git_filter *self, void *payload)
++{
++	GIT_UNUSED(self);
++	struct lfs_attrs *la = (struct lfs_attrs *)payload;
++	char *tmp_out_file = appendCharToBuffer(la->full_path, '2');
++
++	git_process *process;
++	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
++	opts.cwd = la->workdir;
++	git_process_result result = GIT_PROCESS_RESULT_INIT;
++#if defined(GIT_WIN32)
++	const char *args_array[] = { "C:\\Windows\\System32\\cmd.exe",
++		                     "/c",
++		                     "git-lfs.exe",
++		                     "smudge",
++		                     la->path,
++		                     "<",
++		                     la->full_path,
++		                     ">",
++		                     tmp_out_file };
++	if (git_process_new(
++	            &process, args_array, ARRAY_SIZE(args_array), NULL, 0,
++	            &opts) < 0) {
++		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
++        defined(__MidnightBSD__) || defined(__DragonFly__)
++	git_str cmd_line = GIT_STR_INIT;
++
++	if (git_str_printf(&cmd_line, "git-lfs smudge %s < %s > %s", la->path, la->full_path, tmp_out_file) < 0) {
++		    fprintf(stderr,
++			    "failed to create git-lfs command for '%s'\n",
++			    la->full_path);
++		    goto on_error;
++	}
++	if (git_process_new_from_cmdline(
++	            &process, cmd_line.ptr, NULL, 0, &opts) < 0) {
++		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++#else
++	git_str cmd_line = GIT_STR_INIT;
++	if (git_str_printf(
++	            &cmd_line, "git-lfs smudge %s < %s > %s", la->path,
++	            la->full_path, tmp_out_file) < 0) {
++		fprintf(stderr, "failed to create git-lfs command for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++	if (git_process_new_from_cmdline(
++	            &process, cmd_line.ptr, NULL, 0, &opts) < 0) {
++		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++#endif
++	if (git_process_start(process) < 0) {
++		fprintf(stderr, "failed to start git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++	if (git_process_wait(&result, process) < 0) {
++		fprintf(stderr, "failed to wait for git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++
++	if (GIT_PROCESS_STATUS_NORMAL != result.status) {
++		fprintf(stderr,
++		        "abnormal process status for git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++
++	if (0 != result.exitcode) {
++		fprintf(stderr,
++		        "abnormal exitcode signal for git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++	if (0 != result.signal) {
++		fprintf(stderr,
++		        "abnormal process signal for git-lfs process for '%s'\n",
++		        la->full_path);
++		goto on_error;
++	}
++
++	/* Remove lfs file and rename downloaded file to oryginal lfs filename
++	 */
++	if (p_unlink(la->full_path) < 0) {
++		fprintf(stderr, "failed to delete file '%s'", la->full_path);
++		goto on_error;
++	}
++
++	if (p_rename(tmp_out_file, la->full_path) < 0) {
++		fprintf(stderr, "failed to rename file to '%s'", la->full_path);
++		goto on_error;
++	}
++
++	git_process_free(process);
++	git__free(payload);
++	return;
++
++on_error:
++	git_process_free(process);
++	git__free(payload);
++	return;
++}
++
++git_filter *git_lfs_filter_new(void)
++{
++	git_filter *f = git__calloc(1, sizeof(git_filter));
++	if (f == NULL)
++		return NULL;
++
++	f->version = GIT_FILTER_VERSION;
++	f->attributes = "lfs";
++	f->shutdown = git_filter_free;
++	f->stream   = lfs_stream;
++	f->check = lfs_check;
++	f->cleanup = lfs_download;
++
++	return f;
++}
