@@ -92,7 +92,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return("multipart"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
+    EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
     });
@@ -134,7 +134,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("email"))).WillOnce(::testing::Return("john@example.com"));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("username"))).WillOnce(::testing::Return("john_doe"));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
+    EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::Eq("file"))).WillOnce([](const std::string& name) {
         static std::string retval{"this is file content\nIt has two lines."};
         return std::string_view(retval);
     });
@@ -178,7 +178,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::_)).Times(0);
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::_)).Times(0);
+    EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
     // Default routing uses everything that comes after /v3/ as graph name
     const std::string URI = "/v3/NON_EXISTENT";
@@ -214,7 +214,7 @@ It has two lines.
     EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::_)).Times(0);
     EXPECT_CALL(*multiPartParser, getFieldByName(::testing::Eq("model"))).WillOnce(::testing::Return(""));
-    EXPECT_CALL(*multiPartParser, getFileContentByName(::testing::_)).Times(0);
+    EXPECT_CALL(*multiPartParser, getFileContentByFieldName(::testing::_)).Times(0);
 
     // Default routing uses everything that comes after /v3/ as graph name
     const std::string URI = "/v3/";

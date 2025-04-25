@@ -50,7 +50,7 @@ public:
         RET_CHECK(payload.multipartParser != nullptr);
         std::string email = payload.multipartParser->getFieldByName("email");
         std::string username = payload.multipartParser->getFieldByName("username");
-        std::string_view fileContent = payload.multipartParser->getFileContentByName("file");
+        std::string_view fileContent = payload.multipartParser->getFileContentByFieldName("file");
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{email + std::string{"+"} + username + std::string{"\n"} + std::string(fileContent)}, cc->InputTimestamp());
         return absl::OkStatus();

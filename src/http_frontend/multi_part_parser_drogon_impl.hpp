@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ public:
     bool hasParseError() const override;
 
     std::string getFieldByName(const std::string& name) const override;
-    std::string_view getFileContentByName(const std::string& name) const override;
+    std::string_view getFileContentByFieldName(const std::string& name) const override;
 };
 
 }  // namespace ovms

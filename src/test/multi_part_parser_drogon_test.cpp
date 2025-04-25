@@ -54,6 +54,6 @@ TEST(MultiPartParserDrogonImpl, GetFileContentByName) {
     ovms::DrogonMultiPartParser parser(req);
     ASSERT_TRUE(parser.parse());
     ASSERT_FALSE(parser.hasParseError());
-    std::string val = std::string(parser.getFileContentByName("somekey"));
+    std::string val = std::string(parser.getFileContentByFieldName("somekey"));
     EXPECT_EQ(val, "Hello; World");
 }

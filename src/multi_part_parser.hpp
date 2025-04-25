@@ -20,12 +20,19 @@ namespace ovms {
 
 class MultiPartParser {
 public:
+    // Called by ovms core during initial request processing to deduce servable name for routing
     virtual bool parse() = 0;
 
+    // API for MP calculators to check whether request was an actual multipart request
     virtual bool hasParseError() const = 0;
 
+    // API for MP calculators to get the multipart field content by field name.
+    // Returns empty string if field is not found.
     virtual std::string getFieldByName(const std::string& name) const = 0;
-    virtual std::string_view getFileContentByName(const std::string& name) const = 0;
+
+    // API for MP calculators to get the multipart file content by field name.
+    // Returns empty string if file is not found.
+    virtual std::string_view getFileContentByFieldName(const std::string& name) const = 0;
 };
 
 }  // namespace ovms

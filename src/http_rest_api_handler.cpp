@@ -453,99 +453,128 @@ Status HttpRestApiHandler::dispatchToProcessor(
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
+static void ensureJsonParserInErrorState(std::shared_ptr<Document>& parsedJson) {
+    // Hack to set json parser in invalid state in order to get HasParseError to respond with true
+    parsedJson->Parse("error");
+}
+
+static Status createV3HttpPayload(
+    const std::string_view uri,
+    const HttpRequestComponents& request_components,
+    std::string& response,
+    const std::string& request_body,
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser,
+    HttpPayload& request,
+    std::string& modelName,
+    bool& streamFieldVal) {
+    OVMS_PROFILE_SCOPE("createV3HttpPayload");
+
+    std::shared_ptr<Document> parsedJson = std::make_shared<Document>();
+
+    auto it = request_components.headers.find("content-type");
+    bool isApplicationJson = it != request_components.headers.end() && it->second.find("application/json") != std::string::npos;
+    bool isMultiPart = it != request_components.headers.end() && it->second.find("multipart/form-data") != std::string::npos;
+    bool isUriBasedRouting = !isApplicationJson && !isMultiPart;  // For content types other than "application/json" and "multipart/form-data", we look for model information in the URI
+
+    if (isMultiPart) {
+        OVMS_PROFILE_SCOPE("multipart parse");
+        if (!multiPartParser->parse()) {
+            SPDLOG_DEBUG("Failed to parse multipart content type request");
+            return StatusCode::FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE;
+        }
+        modelName = multiPartParser->getFieldByName("model");
+        if (modelName.empty()) {
+            isUriBasedRouting = true;
+        } else {
+            SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
+        }
+        ensureJsonParserInErrorState(parsedJson);
+    } else if (isApplicationJson) {
+        {
+            OVMS_PROFILE_SCOPE("rapidjson parse");
+            parsedJson->Parse(request_body.c_str());
+        }
+        OVMS_PROFILE_SCOPE("rapidjson validate");
+        if (parsedJson->HasParseError()) {
+            return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
+        }
+
+        if (!parsedJson->IsObject()) {
+            return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
+        }
+
+        auto modelNameIt = parsedJson->FindMember("model");
+        if (modelNameIt == parsedJson->MemberEnd()) {
+            return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
+        }
+
+        if (!modelNameIt->value.IsString()) {
+            return Status(StatusCode::JSON_INVALID, "model field is not a string");
+        }
+
+        bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
+        if (isTextGenerationEndpoint) {
+            auto streamIt = parsedJson->FindMember("stream");
+            if (streamIt != parsedJson->MemberEnd()) {
+                if (!streamIt->value.IsBool()) {
+                    return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
+                }
+                streamFieldVal = streamIt->value.GetBool();
+            }
+        }
+
+        modelName = modelNameIt->value.GetString();
+        if (modelName.empty()) {
+            isUriBasedRouting = true;
+        } else {
+            SPDLOG_DEBUG("Model name from deduced from JSON: {}", modelName);
+        }
+    }
+
+    // Deduce Graph Name from URI since there is no info in JSON or MultiPart
+    if (isUriBasedRouting) {
+        if (uri.size() <= 4) {  // nothing after "/v3/..."
+            SPDLOG_DEBUG("Failed to deduce model name from URI");
+            return StatusCode::FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI;
+        }
+        modelName = std::string(uri.substr(4));
+        SPDLOG_DEBUG("Model name from deduced from URI: {}", modelName);
+        // Set json parser in invalid state in order to get HasParseError to respond with true
+        ensureJsonParserInErrorState(parsedJson);
+    }
+
+    request.headers = request_components.headers;
+    request.body = request_body;
+    request.parsedJson = std::move(parsedJson);
+    request.uri = std::string(uri);
+    request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
+    request.multipartParser = std::move(multiPartParser);
+
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
+
     HttpPayload request;
-    std::shared_ptr<Document> doc = std::make_shared<Document>();
-    std::shared_ptr<MediapipeGraphExecutor> executor;
+    std::string modelName;
     bool streamFieldVal = false;
-    {
-        auto it = request_components.headers.find("content-type");
-        bool isApplicationJson = it != request_components.headers.end() && it->second.find("application/json") != std::string::npos;
-        bool isMultiPart = it != request_components.headers.end() && it->second.find("multipart/form-data") != std::string::npos;
-        bool isDefault = !isApplicationJson && !isMultiPart;
 
-        std::string model_name;
-
-        if (isMultiPart) {
-            OVMS_PROFILE_SCOPE("multipart parse");
-            if (!multiPartParser->parse()) {
-                return StatusCode::REST_INVALID_URL;
-            }
-            model_name = multiPartParser->getFieldByName("model");
-            if (model_name.empty()) {
-                isDefault = true;
-            } else {
-                SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", model_name);
-            }
-            // Set json parser in invalid state in order to get HasParseError to respond with true
-            doc->Parse("error");
-        } else if (isApplicationJson) {
-            {
-                OVMS_PROFILE_SCOPE("rapidjson parse");
-                doc->Parse(request_body.c_str());
-            }
-            OVMS_PROFILE_SCOPE("rapidjson validate");
-            if (doc->HasParseError()) {
-                return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
-            }
-
-            if (!doc->IsObject()) {
-                return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
-            }
-
-            auto modelNameIt = doc->FindMember("model");
-            if (modelNameIt == doc->MemberEnd()) {
-                return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
-            }
-
-            if (!modelNameIt->value.IsString()) {
-                return Status(StatusCode::JSON_INVALID, "model field is not a string");
-            }
-
-            bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
-            if (isTextGenerationEndpoint) {
-                auto streamIt = doc->FindMember("stream");
-                if (streamIt != doc->MemberEnd()) {
-                    if (!streamIt->value.IsBool()) {
-                        return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
-                    }
-                    streamFieldVal = streamIt->value.GetBool();
-                }
-            }
-
-            model_name = modelNameIt->value.GetString();
-            if (model_name.empty()) {
-                isDefault = true;
-            } else {
-                SPDLOG_DEBUG("Model name from deduced from JSON: {}", model_name);
-            }
-        }
-
-        // Deduce Graph Name from URI since there is no info in JSON or MultiPart
-        if (isDefault) {
-            if (uri.size() <= 4) {  // nothing after "/v3/..."
-                return StatusCode::REST_INVALID_URL;
-            }
-            model_name = std::string(uri.substr(4));
-            SPDLOG_DEBUG("Model name from deduced from URI: {}", model_name);
-            // Set json parser in invalid state in order to get HasParseError to respond with true
-            doc->Parse("error");
-        }
-
-        auto status = this->modelManager.createPipeline(executor, model_name);
-        if (!status.ok()) {
-            return status;
-        }
-
-        request.headers = request_components.headers;
-        request.body = request_body;
-        request.parsedJson = std::move(doc);
-        request.uri = std::string(uri);
-        request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
-        request.multipartParser = std::move(multiPartParser);
+    auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
+    if (!status.ok()) {
+        // TODO: Add logger
+        SPDLOG_DEBUG("Failed to create V3 payload");
+        return status;
     }
+
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    status = this->modelManager.createPipeline(executor, modelName);
+    if (!status.ok()) {
+        return status;
+    }
+
     if (streamFieldVal == false) {
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
         return executor->infer(&request, &response, executionContext);

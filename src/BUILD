@@ -617,7 +617,7 @@ cc_library(
         }) + select({
             "//:enable_drogon": [
                 "libdrogon_http_server",
-                "libovmsmulti_part_parser_drogon_impl",
+                "libmultipart_parser_drogon_impl",
             ],
             "//conditions:default" : [
                 "libnet_http_server",
@@ -817,7 +817,7 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovmsclient_connection",
-        "libovmsmulti_part_parser",
+        "libmultipart_parser",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -852,7 +852,7 @@ cc_library(
 )
 
 cc_library(
-    name = "libovmsmulti_part_parser",
+    name = "libmultipart_parser",
     hdrs = ["multi_part_parser.hpp"],
     deps = [
     ],
@@ -860,22 +860,20 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library(
-    name = "libovmsmulti_part_parser_drogon_impl",
+    name = "libmultipart_parser_drogon_impl",
     hdrs = ["http_frontend/multi_part_parser_drogon_impl.hpp"],
     srcs = ["http_frontend/multi_part_parser_drogon_impl.cpp"],
     deps = [
-        "libovmsmulti_part_parser",
+        "libmultipart_parser",
         "@drogon//:drogon_cmake",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
 )
 
 cc_library(
