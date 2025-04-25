@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #ifndef SRC_LIBGT2_LIBGT2_HPP_
 #define SRC_LIBGT2_LIBGT2_HPP_
 #include <string>

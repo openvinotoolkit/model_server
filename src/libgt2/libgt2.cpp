@@ -121,7 +121,7 @@ int cred_acquire_cb(git_credential** out,
 #elif _WIN32
             username = _strdup(env_cred);
             password = _strdup(username);
- #endif
+#endif
         } else {
             fprintf(stderr, "HF_TOKEN env variable is not set.\n");
             return -1;
