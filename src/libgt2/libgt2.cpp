@@ -114,23 +114,18 @@ int cred_acquire_cb(git_credential** out,
     fprintf(stdout, "Authentication is required for repository clone.\n");
     if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
         const char* env_cred = std::getenv("HF_TOKEN");
-#ifdef __linux__
         if (env_cred) {
+#ifdef __linux__
             username = strdup(env_cred);
             password = strdup(username);
-        } else {
-            fprintf(stderr, "HF_TOKEN env variable is not set.\n");
-            return -1;
-        }
 #elif _WIN32
-        if (env_cred) {
             username = _strdup(env_cred);
             password = _strdup(username);
+ #endif
         } else {
             fprintf(stderr, "HF_TOKEN env variable is not set.\n");
             return -1;
         }
-#endif
         error = git_credential_userpass_plaintext_new(out, username, password);
         if (error < 0) {
             fprintf(stderr, "Creating credentials failed.\n");
