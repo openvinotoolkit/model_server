@@ -321,7 +321,7 @@ add_proxy:
 	@if ! grep -FRq "test:linux --test_env https_proxy=" .user.bazelrc; then\
 		echo test:linux --test_env https_proxy=${HTTPS_PROXY} >> .user.bazelrc;\
 	fi
-ovms_builder_image:
+ovms_builder_image: add_proxy
 ifeq ($(PYTHON_DISABLE),0)
   ifeq ($(MEDIAPIPE_DISABLE),1)
 	@echo "Cannot build model server with Python support without building with Mediapipe enabled. Use 'MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 make docker_build'"; exit 1 ;
@@ -655,7 +655,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
 endif
 
-run_unit_tests: prepare_models
+run_unit_tests: add_proxy prepare_models
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
