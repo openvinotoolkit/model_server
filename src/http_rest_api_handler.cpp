@@ -906,12 +906,10 @@ Status HttpRestApiHandler::processRequest(
     HttpRequestComponents requestComponents;
     auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
 
-    headers->clear();
-    response->clear();
-    (*headers)["content-type"] = "application/json";
-
     if (!status.ok())
         return status;
+
+    response->clear();
     return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
 }
 
