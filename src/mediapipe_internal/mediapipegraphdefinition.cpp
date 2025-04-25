@@ -109,6 +109,19 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}", this->getName(), absMessage);
             return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
         }
+
+        std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
+        for (auto& name : config.output_stream()) {
+            std::string streamName = getStreamName(name);
+            outStreamObservers[streamName] = std::shared_ptr<OutputStreamObserverI>(new NullOutputStreamObserver());  // TODO use at() FIXME
+            auto& perGraphObserverFunctor = outStreamObservers[streamName];
+            auto absStatus = graph.ObserveOutputStream(streamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); });  // TODO FIXME throw?
+        if (!absStatus.ok()) {
+            const std::string absMessage = absStatus.ToString();
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} installation of output stream observer failed with message: {}", this->getName(), absMessage);
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+        }
+                                                                                      }
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());
         return StatusCode::UNKNOWN_ERROR;
@@ -165,18 +178,29 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         return status;
     }
     // here we will not be available if calculator does not exist in OVMS
+    SPDLOG_ERROR("XXX ER new PythonNodeResourcesMap:{}", (void*)this->pythonNodeResourcesMap.get());
     status = this->dryInitializeTest();
     if (!status.ok()) {
         return status;
     }
 
+    SPDLOG_ERROR("XXX ER new PythonNodeResourcesMap:{}", (void*)this->pythonNodeResourcesMap.get());
     status = this->initializeNodes();
     if (!status.ok()) {
         return status;
     }
     // TODO FIXME @atobisze
     SPDLOG_ERROR("ER");
+    try {
     this->queue = std::make_shared<GraphQueue>(this->config, this->pythonNodeResourcesMap, this->genAiServableMap, 1);
+    SPDLOG_ERROR("ER");
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("ER:{}", e.what());
+        return StatusCode::INTERNAL_ERROR;
+    } catch (...) {
+        SPDLOG_ERROR("ER");
+        return StatusCode::INTERNAL_ERROR;
+    }
     SPDLOG_ERROR("XXX ER GraphQueue:{}", (void*)this->queue.get());
 
     lock.unlock();
@@ -457,7 +481,7 @@ public:
         resources(resources) {}
     ~ResourcesCleaningGuard() {
         if (shouldCleanup) {
-            resources.reset();
+            resources->clear();
         }
     }
     void disableCleaning() {

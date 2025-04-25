@@ -1054,6 +1054,7 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
+        SPDLOG_ERROR("ER:{}", (void*) this->pythonNodeResourcesMap.get());
         auto it = this->pythonNodeResourcesMap->find(nodeName);
         if (it == std::end(*pythonNodeResourcesMap)) {
             return nullptr;
@@ -1082,7 +1083,8 @@ public:
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
         ovms::PythonBackend* pythonBackend = nullptr) :
-        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) { this->inputConfig = inputConfig; }
+        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend) { this->inputConfig = inputConfig;
+       SPDLOG_ERROR("ER:{}", (void*) this->pythonNodeResourcesMap.get()); }
 
     // Do not read from path - use predefined config contents
     ovms::Status validateForConfigFileExistence() override {

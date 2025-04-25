@@ -1740,12 +1740,12 @@ public:
                     try {
                 mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);
                     } catch  (std::exception& e) {
-                        SPDLOG_ERROR("AAAAAAAA: {}", e.what());
+                        SPDLOG_ERROR("Exception caught: {}", e.what());
                         createPipelineStatus = StatusCode::UNKNOWN_ERROR;
                         //break;
                     } catch (...) {
                         createPipelineStatus = StatusCode::UNKNOWN_ERROR;
-                        SPDLOG_ERROR("AAAAAAAA");
+                        SPDLOG_ERROR("Exception caught");
                         //break;
                     }
 #endif
@@ -1770,10 +1770,10 @@ public:
                     try {
                 mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);
                     } catch  (std::exception& e) {
-                        SPDLOG_ERROR("AAAAAAAA: {}", e.what());
+                        SPDLOG_ERROR("Exception caught: {}", e.what());
                         executePipelineStatus = StatusCode::UNKNOWN_ERROR;
                     } catch (...) {
-                        SPDLOG_ERROR("AAAAAAAA");
+                        SPDLOG_ERROR("Exception caught");
                         executePipelineStatus = StatusCode::UNKNOWN_ERROR;
                     }
 #endif

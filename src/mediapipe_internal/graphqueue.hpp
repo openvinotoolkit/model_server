@@ -45,6 +45,8 @@ struct GraphHelper {
     std::shared_ptr<::mediapipe::CalculatorGraph> graph;  // TODO FIXME this does not have to be shared_ptr
     std::unordered_map<std::string, std::shared_ptr<OutputStreamObserverI>> outStreamObservers;
     ::mediapipe::Timestamp currentTimestamp;  // TODO FIXME const
+    // We need to know how the cleanup of graph helper happens if graph is not fully initialized eg. obseervers are not even installed FIXME @atobisze consider unique-ptr with custom lambda?
+    bool initialized = false;
     // TODO FIXME move constr/=
     GraphHelper() = default;
     GraphHelper(const GraphHelper&) = delete;

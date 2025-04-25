@@ -2736,7 +2736,6 @@ protected:
         std::shared_ptr<GraphQueue> queue = std::make_shared<GraphQueue>(config, pnsm, gasm, 1);
         GraphIdGuard guard(queue);
         executor = std::make_unique<MockedMediapipeGraphExecutor>("", "", config, mapping, mapping, inputNames, outputNames, pnsm, gasm, this->reporter.get(), std::move(guard));
-        SPDLOG_ERROR("Exit SetUp");
     }
 };
 

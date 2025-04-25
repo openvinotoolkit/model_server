@@ -43,25 +43,28 @@ namespace ovms {
 
 std::shared_ptr<GraphHelper> constructGraphHelper(const ::mediapipe::CalculatorGraphConfig& config, PythonNodeResourcesMap& pythonNodeResourcesMap, GenAiServableMap& genAiServableMap) {
     auto gh = std::make_shared<GraphHelper>();
-    SPDLOG_ERROR("ER GraphHelper():{}", (void*)gh.get());
+    SPDLOG_TRACE("Constructing GraphHelper():{}", (void*)gh.get());
     gh->graph = std::make_shared<::mediapipe::CalculatorGraph>();
     gh->currentTimestamp = ::mediapipe::Timestamp(0);
 
     auto absStatus = gh->graph->Initialize(config);
     if (!absStatus.ok()) {
-        SPDLOG_ERROR("ER issue:{}", absStatus.ToString());
-        throw 42;
+        SPDLOG_ERROR("Failed to initialize graph issue:{}", absStatus.ToString());
+        // This would mean validation did execute fully
+        assert(true);
     }
     for (auto& name : config.output_stream()) {
         std::string streamName = getStreamName(name);
         gh->outStreamObservers[streamName] = std::shared_ptr<OutputStreamObserverI>(new NullOutputStreamObserver());  // TODO use at() FIXME
         auto& perGraphObserverFunctor = gh->outStreamObservers[streamName];
+        SPDLOG_TRACE("Installing output stream observer for output:{}", streamName);
         absStatus = gh->graph->ObserveOutputStream(streamName, [&perGraphObserverFunctor](const ::mediapipe::Packet& packet) -> absl::Status { return perGraphObserverFunctor->handlePacket(packet); });  // TODO FIXME throw?
         if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{}", absStatus.ToString());
-            throw 42;
+            SPDLOG_ERROR("Failed to install output stream observer for output:{}; issue:{}", streamName, absStatus.ToString());
+            return nullptr;
         }
     }
+    gh->initialized = true;
     std::map<std::string, mediapipe::Packet> inputSidePackets;
     inputSidePackets[PYTHON_SESSION_SIDE_PACKET_NAME] = mediapipe::MakePacket<PythonNodeResourcesMap>(pythonNodeResourcesMap)
                                                             .At(STARTING_TIMESTAMP);
@@ -77,7 +80,7 @@ std::shared_ptr<GraphHelper> constructGraphHelper(const ::mediapipe::CalculatorG
         SPDLOG_ERROR("ER issue:{}", absStatus.ToString());
         throw 42;
     }
-    SPDLOG_ERROR("ER");
+    SPDLOG_TRACE("Constructed graph helper");
     return gh;
 }
 void GraphQueue::restoreStream(int streamId) {
@@ -85,7 +88,13 @@ void GraphQueue::restoreStream(int streamId) {
         SPDLOG_ERROR("Cannot restore stream id > queue length");
         assert(streamId < inferRequests.size());
     }
-    inferRequests[streamId] = constructGraphHelper(*this->config, *this->pythonNodeResourcesMap, *this->genAiServableMap);
+    SPDLOG_TRACE("Restoring graph helper id:{}", streamId);
+    auto gh = constructGraphHelper(*this->config, *this->pythonNodeResourcesMap, *this->genAiServableMap);
+    if (gh == nullptr) {
+        SPDLOG_ERROR("Failed to restore graph helper: {}", streamId);
+        assert(false);
+    }
+    inferRequests[streamId] = gh;
 }
 
 GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap, std::shared_ptr<GenAiServableMap> genAiServableMap, int streamsLength) :
@@ -93,19 +102,28 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
     config(std::make_shared<const ::mediapipe::CalculatorGraphConfig>(config)),
     pythonNodeResourcesMap(pythonNodeResourcesMap),
     genAiServableMap(genAiServableMap) {
-    SPDLOG_ERROR("ER GraphQueue():{}", (void*)this);
+    SPDLOG_TRACE("Constructing GraphQueue():{}", (void*)this);
     inferRequests.reserve(streamsLength);
     // TODO FIXME split constructor to init to handle retCodes?
     for (auto i = 0; i < streamsLength; ++i) {
-        SPDLOG_ERROR("ER");
-        inferRequests.emplace_back(std::move(constructGraphHelper(*this->config, *pythonNodeResourcesMap, *genAiServableMap)));
-        SPDLOG_ERROR("ER");
+        SPDLOG_ERROR("Constructing GraphHelper id:{}", i);
+        auto gh = constructGraphHelper(*this->config, *pythonNodeResourcesMap, *genAiServableMap);
+        if (gh == nullptr) {
+            SPDLOG_ERROR("Failed to construct GraphHelper");
+            throw 42; // FIXME @atobisze factory
+        }
+
+        inferRequests.emplace_back(std::move(gh));
     }
 }
 
 GraphHelper::~GraphHelper() {
     SPDLOG_TRACE("GraphHelper wait until idle graph");
-    auto absStatus = this->graph->WaitUntilIdle();
+    auto absStatus = absl::OkStatus();
+    if (this->initialized) {
+        SPDLOG_ERROR("Calling wait until idle");
+        absStatus = this->graph->WaitUntilIdle();
+    }
     if (!absStatus.ok()) {
         SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
         //        throw 42.2;

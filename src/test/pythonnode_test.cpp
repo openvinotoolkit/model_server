@@ -2729,11 +2729,19 @@ TEST_F(PythonFlowTest, FailingToInitializeOneNodeDestructsAllResources) {
     adjustConfigForTargetPlatform(firstTestPbtxt);
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, firstTestPbtxt, getPythonBackend());
-    mediapipeDummy.inputConfig = firstTestPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(mediapipeDummy.getPythonNodeResources("pythonNode1"), nullptr);
+    SPDLOG_ERROR("ER");
+    mediapipeDummy.inputConfig = firstTestPbtxt;
+    SPDLOG_ERROR("ER");
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED);
+    SPDLOG_ERROR("ER");
+    ASSERT_EQ(mediapipeDummy.getPythonNodeResources("pythonNode1"), nullptr);
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(mediapipeDummy.getPythonNodeResources("pythonNode2"), nullptr);
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(mediapipeDummy.getStatus().getStateCode(), PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED);
+    SPDLOG_ERROR("ER");
 }
 
 // Negative Request Tests
