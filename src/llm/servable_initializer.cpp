@@ -48,9 +48,10 @@
 
 namespace ovms {
 
+#if (PYTHON_DISABLE == 0)
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
 
-void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+void GenAiServableInitializer::loadTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
@@ -108,9 +109,9 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
         )",
             py::globals(), locals);
 
-        properties->textProcessor.bosToken = locals["bos_token"].cast<std::string>();
-        properties->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
-        properties->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
+        properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
+        properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
+        properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
@@ -125,6 +126,7 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
+#endif
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);
@@ -148,6 +150,31 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
     }
 
     return StatusCode::OK;
+}
+
+std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
+    std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
+    std::optional<uint32_t> maxModelLength;
+    if (std::filesystem::exists(configPath.c_str())) {
+        std::ifstream ifs(configPath);
+        if (!ifs.is_open()) {
+            return maxModelLength;
+        }
+        rapidjson::Document modelConfig;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+        if (parseResult.Code()) {
+            return maxModelLength;
+        }
+        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
+        for (auto field : maxLengthFields) {
+            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
+                maxModelLength = modelConfig[field.c_str()].GetUint();
+                break;
+            }
+        }
+    }
+    return maxModelLength;
 }
 
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
@@ -266,30 +293,5 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
-}
-
-std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
-    std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
-    std::optional<uint32_t> maxModelLength;
-    if (std::filesystem::exists(configPath.c_str())) {
-        std::ifstream ifs(configPath);
-        if (!ifs.is_open()) {
-            return maxModelLength;
-        }
-        rapidjson::Document modelConfig;
-        rapidjson::IStreamWrapper isw(ifs);
-        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
-        if (parseResult.Code()) {
-            return maxModelLength;
-        }
-        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
-        for (auto field : maxLengthFields) {
-            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
-                maxModelLength = modelConfig[field.c_str()].GetUint();
-                break;
-            }
-        }
-    }
-    return maxModelLength;
 }
 }  // namespace ovms

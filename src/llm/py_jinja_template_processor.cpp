@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "text_processor.hpp"
+#include "py_jinja_template_processor.hpp"
 
 #include <string>
 #include <utility>
@@ -35,16 +35,16 @@
 
 namespace ovms {
 
-bool TextProcessor::applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, const std::string& requestBody, std::string& output) {
-    if (textProcessor.chatTemplate == nullptr) {
+bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output) {
+    if (templateProcessor.chatTemplate == nullptr) {
         output = "Error: Chat template not loaded correctly, so it cannot be applied";
         return false;
     }
 
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = textProcessor.chatTemplate->getObject(),
-            "bos_token"_a = textProcessor.bosToken, "eos_token"_a = textProcessor.eosToken);
+        auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),
+            "bos_token"_a = templateProcessor.bosToken, "eos_token"_a = templateProcessor.eosToken);
         py::exec(R"(
             output = ""
             error = ""

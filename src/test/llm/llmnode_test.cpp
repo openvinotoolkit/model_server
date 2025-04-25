@@ -26,10 +26,12 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
+#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #pragma warning(pop)
+#endif
 
 #include "../../http_rest_api_handler.hpp"
 #include "../../http_status_code.hpp"
@@ -39,7 +41,7 @@
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
-#include "../../llm/text_processor.hpp"
+#include "../../llm/text_utils.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
@@ -3057,9 +3059,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
+#if (PYTHON_DISABLE == 0)
 public:
     void SetUp() { py::initialize_interpreter(); }
     void TearDown() { py::finalize_interpreter(); }
+#endif
 };
 
 TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
@@ -3316,9 +3320,11 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
+#if (PYTHON_DISABLE == 0)
 public:
     void SetUp() { py::initialize_interpreter(); }
     void TearDown() { py::finalize_interpreter(); }
+#endif
 };
 
 TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
@@ -3382,9 +3388,11 @@ INSTANTIATE_TEST_SUITE_P(
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {
+#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
+#endif
 };
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {

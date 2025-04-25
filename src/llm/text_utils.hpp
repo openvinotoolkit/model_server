@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,30 +16,9 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <sstream>
 #include <string>
-
 #include <openvino/openvino.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
-
-#include "src/python/utils.hpp"
-
-namespace ovms {
-
-class TextProcessor {
-public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-
-    static bool applyChatTemplate(TextProcessor& textProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
-};
 
 template <typename T>
 static std::string packPromptTokens(T* input, size_t size) {
@@ -81,4 +60,3 @@ static std::string getPromptTokensString(const ov::Tensor& tensor) {
 }
 #pragma GCC diagnostic pop
 #pragma warning(pop)
-}  // namespace ovms

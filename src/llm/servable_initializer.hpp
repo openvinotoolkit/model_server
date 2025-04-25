@@ -46,7 +46,7 @@ struct GenAiServableProperties;
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
-    static void loadTextProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static void loadTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure
@@ -55,7 +55,7 @@ public:
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
+std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
-std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 }  // namespace ovms

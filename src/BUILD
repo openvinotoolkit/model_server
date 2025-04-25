@@ -602,10 +602,6 @@ cc_library(
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
-                # Jinja template processing is done in Python
-                "//src/llm:llmcalculator",
-                "//src/llm:genai_servables",
-                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + select({
@@ -613,7 +609,8 @@ cc_library(
             "//:not_disable_mediapipe" : [
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",],
+                "//src/rerank:rerankcalculator",
+                "//src/llm:llmcalculator",],
         }) + select({
             "//:enable_drogon": [
                 "libdrogon_http_server",
@@ -2791,6 +2788,11 @@ cc_test(
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
                 "test/multipart_calculator_test.cpp",
+                "test/llm/llmnode_test.cpp",
+                "test/llm/max_model_length_test.cpp",
+                "test/llm/text_streamer_test.cpp",
+                "test/llm/visual_language_model/complete_flow_test.cpp",
+                "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2800,14 +2802,8 @@ cc_test(
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                # LLM logic uses Python for processing Jinja templates
-                "test/llm/llmnode_test.cpp",
-                "test/llm/assisted_decoding_test.cpp",
-                "test/llm/max_model_length_test.cpp",
+                # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
-                "test/llm/text_streamer_test.cpp",
-                "test/llm/visual_language_model/complete_flow_test.cpp",
-                "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({

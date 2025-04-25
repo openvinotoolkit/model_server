@@ -80,8 +80,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-
-    loadTextProcessor(properties, parsedModelsPath);
+#if (PYTHON_DISABLE == 0)
+    loadTemplateProcessor(properties, parsedModelsPath);
+#endif
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
