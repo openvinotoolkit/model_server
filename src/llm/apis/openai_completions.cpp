@@ -275,7 +275,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
+absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength) {
     OVMS_PROFILE_FUNCTION();
     // stream: bool; optional
     if (!doc.IsObject())
@@ -495,51 +495,26 @@ absl::Status OpenAIChatCompletionsHandler::parseCommonPart(std::optional<uint32_
         request.numReturnSequences = it->value.GetUint();
     }
 
-    // Speculative decoding specific parameters
+    // Assisted decoding specific parameters
 
     auto numAssistantTokensIt = doc.FindMember("num_assistant_tokens");
     auto assistantConfidenceThresholdIt = doc.FindMember("assistant_confidence_threshold");
+    auto maxNgramSizeIt = doc.FindMember("max_ngram_size");
 
     bool numAssistantTokensItHasValue = (numAssistantTokensIt != doc.MemberEnd() && !numAssistantTokensIt->value.IsNull());
     bool assistantConfidenceThresholdItHasValue = (assistantConfidenceThresholdIt != doc.MemberEnd() && !assistantConfidenceThresholdIt->value.IsNull());
+    bool maxNgramSizeItHasValue = (maxNgramSizeIt != doc.MemberEnd() && !maxNgramSizeIt->value.IsNull());
 
-    if (isSpeculativePipeline) {
-        if (!numAssistantTokensItHasValue && !assistantConfidenceThresholdItHasValue)
-            return absl::InvalidArgumentError("Speculative decoding requires either num_assistant_tokens or assistant_confidence_threshold to be set.");
-
-        if (numAssistantTokensItHasValue && assistantConfidenceThresholdItHasValue)
-            return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are mutually exclusive and cannot both be set.");
-    } else if (numAssistantTokensItHasValue || assistantConfidenceThresholdItHasValue) {
-        return absl::InvalidArgumentError("num_assistant_tokens and assistant_confidence_threshold are only supported when speculative decoding is enabled.");
-    }
-    // num_assistant_tokens: uint;
     if (numAssistantTokensItHasValue) {
-        if (!numAssistantTokensIt->value.IsUint() || numAssistantTokensIt->value.GetUint() == 0) {
-            return absl::InvalidArgumentError("num_assistant_tokens must be an unsigned integer greater than 0");
-        }
         request.numAssistantTokens = numAssistantTokensIt->value.GetUint();
     }
-    // assistant_confidence_threshold: float;
     if (assistantConfidenceThresholdItHasValue) {
-        if (!assistantConfidenceThresholdIt->value.IsDouble() && !assistantConfidenceThresholdIt->value.IsInt()) {
-            return absl::InvalidArgumentError("assistant_confidence_threshold must be a positive number");
-        }
         request.assistantConfidenceThreshold = assistantConfidenceThresholdIt->value.GetDouble();
-        if (request.assistantConfidenceThreshold <= 0.0) {
-            return absl::InvalidArgumentError("assistant_confidence_threshold must be greater than 0");
-        }
+    }
+    if (maxNgramSizeItHasValue) {
+        request.maxNgramSize = maxNgramSizeIt->value.GetUint();
     }
     request.maxModelLength = maxModelLength;
-
-    // use_beam_search: bool; optional - defaults to false
-    // Extension from vLLM, unsupported by OpenAI API, not available directly in CB lib
-    // Use best_of>1 to steer into beams search
-    // it = doc.FindMember("use_beam_search");
-    // if (it != doc.MemberEnd()) {
-    //     if (!it->value.IsBool())
-    //         return false;
-    //     request.useBeamSearch = it->value.GetBool();
-    // }
 
     // logit_bias TODO
     // top_logprobs TODO
@@ -573,8 +548,8 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, bool isSpeculativePipeline, std::optional<uint32_t> maxModelLength) {
-    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength);
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength) {
+    absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
 
     if (status != absl::OkStatus())
         return status;
