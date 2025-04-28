@@ -44,3 +44,20 @@ cc_library(
     alwayslink = 1,
     local_defines = COMMON_LOCAL_DEFINES,
 )
+
+cc_library(
+    name = "graph_cli_parser",
+    srcs = ["graph_cli_parser.cpp"],
+    hdrs = ["graph_cli_parser.hpp"],
+    deps =  [
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovms_version",
+        "@ovms//src:ovms_exit_codes",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+)

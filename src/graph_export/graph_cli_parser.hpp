@@ -16,6 +16,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <cxxopts.hpp>
 
@@ -23,16 +25,20 @@ namespace ovms {
 
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
+struct GraphSettingsImpl;
 
-class CLIParser {
+class GraphCLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
 
 public:
-    CLIParser() = default;
-    void parse(int argc, char** argv);
+    GraphCLIParser() = default;
+    void parse(const std::vector<std::string>& unmatchedOptions);
 
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+
+private:
+    static GraphSettingsImpl& defaultGraphSettings();
 };
 
 }  // namespace ovms

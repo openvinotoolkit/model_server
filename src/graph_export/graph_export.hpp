@@ -17,20 +17,10 @@
 #include <string>
 
 namespace ovms {
+class Status;
 
 class GraphExport {
 protected:
-    const std::string pipelineType;
-    const std::string modelPath;
-    const std::string maxNumSeqs;
-    const std::string targetDevice;
-    const std::string pluginConfig;
-    const std::string enablePrefixCaching;
-    const std::string cacheSize;
-    const std::string maxNumBatchedTokens;
-    bool dynamicSplitFuse;
-    const std::string draftModelDirName;
-
     std::string graphString;
 
 public:
@@ -38,6 +28,6 @@ public:
         const std::string& pluginConfig, const std::string& enablePrefixCaching, const std::string& cacheSize, const std::string& maxNumBatchedTokens, bool dynamicSplitFuse,
         const std::string& draftModelDirName);
 
-    createGraphFile(const std::string directoryPath);
+    Status createGraphFile(const std::string directoryPath);
 };
 }  // namespace ovms

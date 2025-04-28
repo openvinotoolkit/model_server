@@ -340,6 +340,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "//src/graph_export:graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -566,7 +567,6 @@ cc_library(
         "modelinstance.hpp",
         "model_service.hpp",
         "model_service.cpp",
-        "ovms_exit_codes.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -642,6 +642,7 @@ cc_library(
             "node_library_utils",
             "custom_node_library_internal_manager_wrapper",
             "nodeinfo",
+            "ovms_exit_codes",
             "dags_nodestreamidguard",
             "libovms_dags_session_id",
             "libovms_dags_pipelineeventqueue",
@@ -2108,6 +2109,17 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
+cc_library(
+    name = "ovms_exit_codes",
+    hdrs = ["ovms_exit_codes.hpp",],
+    srcs = [],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+        
 cc_library(
     name = "libovms_outputkeeper",
     hdrs = ["outputkeeper.hpp",],

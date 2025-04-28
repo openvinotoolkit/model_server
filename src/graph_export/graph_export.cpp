@@ -45,26 +45,32 @@ static std::string createTextGenerationGraphTemplate(const std::string& pipeline
     }
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-            max_num_seqs:)" << maxNumSeqs << R"(,
-            device: )"<< targetDevice << R"(,
-            models_path: )" << modelPath << R"(,
-            plugin_config: )" << pluginConfig << R"(,
-            enable_prefix_caching: )" << enablePrefixCaching << R"(,
-            cache_size: )" << cacheSize << R"(,)";
-            if(pipelineType != "") {
-                oss << R"(pipeline_type: )" << pipelineType<< R"(,)";
-            }
-            if(maxNumBatchedTokens != "") {
-                oss << R"(max_num_batched_tokens: )" << maxNumBatchedTokens<< R"(,)";
-            }
-            if(!dynamicSplitFuse) {
-                oss << R"(dynamic_split_fuse: false)";
-            }
-            if(draftModelDirName != "") {
-                oss << R"(# Speculative decoding configuration)";
-                oss << R"(draft_models_path: )" << draftModelDirName<< R"(,)";
-            }
-        oss << R"(
+            max_num_seqs:)"
+        << maxNumSeqs << R"(,
+            device: )"
+        << targetDevice << R"(,
+            models_path: )"
+        << modelPath << R"(,
+            plugin_config: )"
+        << pluginConfig << R"(,
+            enable_prefix_caching: )"
+        << enablePrefixCaching << R"(,
+            cache_size: )"
+        << cacheSize << R"(,)";
+    if (pipelineType != "") {
+        oss << R"(pipeline_type: )" << pipelineType << R"(,)";
+    }
+    if (maxNumBatchedTokens != "") {
+        oss << R"(max_num_batched_tokens: )" << maxNumBatchedTokens << R"(,)";
+    }
+    if (!dynamicSplitFuse) {
+        oss << R"(dynamic_split_fuse: false)";
+    }
+    if (draftModelDirName != "") {
+        oss << R"(# Speculative decoding configuration)";
+        oss << R"(draft_models_path: )" << draftModelDirName << R"(,)";
+    }
+    oss << R"(
         }
     }
     input_stream_handler {
@@ -85,13 +91,12 @@ static std::string createTextGenerationGraphTemplate(const std::string& pipeline
 GraphExport::GraphExport(const std::string& pipelineType, const std::string& modelPath, const std::string& maxNumSeqs, const std::string& targetDevice,
     const std::string& pluginConfig, const std::string& enablePrefixCaching, const std::string& cacheSize, const std::string& maxNumBatchedTokens, bool dynamicSplitFuse,
     const std::string& draftModelDirName) {
-        this->graphString = createTextGenerationGraphTemplate(pipelineType, modelPath, maxNumSeqs, targetDevice,
-            pluginConfig, enablePrefixCaching, cacheSize, maxNumBatchedTokens, dynamicSplitFuse,
-            draftModelDirName);
-    }
+    this->graphString = createTextGenerationGraphTemplate(pipelineType, modelPath, maxNumSeqs, targetDevice,
+        pluginConfig, enablePrefixCaching, cacheSize, maxNumBatchedTokens, dynamicSplitFuse,
+        draftModelDirName);
+}
 
-    GraphExport::createGraphFile(const std::string directoryPath) {
-
-    }
+Status GraphExport::createGraphFile(const std::string directoryPath) {
+}
 
 }  // namespace ovms

@@ -19,13 +19,9 @@
 #include <stdexcept>
 #include <string>
 
-// TODO: Write windows/linux specific status codes.
-#ifdef __linux__
-#include <sysexits.h>
-#elif _WIN32
-#include <ntstatus.h>
-#endif
 #include "capi_frontend/server_settings.hpp"
+#include "graph_export/graph_cli_parser.hpp"
+#include "ovms_exit_codes.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -33,6 +29,7 @@ namespace ovms {
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
+        options->allow_unrecognised_options();
 
         // clang-format off
         options->add_options()
@@ -197,16 +194,8 @@ void CLIParser::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->unmatched().size()) {
-            std::cerr << "error parsing options - unmatched arguments: ";
-            for (auto& argument : result->unmatched()) {
-                std::cerr << argument << ", ";
-            }
-            std::cerr << std::endl;
-#ifdef __linux__
-        exit(EX_USAGE);
-#elif _WIN32
-        exit(3);
-#endif
+            // TODO: Add keyword check for printing help for specific parser ?
+            this->graphParser.parse(result->unmatched());
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
@@ -217,28 +206,16 @@ void CLIParser::parse(int argc, char** argv) {
             std::cout << "OpenVINO backend " << OPENVINO_NAME << std::endl;
             std::cout << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
 #pragma warning(pop)
-#ifdef __linux__
-            exit(EX_OK);
-#elif _WIN32
-            exit(0);
-#endif
+            exit(OVMS_EX_OK);
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
-#ifdef __linux__
-            exit(EX_OK);
-#elif _WIN32
-            exit(0);
-#endif
+            exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;
-#ifdef __linux__
-        exit(EX_USAGE);
-#elif _WIN32
-        exit(3);
-#endif
+        exit(OVMS_EX_USAGE);
     }
 }
 
@@ -254,6 +231,8 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
             serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
         if (result->count("download_path"))
             serverSettings->hfSettings.downloadPath = result->operator[]("download_path").as<std::string>();
+
+        graphParser.prepare(serverSettings, modelsSettings);
         return;
     } else {
         serverSettings->hfSettings.pullHfModelMode = false;
