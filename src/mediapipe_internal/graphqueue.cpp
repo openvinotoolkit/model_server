@@ -29,6 +29,7 @@
 #include "../queue.hpp"
 #include "src/python/pythonnoderesources.hpp"
 #include "src/llm/servable.hpp"
+#include "src/assert.hpp"
 
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
@@ -42,16 +43,13 @@ const std::string LLM_SESSION_SIDE_PACKET_NAME = "llm";
 namespace ovms {
 
 std::shared_ptr<GraphHelper> constructGraphHelper(const ::mediapipe::CalculatorGraphConfig& config, PythonNodeResourcesMap& pythonNodeResourcesMap, GenAiServableMap& genAiServableMap) {
-    auto gh = std::make_shared<GraphHelper>();
     SPDLOG_TRACE("Constructing GraphHelper():{}", (void*)gh.get());
-    gh->graph = std::make_shared<::mediapipe::CalculatorGraph>();
-    gh->currentTimestamp = ::mediapipe::Timestamp(0);
-
+    auto gh = std::make_shared<GraphHelper>();
     auto absStatus = gh->graph->Initialize(config);
     if (!absStatus.ok()) {
         SPDLOG_ERROR("Failed to initialize graph issue:{}", absStatus.ToString());
         // This would mean validation did execute fully
-        assert(true);
+        ASSERT_ALWAYS(true);
     }
     for (auto& name : config.output_stream()) {
         std::string streamName = getStreamName(name);
@@ -86,13 +84,13 @@ std::shared_ptr<GraphHelper> constructGraphHelper(const ::mediapipe::CalculatorG
 void GraphQueue::restoreStream(int streamId) {
     if (streamId < inferRequests.size()) {
         SPDLOG_ERROR("Cannot restore stream id > queue length");
-        assert(streamId < inferRequests.size());
+        ASSERT_ALWAYS(streamId < inferRequests.size());
     }
     SPDLOG_TRACE("Restoring graph helper id:{}", streamId);
     auto gh = constructGraphHelper(*this->config, *this->pythonNodeResourcesMap, *this->genAiServableMap);
     if (gh == nullptr) {
         SPDLOG_ERROR("Failed to restore graph helper: {}", streamId);
-        assert(false);
+        ASSERT_ALWAYS(false);
     }
     inferRequests[streamId] = gh;
 }
@@ -116,12 +114,12 @@ GraphQueue::GraphQueue(const ::mediapipe::CalculatorGraphConfig& config, std::sh
         inferRequests.emplace_back(std::move(gh));
     }
 }
-
-GraphHelper::~GraphHelper() {
-    SPDLOG_TRACE("GraphHelper wait until idle graph");
+void GraphHelper::closeGraph() {
+    SPDLOG_ERROR("ER");
+    ASSERT_ALWAYS(this->graph.get() != nullptr);
     auto absStatus = absl::OkStatus();
     if (this->initialized) {
-        SPDLOG_ERROR("Calling wait until idle");
+        SPDLOG_ERROR("Calling wait until idle graph:{}", (void*)this->graph.get());
         absStatus = this->graph->WaitUntilIdle();
     }
     if (!absStatus.ok()) {
@@ -145,6 +143,16 @@ GraphHelper::~GraphHelper() {
         //    throw 42.2;
     }
     SPDLOG_ERROR("ER");
+
+}
+
+GraphHelper::GraphHelper() :
+graph(std::make_shared<::mediapipe::CalculatorGraph>()),
+currentTimestamp(::mediapipe::Timestamp(0)) {}
+
+GraphHelper::~GraphHelper() {
+    SPDLOG_TRACE("GraphHelper wait until idle graph");
+    closeGraph();
     this->graph.reset();
     SPDLOG_ERROR("ER ~GraphHelper:{}", (void*) this);
 }
@@ -154,31 +162,6 @@ GraphQueue::~GraphQueue() {
     for (auto& graphHelper : inferRequests) {
         SPDLOG_TRACE("GraphQueue wait until idle graph");
         graphHelper.reset();
-        SPDLOG_ERROR("ER");
-        continue;
-        auto absStatus = graphHelper->graph->WaitUntilIdle();
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //        throw 42.2;
-        }
-        absStatus = graphHelper->graph->CloseAllPacketSources();
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //      throw "as";
-        }
-        SPDLOG_TRACE("GraphQueue wait until done graph");
-        absStatus = graphHelper->graph->WaitUntilDone();
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //    throw 42.2;
-        }
-        graphHelper->graph->Cancel();
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR("ER issue:{} {}", absStatus.ToString(), (void*)this);
-            //    throw 42.2;
-        }
-        SPDLOG_ERROR("ER");
-        graphHelper->graph.reset();
         SPDLOG_ERROR("ER");
     }
     SPDLOG_ERROR("ER ~GraphQueue:{}", (void*)this);

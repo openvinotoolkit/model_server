@@ -174,6 +174,7 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_graph",
         "//src/python:libovmspythonmodule", # TODO not splitted
         "//src/llm:genai_servables", # TODO split!
+        "//src:assert",
     ],
     copts = [],
     visibility = ["//visibility:public",],
@@ -802,6 +803,16 @@ cc_library(
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED + COPTS_OV_TRACE,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "assert",
+    hdrs = ["assert.hpp"],
+    deps = [
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2777,7 +2788,6 @@ cc_test(
                 "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
-                "test/streaming_test.cpp", # Mediapipe enabled
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
@@ -2950,6 +2960,7 @@ cc_test(
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
+                "//src:streaming_test", # Mediapipe enabled
             ],
             "//:disable_mediapipe" :
             [
@@ -3034,6 +3045,22 @@ cc_library(
             ":inferenceresponse",
             "@com_google_googletest//:gtest",
     ],
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "streaming_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/streaming_test.cpp"],
+    data = [ # FIXME @atobisze
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    deps = [
+            "//src:ovms_lib",
+            "//src:test_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(

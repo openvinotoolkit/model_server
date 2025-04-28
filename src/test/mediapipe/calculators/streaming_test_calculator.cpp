@@ -46,6 +46,14 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "AddOneSingleStreamTestCalculator::Process";
+                if (cc->Inputs().NumEntries() == 0) {
+                        LOG(ERROR) << "exit 1";
+                                    return tool::StatusStop();
+                                            }
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (cc->Inputs().Tag(tag).IsEmpty()) {
+                LOG(ERROR) << "OpenVINOInferenceCalculator expects all input packets at the same time for each call to Process().";                                                                                RET_CHECK(false);                                                                                                                                                                             }
+}
         ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
         ov::Tensor output(input.get_element_type(), input.get_shape());
         for (size_t i = 0; i < input.get_byte_size() / sizeof(float); i++) {
@@ -85,6 +93,14 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "AddOne3CycleIterationsTestCalculator::Process";
+                if (cc->Inputs().NumEntries() == 0) {
+                        LOG(ERROR) << "exit 1";
+                                    return tool::StatusStop();
+                                            }
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (cc->Inputs().Tag(tag).IsEmpty()) {
+                LOG(ERROR) << "OpenVINOInferenceCalculator expects all input packets at the same time for each call to Process().";                                                                                RET_CHECK(false);                                                                                                                                                                             }
+}
         if (++cycle_iteration > 3) {
             return absl::OkStatus();
         }
@@ -132,6 +148,14 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
+                if (cc->Inputs().NumEntries() == 0) {
+                        LOG(ERROR) << "exit 1";
+                                    return tool::StatusStop();
+                                            }
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (cc->Inputs().Tag(tag).IsEmpty()) {
+                LOG(ERROR) << "OpenVINOInferenceCalculator expects all input packets at the same time for each call to Process().";                                                                                RET_CHECK(false);                                                                                                                                                                             }
+}
         ov::Tensor input1 = cc->Inputs().Index(0).Get<ov::Tensor>();
         LOG(INFO) << "AddNumbersMultiInputsOutputsTestCalculator::Process";
         ov::Tensor input2 = cc->Inputs().Index(1).Get<ov::Tensor>();
@@ -200,6 +224,14 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         LOG(INFO) << "AddSidePacketToSingleStreamTestCalculator::Process";
+                if (cc->Inputs().NumEntries() == 0) {
+                        LOG(ERROR) << "exit 1";
+                                    return tool::StatusStop();
+                                            }
+        for (const std::string& tag : cc->Inputs().GetTags()) {
+            if (cc->Inputs().Tag(tag).IsEmpty()) {
+                LOG(ERROR) << "OpenVINOInferenceCalculator expects all input packets at the same time for each call to Process().";                                                                                RET_CHECK(false);                                                                                                                                                                             }
+}
         ov::Tensor input = cc->Inputs().Index(0).Get<ov::Tensor>();
         ov::Tensor output(input.get_element_type(), input.get_shape());
         int64_t valueToAdd = cc->InputSidePackets().Index(0).Get<int64_t>();

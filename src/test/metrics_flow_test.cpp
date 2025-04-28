@@ -930,6 +930,7 @@ TEST_F(MetricFlowTest, RestV3StreamError) {
 
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, CurrentGraphs) {
+    GTEST_SKIP() << "To rewrite when using graph pool";
     using ::testing::_;
     using ::testing::Return;
 

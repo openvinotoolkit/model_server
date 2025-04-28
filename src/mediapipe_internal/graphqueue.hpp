@@ -48,7 +48,7 @@ struct GraphHelper {
     // We need to know how the cleanup of graph helper happens if graph is not fully initialized eg. obseervers are not even installed FIXME @atobisze consider unique-ptr with custom lambda?
     bool initialized = false;
     // TODO FIXME move constr/=
-    GraphHelper() = default;
+    GraphHelper();
     GraphHelper(const GraphHelper&) = delete;
     GraphHelper& operator=(const GraphHelper&) = delete;
     GraphHelper(GraphHelper&& gh) :
@@ -57,6 +57,7 @@ struct GraphHelper {
         currentTimestamp(gh.currentTimestamp) {}
     GraphHelper& operator=(GraphHelper&& gh) = default;
     ~GraphHelper();
+    void closeGraph();
 };
 // we need to keep Graph alive during MP reload hence shared_ptr
 //class GraphQueue : public Queue<std::shared_ptr<::mediapipe::CalculatorGraph>> {
@@ -77,6 +78,7 @@ struct GraphIdGuard {
     const int id;
     std::shared_ptr<GraphHelper> gh;
     bool success = false;
+    bool disarm = false; // FIXME @atobisze WA until steaming is implemented
     // TODO FIXME shared_ptr
     ::mediapipe::CalculatorGraph& graph;
     GraphIdGuard(std::shared_ptr<GraphQueue>& queue) :

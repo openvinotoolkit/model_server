@@ -275,6 +275,7 @@ public:
     Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start MediapipeGraphExecutor::inferEx mediapipe graph: {} execution", this->name);
+        this->guard.success = true; // FIXME @atobisze WA until fully implemented streaming
         std::mutex sendMutex;
         try {
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
@@ -290,10 +291,12 @@ public:
             };
             Timer<TIMER_END2> timer;
             timer.start(PROCESS);
+    SPDLOG_ERROR("ER");
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph installing packet observers");
                 // Installing observers
                 for (const auto& outputName : this->outputNames) {
+    SPDLOG_ERROR("ER");
                     MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, &executionContext, this](const ::mediapipe::Packet& packet) -> absl::Status {
                         OVMS_PROFILE_SCOPE("Mediapipe Packet Ready Callback");
                         try {
@@ -322,16 +325,21 @@ public:
                 }
             }
 
+    SPDLOG_ERROR("ER");
             std::map<std::string, mediapipe::Packet> inputSidePackets;
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph creating input side packets");
+    SPDLOG_ERROR("ER");
                 OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
+    SPDLOG_ERROR("ER: {}", (void*)this->pythonNodeResourcesMap.get());
 #if (PYTHON_DISABLE == 0)
                 inputSidePackets[PYTHON_SIDE_PACKET_NAME] = mediapipe::MakePacket<PythonNodeResourcesMap>(*this->pythonNodeResourcesMap)
                                                                 .At(STARTING_TIMESTAMP);
+    SPDLOG_ERROR("ER");
                 inputSidePackets[LLM_SESSION_PACKET_NAME] = mediapipe::MakePacket<GenAiServableMap>(*this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
             }
+    SPDLOG_ERROR("ER");
 
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph start run");

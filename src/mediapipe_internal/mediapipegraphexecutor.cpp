@@ -31,6 +31,8 @@
 #include "../python/python_backend.hpp"
 #endif
 
+#include "../assert.hpp"
+
 namespace ovms {
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(
@@ -58,7 +60,12 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
-    guard(std::move(guard)) {}
+    guard(std::move(guard)) {
+            ASSERT_ALWAYS(pythonNodeResourcesMap.get() != nullptr);
+            ASSERT_ALWAYS(llmNodeResourcesMap.get() != nullptr);
+    SPDLOG_ERROR("XXX ER: {}", (void*)this->pythonNodeResourcesMap.get());
+    SPDLOG_ERROR("XXX ER: {}", (void*)this->llmNodeResourcesMap.get());
+    }
 
 const std::string MediapipeGraphExecutor::PYTHON_SIDE_PACKET_NAME = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_PACKET_NAME = "llm";
