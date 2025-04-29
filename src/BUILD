@@ -2924,6 +2924,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
+            ":graph_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3035,6 +3036,21 @@ cc_library(
         "//src/libgt2:libgt2",
         "//src/libgt2:hf_pull_model_module",
         "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "graph_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/graph_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/graph_export:graph_export",
+        "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
