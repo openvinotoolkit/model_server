@@ -26,6 +26,7 @@ python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-inst
 LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 > **Note:** The users in China need to set environment variable `HF_ENDPOINT="https://hf-mirror.com"` before running the export script to connect to the HF Hub.
+
 > **Note:** If you want to export models outside of the `OpenVINO` organization in HuggingFace, you need to install additional Python dependencies:
 > ```console
 > pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
@@ -46,7 +47,7 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
+ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
 ```
 :::
 ::::
@@ -102,6 +103,7 @@ curl -s http://localhost:8000/v3/chat/completions \
 :::{tab-item} Windows
 
 Windows Powershell
+```bat
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
