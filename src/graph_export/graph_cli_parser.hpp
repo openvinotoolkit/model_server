@@ -26,6 +26,7 @@ namespace ovms {
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
 struct GraphSettingsImpl;
+class Status;
 
 class GraphCLIParser {
     std::unique_ptr<cxxopts::Options> options;
@@ -36,6 +37,8 @@ public:
     void parse(const std::vector<std::string>& unmatchedOptions);
 
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+
+    Status validate(ServerSettingsImpl*);
 
 private:
     static GraphSettingsImpl& defaultGraphSettings();

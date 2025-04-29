@@ -20,6 +20,7 @@
 
 #include "../config.hpp"
 #include "libgt2.hpp"
+#include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
 #include "../status.hpp"
@@ -56,6 +57,12 @@ Status HfPullModelModule::clone() const {
     std::unique_ptr<HfDownloader> hfDownloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
     // TODO: CVS-166568 Do we want to set timeout for this operation ?
     auto status = hfDownloader->cloneRepository();
+    if (!status.ok()) {
+        return status;
+    }
+
+    std::unique_ptr<GraphExport> graphExporter = std::make_unique<GraphExport>(this->hfSettings.graphSettings);
+    status = graphExporter->createGraphFile(this->hfSettings.downloadPath);
     if (!status.ok()) {
         return status;
     }

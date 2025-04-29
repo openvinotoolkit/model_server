@@ -44,13 +44,59 @@ protected:
     }
 };
 
+const std::string expectedGraphContents = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node: {
+    name: "LLMExecutor"
+    calculator: "HttpLLMCalculator"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    input_side_packet: "LLM_NODE_RESOURCES:llm"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    node_options: {
+        [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+            max_num_seqs:256,
+            device: CPU,
+            models_path: "./",
+            plugin_config: '{ }',
+            enable_prefix_caching: true,
+            cache_size: 10,
+            pipeline_type: AUTO,
+            dynamic_split_fuse: false,
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+            tag_index: "LOOPBACK:0"
+            }
+        }
+        }
+    }
+    }
+)";
+
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
     this->ServerPullHfModel(modelName, downloadPath);
     std::string modelPath = ovms::FileSystem::appendSlash(downloadPath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(downloadPath) + "graph.pbtxt";
     ASSERT_EQ(std::filesystem::exists(modelPath), true);
+    ASSERT_EQ(std::filesystem::exists(graphPath), true);
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+    std::cout << graphContents << std::endl;
+
+    ASSERT_EQ(expectedGraphContents, graphContents);
 }
 
 class TestHfDownloader : public ovms::HfDownloader {
@@ -175,7 +221,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "128");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "false");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "20");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "16");
@@ -212,7 +258,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "128");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "NPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "10");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "");
@@ -242,7 +288,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "256");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "10");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "");

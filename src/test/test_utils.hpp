@@ -504,6 +504,8 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
+std::string GetFileContents(const std::string& filePath);
+
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 

@@ -37,6 +37,8 @@ cc_library(
         "@ovms//src:libovmslogging",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:libovms_module",
+        "@ovms//src:libovmsfilesystem",
+        "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -50,6 +52,7 @@ cc_library(
     srcs = ["graph_cli_parser.cpp"],
     hdrs = ["graph_cli_parser.hpp"],
     deps =  [
+        "@ovms//src:cpp_headers",
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:libovms_version",

@@ -23,6 +23,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../version.hpp"
+#include "../status.hpp"
 
 namespace ovms {
 
@@ -75,6 +76,10 @@ void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
                 "DYNAMIC_SPLIT_FUSE");
 
         options->add_options("plugin config")
+            ("max_prompt_len",
+                "Sets NPU specific property for maximum number of tokens in the prompt.",
+                cxxopts::value<std::string>()->default_value(""),
+                "MAX_PROMPT_LEN")
             ("kv_cache_precision",
                 "u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.",
                 cxxopts::value<std::string>()->default_value(""),
@@ -127,7 +132,20 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
     serverSettings->hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<std::string>();
     serverSettings->hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
     serverSettings->hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
-    // TODO: modelPath and pluginConfig
+    // TODO: modelPath
+    // Plugin configuration
+    if (result->count("max_prompt_len")) {
+        serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<std::string>();
+    }
+
+    if (result->count("kv_cache_precision")) {
+        serverSettings->hfSettings.graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
+    }
+}
+
+Status GraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
+    // TODO: add validation of graphSettings and plugin config
+    return StatusCode::OK;
 }
 
 }  // namespace ovms

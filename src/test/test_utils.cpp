@@ -631,6 +631,23 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     return content;
 }
 
+std::string GetFileContents(const std::string& filePath) {
+    if (!std::filesystem::exists(filePath)) {
+        std::cout << "File does not exist:" << filePath << std::endl;
+        return {};
+    }
+
+    std::ifstream file(filePath, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        std::cout << "File could not be opened:" << filePath << std::endl;
+        return {};
+    }
+
+    std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    file.close();
+    return content;
+}
+
 void SetEnvironmentVar(const std::string& var, const std::string& val) {
 #ifdef _WIN32
     _putenv_s(var.c_str(), val.c_str());

@@ -17,6 +17,8 @@
 #include <string>
 
 namespace ovms {
+struct PluginConfigSettingsImpl;
+struct GraphSettingsImpl;
 class Status;
 
 class GraphExport {
@@ -24,10 +26,9 @@ protected:
     std::string graphString;
 
 public:
-    GraphExport(const std::string& pipelineType, const std::string& modelPath, const std::string& maxNumSeqs, const std::string& targetDevice,
-        const std::string& pluginConfig, const std::string& enablePrefixCaching, const std::string& cacheSize, const std::string& maxNumBatchedTokens, bool dynamicSplitFuse,
-        const std::string& draftModelDirName);
+    GraphExport(const GraphSettingsImpl& graphSettings);
 
-    Status createGraphFile(const std::string directoryPath);
+    Status createGraphFile(const std::string& directoryPath);
+    static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
 };
 }  // namespace ovms
