@@ -79,14 +79,18 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/v1/completions/
-content-typeapplication/json
+    std::string expectedResponse = R"(URI: /v3/v1/completions/
+Key: content-type; Value: application/json
+Body:
+
         {
             "model": "gpt",
             "stream": false,
             "messages": []
         }
-    {"model":"gpt","stream":false,"messages":[]}0)";
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}0)";
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -105,14 +109,20 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
         handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/completions/
-content-typeapplication/jsontest1headertest2header
+    std::string expectedResponse = R"(URI: /v3/completions/
+Key: content-type; Value: application/json
+Key: test1; Value: header
+Key: test2; Value: header
+Body:
+
         {
             "model": "gpt",
             "stream": false,
             "messages": []
         }
-    {"model":"gpt","stream":false,"messages":[]}0)";
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}0)";
     ASSERT_EQ(response, expectedResponse);
 }
 

@@ -221,5 +221,5 @@ It has two lines.
 
     ASSERT_EQ(
         handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::REST_INVALID_URL);
+        ovms::StatusCode::FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI);
 }
