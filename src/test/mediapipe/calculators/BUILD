@@ -33,6 +33,50 @@ mediapipe_proto_library(
 )
 
 cc_library(
+    name = "dependency_free_http_test_calculators",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = [
+        "multipart_accepting_calculator.cpp",
+        "openai_chat_completions_mock_calculator.cpp",
+    ],
+    copts = select({
+            "//conditions:default": [
+                "-Wall",
+                "-Wno-unknown-pragmas",
+                "-Werror",
+                "-Wno-sign-compare",
+            ],
+            "//:fuzzer_build" : [
+                "-fsanitize=address",
+                "-fprofile-generate",
+                "-ftest-coverage",
+            ],
+            "//src:windows" : [
+                "-W0",
+            ],
+        }),
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//src:httppayload",
+        "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
+    ],
+    linkopts = select({
+        "//conditions:default": [
+        ],
+        "//:fuzzer_build" : [
+            "-fprofile-generate",
+            "-fsanitize=address",
+            "-fsanitize-coverage=trace-pc",
+            "-static-libasan",
+        ],
+    }),
+)
+
+
+cc_library(
     name = "mediapipe_test_calculators",
     linkstatic = 1,
     alwayslink = 1,
@@ -48,8 +92,6 @@ cc_library(
         "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
         "two_input_calculator.cpp",
-        "openai_chat_completions_mock_calculator.cpp",
-        "multipart_accepting_calculator.cpp",
     ],
     copts = select({
             "//conditions:default": [
