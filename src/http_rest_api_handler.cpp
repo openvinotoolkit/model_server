@@ -453,6 +453,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
+#if (MEDIAPIPE_DISABLE == 0)
 static void ensureJsonParserInErrorState(std::shared_ptr<Document>& parsedJson) {
     // Hack to set json parser in invalid state in order to get HasParseError to respond with true
     parsedJson->Parse("error");
@@ -553,6 +554,7 @@ static Status createV3HttpPayload(
 
     return StatusCode::OK;
 }
+#endif
 
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)

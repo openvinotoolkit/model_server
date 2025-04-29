@@ -238,9 +238,6 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
             headers["inference-header-content-length"] = std::to_string(responseComponents.inferenceHeaderContentLength.value());
         }
-        for (const auto& [key, value] : headers) {
-            resp->addHeader(key, value);
-        }
         resp->setBody(output);
 
         const auto http_status = http(status);
