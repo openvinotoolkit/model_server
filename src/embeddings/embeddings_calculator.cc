@@ -1,6 +1,5 @@
 //*****************************************************************************
 // Copyright 2024 Intel Corporation
-//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -53,8 +52,6 @@ class EmbeddingsCalculator : public CalculatorBase {
     static const std::string EMBEDDINGS_MODEL_INPUT_IDS_NAME;
     static const std::string EMBEDDINGS_MODEL_ATTENTION_MASK_NAME;
     static const std::string EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME;
-
-    mediapipe::Timestamp timestamp{0};
 
 protected:
     std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
@@ -290,7 +287,7 @@ public:
         }
         time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseResponseStartTime).count();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings response deserialization time: {} ms", time / 1000);
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
         return absl::OkStatus();
     }
 };

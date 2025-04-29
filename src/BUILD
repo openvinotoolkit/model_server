@@ -154,6 +154,30 @@ cc_library(
     copts = [],
     visibility = ["//visibility:public",],
     linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+cc_library(
+    name = "mediapipe_internal_graphqueue",
+    hdrs = [
+    "mediapipe_internal/graphqueue.hpp",
+    "mediapipe_internal/outputstreamobserver.hpp",
+    ], # TODO FIXME
+    srcs = ["mediapipe_internal/graphqueue.cpp"],
+    deps = [
+        "libovms_queue",
+        "libovmslogging",
+        "execution_context",
+        "libovmstimer",
+        "libovmsmetrics",
+        "model_metric_reporter",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "//src/python:libovmspythonmodule", # TODO not splitted
+        "//src/llm:genai_servables", # TODO split!
+    ],
+    copts = [],
+    visibility = ["//visibility:public",],
+    linkopts = [],
 )
 cc_library(
     name = "libovms_ovinferrequestsqueue",
@@ -379,7 +403,7 @@ cc_library(
     srcs = ["model_metric_reporter.cpp"],
     deps = [
         "libovmsmodelversion",
-        "libovms_execution_context",
+        "execution_context",
         "libovmslogging",
         "libovmsmetrics",
     ],
@@ -589,6 +613,7 @@ cc_library(
                 "mediapipe_internal/mediapipegraphconfig.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.cpp",
                 "mediapipe_internal/mediapipegraphdefinition.hpp",
+                "mediapipe_internal/outputstreamobserver.hpp",
                 "mediapipe_internal/mediapipegraphexecutor.cpp",
                 "mediapipe_internal/mediapipegraphexecutor.hpp",
                 "mediapipe_internal/packettypes.hpp",
@@ -649,7 +674,7 @@ cc_library(
             "libovms_dags_nodesessionresult",
             "libovms_dags_nodeinputhandler",
             "custom_node_output_allocator",
-            "libovms_execution_context",
+            "execution_context",
             "executingstreamidguard",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
@@ -715,6 +740,7 @@ cc_library(
                 })
             + select({
             "//conditions:default": [
+                "mediapipe_internal_graphqueue",
                 "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
                 "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
                 "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
@@ -1864,7 +1890,7 @@ cc_library(
     ],
     deps = [
         "libovmslogging",
-        "libovms_execution_context",
+        "execution_context",
         "libovms_dags_session_id",
     ],
     visibility = ["//visibility:public"],
@@ -2274,7 +2300,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "libovms_execution_context",
+    name = "execution_context",
     hdrs = ["execution_context.hpp",],
     deps = [],
     visibility = ["//visibility:public"],
@@ -2371,7 +2397,7 @@ cc_library(
     deps = [
             "libovmslogging",
             "libovmsmodelversionstatus",
-            "libovms_execution_context",
+            "execution_context",
             "libovms_dags_aliases",
             "libovms_dags_pipelineeventqueue",
             "libovms_dags_session_id",

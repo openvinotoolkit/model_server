@@ -71,6 +71,28 @@ TEST_F(GetMediapipeGraphMetadataResponse, BasicResponseMetadata) {
                   }
               }
             }
+            node {
+            calculator: "OVMSOVCalculator"
+            input_stream: "B:in"
+            output_stream: "A:out2"
+              node_options: {
+                  [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                    servable_name: "dummyUpper"
+                    servable_version: "1"
+                  }
+              }
+            }
+            node {
+            calculator: "OVMSOVCalculator"
+            input_stream: "B:in2"
+            output_stream: "A:out3"
+              node_options: {
+                  [type.googleapis.com / mediapipe.OVMSCalculatorOptions]: {
+                    servable_name: "dummyUpper"
+                    servable_version: "1"
+                  }
+              }
+            }
         )";
 
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};

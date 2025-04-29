@@ -587,13 +587,14 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
-
+    SPDLOG_ERROR("ER");
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(std::string(doc["name"].GetString()), "dummy");
     ASSERT_EQ(std::string(doc["versions"].GetArray()[0].GetString()), "1");
     ASSERT_EQ(std::string(doc["platform"].GetString()), "OpenVINO");
 
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(doc["inputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["name"].GetString()), "b");
     ASSERT_EQ(std::string(doc["inputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
@@ -601,15 +602,20 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["inputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
 
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(doc["outputs"].GetArray().Size(), 1);
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["name"].GetString()), "a");
     ASSERT_EQ(std::string(doc["outputs"].GetArray()[0].GetObject()["datatype"].GetString()), "FP32");
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray().Size(), 2);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[0].GetInt(), 1);
     ASSERT_EQ(doc["outputs"].GetArray()[0].GetObject()["shape"].GetArray()[1].GetInt(), 10);
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(doc["rt_info"].GetArray().Size(), 1);
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["resolution"].GetObject()["height"].GetString()), "200");
+    SPDLOG_ERROR("ER");
     ASSERT_EQ(std::string(doc["rt_info"].GetObject()["model_info"].GetObject()["precision"].GetString()), "FP16");
+    SPDLOG_ERROR("ER");
 }
 
 // Disabled due to bad cast when getting RT info

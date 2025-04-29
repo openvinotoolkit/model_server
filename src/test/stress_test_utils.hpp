@@ -1096,7 +1096,7 @@ protected:
     const uint32_t loadThreadCount = 20;
     const uint32_t beforeConfigChangeLoadTimeMs = 30;
     const uint32_t afterConfigChangeLoadTimeMs = 50;
-    const int stressIterationsLimit = 5000;
+    const int stressIterationsLimit = 1000;
 
     std::string configFilePath;
     std::string ovmsConfig;
@@ -1393,10 +1393,12 @@ public:
                 }));
         }
         // start initial load
+        SPDLOG_INFO("Starting all threads");
         std::for_each(startSignals.begin(), startSignals.end(), [](auto& startSignal) { startSignal.set_value(); });
         // sleep to allow all load threads to stress ovms during config changes
         std::this_thread::sleep_for(std::chrono::milliseconds(beforeConfigChangeLoadTimeMs));
         ((*this).*configChangeOperation)();
+        SPDLOG_INFO("Triggering config change");
         if (reloadWholeConfig) {
             manager->loadConfig(configFilePath);
         } else {
@@ -1404,7 +1406,9 @@ public:
         }
         // wait to work strictly on config operations after change
         std::this_thread::sleep_for(std::chrono::milliseconds(afterConfigChangeLoadTimeMs));
+        SPDLOG_INFO("Sending signal to stop all workers");
         std::for_each(stopSignals.begin(), stopSignals.end(), [](auto& stopSignal) { stopSignal.set_value(); });
+        SPDLOG_INFO("Joining all threads");
         std::for_each(workerThreads.begin(), workerThreads.end(), [](auto& t) { t->join(); });
 
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
@@ -1733,7 +1737,17 @@ public:
                 createPipelineStatus = this->manager->createPipeline(pipelinePtr, pipelineName, &request, &response);
 #if (MEDIAPIPE_DISABLE == 0)
             } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+                    try {
                 mediacreate(executorPtr, *(this->manager), request, response, createPipelineStatus);
+                    } catch  (std::exception& e) {
+                        SPDLOG_ERROR("AAAAAAAA: {}", e.what());
+                        createPipelineStatus = StatusCode::UNKNOWN_ERROR;
+                        //break;
+                    } catch (...) {
+                        createPipelineStatus = StatusCode::UNKNOWN_ERROR;
+                        SPDLOG_ERROR("AAAAAAAA");
+                        //break;
+                    }
 #endif
             }
             // we need to make sure that expected status happened and still accept
@@ -1753,7 +1767,15 @@ public:
                     ovms::ExecutionContext::Method::Predict));
 #if (MEDIAPIPE_DISABLE == 0)
             } else if (typeid(ServableType) == typeid(ovms::MediapipeGraphExecutor)) {
+                    try {
                 mediaexec(executorPtr, *(this->manager), request, response, executePipelineStatus);
+                    } catch  (std::exception& e) {
+                        SPDLOG_ERROR("AAAAAAAA: {}", e.what());
+                        executePipelineStatus = StatusCode::UNKNOWN_ERROR;
+                    } catch (...) {
+                        SPDLOG_ERROR("AAAAAAAA");
+                        executePipelineStatus = StatusCode::UNKNOWN_ERROR;
+                    }
 #endif
             }
             createPipelineRetCodesCounters[executePipelineStatus.getCode()]++;

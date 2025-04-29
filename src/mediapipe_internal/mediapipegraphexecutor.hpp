@@ -28,17 +28,22 @@
 #include "../profiler.hpp"
 #include "../status.hpp"
 #include "../timer.hpp"
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4324 6001 6385 6386 6326 6011 4309 4005 4456 6246)
+#endif
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphdefinition.hpp"  // for version in response and PythonNodeResourceMap
 #include "packettypes.hpp"
+#include "graphqueue.hpp"
 
 namespace ovms {
 class PythonBackend;
@@ -71,57 +76,90 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     }                                                                    \
     _Pragma("warning(pop)")
 
+template <typename RequestType, typename ResponseType>
+struct MyFunctor : public OutputStreamObserverI {
+    const std::string& requestId;
+    MediapipeGraphExecutor& exec;
+    const std::string outputStreamName;
+    mediapipe_packet_type_enum packetType;
+    ResponseType& response;
+    MyFunctor(const std::string& outputStreamName, mediapipe_packet_type_enum packetType, MediapipeGraphExecutor& exec, const RequestType& request, ResponseType& response) :
+        requestId(getRequestId(request)),
+        exec(exec),
+        outputStreamName(outputStreamName),
+        packetType(packetType),
+        response(response) {
+        SPDLOG_ERROR("ER MyFunctor:{} observer constructed:{}", outputStreamName, (void*)this);
+    }
+    absl::Status handlePacket(const ::mediapipe::Packet& packet) override;
+    ~MyFunctor() {
+        SPDLOG_ERROR("ER Destroy Functor:{} this:{}", outputStreamName, (void*)this);
+    }
+};
 class MediapipeGraphExecutor {
+public:
     const std::string name;
     const std::string version;
+
+private:
     const ::mediapipe::CalculatorGraphConfig config;
     stream_types_mapping_t inputTypes;
     stream_types_mapping_t outputTypes;
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap llmNodeResourcesMap;
+    std::shared_ptr<PythonNodeResourcesMap> pythonNodeResourcesMap;
+    std::shared_ptr<GenAiServableMap> llmNodeResourcesMap;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
+    GraphIdGuard guard;
 
 public:
-    static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
-    static const std::string LLM_SESSION_SIDE_PACKET_TAG;
+    static const std::string PYTHON_SIDE_PACKET_NAME;
+    static const std::string LLM_SESSION_PACKET_NAME;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
         stream_types_mapping_t inputTypes,
         stream_types_mapping_t outputTypes,
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
-        const PythonNodeResourcesMap& pythonNodeResourcesMap,
-        const GenAiServableMap& llmNodeResourcesMap,
+        const std::shared_ptr<PythonNodeResourcesMap>& pythonNodeResourcesMap,
+        const std::shared_ptr<GenAiServableMap>& llmNodeResourcesMap,
         PythonBackend* pythonBackend,
-        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter, GraphIdGuard&& guard);
 
     template <typename RequestType, typename ResponseType>
     Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
-        MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
+        SPDLOG_ERROR("ER Executor::infer() using GraphHelper:{}", (void*)guard.gh.get());
+        MetricCounterGuard rejectedRequestGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
         MetricGaugeGuard currentGraphsGuard(this->mediapipeServableMetricReporter->currentGraphs.get());
-        ::mediapipe::CalculatorGraph graph;
-        MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
-        enum : unsigned int {
-            PROCESS,
-            TIMER_END2
-        };
-        Timer<TIMER_END2> timer;
-        timer.start(PROCESS);
-        std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
+        ::mediapipe::CalculatorGraph& graph = this->guard.graph;
+        //SPDLOG_ERROR("SetExecutor XXX");
+        //std::ignore = graph.SetExecutor("", sharedThreadPool);  // TODO FIXME
+        SPDLOG_ERROR("Start unary KServe request mediapipe graph: {} initializationXXXbegin", this->name);
+        //MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+        //std::unordered_map<std::string, ::mediapipe::OutputStreamPoller> outputPollers;
         for (auto& name : this->outputNames) {
             if (name.empty()) {
                 SPDLOG_DEBUG("Creating Mediapipe graph outputs name failed for: {}", name);
                 return StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR;
             }
+            SPDLOG_ERROR("ER XXX Will construct observer for guard:{}, helper:{}, graph:{}", (void*)&this->guard, (void*)this->guard.gh.get(), (void*)&graph);
+            guard.gh->outStreamObservers[name] = std::make_shared<MyFunctor<RequestType, ResponseType>>(name, this->outputTypes.at(name), *this, *request, *response);  // TODO use at() FIXME
+            /*
+            ///////////////
+            ///// OutputStreamPollers
+            ///////////
+            // CreateAPI Specific observer
+            // Replace guard ptr with new one
+            // What to do if
+            //MP_RETURN_ON_FAIL(graph.ObserveOutputStream(outputName, [&serverReaderWriter, &sendMutex, &outputName, &executionContext, this](const ::mediapipe::Packet& packet) -> absl::Status {
+
             auto absStatusOrPoller = graph.AddOutputStreamPoller(name);
             if (!absStatusOrPoller.ok()) {
                 const std::string absMessage = absStatusOrPoller.status().ToString();
@@ -129,19 +167,23 @@ public:
                 return Status(StatusCode::MEDIAPIPE_GRAPH_ADD_OUTPUT_STREAM_ERROR, std::move(absMessage));
             }
             outputPollers.emplace(name, std::move(absStatusOrPoller).value());
+            */
         }
-        std::map<std::string, mediapipe::Packet> inputSidePackets;
+        /*std::map<std::string, mediapipe::Packet> inputSidePackets;
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
-        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[PYTHON_SIDE_PACKET_NAME] = mediapipe::MakePacket<PythonNodeResourcesMap>(*this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[LLM_SESSION_PACKET_NAME] = mediapipe::MakePacket<GenAiServableMap>(*this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
         std::set<std::string> outputPollersWithReceivedPacket;
+        // TODO FIXME no mechanism to check that
+        */
 
         size_t numberOfPacketsCreated = 0;
+        SPDLOG_ERROR("Current Timestamp pushing:{}", this->guard.gh->currentTimestamp.Value());
         auto ovms_status = createAndPushPacketsImpl(
             std::shared_ptr<const RequestType>(request,
                 // Custom deleter to avoid deallocation by custom holder
@@ -151,8 +193,10 @@ public:
             this->inputTypes,
             this->pythonBackend,
             graph,
-            this->currentStreamTimestamp,
+            this->guard.gh->currentTimestamp,
+            //            this->currentStreamTimestamp,
             numberOfPacketsCreated);
+        SPDLOG_ERROR("Current Timestamp pushed:{}", this->guard.gh->currentTimestamp.Value());
         if (!ovms_status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
             return ovms_status;
@@ -167,7 +211,7 @@ public:
             return Status(StatusCode::INVALID_NO_OF_INPUTS, "Not all input packets created");
         }
 
-        failedRequestsGuard.disable();
+        rejectedRequestGuard.disable(); // @atobisze renamed
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
 
         // we wait idle since some calculators could hold ownership on packet content while nodes further down the graph
@@ -179,7 +223,9 @@ public:
         }
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
 
-        MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
+        //        MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
+        //
+        /*
         for (auto& [outputStreamName, poller] : outputPollers) {
             size_t receivedOutputs = 0;
             SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);
@@ -203,20 +249,25 @@ public:
             }
             SPDLOG_TRACE("Received all: {} packets for: {}", receivedOutputs, outputStreamName);
         }
-        status = graph.WaitUntilDone();
+        */
+        // status = graph.WaitUntilDone();
+        status = graph.WaitUntilIdle();
         if (!status.ok()) {  // Collect error metric after Process()
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         MP_RETURN_ON_FAIL(status, "graph wait until done", mediapipeAbslToOvmsStatus(status.code()));
-        if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
+        /*        if (outputPollers.size() != outputPollersWithReceivedPacket.size()) {
             SPDLOG_DEBUG("Mediapipe failed to execute. Failed to receive all output packets");
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unknown error during mediapipe execution");
-        }
-        timer.stop(PROCESS);
+        }*/
+        /*timer.stop(PROCESS);
         double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
         OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
-        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
+        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));*/
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
+        // FIXME @atobisze probably not all cases need ful reload of graph
+        // eg if we fail to push the packet into
+        //this->guard.success = true;
         return StatusCode::OK;
     }
 
@@ -276,9 +327,9 @@ public:
                 OVMS_PROFILE_SCOPE("Mediapipe graph creating input side packets");
                 OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
 #if (PYTHON_DISABLE == 0)
-                inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
-                                                                       .At(STARTING_TIMESTAMP);
-                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+                inputSidePackets[PYTHON_SIDE_PACKET_NAME] = mediapipe::MakePacket<PythonNodeResourcesMap>(*this->pythonNodeResourcesMap)
+                                                                .At(STARTING_TIMESTAMP);
+                inputSidePackets[LLM_SESSION_PACKET_NAME] = mediapipe::MakePacket<GenAiServableMap>(*this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
             }
 
@@ -369,4 +420,19 @@ public:
         }
     }
 };
+
+template <typename RequestType, typename ResponseType>
+absl::Status MyFunctor<RequestType, ResponseType>::handlePacket(const ::mediapipe::Packet& packet) {
+    SPDLOG_ERROR("ER my functor:{}", (void*)this);
+    auto status = onPacketReadySerializeImpl(
+        this->requestId,
+        this->exec.name,
+        this->exec.version,
+        this->outputStreamName,
+        this->packetType,
+        packet,
+        response);
+    return status.ok() ? absl::OkStatus() : absl::Status(absl::StatusCode::kInternal, "Some error");
+    ;
+}
 }  // namespace ovms
