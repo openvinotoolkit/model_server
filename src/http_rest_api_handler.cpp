@@ -564,8 +564,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
 
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
     if (!status.ok()) {
-        // TODO: Add logger
-        SPDLOG_DEBUG("Failed to create V3 payload");
+        SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
         return status;
     }
 
