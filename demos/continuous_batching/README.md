@@ -147,8 +147,12 @@ A single servable exposes both `chat/completions` and `completions` endpoints wi
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-:::{dropdown} **Unary call with cURL**
-```console
+### Unary calls to chat/completions endpoint using cURL 
+
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -167,6 +171,26 @@ curl http://localhost:8000/v3/chat/completions \
     ]
   }'| jq .
 ```
+:::
+
+:::{tab-item} Windows
+Windows Powershell
+```bat
+(Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
+ -Method POST `
+ -Headers @{ "Content-Type" = "application/json" } `
+ -Body '{"model": "Phi-3.5-mini-instruct", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
+```
+
+Windows Command Prompt
+```bat
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Phi-3.5-mini-instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+```
+:::
+
+::::
+
+:::{dropdown} Expected Response
 ```json
 {
   "choices": [
@@ -190,9 +214,13 @@ curl http://localhost:8000/v3/chat/completions \
   }
 }
 ```
-
+:::
+### Unary calls to completions endpoint using cURL 
 A similar call can be made with a `completion` endpoint:
-```console
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
 curl http://localhost:8000/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -202,6 +230,26 @@ curl http://localhost:8000/v3/completions \
     "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
   }'| jq .
 ```
+:::
+
+:::{tab-item} Windows
+Windows Powershell
+```bat
+(Invoke-WebRequest -Uri "http://localhost:8000/v3/completions" `
+ -Method POST `
+ -Headers @{ "Content-Type" = "application/json" } `
+ -Body '{"model": "Phi-3.5-mini-instruct", "max_tokens": 30, "temperature": 0, "stream": false, "prompt":"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"}').Content
+```
+
+Windows Command Prompt
+```bat
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Phi-3.5-mini-instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"prompt\":\"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\"}"
+```
+:::
+
+::::
+
+:::{dropdown} Expected Response
 ```json
 {
   "choices": [
@@ -224,14 +272,18 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 
-:::{dropdown} **Streaming call with OpenAI Python package**
+### Streaming call with OpenAI Python package
 
-The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` and `completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
 pip3 install openai
 ```
+
+::::{tab-set}
+
+:::{tab-item} Chat completions
 ```python
 from openai import OpenAI
 
@@ -255,7 +307,10 @@ Output:
 It looks like you're testing me!
 ```
 
-A similar code can be applied for the completion endpoint:
+:::
+
+:::{tab-item} Completions
+
 ```console
 pip3 install openai
 ```
@@ -283,12 +338,14 @@ It looks like you're testing me!
 ```
 :::
 
+::::
+
 ## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demonstrated using benchmarking app from vLLM repository:
 ```console
-git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
+git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
