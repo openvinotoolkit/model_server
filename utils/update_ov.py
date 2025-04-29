@@ -250,7 +250,7 @@ def update_openvino_genai():
                 else:
                     print(f"Failed to fetch tokenizers commit date. Status code: {commit_response.status_code}")
     else:
-        print(f"Failed to fetch submodules. Status code: {response.status_code}")
+        raise Exception(f"Failed to fetch submodules. Status code: {response.status_code}, Message: {response.text}")
     
     # Read the Makefile
     makefile_path = 'Makefile'
