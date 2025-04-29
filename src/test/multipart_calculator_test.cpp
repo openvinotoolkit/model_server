@@ -97,8 +97,9 @@ It has two lines.
         return std::string_view(retval);
     });
 
+    const std::string URI = "/v3/something";
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
     std::string expectedResponse = R"(john@example.com+john_doe

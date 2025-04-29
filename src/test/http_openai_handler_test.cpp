@@ -75,11 +75,12 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         }
     )";
 
+    const std::string URI = "/v3/something";
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(URI: /v3/v1/completions/
+    std::string expectedResponse = R"(URI: /v3/something
 Key: content-type; Value: application/json
 Body:
 
