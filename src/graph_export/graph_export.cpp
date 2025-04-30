@@ -20,9 +20,12 @@
 #include <string>
 #include <utility>
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#pragma warning(pop)
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
@@ -30,8 +33,6 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
-
-using namespace rapidjson;
 
 namespace ovms {
 
@@ -121,26 +122,26 @@ Status GraphExport::createGraphFile(const std::string& directoryPath) {
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {
-    Document d;
+    rapidjson::Document d;
     d.SetObject();
     bool configNotEmpty = false;
 
     if (pluginConfig.kvCachePrecision != "") {
-        Value name;
+        rapidjson::Value name;
         name.SetString(pluginConfig.kvCachePrecision.c_str(), d.GetAllocator());
         d.AddMember("KV_CACHE_PRECISION", name, d.GetAllocator());
         configNotEmpty = true;
     }
 
     if (pluginConfig.maxPromptLength != "") {
-        Value name;
+        rapidjson::Value name;
         name.SetString(pluginConfig.maxPromptLength.c_str(), d.GetAllocator());
         d.AddMember("MAX_PROMPT_LEN", name, d.GetAllocator());
         configNotEmpty = true;
     }
 
     if (pluginConfig.modelDistributionPolicy != "") {
-        Value name;
+        rapidjson::Value name;
         name.SetString(pluginConfig.modelDistributionPolicy.c_str(), d.GetAllocator());
         d.AddMember("MODEL_DISTRIBUTION_POLICY", name, d.GetAllocator());
         configNotEmpty = true;
@@ -150,8 +151,8 @@ std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& plug
 
     if (configNotEmpty) {
         // Serialize the document to a JSON string
-        StringBuffer buffer;
-        Writer<StringBuffer> writer(buffer);
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         d.Accept(writer);
 
         // Output the JSON string
