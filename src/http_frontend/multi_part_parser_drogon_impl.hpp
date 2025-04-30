@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,28 +15,35 @@
 //*****************************************************************************
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+#include "../multi_part_parser.hpp"
+
 #pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#pragma warning(disable : 6326)
+#include <drogon/drogon.h>
 #pragma warning(pop)
 
-#include "client_connection.hpp"
-#include "multi_part_parser.hpp"
+#include <string>
+#include <string_view>
+#include <memory>
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::unordered_map<std::string, std::string> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
-    std::shared_ptr<MultiPartParser> multipartParser;
+class DrogonMultiPartParser : public MultiPartParser {
+    bool hasParseError_{true};
+    const drogon::HttpRequestPtr request{nullptr};
+    const std::shared_ptr<drogon::MultiPartParser> parser{nullptr};
+
+public:
+    DrogonMultiPartParser(const drogon::HttpRequestPtr& request) :
+        request(request),
+        parser(std::make_shared<drogon::MultiPartParser>()) {}
+
+    bool parse() override;
+
+    bool hasParseError() const override;
+
+    std::string getFieldByName(const std::string& name) const override;
+    std::string_view getFileContentByFieldName(const std::string& name) const override;
 };
 
 }  // namespace ovms

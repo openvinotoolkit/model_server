@@ -615,8 +615,14 @@ cc_library(
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
         }) + select({
-            "//:enable_drogon": ["libdrogon_http_server"],
-            "//conditions:default" : ["libnet_http_server"],
+            "//:enable_drogon": [
+                "libdrogon_http_server",
+                "libmultipart_parser_drogon_impl",
+            ],
+            "//conditions:default" : [
+                "libnet_http_server",
+                # Add net-http implementation here if we ever want one
+            ],
         }) + [
             "cpp_headers",
             "ovms_header",
@@ -811,6 +817,7 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovmsclient_connection",
+        "libmultipart_parser",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -829,6 +836,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
+
 cc_library(
     name = "libhttpclientconnection",
     hdrs = ["http_frontend/http_client_connection.hpp"],
@@ -841,6 +849,31 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
+)
+
+cc_library(
+    name = "libmultipart_parser",
+    hdrs = ["multi_part_parser.hpp"],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libmultipart_parser_drogon_impl",
+    hdrs = ["http_frontend/multi_part_parser_drogon_impl.hpp"],
+    srcs = ["http_frontend/multi_part_parser_drogon_impl.cpp"],
+    deps = [
+        "libmultipart_parser",
+        "@drogon//:drogon_cmake",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -2757,6 +2790,7 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
+                "test/multipart_calculator_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2776,6 +2810,12 @@ cc_test(
                 "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_python" : [],
+        }) + select({
+            "//:enable_drogon": [
+                "test/multi_part_parser_drogon_test.cpp",
+            ],
+            "//conditions:default" : [
+            ],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -2827,6 +2867,7 @@ cc_test(
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_mediapipe_two_inputs.json",
         "test/mediapipe/config_mediapipe_two_outputs_dag.json",
+        "test/mediapipe/config_mediapipe_multipart_mock.json",
         "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
@@ -2845,6 +2886,7 @@ cc_test(
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/graph_multipart.pbtxt",
         "test/mediapipe/negative/config_exception_during_process.json",
         "test/mediapipe/negative/config_no_calc_output_stream.json",
         "test/mediapipe/negative/graph_exception_during_process.pbtxt",
@@ -2927,6 +2969,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
+                "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
