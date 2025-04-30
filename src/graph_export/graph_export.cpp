@@ -114,10 +114,17 @@ GraphExport::GraphExport(const GraphSettingsImpl& graphSettings) {
 }
 
 Status GraphExport::createGraphFile(const std::string& directoryPath) {
-    // TODO add if file exists checks and overwrite if it does, catch exceptions ?
-    std::ofstream graphFile(FileSystem::joinPath({directoryPath, "graph.pbtxt"}));
-    graphFile << this->graphString << std::endl;
-    graphFile.close();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    // Always overwrite
+    {
+        std::ofstream graphFile(fullPath, std::ios::trunc | std::ofstream::binary);
+        if (graphFile.is_open()) {
+            graphFile << this->graphString << std::endl;
+        } else {
+            SPDLOG_ERROR("Unable to open file: ", fullPath);
+            return StatusCode::FILE_INVALID;
+        }
+    }
     return StatusCode::OK;
 }
 
