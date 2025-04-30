@@ -63,14 +63,48 @@ For example, the `model_config` section in `config.json` could look like this:
 FIXME TODO
 
 # List models
-# Disable model
+
+To check what models are servable from specified model repository:
+```
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+--model_repository /models --list_models
+```
+
+
 # Enable model
 
+To add model to ovms configuration file with specific model use either:
+
+```
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+--model_repository /models --add_to_config <config_file_path> --model_name <name>
+```
+
+When model is directly inside `/models`. FIXME explain better with pictures/tree
+
+Or
+
+```
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+--add_to_config <config_file_path> --model_name <name>
+```
+when there is no model_repository secified.
+
+# Disable model
+
+If you want to remove model from configuration file you can do it either manually or use command:
+
+```
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+--remove_from_config <config_file_path> --model_name <name>
+```
+
 FIXME TODO TBD
--> model vs mp graph vs llm model is confusing
--> adjust existing documentation to link with this doc
--> task, task_params to be updated explained
--> explain the directory structure with relation to model_repository & model_name & source_model & model_path
--> where is config.json created?
--> does not answer how to serve multiple models, how to update existing config.json with pull mode etc.
--> do we want to allow in pulling mode separately specifying model_path/repository?
+- model vs mp graph vs llm model is confusing
+- adjust existing documentation to link with this doc
+- task, task_params to be updated explained
+- explain the directory structure with relation to model_repository & model_name & source_model & model_path
+- where is config.json created?
+- does not answer how to serve multiple models, how to update existing config.json with pull mode etc.
+- do we want to allow in pulling mode separately specifying model_path/repository?
+- we should explain the relevance of config.json to model repository (ie that config.json will work with specific dir)
