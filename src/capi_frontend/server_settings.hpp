@@ -28,6 +28,7 @@ struct PluginConfigSettingsImpl {
 };
 
 struct GraphSettingsImpl {
+    std::string task = "";
     std::string pipelineType = "AUTO";
     std::string modelPath = "./";  // TODO: this should be set in ovms or based on download_path? current dir or can user put it ?
     std::string maxNumSeqs = "256";

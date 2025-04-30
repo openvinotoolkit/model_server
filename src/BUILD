@@ -326,6 +326,7 @@ cc_library(
         "modelconfig",
         "libovms_cliparser",
         "libovms_systeminfo",
+        "ovms_exit_codes",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

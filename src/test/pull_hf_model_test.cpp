@@ -190,7 +190,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--pull",
         (char*)"--source_model",
         (char*)modelName.c_str(),
-        (char*)"--download_path",
+        (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--pipeline_type",
         (char*)"VLM",
@@ -237,7 +237,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"--pull",
         (char*)"--source_model",
         (char*)modelName.c_str(),
-        (char*)"--download_path",
+        (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--pipeline_type",
         (char*)"VLM",
@@ -274,7 +274,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
         (char*)"--pull",
         (char*)"--source_model",
         (char*)modelName.c_str(),
-        (char*)"--download_path",
+        (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
     };
 

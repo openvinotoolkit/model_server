@@ -32,16 +32,15 @@ GraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
     return instance;
 }
 
-void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
-    try {
-        options = std::make_unique<cxxopts::Options>("ovms graph", "OpenVINO Model Server graph creation options");
+void GraphCLIParser::createOptions() {
+    this->options = std::make_unique<cxxopts::Options>("ovms graph", "OpenVINO Model Server graph creation options");
 
-        // clang-format off
-        options->add_options()
-            ("h, help",
-                "Show this help message and exit");
-
+    // clang-format off
         options->add_options("general options")
+            ("task",
+            "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint",
+            cxxopts::value<std::string>()->default_value(""),
+            "TASK")
             ("max_num_seqs",
                 "The maximum number of sequences that can be processed together. Default 256.",
                 cxxopts::value<std::string>()->default_value("256"),
@@ -84,7 +83,20 @@ void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
                 "u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.",
                 cxxopts::value<std::string>()->default_value(""),
                 "KV_CACHE_PRECISION");
+}
 
+void GraphCLIParser::printHelp() {
+    if (!this->options) {
+        this->createOptions();
+    }
+    std::cout << options->help({"general options", "plugin config"}) << std::endl;
+}
+
+void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+    try {
+        if (!this->options) {
+            this->createOptions();
+        }
         std::vector<const char*> cStrArray;
         cStrArray.reserve(unmatchedOptions.size()+1);
         cStrArray.push_back("ovms graph");
@@ -101,11 +113,6 @@ void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
             }
             std::cerr << std::endl;
             exit(OVMS_EX_USAGE);
-        }
-
-        if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "general options", "plugin config"}) << std::endl;
-            exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
         std::cerr << "error parsing options: " << e.what() << std::endl;

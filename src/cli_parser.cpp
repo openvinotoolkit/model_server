@@ -132,10 +132,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "HF source model path",
                 cxxopts::value<std::string>(),
                 "HF_SOURCE")
-            ("download_path",
+            ("model_repository_path",
                 "HF model destination download path",
                 cxxopts::value<std::string>(),
-                "DOWNLOAD_PATH");
+                "MODEL_REPOSITORY_PATH");
 
         options->add_options("single model")
             ("model_name",
@@ -194,8 +194,7 @@ void CLIParser::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->unmatched().size()) {
-            // TODO: Add keyword check for printing help for specific parser ?
-            this->graphParser.parse(result->unmatched());
+            this->graphOptionsParser.parse(result->unmatched());
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
@@ -211,6 +210,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model"}) << std::endl;
+            this->graphOptionsParser.printHelp();
             exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
@@ -229,10 +229,10 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
         if (result->count("source_model"))
             serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        if (result->count("download_path"))
-            serverSettings->hfSettings.downloadPath = result->operator[]("download_path").as<std::string>();
+        if (result->count("model_repository_path"))
+            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
 
-        graphParser.prepare(serverSettings, modelsSettings);
+        this->graphOptionsParser.prepare(serverSettings, modelsSettings);
         return;
     } else {
         serverSettings->hfSettings.pullHfModelMode = false;

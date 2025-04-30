@@ -39,6 +39,8 @@ public:
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     Status validate(ServerSettingsImpl*);
+    void printHelp();
+    void createOptions();
 
 private:
     static GraphSettingsImpl& defaultGraphSettings();

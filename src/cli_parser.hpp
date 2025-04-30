@@ -30,7 +30,7 @@ class GraphCLIParser;
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
-    GraphCLIParser graphParser;
+    GraphCLIParser graphOptionsParser;
 
 public:
     CLIParser() = default;
