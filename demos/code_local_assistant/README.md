@@ -21,11 +21,20 @@ mkdir models
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
+
+::::{tab-set}
+:::{tab-item} Intel GPU
 ```console
 python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 1 --overwrite_models
 ```
+:::
 
-> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
+:::{tab-item} Intel NPU
+```console
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+```
+:::
+::::
 
 ## Prepare Code Completion Model
 For this task we need smaller, lighter model that will produce code quicker than chat task.
@@ -33,11 +42,18 @@ Since we do not want to wait for the code to appear, we need to use smaller mode
 Code completion works in non-streaming, unary mode. Do not use instruct model, there is no chat involved in the process.
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
+
+::::{tab-set}
+:::{tab-item} Intel GPU
 ```console
 python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 1 --overwrite_models
 ```
+:::
 
-> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
+:::{tab-item} Intel NPU
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+:::
+::::
 
 Examine that workspace is set up properly `models/config_all.json`:
 ```
@@ -107,12 +123,21 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 
 ### Linux: via Docker
+::::{tab-set}
+:::{tab-item} Intel GPU
 ```bash
 docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
   -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
+:::
 
-> **Note:** For Intel NPU use `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
+:::{tab-item} Intel NPU
+```bash
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
+```
+:::
+::::
 
 ## Set Up Visual Studio Code
 
