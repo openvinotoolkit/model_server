@@ -236,8 +236,9 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
         resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
-            headers["inference-header-content-length"] = std::to_string(responseComponents.inferenceHeaderContentLength.value());
+            resp->addHeader("inference-header-content-length", std::to_string(responseComponents.inferenceHeaderContentLength.value()));
         }
+
         resp->setBody(output);
 
         const auto http_status = http(status);
