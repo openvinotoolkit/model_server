@@ -74,7 +74,7 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 252f94ff02c629a36c0445c266a7911dcb344ed9 # master 2025-04-28
+OV_SOURCE_BRANCH ?= fdfb589aabbb033f800313f71905f1a281e8fc89# master 2025-04-30
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
 OV_TOKENIZERS_BRANCH ?= 979cba29ffc1f99d3c53e28a2c29b750390e59d9 # master 2025-04-25
 
@@ -161,11 +161,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "24.52.32224"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18866-252f94ff02c/openvino_toolkit_ubuntu24_2025.2.0.dev20250426_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18901-fdfb589aabb/openvino_toolkit_ubuntu24_2025.2.0.dev20250430_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18866-252f94ff02c/openvino_toolkit_ubuntu22_2025.2.0.dev20250426_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18901-fdfb589aabb/openvino_toolkit_ubuntu22_2025.2.0.dev20250430_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
