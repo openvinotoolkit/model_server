@@ -22,12 +22,12 @@
 #)
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
+     "LINUX_COMMON_STATIC_LIBS_COPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
+COPTS_ADJUSTED = select({
+                "//conditions:default": LINUX_COMMON_STATIC_LIBS_COPTS,
+                "//src:windows" : [],
+                })
 
 LINKOPTS_ADJUSTED = select({
     "//conditions:default": [],
