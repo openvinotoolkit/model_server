@@ -74,11 +74,11 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= fdfb589aabbb033f800313f71905f1a281e8fc89# master 2025-04-30
+OV_SOURCE_BRANCH ?= 3dfebc44ce832bc7224a1dfdd3584ad53b7a43f5 # fix_by_channel_long_prompts/ 2025-05-01
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
 OV_TOKENIZERS_BRANCH ?= 979cba29ffc1f99d3c53e28a2c29b750390e59d9 # master 2025-04-25
 
-OV_SOURCE_ORG ?= openvinotoolkit
+OV_SOURCE_ORG ?= zhangYiIntel
 OV_CONTRIB_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
