@@ -823,6 +823,7 @@ TEST_F(MetricFlowTest, ModelReady) {
 TEST_F(MetricFlowTest, RestV3Unary) {
     HttpRestApiHandler handler(server, 0);
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
 
     EXPECT_CALL(*stream, IsDisconnected())
         .WillRepeatedly(::testing::Return(false));
@@ -831,10 +832,11 @@ TEST_F(MetricFlowTest, RestV3Unary) {
         std::string request = R"({"model": "dummy_gpt", "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
-        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
     }
 
@@ -849,6 +851,7 @@ TEST_F(MetricFlowTest, RestV3Unary) {
 TEST_F(MetricFlowTest, RestV3UnaryError) {
     HttpRestApiHandler handler(server, 0);
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
 
     EXPECT_CALL(*stream, IsDisconnected())
@@ -860,9 +863,10 @@ TEST_F(MetricFlowTest, RestV3UnaryError) {
         std::string request = R"({"model": "dummy_gpt", "prompt":"ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
+        comps.headers = {{"content-type", "application/json"}};
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     }
 
@@ -874,6 +878,7 @@ TEST_F(MetricFlowTest, RestV3UnaryError) {
 TEST_F(MetricFlowTest, RestV3Stream) {
     HttpRestApiHandler handler(server, 0);
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     ON_CALL(*stream, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));  // make the streaming flow sequential
 
     EXPECT_CALL(*stream, IsDisconnected())
@@ -883,10 +888,11 @@ TEST_F(MetricFlowTest, RestV3Stream) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "Hello World"})";
         std::string response;
         HttpRequestComponents comps;
+        comps.headers = {{"content-type", "application/json"}};
         auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
-        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 
@@ -905,6 +911,7 @@ TEST_F(MetricFlowTest, RestV3Stream) {
 TEST_F(MetricFlowTest, RestV3StreamError) {
     HttpRestApiHandler handler(server, 0);
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
 
     ON_CALL(*stream, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
@@ -917,9 +924,10 @@ TEST_F(MetricFlowTest, RestV3StreamError) {
         std::string request = R"({"model": "dummy_gpt", "stream": true, "prompt": "ReturnError"})";
         std::string response;
         HttpRequestComponents comps;
-        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr);
+        comps.headers = {{"content-type", "application/json"}};
+        auto status = handler.processV3("/v3/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
-        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr);
+        status = handler.processV3("/v3/v1/completions", comps, response, request, streamPtr, multiPartParser);
         ASSERT_EQ(status, ovms::StatusCode::PARTIAL_END) << status.string();
     }
 

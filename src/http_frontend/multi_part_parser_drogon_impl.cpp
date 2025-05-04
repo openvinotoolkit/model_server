@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,30 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
-
-#include "client_connection.hpp"
-#include "multi_part_parser.hpp"
+#include "multi_part_parser_drogon_impl.hpp"
 
 namespace ovms {
 
-struct HttpPayload {
-    std::string uri;
-    std::unordered_map<std::string, std::string> headers;
-    std::string body;                                 // always
-    std::shared_ptr<rapidjson::Document> parsedJson;  // pre-parsed body             = null
-    std::shared_ptr<ClientConnection> client;
-    std::shared_ptr<MultiPartParser> multipartParser;
-};
+bool DrogonMultiPartParser::parse() {
+    this->hasParseError_ = this->parser->parse(request) != 0;
+    return !this->hasParseError_;
+}
+
+bool DrogonMultiPartParser::hasParseError() const {
+    return this->hasParseError_;
+}
+
+std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const {
+    return this->parser->getParameter<std::string>(name);
+}
+
+std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::string& name) const {
+    auto fileMap = this->parser->getFilesMap();
+
+    auto it = fileMap.find(name);
+    if (it == fileMap.end()) {
+        return "";
+    }
+    return it->second.fileContent();
+}
 
 }  // namespace ovms
