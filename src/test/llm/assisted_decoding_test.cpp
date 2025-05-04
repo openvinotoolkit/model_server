@@ -178,8 +178,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 
     // Dynamic number of candidates
     requestBody = R"(
@@ -201,12 +200,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    GTEST_SKIP() << "Skip this test until tokenizer not respecting add_special_tokens parameter bug is fixed";
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -239,10 +236,9 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
-    ASSERT_TRUE(choice["finish_reason"].IsString());
+        ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 
     // Dynamic number of candidates
     requestBody = R"(
@@ -272,8 +268,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParametersProvided) {
@@ -335,8 +330,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
+    EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDecoding) {
@@ -374,8 +368,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
-    // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
 // Consider parametrization of negative tests with request body and endpoint as parameters
