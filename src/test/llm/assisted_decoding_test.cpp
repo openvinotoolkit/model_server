@@ -374,7 +374,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
     // TODO: awaiting OV/GenAI fix, uncomment when fixed
-    //ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
+    // ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 }
 
 // Consider parametrization of negative tests with request body and endpoint as parameters
