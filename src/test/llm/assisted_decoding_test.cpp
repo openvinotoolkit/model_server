@@ -236,7 +236,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
-        ASSERT_TRUE(choice["finish_reason"].IsString());
+    ASSERT_TRUE(choice["finish_reason"].IsString());
     ASSERT_FALSE(choice["logprobs"].IsObject());
     ASSERT_EQ(choice["message"]["content"].GetString(), expectedMessages[0]);
 
