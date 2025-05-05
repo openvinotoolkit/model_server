@@ -133,7 +133,6 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
     }
 
     serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
-    
     serverSettings->hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     serverSettings->hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
     serverSettings->hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
