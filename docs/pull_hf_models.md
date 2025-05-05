@@ -1,4 +1,5 @@
-This functionality is not yet functional
+*Note:*
+This functionality is a work in progress
 
 # Pulling the models {#ovms_pul}
 
@@ -25,7 +26,6 @@ docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
 It will prepare all needed configuration files to support LLMS with OVMS in model repository
 
 # Starting the mediapipe graph or LLM models
- TODO FIXME Message can be confusing - in some context models are simple bin/xml file which is intuitive. That is not the case for LLM's since they almost always require whole graph.pbtx configuration file.
 Now you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
 
 ```
@@ -33,11 +33,11 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
 ```
 
-Server will detect the type of requested model and load it accordingly, detecting if there is .pbtxt file and additional subconfiguration json.
+Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
 
-*Note*: There is no online model modification nor versioning capability as of now for graph, LLM like models.
+*Note*: There is no online model modification nor versioning capability as of now for graphs, LLM like models.
 
-# Starting the LLM models from HF directly
+# Starting the LLM model from HF directly
 
 In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
 
@@ -47,7 +47,7 @@ docker run -d --rm -v <models_repository>:/models openvino/model_server:latest -
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
 
-# Starting the LLM models from local storage
+# Starting the LLM model from local storage
 
 In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
 ```
@@ -60,16 +60,60 @@ Now there is an easier way to specify LLM configurations in `config.json`. In th
 
 For example, the `model_config` section in `config.json` could look like this:
 
-FIXME TODO
-
+```json
+{
+    "model_config_list": [
+        {
+            "config": {
+                "name": "text_generation_model",
+                "base_path": "/models/text_generation_model"
+            }
+        },
+        {
+            "config": {
+                "name": "embedding_model",
+                "base_path": "/models/embedding_model"
+            }
+        },
+        {
+            "config": {
+                "name": "mediapipe_graph",
+                "base_path": "/models/mediapipe_graph"
+            }
+        }
+    ]
+}
+```
 # List models
 
 To check what models are servable from specified model repository:
 ```
 docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
---model_repository /models --list_models
+--models_repository /models --list_models
 ```
 
+For following directory structure:
+```
+/models
+├── meta
+│   ├── llama4
+│   │   └── graph.pbtxt
+│   ├── llama3.1
+│   │   └── graph.pbtxt
+├── LLama3.2
+│   └── graph.pbtxt
+└── resnet
+    └── 1
+        └── saved_model.pb
+```
+
+The output would be:
+```
+meta/llama4
+meta/llama3.1
+LLama3.2
+resnet
+```
 
 # Enable model
 
@@ -77,18 +121,18 @@ To add model to ovms configuration file with specific model use either:
 
 ```
 docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
---model_repository /models --add_to_config <config_file_path> --model_name <name>
+--models_repository /models/<model_path> --add_to_config <config_file_path> --model_name <name>
 ```
 
-When model is directly inside `/models`. FIXME explain better with pictures/tree
+When model is directly inside `/models`.
 
 Or
 
 ```
 docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
---add_to_config <config_file_path> --model_name <name>
+--add_to_config <config_file_path> --model_name <name> --model_path <model_path>
 ```
-when there is no model_repository secified.
+when there is no model_repository specified.
 
 # Disable model
 
@@ -100,11 +144,7 @@ docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
 ```
 
 FIXME TODO TBD
-- model vs mp graph vs llm model is confusing
 - adjust existing documentation to link with this doc
 - task, task_params to be updated explained
-- explain the directory structure with relation to model_repository & model_name & source_model & model_path
-- where is config.json created?
-- does not answer how to serve multiple models, how to update existing config.json with pull mode etc.
 - do we want to allow in pulling mode separately specifying model_path/repository?
 - we should explain the relevance of config.json to model repository (ie that config.json will work with specific dir)
