@@ -22,23 +22,24 @@
 namespace ovms {
 
 struct PluginConfigSettingsImpl {
-    std::string kvCachePrecision = "";
-    std::string maxPromptLength = "";
-    std::string modelDistributionPolicy = "";
+    std::optional<std::string> kvCachePrecision;
+    std::optional<uint32_t> maxPromptLength;
+    std::optional<std::string> modelDistributionPolicy;
 };
 
 struct GraphSettingsImpl {
     std::string task = "";
-    std::string pipelineType = "AUTO";
+
     std::string modelPath = "./";  // TODO: this should be set in ovms or based on download_path? current dir or can user put it ?
-    std::string maxNumSeqs = "256";
+    uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
-    std::string cacheSize = "10";
-    std::string maxNumBatchedTokens = "";
-    std::string dynamicSplitFuse = "false";
-    std::string draftModelDirName = "";
+    uint32_t cacheSize = 10;
+    std::string dynamicSplitFuse = "true";
     PluginConfigSettingsImpl pluginConfig;
+    std::optional<uint32_t> maxNumBatchedTokens;
+    std::optional<std::string> draftModelDirName;
+    std::optional<std::string> pipelineType;
 };
 
 struct HFSettingsImpl {

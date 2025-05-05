@@ -155,8 +155,8 @@ protected:
 TEST_F(GraphCreationTest, positiveDefault) {
     ovms::GraphSettingsImpl graphSettings;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>(graphSettings);
-    auto status = graphExporter->createGraphFile(this->directoryPath);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -167,12 +167,12 @@ TEST_F(GraphCreationTest, positiveDefault) {
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::GraphSettingsImpl graphSettings;
     graphSettings.pluginConfig.kvCachePrecision = "u8";
-    graphSettings.pluginConfig.maxPromptLength = "123";
+    graphSettings.pluginConfig.maxPromptLength = 123;
     graphSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>(graphSettings);
-    auto status = graphExporter->createGraphFile(this->directoryPath);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -185,8 +185,8 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
     graphSettings.pluginConfig.kvCachePrecision = "u8";
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>(graphSettings);
-    auto status = graphExporter->createGraphFile(this->directoryPath);
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);

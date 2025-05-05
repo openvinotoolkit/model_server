@@ -16,6 +16,7 @@
 #include "graph_cli_parser.hpp"
 
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -43,11 +44,11 @@ void GraphCLIParser::createOptions() {
             "TASK")
             ("max_num_seqs",
                 "The maximum number of sequences that can be processed together. Default 256.",
-                cxxopts::value<std::string>()->default_value("256"),
+                cxxopts::value<uint32_t>()->default_value("256"),
                 "MAX_NUM_SEQS")
             ("pipeline_type",
                 "Type of the pipeline to be used: Choices LM, LM_CB, VLM, VLM_CB, AUTO. AUTO is used by default.",
-                cxxopts::value<std::string>()->default_value("AUTO"),
+                cxxopts::value<std::string>(),
                 "PIPELINE_TYPE")
             ("graph_target_device",
                 "CPU, GPU, NPU or HETERO, default is CPU.",
@@ -59,25 +60,25 @@ void GraphCLIParser::createOptions() {
                 "ENABLE_PREFIX_CACHING")
             ("max_num_batched_tokens",
                 "empty or integer. The maximum number of tokens that can be batched together.",
-                cxxopts::value<std::string>()->default_value(""),
+                cxxopts::value<uint32_t>(),
                 "MAX_NUM_BATCHED_TOKENS")
             ("cache_size",
                 "cache size in GB, default is 10.",
-                cxxopts::value<std::string>()->default_value("10"),
+                cxxopts::value<uint32_t>()->default_value("10"),
                 "CACHE_SIZE")
             ("draft_source_model",
                 "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
-                cxxopts::value<std::string>()->default_value(""),
+                cxxopts::value<std::string>(),
                 "DRAFT_SOURCE_MODEL")
             ("dynamic_split_fuse",
                 "Dynamic split fuse algorithm enabled. Default true.",
-                cxxopts::value<std::string>()->default_value("false"),
+                cxxopts::value<std::string>()->default_value("true"),
                 "DYNAMIC_SPLIT_FUSE");
 
         options->add_options("plugin config")
             ("max_prompt_len",
                 "Sets NPU specific property for maximum number of tokens in the prompt.",
-                cxxopts::value<std::string>()->default_value(""),
+                cxxopts::value<uint32_t>(),
                 "MAX_PROMPT_LEN")
             ("kv_cache_precision",
                 "u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.",
@@ -131,18 +132,25 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
         }
     }
 
-    serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<std::string>();
-    serverSettings->hfSettings.graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
+    serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
+    
     serverSettings->hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     serverSettings->hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
-    serverSettings->hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<std::string>();
-    serverSettings->hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<std::string>();
+    serverSettings->hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
     serverSettings->hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
-    serverSettings->hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
+    if (result->count("draft_source_model")) {
+        serverSettings->hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
+    }
+    if (result->count("pipeline_type")) {
+        serverSettings->hfSettings.graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
+    }
+    if (result->count("max_num_batched_tokens")) {
+        serverSettings->hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
+    }
     // TODO: modelPath
     // Plugin configuration
     if (result->count("max_prompt_len")) {
-        serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<std::string>();
+        serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
     }
 
     if (result->count("kv_cache_precision")) {
@@ -151,7 +159,7 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
 }
 
 Status GraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
-    // TODO: add validation of graphSettings and plugin config
+    // TODO: CVS-166727 add validation of graphSettings and plugin config
     return StatusCode::OK;
 }
 

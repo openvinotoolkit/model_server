@@ -67,8 +67,6 @@ const std::string expectedGraphContents = R"(
             plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
-            pipeline_type: AUTO,
-            dynamic_split_fuse: false,
         }
     }
     input_stream_handler {
@@ -217,16 +215,16 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType, "VLM");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.value(), "VLM");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "128");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 128);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "false");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "20");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "16");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 20);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName, "/draft/model/source");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.value(), "/draft/model/source");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {
@@ -254,16 +252,16 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType, "VLM");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.value(), "VLM");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "128");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 128);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "NPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "10");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "false");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 10);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
@@ -284,14 +282,14 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType, "AUTO");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, "256");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 256);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, "10");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens, "");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "false");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName, "");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 10);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
 }

@@ -634,13 +634,13 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
 std::string GetFileContents(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
         std::cout << "File does not exist:" << filePath << std::endl;
-        return {};
+        throw std::runtime_error("Failed to open file: " + filePath);
     }
 
     std::ifstream file(filePath, std::ios::in | std::ios::binary);
     if (!file.is_open()) {
         std::cout << "File could not be opened:" << filePath << std::endl;
-        return {};
+        throw std::runtime_error("Failed to open file: " + filePath);
     }
 
     std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};

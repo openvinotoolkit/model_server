@@ -36,9 +36,7 @@
 
 namespace ovms {
 
-static std::string createTextGenerationGraphTemplate(const std::string& pipelineType, const std::string& modelPath, const std::string& maxNumSeqs, const std::string& targetDevice,
-    const std::string& pluginConfig, const std::string& enablePrefixCaching, const std::string& cacheSize, const std::string& maxNumBatchedTokens, const std::string& dynamicSplitFuse,
-    const std::string& draftModelDirName) {
+static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -59,34 +57,34 @@ static std::string createTextGenerationGraphTemplate(const std::string& pipeline
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:)"
-        << maxNumSeqs << R"(,
+        << graphSettings.maxNumSeqs << R"(,
             device: )"
-        << targetDevice << R"(,
+        << graphSettings.targetDevice << R"(,
             models_path: ")"
-        << modelPath << R"(",
+        << graphSettings.modelPath << R"(",
             plugin_config: ')"
-        << pluginConfig << R"(',
+        << GraphExport::createPluginString(graphSettings.pluginConfig) << R"(',
             enable_prefix_caching: )"
-        << enablePrefixCaching << R"(,
+        << graphSettings.enablePrefixCaching << R"(,
             cache_size: )"
-        << cacheSize << R"(,)";
-    if (pipelineType != "") {
+        << graphSettings.cacheSize << R"(,)";
+    if (graphSettings.pipelineType.has_value()) {
         oss << R"(
-            pipeline_type: )" << pipelineType << R"(,)";
+            pipeline_type: )" << graphSettings.pipelineType.value() << R"(,)";
     }
-    if (maxNumBatchedTokens != "") {
+    if (graphSettings.maxNumBatchedTokens.has_value()) {
         oss << R"(
-            max_num_batched_tokens: )" << maxNumBatchedTokens << R"(,)";
+            max_num_batched_tokens: )" << graphSettings.maxNumBatchedTokens.value() << R"(,)";
     }
-    if (dynamicSplitFuse != "true") {
+    if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
     }
-    if (draftModelDirName != "") {
+    if (graphSettings.draftModelDirName.has_value()) {
         oss << R"(
             # Speculative decoding configuration)";
         oss << R"(
-            draft_models_path: )" << draftModelDirName << R"(,)";
+            draft_models_path: )" << graphSettings.draftModelDirName.value() << R"(,)";
     }
     oss << R"(
         }
@@ -107,19 +105,17 @@ static std::string createTextGenerationGraphTemplate(const std::string& pipeline
     return oss.str();
 }
 
-GraphExport::GraphExport(const GraphSettingsImpl& graphSettings) {
-    this->graphString = createTextGenerationGraphTemplate(graphSettings.pipelineType, graphSettings.modelPath, graphSettings.maxNumSeqs, graphSettings.targetDevice,
-        GraphExport::createPluginString(graphSettings.pluginConfig), graphSettings.enablePrefixCaching, graphSettings.cacheSize, graphSettings.maxNumBatchedTokens, graphSettings.dynamicSplitFuse,
-        graphSettings.draftModelDirName);
+GraphExport::GraphExport() {
 }
 
-Status GraphExport::createGraphFile(const std::string& directoryPath) {
+Status GraphExport::createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings) {
+    std::string graphString = createTextGenerationGraphTemplate(graphSettings);
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     // Always overwrite
     {
         std::ofstream graphFile(fullPath, std::ios::trunc | std::ofstream::binary);
         if (graphFile.is_open()) {
-            graphFile << this->graphString << std::endl;
+            graphFile << graphString << std::endl;
         } else {
             SPDLOG_ERROR("Unable to open file: ", fullPath);
             return StatusCode::FILE_INVALID;
@@ -133,23 +129,23 @@ std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& plug
     d.SetObject();
     bool configNotEmpty = false;
 
-    if (pluginConfig.kvCachePrecision != "") {
+    if (pluginConfig.kvCachePrecision.has_value()) {
         rapidjson::Value name;
-        name.SetString(pluginConfig.kvCachePrecision.c_str(), d.GetAllocator());
+        name.SetString(pluginConfig.kvCachePrecision.value().c_str(), d.GetAllocator());
         d.AddMember("KV_CACHE_PRECISION", name, d.GetAllocator());
         configNotEmpty = true;
     }
 
-    if (pluginConfig.maxPromptLength != "") {
+    if (pluginConfig.maxPromptLength.has_value()) {
         rapidjson::Value name;
-        name.SetString(pluginConfig.maxPromptLength.c_str(), d.GetAllocator());
+        name.SetString(std::to_string(pluginConfig.maxPromptLength.value()).c_str(), d.GetAllocator());
         d.AddMember("MAX_PROMPT_LEN", name, d.GetAllocator());
         configNotEmpty = true;
     }
 
-    if (pluginConfig.modelDistributionPolicy != "") {
+    if (pluginConfig.modelDistributionPolicy.has_value()) {
         rapidjson::Value name;
-        name.SetString(pluginConfig.modelDistributionPolicy.c_str(), d.GetAllocator());
+        name.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
         d.AddMember("MODEL_DISTRIBUTION_POLICY", name, d.GetAllocator());
         configNotEmpty = true;
     }

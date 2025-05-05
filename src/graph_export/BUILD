@@ -14,19 +14,6 @@
 # limitations under the License.
 #
 
-load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
-
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
-
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
 cc_library(
     name = "graph_export",
     srcs = ["graph_export.cpp"],
@@ -41,10 +28,6 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-    local_defines = COMMON_LOCAL_DEFINES,
 )
 
 cc_library(
@@ -53,14 +36,10 @@ cc_library(
     hdrs = ["graph_cli_parser.hpp"],
     deps =  [
         "@ovms//src:cpp_headers",
-        "@com_github_jarro2783_cxxopts//:cxxopts",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:libovms_version",
         "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
-    local_defines = COMMON_LOCAL_DEFINES,
 )

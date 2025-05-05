@@ -22,13 +22,9 @@ struct GraphSettingsImpl;
 class Status;
 
 class GraphExport {
-protected:
-    std::string graphString;
-
 public:
-    GraphExport(const GraphSettingsImpl& graphSettings);
-
-    Status createGraphFile(const std::string& directoryPath);
+    GraphExport();
+    Status createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings);
     static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
 };
 }  // namespace ovms

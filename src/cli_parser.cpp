@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ namespace ovms {
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
+        // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
         // clang-format off
