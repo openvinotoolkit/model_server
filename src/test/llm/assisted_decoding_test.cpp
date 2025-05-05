@@ -208,7 +208,6 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    GTEST_SKIP() << "Skip this test until tokenizer not respecting add_special_tokens parameter bug is fixed";
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
