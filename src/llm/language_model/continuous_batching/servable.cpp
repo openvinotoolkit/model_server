@@ -64,10 +64,6 @@ std::shared_ptr<GenAiServableProperties> ContinuousBatchingServable::getProperti
     return properties;
 }
 
-bool ContinuousBatchingServable::supportsSpeculativeDecoding() const {
-    return true;
-}
-
 absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {

@@ -130,6 +130,8 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::REST_INVALID_URL, "Invalid request URL"},
     {StatusCode::REST_UNSUPPORTED_METHOD, "Unsupported method"},
     {StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE, "Request components type not recognized"},
+    {StatusCode::FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE, "Request of multipart type but failed to parse"},
+    {StatusCode::FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI, "Failed to deduce model name from all possible ways"},
 
     // Rest parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},

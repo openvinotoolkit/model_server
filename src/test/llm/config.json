@@ -16,10 +16,6 @@
     {
         "name":"lm_legacy_regular",
         "graph_path":"/ovms/src/test/llm/lm_legacy_regular.pbtxt"
-    },
-    {
-        "name":"lm_cb_speculative",
-        "graph_path":"/ovms/src/test/llm/lm_cb_speculative.pbtxt"
     }
     ]
 }
