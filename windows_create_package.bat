@@ -37,6 +37,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+set "dest_dir=C:\opt"
+
 :: Remove below if Windows should always come without python
 ::
 :: Copy pyovms module
@@ -45,7 +47,6 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
-:: set "dest_dir=C:\opt"
 :: set "python_version=3.12.9"
 
 :: call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
