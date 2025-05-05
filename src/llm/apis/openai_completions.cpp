@@ -143,7 +143,7 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
         status = setopt;      \
     }
 
-static absl::Status downloadImage(const char* url, std::string& image, const double& sizeLimit) {
+static absl::Status downloadImage(const char* url, std::string& image, const long& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
@@ -154,14 +154,14 @@ static absl::Status downloadImage(const char* url, std::string& image, const dou
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_HTTPPROXYTUNNEL, 1L))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
 
-    if (status == CURLE_OK) {
-        status = curl_easy_perform(curl_handle);
+    if (status != CURLE_OK) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
+        return absl::InvalidArgumentError("Image downloading failed");
     }
 
+    status = curl_easy_perform(curl_handle);
     if (status != CURLE_OK) {
-        std::stringstream ss;
-        ss << "Downloading image failed: " << curl_easy_strerror(status);
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
         return absl::InvalidArgumentError("Image downloading failed");
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
@@ -234,7 +234,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 curl_global_init(CURL_GLOBAL_ALL);
-                                double sizeLimit = 20000000L;
+                                long sizeLimit = 20000000;  // restrict single image size to 20MB
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
