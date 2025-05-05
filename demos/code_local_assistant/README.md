@@ -51,7 +51,9 @@ python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --
 :::
 
 :::{tab-item} Intel NPU
+```console
 python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+```
 :::
 ::::
 
