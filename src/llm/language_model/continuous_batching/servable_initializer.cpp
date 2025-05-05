@@ -113,7 +113,9 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
 #if (PYTHON_DISABLE == 0)
-    loadTemplateProcessor(properties, parsedModelsPath);
+    loadPyTemplateProcessor(properties, parsedModelsPath);
+#else
+    loadDefaultTemplateProcessorIfNeeded(properties);
 #endif
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

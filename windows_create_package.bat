@@ -37,30 +37,33 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+:: Remove below if Windows should always come without python
+::
 :: Copy pyovms module
-md dist\windows\ovms\python
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
-if !errorlevel! neq 0 exit /b !errorlevel!
+:: md dist\windows\ovms\python
+:: copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+:: if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Prepare self-contained python
-set "dest_dir=C:\opt"
-set "python_version=3.12.9"
+:: set "dest_dir=C:\opt"
+:: set "python_version=3.12.9"
 
-call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
-if !errorlevel! neq 0 (
-    echo Error occurred when creating Python environment for the distribution.
-    exit /b !errorlevel!
-)
+:: call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
+:: if !errorlevel! neq 0 (
+::     echo Error occurred when creating Python environment for the distribution.
+::     exit /b !errorlevel!
+:: )
 :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
-if !errorlevel! neq 0 (
-    echo Error occurred when creating Python environment for the distribution.
-    exit /b !errorlevel!
-)
-.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-if !errorlevel! neq 0 (
-    echo Error during Python dependencies for LLM installation. The package will not be fully functional.
-)
+:: xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
+:: if !errorlevel! neq 0 (
+::     echo Error occurred when creating Python environment for the distribution.
+::     exit /b !errorlevel!
+:: )
+:: .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+:: if !errorlevel! neq 0 (
+::     echo Error during Python dependencies for LLM installation. The package will not be fully functional.
+:: )
+::
 
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!

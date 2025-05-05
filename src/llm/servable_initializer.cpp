@@ -48,10 +48,9 @@
 
 namespace ovms {
 
-#if (PYTHON_DISABLE == 0)
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
-
-void GenAiServableInitializer::loadTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+#if (PYTHON_DISABLE == 0)
+void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
@@ -124,6 +123,14 @@ void GenAiServableInitializer::loadTemplateProcessor(std::shared_ptr<GenAiServab
     } catch (...) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
+    }
+}
+#else
+void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
+    const std::string modelChatTemplate = properties->tokenizer.get_chat_template();
+    if (modelChatTemplate.empty()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Could not load model chat template. Using default template.");
+        properties->tokenizer.set_chat_template("{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}");
     }
 }
 #endif

@@ -46,7 +46,14 @@ struct GenAiServableProperties;
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
-    static void loadTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+#if (PYTHON_DISABLE == 0)
+    // Use Python Jinja module for template processing
+    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+#else
+    // In C++ only version we use GenAI for template processing, but to have the same behavior as in Python-enabled version
+    // we use default template if model does not have its own, so that servable can also work on chat/completion endpoint.
+    static void loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties);
+#endif
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure
