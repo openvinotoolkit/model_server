@@ -608,6 +608,7 @@ cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/image_gen:image_gen_calculator",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",
@@ -2604,6 +2605,27 @@ cc_library(
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code"
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libimage_conversion",
+    hdrs = [
+        "image_conversion.hpp",
+    ],
+    srcs = [
+        "image_conversion.cpp",
+    ],
+    deps = [
+        "@stb//:image",
+        "@com_google_absl//absl/strings",
+        "//third_party:openvino",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

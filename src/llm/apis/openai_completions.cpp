@@ -23,13 +23,9 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #pragma warning(push)
-#pragma warning(disable : 6262)
-#include "stb_image.h"  // NOLINT
-#pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -37,6 +33,7 @@
 
 #include <curl/curl.h>
 #include <regex>
+#include "../../image_conversion.hpp"  // TODO: Rename to stbi_conversions?
 
 using namespace rapidjson;
 
@@ -88,43 +85,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     }
 
     return absl::OkStatus();
-}
-
-ov::Tensor load_image_stbi(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
-    if (!image) {
-        std::stringstream errorMessage;
-        errorMessage << "Failed to load the image";
-        throw std::runtime_error{errorMessage.str()};
-    }
-    struct SharedImageAllocator {
-        unsigned char* image;
-        int channels, height, width;
-        void* allocate(size_t bytes, size_t) const {
-            if (image && channels * height * width == bytes) {
-                return image;
-            }
-            throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
-        }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
-            if (image != nullptr) {
-                stbi_image_free(image);
-                image = nullptr;
-            }
-        }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
-    };
-    return ov::Tensor(
-        ov::element::u8,
-        ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
 }
 
 static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
