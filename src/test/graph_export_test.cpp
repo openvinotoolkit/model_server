@@ -48,8 +48,6 @@ const std::string expectedOneSettingPluginGraphContents = R"(
             plugin_config: '{"KV_CACHE_PRECISION":"u8"}',
             enable_prefix_caching: true,
             cache_size: 10,
-            pipeline_type: AUTO,
-            dynamic_split_fuse: false,
         }
     }
     input_stream_handler {
@@ -88,8 +86,6 @@ const std::string expectedFullPluginGraphContents = R"(
             plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":"123","MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
             cache_size: 10,
-            pipeline_type: AUTO,
-            dynamic_split_fuse: false,
         }
     }
     input_stream_handler {
@@ -128,8 +124,6 @@ const std::string expectedDefaultGraphContents = R"(
             plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
-            pipeline_type: AUTO,
-            dynamic_split_fuse: false,
         }
     }
     input_stream_handler {
