@@ -25,6 +25,14 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
+IF "%~2"=="--with_python" (
+    echo Self contained Python will be included in the package
+    set "with_python=true"
+) ELSE (
+    echo Self contained Python will not be included in the package
+    set "with_python=false"
+)
+
 if exist dist\windows\ovms (
     rmdir /s /q dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
@@ -39,10 +47,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "dest_dir=C:\opt"
 
-:: Check if include_python flag is set
-set "include_python=false"
-
-if /i "%include_python%"=="true" (
+if /i "%with_python%"=="true" (
     :: Copy pyovms module
     md dist\windows\ovms\python
     copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python

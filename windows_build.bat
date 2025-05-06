@@ -25,13 +25,26 @@ IF "%~1"=="" (
     set "BAZEL_SHORT_PATH=C:\%1"
 )
 
+IF "%~2"=="--with_python" (
+    echo Building model server with Python
+    set "bazelBuildArgs=--config=win_mp_on_py_on"
+) ELSE (
+    echo Building model server without Python 
+    set "bazelBuildArgs=--config=win_mp_on_py_off"
+)
+
+IF "%~3"=="--with_tests" (
+    echo Building model server with tests
+    set "buildTargets=//src:ovms //src:ovms_test"
+) ELSE (
+    echo Building model server without tests
+    set "buildTargets=//src:ovms"
+)
+
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 
-
-:: bazelBuildArgs is added to ovms --version output so please pay attention what you add here
-set "bazelBuildArgs=--config=windows"
-set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms %2 2>&1 | tee win_build.log"
+set "buildCommand=bazel %bazelStartupCmd% build  %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
