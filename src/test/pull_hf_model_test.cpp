@@ -22,9 +22,110 @@
 
 #include "test_utils.hpp"
 #include "../filesystem.hpp"
-#include "../libgt2/hf_pull_model_module.hpp"
-#include "src/libgt2/libgt2.hpp"
+#include "src/pull_module/hf_pull_model_module.hpp"
+#include "src/pull_module/libgit2.hpp"
 #include "../server.hpp"
+#include "src/stringutils.hpp"
+#include "../timer.hpp"
+
+struct EnvGuard {
+    void set(const std::string& name, const std::string& value) {
+        std::string originalValue = "";
+        const char* oldValCstr = std::getenv(name.c_str());
+        if (oldValCstr) {
+            originalValue = std::string(oldValCstr);
+        }
+        if (originalValues.find(name) == originalValues.end()) {
+            originalValues[name] = originalValue;
+        }
+        SetEnvironmentVar(name, value);
+    }
+    ~EnvGuard() {
+        for (auto& [k, v] : originalValues) {
+            if (v.empty()) {
+                UnSetEnvironmentVar(k);
+            } else {
+                SetEnvironmentVar(k, v);
+            }
+        }
+    }
+
+private:
+    std::unordered_map<std::string, std::string> originalValues;
+};
+
+class TestHfDownloadModelModule : public TestWithTempDir {};
+
+TEST_F(TestHfDownloadModelModule, TestInvalidProxyTimeout) {
+    ovms::HfPullModelModule hfModule;
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath) + "repository";  // Cleanup
+
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        nullptr};
+
+    int arg_count = 6;
+    ConstructorEnabledConfig config;
+    {
+        EnvGuard eGuard;
+        eGuard.set("https_proxy", "");
+        const std::string timeoutConnectVal = "1000";
+        eGuard.set(ovms::HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, timeoutConnectVal);
+        config.parse(arg_count, const_cast<char**>(n_argv));
+        auto status = hfModule.start(config);
+        ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+        ovms::Timer<1> timer;
+        timer.start(0);
+        status = hfModule.clone();
+        EXPECT_NE(status, ovms::StatusCode::OK) << status.string();
+        timer.stop(0);
+        double timeSpentMs = timer.elapsed<std::chrono::microseconds>(0) / 1000;
+        SPDLOG_DEBUG("Time spent:{} ms", timeSpentMs);
+        EXPECT_LE(timeSpentMs, 3 * ovms::stoi32(timeoutConnectVal).value()) << "We should timeout before 1ms has passed but clone worked for: " << timeSpentMs << "ms > " << timeoutConnectVal << "ms. Status: " << status.string();
+    }
+    SPDLOG_TRACE("After guard closure");
+}
+
+TEST(Libgit2Framework, TimeoutTestProxy) {
+    GTEST_SKIP() << "Does not work with proxy set";
+    // https://github.com/libgit2/libgit2/issues/7072
+    git_libgit2_init();
+
+    git_repository* cloned_repo = NULL;
+    git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+    git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+    checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+    clone_opts.checkout_opts = checkout_opts;
+    // Use proxy
+    if (true) {
+        clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+        clone_opts.fetch_opts.proxy_opts.url = "http://proxy-dmz.intel.com:912";
+    }
+    int e = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 10000);
+    EXPECT_EQ(e, 0);
+
+    std::string passRepoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    const char* path = "/tmp/model";
+    int error = git_clone(&cloned_repo, passRepoUrl.c_str(), path, &clone_opts);
+    if (error != 0) {
+        const git_error* err = git_error_last();
+        if (err) {
+            std::cout << "Libgit2 clone error:" << err->klass << "; " << err->message << std::endl;
+        }
+        EXPECT_EQ(error, 0);
+    } else if (cloned_repo) {
+        git_repository_free(cloned_repo);
+    }
+
+    git_libgit2_shutdown();
+}
 
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
