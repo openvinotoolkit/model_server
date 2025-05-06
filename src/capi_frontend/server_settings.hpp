@@ -30,7 +30,7 @@ struct PluginConfigSettingsImpl {
 struct GraphSettingsImpl {
     std::string task = "";
 
-    std::string modelPath = "./";  // TODO: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
