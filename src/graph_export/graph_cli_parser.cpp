@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "graph_cli_parser.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -99,11 +100,9 @@ void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
             this->createOptions();
         }
         std::vector<const char*> cStrArray;
-        cStrArray.reserve(unmatchedOptions.size()+1);
+        cStrArray.reserve(unmatchedOptions.size() + 1);
         cStrArray.push_back("ovms graph");
-        for (const auto& str : unmatchedOptions) {
-            cStrArray.push_back(str.c_str());
-        }
+        std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
         const char* const* args = cStrArray.data();
         result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
