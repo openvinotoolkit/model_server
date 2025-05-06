@@ -19,6 +19,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #pragma warning(push)
@@ -455,6 +456,57 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
     std::string expectedOutput = " Hi, HELLO ";
     ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
     ASSERT_EQ(finalPrompt, expectedOutput);
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateComparePythonAndGenAiProcessors) {
+    GTEST_SKIP() << "Skipping test due to GenAI template processor not recognizing system message. Enable when resolved.";
+    // Using modified Llama2 template to work with limited tokenizer object (with no models loaded)
+    std::string tokenizerJson = R"({
+    "chat_template": "{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\\n' + system_message + '\\n<</SYS>>\\n\\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ '<s>' + '[INST] ' + content.strip() + ' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' '  + content.strip() + ' </s>' }}{% endif %}{% endfor %}"
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+    servable->getProperties()->modelsPath = directoryPath;
+    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+
+    std::string pythonProcessorOutput = "";
+    std::string payloadBody = R"(
+        {
+            "model": "model",
+            "stream": false,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant."
+                },
+                {
+                    "role": "user",
+                    "content": "What is OpenVINO?"
+                },
+                {
+                    "role": "assistant",
+                    "content": "OpenVINO is a toolkit for optimizing and deploying deep learning models."
+                },
+                {
+                    "role": "user",
+                    "content": "Is it free to use?"
+                }
+            ]
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, pythonProcessorOutput), true);
+    ov::genai::Tokenizer tokenizer(directoryPath);
+    ov::genai::ChatHistory chatHistory;
+    chatHistory.push_back({{"role", "system"}, {"content", "You are a helpful assistant."}});
+    chatHistory.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
+    chatHistory.push_back({{"role", "assistant"}, {"content", "OpenVINO is a toolkit for optimizing and deploying deep learning models."}});
+    chatHistory.push_back({{"role", "user"}, {"content", "Is it free to use?"}});
+    std::string chatTemplate = R"({% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\\n' + system_message + '\\n<</SYS>>\\n\\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ '<s>' + '[INST] ' + content.strip() + ' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' '  + content.strip() + ' </s>' }}{% endif %}{% endfor %})";
+    tokenizer.set_chat_template(chatTemplate);
+    std::cout << "GenAI chat template: " << tokenizer.get_chat_template() << std::endl;
+    constexpr bool addGenerationPrompt = true;
+    std::string genAiProcessorOutput = tokenizer.apply_chat_template(chatHistory, addGenerationPrompt);
+    ASSERT_EQ(pythonProcessorOutput, genAiProcessorOutput);
 }
 
 std::string configTemplate = R"(
