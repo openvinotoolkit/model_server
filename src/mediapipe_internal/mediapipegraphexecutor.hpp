@@ -91,6 +91,7 @@ class MediapipeGraphExecutor {
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
     static const std::string LLM_SESSION_SIDE_PACKET_TAG;
+    static const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,

@@ -60,6 +60,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
 
 const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
+const std::string MediapipeGraphExecutor::IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "pipes";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms

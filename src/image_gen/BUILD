@@ -39,6 +39,21 @@ cc_library(
 )
 
 cc_library(
+    name = "pipelines",
+    hdrs = ["pipelines.hpp"],
+    srcs = ["pipelines.cpp"],
+    deps = select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "image_gen_calculator",
     srcs = ["http_image_gen_calculator.cc"],
     deps = [
@@ -46,6 +61,7 @@ cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "image_gen_calculator_cc_proto",
+        ":pipelines",
     ]+ select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

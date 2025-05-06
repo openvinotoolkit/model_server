@@ -29,6 +29,8 @@ using namespace ovms;
 
 namespace mediapipe {
 
+const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
+
 class HttpImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
