@@ -209,7 +209,6 @@ protected:
 };
 
 TEST_F(MetricFlowTest, GrpcPredict) {
-    GTEST_SKIP() << "Skipping test temporarily.";
     PredictionServiceImpl impl(server);
     tensorflow::serving::PredictRequest request;
     tensorflow::serving::PredictResponse response;
