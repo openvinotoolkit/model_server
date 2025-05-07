@@ -504,6 +504,8 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
+std::string GetFileContents(const std::string& filePath);
+
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
@@ -1041,7 +1043,7 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
- * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
  */
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*

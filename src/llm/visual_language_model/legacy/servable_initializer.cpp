@@ -81,7 +81,6 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

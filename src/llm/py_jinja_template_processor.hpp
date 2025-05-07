@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2024 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,29 +14,28 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
 #include <memory>
+#include <sstream>
+#include <string>
 
-#include <cxxopts.hpp>
+#include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6326 28182 6011 28020)
+// Python execution for template processing
+#include <pybind11/embed.h>  // everything needed for embedding
+#include <pybind11/stl.h>
+#pragma warning(pop)
 
-#include "graph_export/graph_cli_parser.hpp"
+#include "src/python/utils.hpp"
 
 namespace ovms {
 
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
-class GraphCLIParser;
-
-class CLIParser {
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-    GraphCLIParser graphOptionsParser;
-
+class PyJinjaTemplateProcessor {
 public:
-    CLIParser() = default;
-    void parse(int argc, char** argv);
+    std::string bosToken = "";
+    std::string eosToken = "";
+    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
 
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
 };
-
 }  // namespace ovms
