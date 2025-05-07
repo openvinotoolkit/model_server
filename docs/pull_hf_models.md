@@ -42,7 +42,7 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository <path_where_to_store_model_files> --model_name <ovms_servable_name> --task <task> --task_params <task_params>
 ```
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
