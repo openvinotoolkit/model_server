@@ -69,7 +69,7 @@ cc_shared_library(
         "@aws-sdk-cpp//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
-        "@curl//:__subpackages__",
+        "//third_party:curl//:__subpackages__",
         "@com_github_google_crc32c//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
         "@com_github_libevent_libevent//:__subpackages__",
@@ -326,6 +326,7 @@ cc_library(
         "modelconfig",
         "libovms_cliparser",
         "libovms_systeminfo",
+        "ovms_exit_codes",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -340,6 +341,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "//src/graph_export:graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -566,7 +568,6 @@ cc_library(
         "modelinstance.hpp",
         "model_service.hpp",
         "model_service.cpp",
-        "ovms_exit_codes.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -645,6 +646,7 @@ cc_library(
             "node_library_utils",
             "custom_node_library_internal_manager_wrapper",
             "nodeinfo",
+            "ovms_exit_codes",
             "dags_nodestreamidguard",
             "libovms_dags_session_id",
             "libovms_dags_pipelineeventqueue",
@@ -2139,6 +2141,17 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "ovms_exit_codes",
+    hdrs = ["ovms_exit_codes.hpp",],
+    srcs = [],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+        
+cc_library(
     name = "libovms_outputkeeper",
     hdrs = ["outputkeeper.hpp",],
     srcs = ["outputkeeper.cpp",],
@@ -2953,6 +2966,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
+            ":graph_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3065,6 +3079,21 @@ cc_library(
         "//src/libgt2:libgt2",
         "//src/libgt2:hf_pull_model_module",
         "//src:ovms_lib",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "graph_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/graph_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/graph_export:graph_export",
+        "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

@@ -21,12 +21,7 @@
 #include <thread>
 
 #include "logging.hpp"
-// TODO: Write windows/linux specific status codes.
-#ifdef __linux__
-#include <sysexits.h>
-#elif _WIN32
-#include <ntstatus.h>
-#endif
+#include "ovms_exit_codes.hpp"
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -56,11 +51,7 @@ Config& Config::parse(int argc, char** argv) {
     p.parse(argc, argv);
     p.prepare(&serverSettings, &modelsSettings);
     if (!this->parse(&serverSettings, &modelsSettings))
-#ifdef __linux__
-        exit(EX_USAGE);
-#elif _WIN32
-        exit(3);
-#endif
+        exit(OVMS_EX_USAGE);
     return *this;
 }
 

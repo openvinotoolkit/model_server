@@ -50,6 +50,7 @@ cc_library(
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
         ":libgt2",
+        "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",

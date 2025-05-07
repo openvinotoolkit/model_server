@@ -91,7 +91,8 @@ copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %dest_dir%\git-lfs.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-
+copy C:\opt\curl-8.13.0_1-win64-mingw\bin\libcurl-x64.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
 if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
@@ -116,6 +117,26 @@ copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
+
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\zlib\LICENSE.txt %license_dest%LICENSE-ZLIB.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
+
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 
