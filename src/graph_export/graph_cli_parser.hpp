@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2022 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,27 +16,34 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <cxxopts.hpp>
-
-#include "graph_export/graph_cli_parser.hpp"
 
 namespace ovms {
 
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
-class GraphCLIParser;
+struct GraphSettingsImpl;
+class Status;
 
-class CLIParser {
+class GraphCLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
-    GraphCLIParser graphOptionsParser;
 
 public:
-    CLIParser() = default;
-    void parse(int argc, char** argv);
+    GraphCLIParser() = default;
+    void parse(const std::vector<std::string>& unmatchedOptions);
 
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+
+    Status validate(ServerSettingsImpl*);
+    void printHelp();
+    void createOptions();
+
+private:
+    static GraphSettingsImpl& defaultGraphSettings();
 };
 
 }  // namespace ovms

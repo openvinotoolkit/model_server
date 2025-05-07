@@ -631,6 +631,23 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     return content;
 }
 
+std::string GetFileContents(const std::string& filePath) {
+    if (!std::filesystem::exists(filePath)) {
+        std::cout << "File does not exist:" << filePath << std::endl;
+        throw std::runtime_error("Failed to open file: " + filePath);
+    }
+
+    std::ifstream file(filePath, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        std::cout << "File could not be opened:" << filePath << std::endl;
+        throw std::runtime_error("Failed to open file: " + filePath);
+    }
+
+    std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    file.close();
+    return content;
+}
+
 void SetEnvironmentVar(const std::string& var, const std::string& val) {
 #ifdef _WIN32
     _putenv_s(var.c_str(), val.c_str());
@@ -733,14 +750,14 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int time
     ASSERT_EQ(server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME), ovms::ModuleState::SHUTDOWN) << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load and network load";
 }
 
-// --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+// --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, int timeoutSeconds) {
     server.setShutdownRequest(0);
     char* argv[] = {(char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
         (char*)source_model.c_str(),
-        (char*)"--download_path",
+        (char*)"--model_repository_path",
         (char*)download_path.c_str()};
     int argc = 6;
     t.reset(new std::thread([&argc, &argv, &server]() {

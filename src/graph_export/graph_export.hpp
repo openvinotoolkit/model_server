@@ -1,5 +1,5 @@
-//*****************************************************************************
-// Copyright 2022 Intel Corporation
+//****************************************************************************
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,29 +14,17 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <memory>
-
-#include <cxxopts.hpp>
-
-#include "graph_export/graph_cli_parser.hpp"
+#include <string>
 
 namespace ovms {
+struct PluginConfigSettingsImpl;
+struct GraphSettingsImpl;
+class Status;
 
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
-class GraphCLIParser;
-
-class CLIParser {
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-    GraphCLIParser graphOptionsParser;
-
+class GraphExport {
 public:
-    CLIParser() = default;
-    void parse(int argc, char** argv);
-
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+    GraphExport();
+    Status createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings);
+    static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
 };
-
 }  // namespace ovms
