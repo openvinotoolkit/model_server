@@ -25,6 +25,8 @@
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 
+#include "pipelines.hpp"
+
 using namespace ovms;
 
 namespace mediapipe {
@@ -40,6 +42,7 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
+        cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Set<std::unordered_map<std::string, std::shared_ptr<ovms::ImageGenerationPipelines>>>();  // TODO: template?
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         return absl::OkStatus();
     }

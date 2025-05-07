@@ -265,7 +265,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->genAiServableMap, this->imageGenerationPipelinesMap,
+        this->pythonBackend, this->reporter.get());
     return status;
 }
 
