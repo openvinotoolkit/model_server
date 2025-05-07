@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "../../../logging.hpp"
+#include "../../text_utils.hpp"
 
 namespace ovms {
 

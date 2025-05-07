@@ -33,9 +33,9 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelmanager.hpp"
 #include "../ov_utils.hpp"
-#if (PYTHON_DISABLE == 0)
 #include "../llm/servable.hpp"
 #include "../llm/servable_initializer.hpp"
+#if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
 #endif
 #include "../status.hpp"
@@ -396,7 +396,6 @@ Status MediapipeGraphDefinition::waitForLoaded(std::unique_ptr<MediapipeGraphDef
     return StatusCode::OK;
 }
 
-#if (PYTHON_DISABLE == 0)
 template <typename T>
 class ResourcesCleaningGuard {
 public:
@@ -413,7 +412,6 @@ public:
         shouldCleanup = false;
     }
 };
-#endif
 
 Status MediapipeGraphDefinition::initializeNodes() {
     SPDLOG_INFO("MediapipeGraphDefinition initializing graph nodes");
@@ -445,6 +443,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->pythonNodeResourcesMap.insert(std::pair<std::string, std::shared_ptr<PythonNodeResources>>(nodeName, std::move(nodeResources)));
             pythonResourcesCleaningGuard.disableCleaning();
         }
+#endif
         // Passed to both calculators that require LLM Engine (gRPC KServe & HTTP OpenAI)
         if (endsWith(config.node(i).calculator(), LLM_NODE_CALCULATOR_NAME)) {
             ResourcesCleaningGuard<GenAiServableMap> genAiServablesCleaningGuard(this->genAiServableMap);
@@ -470,7 +469,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
             this->genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
             genAiServablesCleaningGuard.disableCleaning();
         }
-#endif
     }
     return StatusCode::OK;
 }
