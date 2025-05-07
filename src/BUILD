@@ -612,6 +612,7 @@ cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/image_gen:image_gen_calculator",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",],
