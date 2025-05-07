@@ -31,6 +31,8 @@ using namespace ovms;
 
 namespace mediapipe {
 
+using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
+
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
 
 class ImageGenCalculator : public CalculatorBase {
@@ -42,7 +44,7 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
-        cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Set<std::unordered_map<std::string, std::shared_ptr<ovms::ImageGenerationPipelines>>>();  // TODO: template?
+        cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Set<ImageGenerationPipelinesMap>();  // TODO: template?
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         return absl::OkStatus();
     }
@@ -59,6 +61,21 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process start", cc->NodeName());
+
+        ImageGenerationPipelinesMap pipelinesNap = cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Get<ImageGenerationPipelinesMap>();
+        auto it = pipelinesNap.find(cc->NodeName());
+        RET_CHECK(it != pipelinesNap.end()) << "Could not find initialized Image Gen node named: " << cc->NodeName();
+        auto pipe = it->second;
+
+        // curl -X POST localhost:11338/v3/endpoint -d '{}'
+        ov::genai::Text2ImagePipeline::GenerationRequest request = pipe->text2ImagePipeline.create_generation_request();
+        ov::Tensor image = request.generate("a cat",  // TODO: get from payload
+            ov::AnyMap{
+                ov::genai::width(512),
+                ov::genai::height(512),
+                ov::genai::num_inference_steps(20),
+                ov::genai::num_images_per_prompt(1)});
+
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }

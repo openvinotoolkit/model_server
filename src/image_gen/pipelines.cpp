@@ -18,7 +18,7 @@
 namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const std::string& models_path) :
-    text2ImagePipeline(ov::genai::Text2ImagePipeline(models_path/*TODO Device*/)) {
+    text2ImagePipeline(ov::genai::Text2ImagePipeline(models_path, "CPU"/*TODO Device*/)) {
     // TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
 }
 
