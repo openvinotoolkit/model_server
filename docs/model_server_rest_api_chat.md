@@ -129,6 +129,17 @@ Note that below parameters are valid only for speculative pipeline. See [specula
 | num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
 | assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
 
+#### Prompt lookup decoding specific
+
+Note that below parameters are valid only for prompt lookup pipeline. Add `"prompt_lookup": true` to `plugin_config` in your graph config node options to serve it.
+
+| Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
+|-------|----------|----------|----------|---------|-----|
+| num_assistant_tokens | ✅ | ❌ | ❌ | int | Number of candidate tokens proposed after ngram match is found |
+| max_ngram_size | ✅ | ❌ | ❌ | int | The maximum ngram to use when looking for matches in the prompt |
+
+**Note**: vLLM does not support those parameters as sampling parameters, but enables prompt lookup decoding, by setting them in [LLM config](https://docs.vllm.ai/en/stable/features/spec_decode.html#speculating-by-matching-n-grams-in-the-prompt)
+
 #### Unsupported params from OpenAI service:
 - logit_bias
 - top_logprobs
