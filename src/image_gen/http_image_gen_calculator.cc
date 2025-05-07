@@ -31,7 +31,7 @@ namespace mediapipe {
 
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
 
-class HttpImageGenCalculator : public CalculatorBase {
+class ImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
 
@@ -45,25 +45,25 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "HttpImageGenCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "HttpImageGenCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Open start", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "HttpImageGenCalculator  [Node: {}] Process start", cc->NodeName());
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "HttpImageGenCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }
 };
 
-const std::string HttpImageGenCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
-const std::string HttpImageGenCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
+const std::string ImageGenCalculator::INPUT_TAG_NAME{"HTTP_REQUEST_PAYLOAD"};
+const std::string ImageGenCalculator::OUTPUT_TAG_NAME{"HTTP_RESPONSE_PAYLOAD"};
 
-REGISTER_CALCULATOR(HttpImageGenCalculator);
+REGISTER_CALCULATOR(ImageGenCalculator);
 
 }  // namespace mediapipe
