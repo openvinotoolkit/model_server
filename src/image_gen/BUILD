@@ -62,6 +62,7 @@ cc_library(
         "//src:libovmslogging",
         "image_gen_calculator_cc_proto",
         ":pipelines",
+        "//src:libimage_conversion",
     ]+ select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

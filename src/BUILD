@@ -2602,6 +2602,27 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+cc_library(
+    name = "libimage_conversion",
+    hdrs = [
+        "image_conversion.hpp",
+    ],
+    srcs = [
+        "image_conversion.cpp",
+    ],
+    deps = [
+        "@stb//:image",
+        "@com_google_absl//absl/strings",
+        "//third_party:openvino",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 # HTTP Server implementation using net_http of tensorflow
 # To use other library simply create new target and implementation of libhttp_async_writer_interface
 cc_library(

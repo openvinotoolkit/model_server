@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
+
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
 #pragma GCC diagnostic push
@@ -24,8 +26,26 @@
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
+#include "../image_conversion.hpp"
 
 #include "pipelines.hpp"
+
+static void save_png_to_disk(const std::string& png_data, const std::string& filename) {
+    std::ofstream out_file(filename, std::ios::binary);
+    if (!out_file) {
+        throw std::runtime_error("Failed to open file for writing: " + filename);
+    }
+    
+    out_file.write(png_data.data(), png_data.size());
+    
+    if (!out_file.good()) {
+        out_file.close();
+        std::remove(filename.c_str()); // Clean up partial file
+        throw std::runtime_error("Failed to write data to file: " + filename);
+    }
+    
+    out_file.close();
+}
 
 using namespace ovms;
 
@@ -67,15 +87,35 @@ public:
         RET_CHECK(it != pipelinesNap.end()) << "Could not find initialized Image Gen node named: " << cc->NodeName();
         auto pipe = it->second;
 
-        // curl -X POST localhost:11338/v3/endpoint -d '{}'
-        ov::genai::Text2ImagePipeline::GenerationRequest request = pipe->text2ImagePipeline.create_generation_request();
-        ov::Tensor image = request.generate("a cat",  // TODO: get from payload
-            ov::AnyMap{
-                ov::genai::width(512),
-                ov::genai::height(512),
-                ov::genai::num_inference_steps(20),
-                ov::genai::num_images_per_prompt(1)});
+        auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
+        if (payload.parsedJson->HasParseError())
+            return absl::InvalidArgumentError("Failed to parse JSON");
 
+        if (!payload.parsedJson->IsObject()) {
+            return absl::InvalidArgumentError("JSON body must be an object");
+        }
+
+        // get prompt field as string
+        auto promptIt = payload.parsedJson->FindMember("prompt");
+        if (promptIt == payload.parsedJson->MemberEnd()) {
+            return absl::InvalidArgumentError("prompt field is missing in JSON body");
+        }
+        if (!promptIt->value.IsString()) {
+            return absl::InvalidArgumentError("prompt field is not a string");
+        }
+        std::string prompt = promptIt->value.GetString();
+
+        // curl -X POST localhost:11338/v3/images/generations -H "Content-Type: application/json" -d '{ "model": "endpoint", "prompt": "A cute baby sea otter", "n": 1, "size": "1024x1024" }'
+        ov::genai::Text2ImagePipeline::GenerationRequest request = pipe->text2ImagePipeline.create_generation_request();
+        ov::Tensor image = request.generate(prompt,
+            ov::AnyMap{
+                ov::genai::width(512),  // todo: get from req
+                ov::genai::height(512),  // todo: get from req
+                ov::genai::num_inference_steps(20),  // todo: get from req
+                ov::genai::num_images_per_prompt(1)});  // todo: get from req
+
+        std::string res = save_image_stbi(image);
+        save_png_to_disk(res, "output.png");
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }
