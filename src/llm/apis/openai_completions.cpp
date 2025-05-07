@@ -143,7 +143,7 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
         status = setopt;      \
     }
 
-static absl::Status downloadImage(const char* url, std::string& image, const long& sizeLimit) {
+static absl::Status downloadImage(const char* url, std::string& image, const int64& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
@@ -234,7 +234,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 curl_global_init(CURL_GLOBAL_ALL);
-                                long sizeLimit = 20000000;  // restrict single image size to 20MB
+                                int64 sizeLimit = 20000000;  // restrict single image size to 20MB
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
