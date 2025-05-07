@@ -108,6 +108,8 @@ copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
+if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\curl-8.13.0_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\curl-8.13.0_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
