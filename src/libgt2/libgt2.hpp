@@ -70,6 +70,7 @@ protected:
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
+    std::string getFullPath(const std::string& downloadPath, const std::string& sourceModel);
 };
 
 }  // namespace ovms

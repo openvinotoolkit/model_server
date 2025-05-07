@@ -225,6 +225,13 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
 
+    if (result->count("log_level"))
+        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
+    if (result->count("log_path"))
+        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
+
+    // Server settings
+    serverSettings->startedWithCLI = true;
     // Ovms Pull models mode
     if (result->count("pull")) {
         serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
@@ -241,21 +248,18 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
+    serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
+    serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
+    serverSettings->filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
+    serverSettings->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+    serverSettings->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    
+    if (result->count("grpc_channel_arguments"))
+        serverSettings->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
 
-    if (result->count("model_name")) {
-        modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("model_name");
+    if (result != nullptr && result->count("cache_dir")) {
+        serverSettings->cacheDir = result->operator[]("cache_dir").as<std::string>();
     }
-    if (result->count("model_path")) {
-        modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("model_name");
-    }
-
-    if (result->count("max_sequence_number")) {
-        modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings->userSetSingleModelArguments.push_back("max_sequence_number");
-    }
-
     if (result->count("cpu_extension")) {
         serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
@@ -276,6 +280,30 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("rest_workers"))
         serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
+
+#if (PYTHON_DISABLE == 0)
+        serverSettings->withPython = true;
+#endif
+
+#ifdef MTR_ENABLED
+    if (result->count("trace_path"))
+        serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
+#endif
+
+    // Model settings
+    if (result->count("model_name")) {
+        modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
+        modelsSettings->userSetSingleModelArguments.push_back("model_name");
+    }
+    if (result->count("model_path")) {
+        modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
+        modelsSettings->userSetSingleModelArguments.push_back("model_name");
+    }
+
+    if (result->count("max_sequence_number")) {
+        modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
+        modelsSettings->userSetSingleModelArguments.push_back("max_sequence_number");
+    }
 
     if (result->count("batch_size")) {
         modelsSettings->batchSize = result->operator[]("batch_size").as<std::string>();
@@ -317,9 +345,6 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         modelsSettings->userSetSingleModelArguments.push_back("stateful");
     }
 
-    serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
-    serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
-
     if (result->count("idle_sequence_cleanup")) {
         modelsSettings->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
         modelsSettings->userSetSingleModelArguments.push_back("idle_sequence_cleanup");
@@ -330,35 +355,10 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         modelsSettings->userSetSingleModelArguments.push_back("low_latency_transformation");
     }
 
-    if (result->count("log_level"))
-        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
-    if (result->count("log_path"))
-        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
-    #if (PYTHON_DISABLE == 0)
-        serverSettings->withPython = true;
-    #endif
-
-#ifdef MTR_ENABLED
-    if (result->count("trace_path"))
-        serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
-#endif
-
-    if (result->count("grpc_channel_arguments"))
-        serverSettings->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
-
-    serverSettings->filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
-    serverSettings->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
-    serverSettings->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
-
-    if (result != nullptr && result->count("cache_dir")) {
-        serverSettings->cacheDir = result->operator[]("cache_dir").as<std::string>();
-    }
-
     if (result->count("config_path")) {
         modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
         modelsSettings->userSetSingleModelArguments.push_back("config_path");
     }
-    serverSettings->startedWithCLI = true;
 }
 
 }  // namespace ovms

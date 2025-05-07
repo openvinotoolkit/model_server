@@ -27,8 +27,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../stringutils.hpp"
+#include "../filesystem.hpp"
 #include "../logging.hpp"
+#include "../stringutils.hpp"
 #include "../status.hpp"
 
 #ifndef PRIuZ
@@ -175,15 +176,30 @@ HfDownloader::HfDownloader() {
     this->httpProxy = "";
 }
 
+std::string HfDownloader::getFullPath(const std::string& downloadPath, const std::string& sourceModel) {
+    std::string fullPath = FileSystem::joinPath({downloadPath, sourceModel});
+    // Windows path creation
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
+    }
+    
+    return fullPath;   
+}
+
 HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
     this->sourceModel = sourceModel;
-    this->downloadPath = downloadPath;
+    this->downloadPath = this->getFullPath(downloadPath, sourceModel);
     this->hfEndpoint = hfEndpoint;
     this->hfToken = hfToken;
     this->httpProxy = httpProxy;
 }
 
 Status HfDownloader::cloneRepository() {
+    if (FileSystem::isPathEscaped(this->downloadPath)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
+        return StatusCode::PATH_INVALID;
+    }
+
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;

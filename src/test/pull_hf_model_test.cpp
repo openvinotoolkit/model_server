@@ -25,6 +25,7 @@
 #include "../libgt2/hf_pull_model_module.hpp"
 #include "src/libgt2/libgt2.hpp"
 #include "../server.hpp"
+#include "../status.hpp"
 
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
@@ -84,12 +85,14 @@ const std::string expectedGraphContents = R"(
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     this->ServerPullHfModel(modelName, downloadPath);
     std::string modelPath = ovms::FileSystem::appendSlash(downloadPath) + "openvino_model.bin";
     std::string graphPath = ovms::FileSystem::appendSlash(downloadPath) + "graph.pbtxt";
-    ASSERT_EQ(std::filesystem::exists(modelPath), true);
-    ASSERT_EQ(std::filesystem::exists(graphPath), true);
+    std::string tmp;
+    std::cin >> tmp;
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
     std::cout << graphContents << std::endl;
@@ -108,6 +111,7 @@ public:
     void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
+    std::string getFullPath(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getFullPath(downloadPath, sourceModel); };
 };
 
 TEST(HfDownloaderClassTest, Methods) {
@@ -124,6 +128,14 @@ TEST(HfDownloaderClassTest, Methods) {
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+
+    std::string expectedPath = downloadPath + "/" + modelName;
+#ifdef _WIN32
+        std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
+#endif
+    ASSERT_EQ(hfDownloader->getFullPath(downloadPath, modelName), expectedPath);
+
+    EXPECT_EQ(TestHfDownloader(modelName, "../some/path", hfEndpoint, hfToken, "").cloneRepository(), ovms::StatusCode::PATH_INVALID);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {
