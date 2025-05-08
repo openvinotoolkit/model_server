@@ -114,8 +114,8 @@ public:
     void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
-    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getGraphDirectory(downloadPath, sourceModel); };
-    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); };
+    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getGraphDirectory(downloadPath, sourceModel); }
+    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
 };
 
 TEST(HfDownloaderClassTest, Methods) {

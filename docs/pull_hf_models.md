@@ -6,17 +6,17 @@ This functionality is a work in progress
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --pull_hf_model --source_model <model_name_in_HF> --model_repository <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --pull_hf_model --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
 ```
 
-| option               | description                                                                                   |
-|----------------------|-----------------------------------------------------------------------------------------------|
-| `--pull`             | Instructs the server to run in pulling mode to get the model from the Hugging Face repository |
-| `--source_model`     | Specifies the model name in the Hugging Face model repository (optional - if empty model_name is used) |
-| `--model_repository` | Directory where all required model files will be saved                                        |
-| `--model_name`       | Name of the model as exposed externally by the server                                         |
-| `--task`             | Defines the task the model will support (e.g., text_generation/embedding, rerank, etc.)                       |
-| `--task_params`      | Task-specific parameters in a format to be determined (TBD FIXME)                             |
+| option                    | description                                                                                   |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `--pull`                  | Instructs the server to run in pulling mode to get the model from the Hugging Face repository |
+| `--source_model`          | Specifies the model name in the Hugging Face model repository (optional - if empty model_name is used) |
+| `--model_repository_path` | Directory where all required model files will be saved                                        |
+| `--model_name`            | Name of the model as exposed externally by the server                                         |
+| `--task`                  | Defines the task the model will support (e.g., text_generation/embedding, rerank, etc.)                       |
+| `--task_params`           | Task-specific parameters in a format to be determined (TBD FIXME)                             |
 
 ```
 docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
@@ -42,7 +42,7 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository <path_where_to_store_model_files> --model_name <ovms_servable_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <ovms_servable_name> --task <task> --task_params <task_params>
 ```
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
@@ -51,7 +51,7 @@ It will download required model files, prepare configuration for OVMS and start 
 
 In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository <path_where_to_store_ovms_config_files> --model_path <model_files_path> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_path <model_files_path> --model_name <external_model_name> --task <task> --task_params <task_params>
 ```
 
 # Simplified mediapipe graphs and LLM models loading
