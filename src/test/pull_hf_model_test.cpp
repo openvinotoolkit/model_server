@@ -135,7 +135,7 @@ TEST(HfDownloaderClassTest, Methods) {
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
-        std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
+    std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
 #endif
     ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);

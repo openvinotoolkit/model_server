@@ -176,7 +176,7 @@ HfDownloader::HfDownloader() {
     this->httpProxy = "";
 }
 
-std::string HfDownloader::getGraphDirectory(){
+std::string HfDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
@@ -186,8 +186,8 @@ std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, c
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
     }
-    
-    return fullPath;   
+
+    return fullPath;
 }
 
 HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy) {
