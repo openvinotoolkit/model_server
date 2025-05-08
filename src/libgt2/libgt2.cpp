@@ -176,8 +176,12 @@ HfDownloader::HfDownloader() {
     this->httpProxy = "";
 }
 
-std::string HfDownloader::getGraphDirectory() {
-    std::string fullPath = FileSystem::joinPath({this->downloadPath, this->sourceModel});
+std::string HfDownloader::getGraphDirectory(){
+    return this->downloadPath;
+}
+
+std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
     // Windows path creation
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
@@ -186,12 +190,12 @@ std::string HfDownloader::getGraphDirectory() {
     return fullPath;   
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
-    this->sourceModel = sourceModel;
-    this->downloadPath = downloadPath;
-    this->hfEndpoint = hfEndpoint;
-    this->hfToken = hfToken;
-    this->httpProxy = httpProxy;
+HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy) {
+    this->sourceModel = inSourceModel;
+    this->downloadPath = getGraphDirectory(inDownloadPath, inSourceModel);
+    this->hfEndpoint = inHfEndpoint;
+    this->hfToken = inHfToken;
+    this->httpProxy = inHttpProxy;
 }
 
 Status HfDownloader::cloneRepository() {
