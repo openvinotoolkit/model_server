@@ -47,27 +47,11 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
+        stage('Style, SDL') {
           options {
-            timeout(time: 1, unit: 'HOURS')
+                timeout(time: 20, unit: 'MINUTES')
           }
           parallel {
-            stage('Cleanup node') {
-              agent {
-                label 'win_ovms'
-              }
-              steps {
-                script {
-                    agent_name_windows = env.NODE_NAME
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        windows.cleanup_directories()
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
-                    }
-                }
-              }
-            }
             stage('Style check') {
               agent {
                 label "${agent_name_linux}"
@@ -92,6 +76,27 @@ pipeline {
               steps {
                     sh "make test_client_lib"
                   }
+            }
+          }
+        }
+        stage('Cleanup node') {
+          options {
+                timeout(time: 30, unit: 'MINUTES')
+          }
+          stage('Cleanup node') {
+            agent {
+              label 'win_ovms'
+            }
+            steps {
+              script {
+                  agent_name_windows = env.NODE_NAME
+                  def windows = load 'ci/loadWin.groovy'
+                  if (windows != null) {
+                      windows.cleanup_directories()
+                  } else {
+                      error "Cannot load ci/loadWin.groovy file."
+                  }
+              }
             }
           }
         }
