@@ -337,6 +337,10 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
 class HfDownloadModelModule : public TestWithTempDir {};
 
 TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
+#ifdef _WIN32
+    GTEST_SKIP() << "Setting timeout does not work on windows - there is some default used ~80s which is too long";
+    // https://github.com/libgit2/libgit2/issues/7072
+#endif
     ovms::HfPullModelModule hfModule;
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath) + "repository";  // Cleanup
@@ -388,7 +392,7 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
         clone_opts.fetch_opts.proxy_opts.url = "http://proxy-dmz.intel.com:912";
     }
-    int e = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 10000);
+    int e = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, 1000);
     EXPECT_EQ(e, 0);
 
     std::string passRepoUrl = "https://huggingface.co/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
