@@ -49,7 +49,7 @@ pipeline {
         }
         stage('Style, SDL and clean') {
           options {
-            timeout(time: 20, unit: 'HOURS')
+            timeout(time: 1, unit: 'HOURS')
           }
           parallel {
             stage('Cleanup node') {
