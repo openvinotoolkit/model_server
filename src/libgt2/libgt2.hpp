@@ -58,6 +58,7 @@ class HfDownloader {
 public:
     HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy);
     Status cloneRepository();
+    std::string getGraphDirectory();
 
 protected:
     std::string sourceModel;
@@ -70,7 +71,6 @@ protected:
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
-    std::string getFullPath(const std::string& downloadPath, const std::string& sourceModel);
 };
 
 }  // namespace ovms

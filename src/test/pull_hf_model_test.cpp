@@ -85,12 +85,11 @@ const std::string expectedGraphContents = R"(
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     this->ServerPullHfModel(modelName, downloadPath);
     std::string modelPath = ovms::FileSystem::appendSlash(downloadPath) + "openvino_model.bin";
     std::string graphPath = ovms::FileSystem::appendSlash(downloadPath) + "graph.pbtxt";
-    std::string tmp;
-    std::cin >> tmp;
+
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
@@ -111,7 +110,7 @@ public:
     void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
-    std::string getFullPath(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getFullPath(downloadPath, sourceModel); };
+    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); };
 };
 
 TEST(HfDownloaderClassTest, Methods) {
@@ -133,7 +132,7 @@ TEST(HfDownloaderClassTest, Methods) {
 #ifdef _WIN32
         std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
 #endif
-    ASSERT_EQ(hfDownloader->getFullPath(downloadPath, modelName), expectedPath);
+    ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
 
     EXPECT_EQ(TestHfDownloader(modelName, "../some/path", hfEndpoint, hfToken, "").cloneRepository(), ovms::StatusCode::PATH_INVALID);
 }

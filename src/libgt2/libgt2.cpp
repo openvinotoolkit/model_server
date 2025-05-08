@@ -176,8 +176,8 @@ HfDownloader::HfDownloader() {
     this->httpProxy = "";
 }
 
-std::string HfDownloader::getFullPath(const std::string& downloadPath, const std::string& sourceModel) {
-    std::string fullPath = FileSystem::joinPath({downloadPath, sourceModel});
+std::string HfDownloader::getGraphDirectory() {
+    std::string fullPath = FileSystem::joinPath({this->downloadPath, this->sourceModel});
     // Windows path creation
     if (FileSystem::getOsSeparator() != "/") {
         std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
@@ -188,7 +188,7 @@ std::string HfDownloader::getFullPath(const std::string& downloadPath, const std
 
 HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
     this->sourceModel = sourceModel;
-    this->downloadPath = this->getFullPath(downloadPath, sourceModel);
+    this->downloadPath = downloadPath;
     this->hfEndpoint = hfEndpoint;
     this->hfToken = hfToken;
     this->httpProxy = httpProxy;
@@ -200,6 +200,7 @@ Status HfDownloader::cloneRepository() {
         return StatusCode::PATH_INVALID;
     }
 
+    SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;

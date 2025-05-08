@@ -187,3 +187,11 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
     std::cout << graphContents << std::endl;
     ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents);
 }
+
+TEST_F(GraphCreationTest, negativeCreateFile) {
+    ovms::GraphSettingsImpl graphSettings;
+
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile("", graphSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}

@@ -761,7 +761,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
         (char*)download_path.c_str()};
     int argc = 6;
     t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
