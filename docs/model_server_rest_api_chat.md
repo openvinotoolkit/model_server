@@ -133,7 +133,7 @@ Note that below parameters are valid only for speculative pipeline. See [specula
 
 Note that below parameters are valid only for prompt lookup pipeline. Add `"prompt_lookup": true` to `plugin_config` in your graph config node options to serve it.
 
-| Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
 |-------|----------|----------|----------|---------|-----|
 | num_assistant_tokens | ✅ | ❌ | ❌ | int | Number of candidate tokens proposed after ngram match is found |
 | max_ngram_size | ✅ | ❌ | ❌ | int | The maximum ngram to use when looking for matches in the prompt |
