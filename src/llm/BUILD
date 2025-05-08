@@ -78,7 +78,6 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
-        "//third_party:opencv",
         "//third_party:curl",
         "@stb//:image",
     ] + select({
