@@ -32,7 +32,7 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
-#include "text_processor.hpp"
+#include "text_utils.hpp"
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
@@ -91,15 +91,21 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
+#if (PYTHON_DISABLE == 0)
         bool success;
         if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
         } else {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
         }
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
         }
+#else
+        ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+#endif
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }

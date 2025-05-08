@@ -25,6 +25,14 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
+IF "%~2"=="--with_python" (
+    echo Self contained Python will be included in the package
+    set "with_python=true"
+) ELSE (
+    echo Self contained Python will not be included in the package
+    set "with_python=false"
+)
+
 if exist dist\windows\ovms (
     rmdir /s /q dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
@@ -37,29 +45,32 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Copy pyovms module
-md dist\windows\ovms\python
-copy  %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
-if !errorlevel! neq 0 exit /b !errorlevel!
-
-:: Prepare self-contained python
 set "dest_dir=C:\opt"
-set "python_version=3.12.9"
 
-call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
-if !errorlevel! neq 0 (
-    echo Error occurred when creating Python environment for the distribution.
-    exit /b !errorlevel!
-)
-:: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
-if !errorlevel! neq 0 (
-    echo Error occurred when creating Python environment for the distribution.
-    exit /b !errorlevel!
-)
-.\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-if !errorlevel! neq 0 (
-    echo Error during Python dependencies for LLM installation. The package will not be fully functional.
+if /i "%with_python%"=="true" (
+    :: Copy pyovms module
+    md dist\windows\ovms\python
+    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+    if !errorlevel! neq 0 exit /b !errorlevel!
+
+    :: Prepare self-contained python
+    set "python_version=3.12.9"
+
+    call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
+    if !errorlevel! neq 0 (
+        echo Error occurred when creating Python environment for the distribution.
+        exit /b !errorlevel!
+    )
+    :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
+    xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
+    if !errorlevel! neq 0 (
+        echo Error occurred when creating Python environment for the distribution.
+        exit /b !errorlevel!
+    )
+    .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+    if !errorlevel! neq 0 (
+        echo Error during Python dependencies for LLM installation. The package will not be fully functional.
+    )
 )
 
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
@@ -107,6 +118,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.13.0_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\curl-8.13.0_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!

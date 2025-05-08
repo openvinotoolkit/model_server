@@ -18,10 +18,6 @@
 
 #include <cmath>
 #pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include <opencv2/opencv.hpp>
-#pragma warning(pop)
-#pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -143,7 +139,7 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
         status = setopt;      \
     }
 
-static absl::Status downloadImage(const char* url, std::string& image, const int64& sizeLimit) {
+static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
@@ -234,7 +230,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
                                 curl_global_init(CURL_GLOBAL_ALL);
-                                int64 sizeLimit = 20000000;  // restrict single image size to 20MB
+                                int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
