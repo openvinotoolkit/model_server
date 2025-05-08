@@ -30,22 +30,11 @@
 
 #include "pipelines.hpp"
 
-static void save_png_to_disk(const std::string& png_data, const std::string& filename) {
-    std::ofstream out_file(filename, std::ios::binary);
-    if (!out_file) {
-        throw std::runtime_error("Failed to open file for writing: " + filename);
-    }
-    
-    out_file.write(png_data.data(), png_data.size());
-    
-    if (!out_file.good()) {
-        out_file.close();
-        std::remove(filename.c_str()); // Clean up partial file
-        throw std::runtime_error("Failed to write data to file: " + filename);
-    }
-    
-    out_file.close();
-}
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
+#include "absl/strings/escaping.h"
+#include "absl/strings/str_cat.h"
+#pragma warning(pop)
 
 using namespace ovms;
 
@@ -115,7 +104,17 @@ public:
                 ov::genai::num_images_per_prompt(1)});  // todo: get from req
 
         std::string res = save_image_stbi(image);
-        save_png_to_disk(res, "output.png");
+
+        // Convert the image to a base64 string
+        std::string base64_image;
+        absl::Base64Escape(res, &base64_image);
+
+        // Create the JSON response
+        std::string json_response = absl::StrCat("{\"data\":[{\"b64_json\":\"", base64_image, "\"}]}");
+        // Produce std::string packet
+        auto output = absl::make_unique<std::string>(json_response);
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }
