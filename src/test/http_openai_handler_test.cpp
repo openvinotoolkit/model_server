@@ -470,7 +470,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
       {
         "type": "image_url",
         "image_url": {
-          "url":  ")" + getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") + R"("
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") +
+                       R"("
         }
       }
     ]
