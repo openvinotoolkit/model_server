@@ -435,7 +435,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
           "type": "image_url",
           "image_url": {
             "url":  ")" +
-                       getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") + R"("
+                       getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") + R"("
           }
         }
       ]
@@ -451,7 +451,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
     auto [index, image] = imageHistory[0];
     EXPECT_EQ(index, 0);
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
+    EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
@@ -470,7 +470,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
       {
         "type": "image_url",
         "image_url": {
-          "url":  ")" + getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") +
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
                        R"("
         }
       }
@@ -481,13 +481,13 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/demos/common/static/images/")), absl::OkStatus());
+    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils")), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
     auto [index, image] = imageHistory[0];
     EXPECT_EQ(index, 0);
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
-    EXPECT_EQ(image.get_size(), 225792);
+    EXPECT_EQ(image.get_size(), 3);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
@@ -506,7 +506,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
       {
         "type": "image_url",
         "image_url": {
-          "url":  "/ovms/demos/common/static/images/zebra.jpeg"
+          "url":  "/ovms/src/test/binaryutils/rgb.jpg"
         }
       }
     ]
@@ -516,7 +516,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithi
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages("demos/common"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path provided in graph.pbtxt"));
+    ASSERT_EQ(apiHandler->parseMessages("src/test"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path provided in graph.pbtxt"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
