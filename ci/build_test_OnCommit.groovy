@@ -81,22 +81,20 @@ pipeline {
         }
         stage('Cleanup node') {
           options {
-                timeout(time: 30, unit: 'MINUTES')
+              timeout(time: 30, unit: 'MINUTES')
           }
-          stage('Cleanup node') {
-            agent {
-              label 'win_ovms'
-            }
-            steps {
-              script {
-                  agent_name_windows = env.NODE_NAME
-                  def windows = load 'ci/loadWin.groovy'
-                  if (windows != null) {
-                      windows.cleanup_directories()
-                  } else {
-                      error "Cannot load ci/loadWin.groovy file."
-                  }
-              }
+          agent {
+            label 'win_ovms'
+          }
+          steps {
+            script {
+                agent_name_windows = env.NODE_NAME
+                def windows = load 'ci/loadWin.groovy'
+                if (windows != null) {
+                    windows.cleanup_directories()
+                } else {
+                    error "Cannot load ci/loadWin.groovy file."
+                }
             }
           }
         }
