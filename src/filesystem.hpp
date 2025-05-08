@@ -136,7 +136,11 @@ public:
     static bool isPathEscaped(const std::string& path) {
         std::size_t lhs = path.find("../");
         std::size_t rhs = path.find("/..");
-        return (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("/../");
+        bool escapedLinux = (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("/../");
+
+        lhs = path.find("..\\");
+        rhs = path.find("\\..");
+        return escapedLinux || (std::string::npos != lhs && lhs == 0) || (std::string::npos != rhs && rhs == path.length() - 3) || std::string::npos != path.find("\\..\\");
     }
 
     static bool dirExists(const std::string& path) {

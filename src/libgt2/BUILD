@@ -36,6 +36,7 @@ cc_library(
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovmsfilesystem",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

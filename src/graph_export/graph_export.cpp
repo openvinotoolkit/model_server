@@ -109,8 +109,13 @@ GraphExport::GraphExport() {
 }
 
 Status GraphExport::createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings) {
+    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
+        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
+    }
     std::string graphString = createTextGenerationGraphTemplate(graphSettings);
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    SPDLOG_DEBUG("Creating graph file {}", fullPath);
     // Always overwrite
     {
         std::ofstream graphFile(fullPath, std::ios::trunc | std::ofstream::binary);

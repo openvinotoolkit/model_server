@@ -27,8 +27,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../stringutils.hpp"
+#include "../filesystem.hpp"
 #include "../logging.hpp"
+#include "../stringutils.hpp"
 #include "../status.hpp"
 
 #ifndef PRIuZ
@@ -175,15 +176,35 @@ HfDownloader::HfDownloader() {
     this->httpProxy = "";
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
-    this->sourceModel = sourceModel;
-    this->downloadPath = downloadPath;
-    this->hfEndpoint = hfEndpoint;
-    this->hfToken = hfToken;
-    this->httpProxy = httpProxy;
+std::string HfDownloader::getGraphDirectory() {
+    return this->downloadPath;
+}
+
+std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
+    // Windows path creation
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
+    }
+
+    return fullPath;
+}
+
+HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy) {
+    this->sourceModel = inSourceModel;
+    this->downloadPath = getGraphDirectory(inDownloadPath, inSourceModel);
+    this->hfEndpoint = inHfEndpoint;
+    this->hfToken = inHfToken;
+    this->httpProxy = inHttpProxy;
 }
 
 Status HfDownloader::cloneRepository() {
+    if (FileSystem::isPathEscaped(this->downloadPath)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
