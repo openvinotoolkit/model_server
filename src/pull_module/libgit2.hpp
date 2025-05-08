@@ -1,3 +1,4 @@
+#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -13,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#ifndef SRC_LIBGT2_LIBGT2_HPP_
-#define SRC_LIBGT2_LIBGT2_HPP_
 #include <string>
 #include <memory>
 
@@ -28,30 +26,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 namespace ovms {
 class Status;
 
-class Libgt2InitGuard {
-public:
+/*
+ * libgit2 options. 0 is the default value
+ */
+struct Libgit2Options {
+    int serverConnectTimeoutMs = 0;
+    int serverTimeoutMs = 0;
+};
+
+struct Libgt2InitGuard {
     int status;
     std::string errMsg;
-    Libgt2InitGuard() {
-        this->status = git_libgit2_init();
-        if (this->status < 0) {
-            const git_error* err = git_error_last();
-            const char* msg = err ? err->message : "unknown failure";
-            errMsg = std::string(msg);
-        } else {
-            errMsg = "";
-        }
-    }
-    ~Libgt2InitGuard() {
-        git_libgit2_shutdown();
-    }
+    Libgt2InitGuard(const Libgit2Options& opts);
+    ~Libgt2InitGuard();
 };
 
 class HfDownloader {
@@ -71,9 +61,4 @@ protected:
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
 };
-
 }  // namespace ovms
-#ifdef __cplusplus
-}
-#endif
-#endif  // SRC_LIBGT2_LIBGT2_HPP_

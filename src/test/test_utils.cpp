@@ -649,6 +649,7 @@ std::string GetFileContents(const std::string& filePath) {
 }
 
 void SetEnvironmentVar(const std::string& var, const std::string& val) {
+    SPDLOG_INFO("Setting environment variable: {} to: {}", var, val);
 #ifdef _WIN32
     _putenv_s(var.c_str(), val.c_str());
 #elif __linux__
@@ -656,6 +657,7 @@ void SetEnvironmentVar(const std::string& var, const std::string& val) {
 #endif
 }
 void UnSetEnvironmentVar(const std::string& var) {
+    SPDLOG_INFO("Unsetting environment variable: {}", var);
 #ifdef _WIN32
     _putenv_s(var.c_str(), "");
 #elif __linux__
