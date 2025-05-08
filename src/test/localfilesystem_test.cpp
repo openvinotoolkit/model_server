@@ -224,6 +224,11 @@ TEST(FileSystem, CheckIfPathIsEscaped) {
     ASSERT_TRUE(ovms::FileSystem::isPathEscaped("../"));
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/..resnet/"));
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/resnet../"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("\\..\\"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("\\.."));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("..\\"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("\\path\\..resnet\\"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("\\path\\resnet..\\"));
 }
 
 TEST(FileSystem, IsLocalFilesystem) {
