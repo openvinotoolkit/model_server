@@ -434,7 +434,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
         {
           "type": "image_url",
           "image_url": {
-            "url":  "/ovms/demos/common/static/images/zebra.jpeg"
+            "url":  ")" + getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") + R"(
           }
         }
       ]
@@ -469,7 +469,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
       {
         "type": "image_url",
         "image_url": {
-          "url":  "/ovms/demos/common/static/images/zebra.jpeg"
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/demos/common/static/images/zebra.jpeg") + R"(
         }
       }
     ]
@@ -479,7 +479,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAl
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    ASSERT_EQ(apiHandler->parseMessages("/ovms/demos/common/static/images/"), absl::OkStatus());
+    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/demos/common/static/images/")), absl::OkStatus());
     const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
     ASSERT_EQ(imageHistory.size(), 1);
     auto [index, image] = imageHistory[0];
