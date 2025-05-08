@@ -91,8 +91,6 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-    std::string tmp;
-    std::cin >> tmp;
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
@@ -139,8 +137,12 @@ TEST(HfDownloaderClassTest, Methods) {
 #endif
     ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
+}
 
-    EXPECT_EQ(TestHfDownloader(modelName, "../some/path", hfEndpoint, hfToken, "").cloneRepository(), ovms::StatusCode::PATH_INVALID);
+TEST(HfDownloaderClassTest, MethodsNegative) {
+    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "").cloneRepository(), ovms::StatusCode::PATH_INVALID);
+    // Library not initialized
+    EXPECT_EQ(TestHfDownloader("name/test", "/some/path", "", "", "").cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {
