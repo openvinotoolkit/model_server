@@ -70,7 +70,7 @@ protected:
     HfDownloader();
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
-    std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
+    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     bool CheckIfProxySet();
 };
 

@@ -38,7 +38,7 @@ public:
 
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
 
-    Status validate(ServerSettingsImpl*);
+    bool validate(ServerSettingsImpl*);
     void printHelp();
     void createOptions();
 

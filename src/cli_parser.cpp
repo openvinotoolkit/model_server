@@ -225,27 +225,8 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
 
-    if (result->count("log_level"))
-        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
-    if (result->count("log_path"))
-        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
-
     // Server settings
     serverSettings->startedWithCLI = true;
-    // Ovms Pull models mode
-    if (result->count("pull")) {
-        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
-        if (result->count("source_model"))
-            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        if (result->count("model_repository_path"))
-            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
-
-        this->graphOptionsParser.prepare(serverSettings, modelsSettings);
-        return;
-    } else {
-        serverSettings->hfSettings.pullHfModelMode = false;
-    }
-
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
     serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
@@ -253,6 +234,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     serverSettings->filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
     serverSettings->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
     serverSettings->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
+
+    if (result->count("log_level"))
+        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
+    if (result->count("log_path"))
+        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -269,8 +256,6 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (result->count("rest_bind_address"))
         serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
-
-    serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("grpc_max_threads"))
         serverSettings->grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
@@ -289,6 +274,18 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("trace_path"))
         serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
+    // Ovms Pull models mode
+    if (result->count("pull")) {
+        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
+        if (result->count("source_model"))
+            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+        if (result->count("model_repository_path"))
+            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+
+        this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+    } else {
+        serverSettings->hfSettings.pullHfModelMode = false;
+    }
 
     // Model settings
     if (result->count("model_name")) {

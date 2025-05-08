@@ -32,8 +32,8 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath) {
-        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath);
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0) {
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code);
     }
     void TearDown() {
         server.setShutdownRequest(1);
@@ -86,7 +86,8 @@ const std::string expectedGraphContents = R"(
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    this->ServerPullHfModel(modelName, downloadPath);
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
 
     std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
@@ -99,6 +100,20 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     std::cout << graphContents << std::endl;
 
     ASSERT_EQ(expectedGraphContents, graphContents);
+}
+
+TEST_F(HfDownloaderPullHfModel, NegativeNoDownloadWrongTask) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "1";
+    this->ServerPullHfModel(modelName, downloadPath, task, 1);
+}
+
+TEST_F(HfDownloaderPullHfModel, NegativeNoDownloadEmptyTask) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "";
+    this->ServerPullHfModel(modelName, downloadPath, task, 1);
 }
 
 class TestHfDownloader : public ovms::HfDownloader {
