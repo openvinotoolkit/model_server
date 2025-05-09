@@ -136,7 +136,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("model_repository_path",
                 "HF model destination download path",
                 cxxopts::value<std::string>(),
-                "MODEL_REPOSITORY_PATH");
+                "MODEL_REPOSITORY_PATH")
+            ("task",
+                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint.",
+                cxxopts::value<std::string>()->default_value("text_generation"),
+                "TASK");
 
         options->add_options("single model")
             ("model_name",
@@ -210,7 +214,7 @@ void CLIParser::parse(int argc, char** argv) {
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "multi model", "single model"}) << std::endl;
+            std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
             this->graphOptionsParser.printHelp();
             exit(OVMS_EX_OK);
         }
@@ -281,7 +285,17 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
             serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
         if (result->count("model_repository_path"))
             serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
-
+        if (result->count("task")) {
+            std::string task = result->operator[]("task").as<std::string>();
+            if (task != "text_generation") {
+                if (task != "embeddings") {
+                    if (task != "rerank") {
+                        throw std::logic_error("Error: --task parameter unsupported value: " + task);
+                    }
+                }
+            }
+            serverSettings->hfSettings.task = task;
+        }
         this->graphOptionsParser.prepare(serverSettings, modelsSettings);
     } else {
         serverSettings->hfSettings.pullHfModelMode = false;

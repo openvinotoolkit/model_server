@@ -32,9 +32,10 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0) {
-        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code);
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 15) {
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
+
     void TearDown() {
         server.setShutdownRequest(1);
         t->join();
@@ -106,14 +107,7 @@ TEST_F(HfDownloaderPullHfModel, NegativeNoDownloadWrongTask) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "1";
-    this->ServerPullHfModel(modelName, downloadPath, task, 1);
-}
-
-TEST_F(HfDownloaderPullHfModel, NegativeNoDownloadEmptyTask) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "";
-    this->ServerPullHfModel(modelName, downloadPath, task, 1);
+    this->ServerPullHfModel(modelName, downloadPath, task, 1, 1);
 }
 
 class TestHfDownloader : public ovms::HfDownloader {

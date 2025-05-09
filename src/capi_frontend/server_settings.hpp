@@ -28,8 +28,6 @@ struct PluginConfigSettingsImpl {
 };
 
 struct GraphSettingsImpl {
-    std::string task = "text_generation";
-
     std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
@@ -46,6 +44,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
+    std::string task = "text_generation";
     GraphSettingsImpl graphSettings;
 };
 

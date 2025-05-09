@@ -35,14 +35,10 @@ GraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
 }
 
 void GraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms graph", "OpenVINO Model Server graph creation options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull", "--pull graph creation options");
 
     // clang-format off
-    options->add_options("general options")
-        ("task",
-        "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint",
-        cxxopts::value<std::string>()->default_value(""),
-        "TASK")
+    options->add_options("text generation")
         ("max_num_seqs",
             "The maximum number of sequences that can be processed together. Default 256.",
             cxxopts::value<uint32_t>()->default_value("256"),
@@ -91,7 +87,7 @@ void GraphCLIParser::printHelp() {
     if (!this->options) {
         this->createOptions();
     }
-    std::cout << options->help({"general options", "plugin config"}) << std::endl;
+    std::cout << options->help({"text generation", "plugin config"}) << std::endl;
 }
 
 void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
@@ -131,7 +127,6 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
         }
     }
 
-    serverSettings->hfSettings.graphSettings.task = result->operator[]("task").as<std::string>();
     serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
     serverSettings->hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     serverSettings->hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
@@ -163,17 +158,9 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
 
 bool GraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
     // TODO: CVS-166727 add validation of graphSettings and plugin config
-    if (serverSettings->hfSettings.graphSettings.task == "") {
+    if (serverSettings->hfSettings.task == "") {
         std::cerr << "Error: --task parameter not set." << std::endl;
         return false;
-    }
-    if (serverSettings->hfSettings.graphSettings.task != "text_generation") {
-        if (serverSettings->hfSettings.graphSettings.task != "embeddings") {
-            if (serverSettings->hfSettings.graphSettings.task != "rerank") {
-                std::cerr << "Error: --task parameter unsupported value: " << serverSettings->hfSettings.graphSettings.task << std::endl;
-                return false;
-            }
-        }
     }
 
     return true;
