@@ -1612,24 +1612,82 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
 
     std::vector<std::string> responses;
 
+    // Gather responses
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([this, &responses](std::string response) {
             responses.push_back(response);
         });
+
+    // dispatchToProcessor is blocking because of mocked PartialReplyBegin in fixture:
+    // ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
+
+    // Check if there is at least one response
+    ASSERT_GT(responses.size(), 0);
+
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
-    std::regex content_regex("\"content\":\".*\\.[ ]{0,1}\"");
-    if (params.modelName.find("legacy") != std::string::npos) {
-        // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
-        // Because of that, we might get additional response with empty content at the end of the stream.
-        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
-    } else {
-        ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+
+    // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
+    // Because of that, we might get additional response with empty content at the end of the stream.
+    const size_t numberOfLastResponsesToCheckForStopString = params.modelName.find("legacy") != std::string::npos ? 2 : 1;
+
+    // The stop string (.) does not need to be at the end of the message.
+    // There are cases when the last generation contains dot and a new lines, or generated token is "e.g",
+    // or simply any token (or group of tokens) that has dot in a middle.
+
+    // Check for no existence of a dot:
+    for (size_t i = 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
+        // Assert there is no dot '.' in the response
+
+        // Cut "data: " prefix
+        std::string dataPrefix = "data:";
+        std::string resp = responses[i].substr(dataPrefix.size());
+
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(resp.c_str());
+        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                << resp;
+
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        ASSERT_TRUE(d["choices"][0].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+        resp = d["choices"][0]["delta"]["content"].GetString();
+        ASSERT_EQ(resp.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+    }
+
+    // Check for existence of a dot:
+    for (size_t i = responses.size() - numberOfLastResponsesToCheckForStopString; i < responses.size(); ++i) {
+        // Assert there is a dot '.' in the response
+
+        // Cut "data: " prefix
+        std::string dataPrefix = "data:";
+        std::string resp = responses[i].substr(dataPrefix.size());
+
+        // remove from resp: "data: [DONE]" (not only in the beginning)
+        size_t pos = resp.find("data: [DONE]");
+        if (pos != std::string::npos) {
+            resp.erase(pos, std::string("data: [DONE]").length());
+        }
+
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(resp.c_str());
+        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                << resp;
+
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        ASSERT_TRUE(d["choices"][0].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+        resp = d["choices"][0]["delta"]["content"].GetString();
+        ASSERT_NE(resp.find('.'), std::string::npos) << "cannot find dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
     }
 }
 
