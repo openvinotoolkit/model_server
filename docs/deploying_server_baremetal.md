@@ -46,7 +46,7 @@ tar -xzvf ovms_ubuntu24_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
-sudo apt update -y && apt install -y libxml2 curl
+sudo apt update -y && sudo apt install -y libxml2 curl
 ```
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
