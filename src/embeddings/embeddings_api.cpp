@@ -20,6 +20,8 @@
 #include <utility>
 #include <variant>
 
+#include "../logging.hpp"
+
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6386 6011 6246)
 #pragma GCC diagnostic push
@@ -128,6 +130,12 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
 }
 
 absl::Status EmbeddingsHandler::parseRequest() {
+    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
+    if (this->doc.HasParseError()) {
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Non-json request received in embeddings calculator");
+        return absl::InvalidArgumentError("Non-json request received in embeddings calculator");
+    }
+
     auto parsed = EmbeddingsRequest::fromJson(&(this->doc));
 
     if (auto error = std::get_if<std::string>(&parsed)) {

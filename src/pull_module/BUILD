@@ -28,11 +28,11 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 cc_library(
-    name = "libgt2",
-    srcs = ["libgt2.cpp"],
-    hdrs = ["libgt2.hpp"],
+    name = "libgit2",
+    srcs = ["libgit2.cpp"],
+    hdrs = ["libgit2.hpp"],
     deps =  [
-        "@libgt2_engine//:libgt2_engine",
+        "@libgit2_engine//:libgit2_engine",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
@@ -40,7 +40,6 @@ cc_library(
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
     local_defines = COMMON_LOCAL_DEFINES,
 )
 
@@ -49,7 +48,8 @@ cc_library(
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
-        ":libgt2",
+        ":libgit2",
+        "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",
@@ -59,6 +59,5 @@ cc_library(
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
-    alwayslink = 1,
     local_defines = COMMON_LOCAL_DEFINES,
 )

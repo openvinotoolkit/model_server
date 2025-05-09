@@ -52,11 +52,10 @@
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
-#include "libgt2/hf_pull_model_module.hpp"
+#include "pull_module/hf_pull_model_module.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "libgt2/libgt2.hpp"
 #include "logging.hpp"
 #include "metric_module.hpp"
 #include "model_service.hpp"
@@ -93,7 +92,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().hfSettings.pullHfModelMode) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
-        SPDLOG_DEBUG("download_path: {}", config.getServerSettings().hfSettings.downloadPath);
+        SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
         return;
     }
     if (config.configPath().empty()) {

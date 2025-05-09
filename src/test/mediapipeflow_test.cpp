@@ -3667,8 +3667,8 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",   // integral OVMS calculator
         "PythonExecutorCalculator",  // integral OVMS calculator
-        "HttpLLMCalculator",  // integral OVMS calculator
 #endif
+        "HttpLLMCalculator",  // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
         "AddNumbersMultiInputsOutputsTestCalculator",
@@ -3827,6 +3827,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ModelInferHttpRequestCalculator",
         "ModelInferRequestImageCalculator",
         "MotionAnalysisCalculator",
+        "MultipartAcceptingCalculator",
         "MuxCalculator",
         "NegativeCalculator",
         "NoOutputStreamsProducedCalculator",

@@ -53,11 +53,12 @@ protected:
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
     const std::string endpointCompletions = "/v3/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
     rapidjson::Document parsedResponse;
     ovms::HttpResponseComponents responseComponents;
@@ -127,6 +128,7 @@ public:
 
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));  // make the streaming flow sequential
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
@@ -171,7 +173,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -194,7 +196,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -206,7 +208,6 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
-    GTEST_SKIP() << "Skip this test until tokenizer not respecting add_special_tokens parameter bug is fixed";
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -231,7 +232,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -262,7 +263,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -287,7 +288,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParameters
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -302,7 +303,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, speculativeDecodingExclusiveParameters
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -328,7 +329,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -364,7 +365,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
     ASSERT_TRUE(parsedResponse["choices"].IsArray());
@@ -389,7 +390,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCo
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 
     requestBody = R"(
@@ -401,7 +402,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCo
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
@@ -415,7 +416,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCh
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 
     requestBody = R"(
@@ -427,6 +428,6 @@ TEST_F(AssistedDecodingPipelinesHttpTest, promptLookupDecodingMissingParameterCh
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }

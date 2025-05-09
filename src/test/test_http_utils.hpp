@@ -16,6 +16,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -24,6 +25,7 @@
 #include "../http_async_writer_interface.hpp"
 #include "../http_server.hpp"
 #include "../http_status_code.hpp"
+#include "../multi_part_parser.hpp"
 
 class MockedServerRequestInterface final : public ovms::HttpAsyncWriter {
 public:
@@ -34,4 +36,12 @@ public:
     MOCK_METHOD(bool, IsDisconnected, (), (const override));
     MOCK_METHOD(void, RegisterDisconnectionCallback, (std::function<void()>), (override));
     MOCK_METHOD(void, PartialReplyBegin, (std::function<void()>), (override));
+};
+
+class MockedMultiPartParser final : public ovms::MultiPartParser {
+public:
+    MOCK_METHOD(bool, parse, (), (override));
+    MOCK_METHOD(bool, hasParseError, (), (const override));
+    MOCK_METHOD(std::string, getFieldByName, (const std::string&), (const override));
+    MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string&), (const override));
 };

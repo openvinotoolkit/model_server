@@ -50,6 +50,7 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
                          'Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.', dest='draft_model_name')
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
+parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
@@ -330,6 +331,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         plugin_config['MAX_PROMPT_LEN'] = task_parameters['max_prompt_len']
     if task_parameters['ov_cache_dir'] is not None:
         plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
+
+    if task_parameters['prompt_lookup_decoding']:
+        plugin_config['prompt_lookup'] = True
     
     # Additional plugin properties for HETERO
     if "HETERO" in task_parameters['target_device']:

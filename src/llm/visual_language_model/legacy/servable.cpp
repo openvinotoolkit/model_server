@@ -34,7 +34,10 @@
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
-#include "../../text_processor.hpp"
+#include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 #include "servable.hpp"
 
 namespace ovms {
@@ -42,6 +45,10 @@ namespace ovms {
 absl::Status VisualLanguageModelLegacyServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
+    if (payload.parsedJson->HasParseError()) {
+        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+    }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
     } else {

@@ -18,10 +18,6 @@
 
 #include <cmath>
 #pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include <opencv2/opencv.hpp>
-#pragma warning(pop)
-#pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -38,6 +34,9 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
+
+#include <curl/curl.h>
+#include <regex>
 
 using namespace rapidjson;
 
@@ -128,6 +127,45 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
         SharedImageAllocator{image, desiredChannels, y, x});
 }
 
+static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
+    void* image) {
+    size_t realsize = size * nmemb;
+    auto& mem = *static_cast<std::string*>(image);
+    mem.append(static_cast<char*>(downloadedChunk), realsize);
+    return realsize;
+}
+#define CURL_SETOPT(setopt)   \
+    if (status == CURLE_OK) { \
+        status = setopt;      \
+    }
+
+static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
+    CURL* curl_handle = curl_easy_init();
+    auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 20L))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_HTTPPROXYTUNNEL, 1L))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
+
+    if (status != CURLE_OK) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
+        return absl::InvalidArgumentError("Image downloading failed");
+    }
+
+    status = curl_easy_perform(curl_handle);
+    if (status != CURLE_OK) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
+        return absl::InvalidArgumentError("Image downloading failed");
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
+    }
+    curl_easy_cleanup(curl_handle);
+    return absl::OkStatus();
+}
+
 absl::Status OpenAIChatCompletionsHandler::parseMessages() {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
@@ -184,16 +222,32 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             std::string url = imageUrl["url"].GetString();
                             std::string pattern = "base64,";
                             std::size_t pos = url.find(pattern);
-                            size_t offset = pos + pattern.length();
-                            if (pos == std::string::npos) {
-                                return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix");
-                            }
                             std::string decoded;
-                            if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
-                                return absl::InvalidArgumentError("Invalid base64 string in request");
+                            if (pos != std::string::npos) {
+                                size_t offset = pos + pattern.length();
+                                if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
+                                    return absl::InvalidArgumentError("Invalid base64 string in request");
+                                }
+                            } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
+                                curl_global_init(CURL_GLOBAL_ALL);
+                                int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
+                                auto status = downloadImage(url.c_str(), decoded, sizeLimit);
+                                if (status != absl::OkStatus()) {
+                                    return status;
+                                }
+                                curl_global_cleanup();
+                            } else {
+                                return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL");
                             }
-                            ov::Tensor tensor = load_image_stbi(decoded);
-                            request.imageHistory.push_back({i, tensor});
+                            try {
+                                ov::Tensor tensor = load_image_stbi(decoded);
+                                request.imageHistory.push_back({i, tensor});
+                            } catch (std::runtime_error& e) {
+                                std::stringstream ss;
+                                ss << "Image parsing failed: " << e.what();
+                                SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                return absl::InvalidArgumentError("Image parsing failed");
+                            }
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }

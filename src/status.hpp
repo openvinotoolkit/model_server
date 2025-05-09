@@ -167,11 +167,13 @@ enum class StatusCode {
     AS_INCORRECT_REQUESTED_OBJECT_TYPE,
 
     // REST handler
-    REST_NOT_FOUND,                  /*!< Requested REST resource not found */
-    REST_COULD_NOT_PARSE_VERSION,    /*!< Could not parse model version in request */
-    REST_INVALID_URL,                /*!< Malformed REST request url */
-    REST_UNSUPPORTED_METHOD,         /*!< Request sent with unsupported method */
-    UNKNOWN_REQUEST_COMPONENTS_TYPE, /*!< Components type not recognized */
+    REST_NOT_FOUND,                         /*!< Requested REST resource not found */
+    REST_COULD_NOT_PARSE_VERSION,           /*!< Could not parse model version in request */
+    REST_INVALID_URL,                       /*!< Malformed REST request url */
+    REST_UNSUPPORTED_METHOD,                /*!< Request sent with unsupported method */
+    UNKNOWN_REQUEST_COMPONENTS_TYPE,        /*!< Components type not recognized */
+    FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE, /*!< Request of multipart type but failed to parse */
+    FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI,   /*!< Failed to deduce model name from all possible ways */
 
     // REST Parse
     REST_BODY_IS_NOT_AN_OBJECT,                    /*!< REST body should be JSON object */

@@ -6,12 +6,12 @@ To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubu
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
-Download precompiled package (without python support):
+Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22_python_on.tar.gz
 tar -xzvf ovms_ubuntu22_python_on.tar.gz
@@ -25,7 +25,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
@@ -34,12 +34,12 @@ pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
-Download precompiled package (without python support):
+Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu24.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24_python_on.tar.gz
 tar -xzvf ovms_ubuntu24_python_on.tar.gz
@@ -53,7 +53,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.12
@@ -62,12 +62,12 @@ pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 :::
 :::{tab-item} RHEL 9.5
 :sync: rhel-9.5
-Download precompiled package (without python support):
+Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat_python_on.tar.gz
 tar -xzvf ovms_redhat_python_on.tar.gz
@@ -81,7 +81,7 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
@@ -111,9 +111,9 @@ Run `setupvars` script to set required environment variables.
 .\ovms\setupvars.ps1
 ```
 
-> **Note**: Running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+> **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
 
-> **Note**: When serving LLM models, OVMS uses Python's Jinja package to apply chat template. Please ensure you have Windows "Beta Unicode UTF-8 for worldwide language support" enabled. [Instruction](llm_utf8_troubleshoot.png)
+> **Note**: If package contains Python, OVMS uses Python's Jinja package to apply chat template when serving LLMs. In such case, please ensure you have Windows "Beta Unicode UTF-8 for worldwide language support" enabled. [Instruction](llm_utf8_troubleshoot.png)
 
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 

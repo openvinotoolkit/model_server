@@ -19,22 +19,22 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 def _is_windows(ctx):
     return ctx.os.name.lower().find("windows") != -1
 
-def libgt2_engine():
-    libgt2_repository(name="_libgt2_engine")
+def libgit2_engine():
+    libgit2_repository(name="_libgit2_engine")
     new_git_repository(
-        name = "libgt2_engine",
+        name = "libgit2_engine",
         remote = "https://github.com/libgit2/libgit2.git",
         commit = "338e6fb681369ff0537719095e22ce9dc602dbf0", # Dec 28, 2024 - v1.9.0
-        build_file = "@_libgt2_engine//:BUILD",
+        build_file = "@_libgit2_engine//:BUILD",
         patch_args = ["-p1"],
         # Patch implements git-lfs filter, required for HF models download
         patches = ["lfs.patch"],
     )
 
     #native.new_local_repository(
-    #    name = "libgt2_engine",
-    #    path = "/libgt2_engine",
-    #    build_file = "@_libgt2_engine//:BUILD",
+    #    name = "libgit2_engine",
+    #    path = "/libgit2_engine",
+    #    build_file = "@_libgit2_engine//:BUILD",
     #)
 
 def _impl(repository_ctx):
@@ -100,7 +100,7 @@ build_release = {{"CMAKE_BUILD_TYPE": "Release"}}
 build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 
 cmake(
-    name = "libgt2_cmake",
+    name = "libgit2_cmake",
     build_args = [
         "--verbose",
         "--",  # <- Pass remaining options to the native tool.
@@ -133,9 +133,9 @@ cmake(
 )
 
 cc_library(
-    name = "libgt2_engine",
+    name = "libgit2_engine",
     deps = [
-        ":libgt2_cmake",
+        ":libgit2_cmake",
     ],
     visibility = ["//visibility:public"],
 )
@@ -143,7 +143,7 @@ cc_library(
     repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy,
                                                             lib_name=lib_name, out_libs=out_libs, cache_entries=cache_entries, out_static=out_static))
 
-libgt2_repository = repository_rule(
+libgit2_repository = repository_rule(
     implementation = _impl,
     local=True,
 )
