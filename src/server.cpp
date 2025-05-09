@@ -53,6 +53,7 @@
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
+#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -258,6 +259,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<CAPIModule>(*this);
     if (name == HF_MODEL_PULL_MODULE_NAME)
         return std::make_unique<HfPullModelModule>();
+    if (name == SERVABLES_CONFIG_MANAGER_MODULE_NAME)
+        return std::make_unique<ServablesConfigManagerModule>();
     return nullptr;
 }
 
@@ -301,6 +304,11 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 
+    if (config.getServerSettings().listServables) {
+        INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
+        START_MODULE(it);
+        return status;
+    }
     if (config.getServerSettings().hfSettings.pullHfModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
@@ -412,7 +420,9 @@ int Server::start(int argc, char** argv) {
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request && !serverSettings.hfSettings.pullHfModelMode) {
+        while (!shutdown_request &&
+               !serverSettings.hfSettings.pullHfModelMode &&
+               !serverSettings.listServables) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

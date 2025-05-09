@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-#include <string>
+#include "modelextensions.hpp"
 
 namespace ovms {
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string HF_MODEL_PULL_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
-extern const std::string CAPI_MODULE_NAME;
-extern const std::string SERVABLES_CONFIG_MANAGER_MODULE_NAME;
+const std::array<const char*, 2> OV_MODEL_FILES_EXTENSIONS{".xml", ".bin"};
+const std::array<const char*, 1> ONNX_MODEL_FILES_EXTENSIONS{".onnx"};
+const std::array<const char*, 2> PADDLE_MODEL_FILES_EXTENSIONS{".pdmodel", ".pdiparams"};
+const std::array<const char*, 1> TF_MODEL_FILES_EXTENSIONS{".pb"};
+const std::array<const char*, 1> TFLITE_MODEL_FILES_EXTENSIONS{".tflite"};
 }  // namespace ovms
