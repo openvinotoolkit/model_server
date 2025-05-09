@@ -417,10 +417,33 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "modelextensions",
+    hdrs = ["modelextensions.hpp",],
+    srcs = ["modelextensions.cpp",],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
+    name = "listmodels",
+    hdrs = ["listmodels.hpp",],
+    srcs = ["listmodels.cpp",],
+    deps = [
+        "libovmslogging",
+        "modelextensions",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
     name = "modelinstance_h",
     hdrs = ["modelinstance.hpp",],
     srcs = [],
     deps = [
+        "modelextensions",
         "libovmslogging",
         "libovms_outputkeeper",
         "libovmsprofiler",
@@ -3079,6 +3102,7 @@ cc_library(
     srcs = ["test/pull_hf_model_test.cpp"],
     linkopts = [],
     deps = [
+        "listmodels",
         ":test_utils",
         "//src/pull_module:libgit2",
         "//src/pull_module:hf_pull_model_module",
