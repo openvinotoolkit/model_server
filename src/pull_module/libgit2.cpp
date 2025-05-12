@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "libgt2.hpp"
+#include "libgit2.hpp"
 
 #include <string>
 #include <memory>
@@ -39,9 +39,6 @@
 #else
 #define PRIuZ "zu"
 #endif
-#endif
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 namespace ovms {
@@ -80,7 +77,7 @@ static void print_progress(const progress_data* pd) {
 }
 
 static int sideband_progress(const char* str, int len, void* payload) {
-    (void)payload; /* unused */
+    (void)payload;  //  unused
 
     printf("remote: %.*s", len, str);
     fflush(stdout);
@@ -143,6 +140,36 @@ int cred_acquire_cb(git_credential** out,
 }
 
 // C-style callback functions section used in libgt2 library ENDS ********************************
+
+#define IF_ERROR_SET_MSG_AND_RETURN()                                 \
+    do {                                                              \
+        if (this->status < 0) {                                       \
+            const git_error* err = git_error_last();                  \
+            const char* msg = err ? err->message : "unknown failure"; \
+            errMsg = std::string(msg);                                \
+            return;                                                   \
+        } else {                                                      \
+            errMsg = "";                                              \
+        }                                                             \
+    } while (0)
+
+Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
+    SPDLOG_DEBUG("Initializing libgit2");
+    this->status = git_libgit2_init();
+    IF_ERROR_SET_MSG_AND_RETURN();
+    SPDLOG_TRACE("Setting libgit2 server connection timeout:{}", opts.serverConnectTimeoutMs);
+    this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_CONNECT_TIMEOUT, opts.serverConnectTimeoutMs);
+    IF_ERROR_SET_MSG_AND_RETURN();
+    SPDLOG_TRACE("Setting libgit2 server timeout:{}", opts.serverTimeoutMs);
+    this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, opts.serverTimeoutMs);
+    IF_ERROR_SET_MSG_AND_RETURN();
+}
+
+Libgt2InitGuard::~Libgt2InitGuard() {
+    SPDLOG_DEBUG("Shutdown libgit2");
+    git_libgit2_shutdown();
+}
+
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
         return true;
@@ -234,7 +261,9 @@ Status HfDownloader::cloneRepository() {
     std::string passRepoUrl = GetRepositoryUrlWithPassword();
     const char* url = passRepoUrl.c_str();
     const char* path = this->downloadPath.c_str();
+    SPDLOG_TRACE("Starting git clone to: {}", path);
     int error = git_clone(&cloned_repo, url, path, &clone_opts);
+    SPDLOG_TRACE("Ended git clone");
     if (error != 0) {
         const git_error* err = git_error_last();
         if (err)
@@ -251,6 +280,3 @@ Status HfDownloader::cloneRepository() {
 }
 
 }  // namespace ovms
-#ifdef __cplusplus
-}
-#endif

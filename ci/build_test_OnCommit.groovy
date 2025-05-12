@@ -47,9 +47,9 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
+        stage('Style, SDL') {
           options {
-            timeout(time: 20, unit: 'MINUTES')
+                timeout(time: 20, unit: 'MINUTES')
           }
           parallel {
             stage('Style check') {
@@ -76,6 +76,25 @@ pipeline {
               steps {
                     sh "make test_client_lib"
                   }
+            }
+          }
+        }
+        stage('Cleanup node') {
+          options {
+              timeout(time: 30, unit: 'MINUTES')
+          }
+          agent {
+            label 'win_ovms'
+          }
+          steps {
+            script {
+                agent_name_windows = env.NODE_NAME
+                def windows = load 'ci/loadWin.groovy'
+                if (windows != null) {
+                    windows.cleanup_directories()
+                } else {
+                    error "Cannot load ci/loadWin.groovy file."
+                }
             }
           }
         }

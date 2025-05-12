@@ -701,7 +701,7 @@ cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
-            "//src/libgt2:hf_pull_model_module",
+            "//src/pull_module:hf_pull_model_module",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
             "tfs_backend_impl",
@@ -3077,9 +3077,10 @@ cc_library(
     linkopts = [],
     deps = [
         ":test_utils",
-        "//src/libgt2:libgt2",
-        "//src/libgt2:hf_pull_model_module",
+        "//src/pull_module:libgit2",
+        "//src/pull_module:hf_pull_model_module",
         "//src:ovms_lib",
+        "libovmsstring_utils",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
