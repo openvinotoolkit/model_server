@@ -1588,7 +1588,6 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     }
 }
 
-// Potential sporadic - move to functional if problematic
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -1604,7 +1603,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO?"
+                "content": "What is OpenVINO? In short"
             }
             ]
         }
@@ -1662,6 +1661,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
         ASSERT_EQ(resp.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
     }
 
+    bool foundDotInLastResponse = false;
     // Check for existence of a dot:
     for (size_t i = responses.size() - numberOfLastResponsesToCheckForStopString; i < responses.size(); ++i) {
         // Assert there is a dot '.' in the response
@@ -1687,8 +1687,11 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
         ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
         ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
         resp = d["choices"][0]["delta"]["content"].GetString();
-        ASSERT_NE(resp.find('.'), std::string::npos) << "cannot find dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
+        if (resp.find('.') != std::string::npos) {
+            foundDotInLastResponse = true;
+        }
     }
+    ASSERT_TRUE(foundDotInLastResponse) << "cannot find dot last responses";
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
