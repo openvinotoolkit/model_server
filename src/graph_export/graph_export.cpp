@@ -131,6 +131,32 @@ static std::string createRerankSubconfigTemplate(const RerankGraphSettingsImpl& 
     return oss.str();
 }
 
+static std::string createEmbeddingsSubconfigTemplate(const EmbeddingsGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    {
+        "model_config_list": [
+            { "config": 
+                {
+                        "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                        "base_path": "tokenizer"
+                    }
+            },
+            { "config": 
+                {
+                        "name": ")" << graphSettings.modelName << R"(_embeddings_model",
+                        "base_path": "rerank",
+                        "target_device": ")" << graphSettings.targetDevice << R"(",
+                        "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                    }
+            }
+        ]
+    })";
+    // clang-format on
+    return oss.str();
+}
+
 static std::string createRerankGraphTemplate(const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
@@ -169,6 +195,50 @@ static std::string createRerankGraphTemplate(const RerankGraphSettingsImpl& grap
     return oss.str();
 }
 
+static std::string createEmbeddingsGraphTemplate(const EmbeddingsGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:embeddings"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_embeddings_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
+        calculator: "EmbeddingsCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+            normalize_embeddings: )"
+            << graphSettings.normalize << R"(,
+        }
+    }
+    })";
+
+    // clang-format on
+    return oss.str();
+}
+
 GraphExport::GraphExport() {
 }
 
@@ -194,10 +264,15 @@ Status GraphExport::createGraphFile(const std::string& directoryPath, const HFSe
     }
 
     std::string graphString = "";
-    if (hfSettings.task == "text_deneration") {
+    if (hfSettings.task == "text_generation") {
         graphString = createTextGenerationGraphTemplate(hfSettings.graphSettings);
     } else if (hfSettings.task == "embeddings") {
-        return StatusCode::INTERNAL_ERROR;
+        graphString = createEmbeddingsGraphTemplate(hfSettings.embeddingsGraphSettings);
+        std::string subConfigString = createEmbeddingsSubconfigTemplate(hfSettings.embeddingsGraphSettings);
+        std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+        auto status = createFile(fullPath, subConfigString);
+        if (!status.ok())
+            return status;
     } else if (hfSettings.task == "rerank") {
         graphString = createRerankGraphTemplate(hfSettings.rerankGraphSettings);
         std::string subConfigString = createRerankSubconfigTemplate(hfSettings.rerankGraphSettings);

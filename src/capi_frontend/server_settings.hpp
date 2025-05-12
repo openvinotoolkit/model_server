@@ -40,6 +40,15 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> pipelineType;
 };
 
+struct EmbeddingsGraphSettingsImpl {
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+    uint32_t version = 1;
+    std::string normalize = "false";
+    std::string truncate = "false";
+};
+
 struct RerankGraphSettingsImpl {
     std::string targetDevice = "CPU";
     std::string modelName = "";
@@ -55,6 +64,7 @@ struct HFSettingsImpl {
     std::string task = "text_generation";
     TextGenGraphSettingsImpl graphSettings;
     RerankGraphSettingsImpl rerankGraphSettings;
+    EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
 };
 
 struct ServerSettingsImpl {

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "rerank_graph_cli_parser.hpp"
+#include "embeddings_graph_cli_parser.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -29,16 +29,16 @@
 
 namespace ovms {
 
-RerankGraphSettingsImpl& RerankGraphCLIParser::defaultGraphSettings() {
-    static RerankGraphSettingsImpl instance;
+EmbeddingsGraphSettingsImpl& EmbeddingsGraphCLIParser::defaultGraphSettings() {
+    static EmbeddingsGraphSettingsImpl instance;
     return instance;
 }
 
-void RerankGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task rerank graph options");
+void EmbeddingsGraphCLIParser::createOptions() {
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task embeddings graph options");
 
     // clang-format off
-    options->add_options("rerank")
+    options->add_options("embeddings")
         ("graph_target_device",
             "CPU, GPU, NPU or HETERO, default is CPU.",
             cxxopts::value<std::string>()->default_value("CPU"),
@@ -47,24 +47,28 @@ void RerankGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS")
-        ("max_doc_length",
-            "Maximum length of input documents in tokens.",
-            cxxopts::value<uint32_t>()->default_value("16000"),
-            "MAX_DOC_LENGTH")
+        ("truncate",
+            "Truncate the prompts to fit to the embeddings model.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "TRUNCATE")
+        ("normalize",
+            "Normalize the embeddings.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "NORMALIZE")
         ("version",
             "Version of the model.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "VERSION");
 }
 
-void RerankGraphCLIParser::printHelp() {
+void EmbeddingsGraphCLIParser::printHelp() {
     if (!this->options) {
         this->createOptions();
     }
-    std::cout << options->help({"rerank"}) << std::endl;
+    std::cout << options->help({"embeddings"}) << std::endl;
 }
 
-void RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+void EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     try {
         if (!this->options) {
             this->createOptions();
@@ -90,28 +94,29 @@ void RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOption
     }
 }
 
-void RerankGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+void EmbeddingsGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
         if (serverSettings->hfSettings.pullHfModelMode) {
-            serverSettings->hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+            serverSettings->hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
             return;
         } else {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     }
 
-    serverSettings->hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    serverSettings->hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    serverSettings->hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-    serverSettings->hfSettings.rerankGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
+    serverSettings->hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+    serverSettings->hfSettings.embeddingsGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
+    serverSettings->hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
+    serverSettings->hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
+    serverSettings->hfSettings.embeddingsGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
 
     if (!this->validate(serverSettings)) {
         throw std::logic_error("Error parsing graph options.");
     }
 }
 
-bool RerankGraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
+bool EmbeddingsGraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
     // TODO: CVS-166727 add validation of rerankGraphSettings and plugin config
     if (serverSettings->hfSettings.task == "") {
         std::cerr << "Error: --task parameter not set." << std::endl;

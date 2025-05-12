@@ -113,7 +113,7 @@ Status HfPullModelModule::clone() const {
         return status;
     }
     GraphExport graphExporter;
-    status = graphExporter.createGraphFile(this->hfSettings.downloadPath, this->hfSettings);
+    status = graphExporter.createGraphFile(hfDownloader.getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }

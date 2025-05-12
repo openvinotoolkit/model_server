@@ -35,7 +35,7 @@ TextGenGraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
 }
 
 void GraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull graph creation options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull --task text_generation graph options");
 
     // clang-format off
     options->add_options("text generation")

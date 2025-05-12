@@ -343,6 +343,7 @@ cc_library(
         "libovms_version",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
+        "//src/graph_export:embeddings_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
