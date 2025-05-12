@@ -29,13 +29,13 @@
 
 namespace ovms {
 
-GraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
-    static GraphSettingsImpl instance;
+TextGenGraphSettingsImpl& GraphCLIParser::defaultGraphSettings() {
+    static TextGenGraphSettingsImpl instance;
     return instance;
 }
 
 void GraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull", "--pull graph creation options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull graph creation options");
 
     // clang-format off
     options->add_options("text generation")

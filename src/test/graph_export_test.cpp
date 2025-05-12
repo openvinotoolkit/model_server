@@ -147,10 +147,10 @@ protected:
 };
 
 TEST_F(GraphCreationTest, positiveDefault) {
-    ovms::GraphSettingsImpl graphSettings;
+    ovms::HFSettingsImpl hfSettings;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -159,14 +159,14 @@ TEST_F(GraphCreationTest, positiveDefault) {
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
-    ovms::GraphSettingsImpl graphSettings;
-    graphSettings.pluginConfig.kvCachePrecision = "u8";
-    graphSettings.pluginConfig.maxPromptLength = 123;
-    graphSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.graphSettings.pluginConfig.kvCachePrecision = "u8";
+    hfSettings.graphSettings.pluginConfig.maxPromptLength = 123;
+    hfSettings.graphSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -175,12 +175,12 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
-    ovms::GraphSettingsImpl graphSettings;
-    graphSettings.pluginConfig.kvCachePrecision = "u8";
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.graphSettings.pluginConfig.kvCachePrecision = "u8";
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -189,9 +189,9 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
 }
 
 TEST_F(GraphCreationTest, negativeCreateFile) {
-    ovms::GraphSettingsImpl graphSettings;
+    ovms::HFSettingsImpl hfSettings;
 
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile("", graphSettings);
+    auto status = graphExporter->createGraphFile("", hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }

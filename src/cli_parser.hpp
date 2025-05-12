@@ -20,17 +20,18 @@
 #include <cxxopts.hpp>
 
 #include "graph_export/graph_cli_parser.hpp"
+#include "graph_export/rerank_graph_cli_parser.hpp"
 
 namespace ovms {
 
 struct ServerSettingsImpl;
 struct ModelsSettingsImpl;
-class GraphCLIParser;
 
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
     GraphCLIParser graphOptionsParser;
+    RerankGraphCLIParser rerankGraphOptionsParser;
 
 public:
     CLIParser() = default;

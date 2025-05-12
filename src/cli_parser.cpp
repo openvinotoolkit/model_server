@@ -199,7 +199,23 @@ void CLIParser::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         if (result->unmatched().size()) {
-            this->graphOptionsParser.parse(result->unmatched());
+            // HF pull mode
+            if (result->count("pull")) {
+                if (result->count("task")) {
+                    std::string task = result->operator[]("task").as<std::string>();
+                    if (task == "text_generation") {
+                        this->graphOptionsParser.parse(result->unmatched());
+                    }
+                    if (task == "embeddings") {
+                        // TODO: add rerank embeddings parser
+                        throw std::logic_error("Error: --task parameter unsupported value: " + task);
+                    }
+                    if (task == "rerank") {
+
+                        this->rerankGraphOptionsParser.parse(result->unmatched());
+                    }
+                }
+            }
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
@@ -216,6 +232,7 @@ void CLIParser::parse(int argc, char** argv) {
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
             this->graphOptionsParser.printHelp();
+            this->rerankGraphOptionsParser.printHelp();
             exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
@@ -287,16 +304,18 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
             serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
             std::string task = result->operator[]("task").as<std::string>();
-            if (task != "text_generation") {
-                if (task != "embeddings") {
-                    if (task != "rerank") {
-                        throw std::logic_error("Error: --task parameter unsupported value: " + task);
-                    }
-                }
-            }
             serverSettings->hfSettings.task = task;
+            if (task == "text_generation") {
+                this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+            } else if (task == "embeddings") {
+                // TODO: add rerank embeddings parser
+                throw std::logic_error("Error: --task parameter unsupported value: " + task);
+            } else if (task == "rerank") {
+                this->rerankGraphOptionsParser.prepare(serverSettings, modelsSettings);
+            } else {
+                throw std::logic_error("Error: --task parameter unsupported value: " + task);
+            }
         }
-        this->graphOptionsParser.prepare(serverSettings, modelsSettings);
     } else {
         serverSettings->hfSettings.pullHfModelMode = false;
     }

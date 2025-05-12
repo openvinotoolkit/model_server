@@ -62,7 +62,7 @@ Status HfPullModelModule::clone() const {
     }
 
     std::unique_ptr<GraphExport> graphExporter = std::make_unique<GraphExport>();
-    status = graphExporter->createGraphFile(hfDownloader->getGraphDirectory(), this->hfSettings.graphSettings);
+    status = graphExporter->createGraphFile(hfDownloader->getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }

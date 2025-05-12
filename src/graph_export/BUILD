@@ -43,3 +43,18 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "rerank_graph_cli_parser",
+    srcs = ["rerank_graph_cli_parser.cpp"],
+    hdrs = ["rerank_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovms_version",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)

@@ -36,7 +36,7 @@
 
 namespace ovms {
 
-static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& graphSettings) {
+static std::string createTextGenerationGraphTemplate(const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -105,28 +105,110 @@ static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& gr
     return oss.str();
 }
 
+static std::string createRerankSubconfigTemplate(const RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    {
+        "model_config_list": [
+            { "config": 
+                {
+                        "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                        "base_path": "tokenizer"
+                    }
+            },
+            { "config": 
+                {
+                        "name": ")" << graphSettings.modelName << R"(_rerank_model",
+                        "base_path": "rerank",
+                        "target_device": ")" << graphSettings.targetDevice << R"(",
+                        "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                    }
+            }
+        ]
+    })";
+    // clang-format on
+    return oss.str();
+}
+
+static std::string createRerankGraphTemplate(const RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:rerank"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_rerank_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "RERANK_SESSION:rerank"
+        calculator: "RerankCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+    })";
+
+    // clang-format on
+    return oss.str();
+}
+
 GraphExport::GraphExport() {
 }
 
-Status GraphExport::createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings) {
-    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
-        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
-        return StatusCode::PATH_INVALID;
-    }
-    std::string graphString = createTextGenerationGraphTemplate(graphSettings);
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    SPDLOG_DEBUG("Creating graph file {}", fullPath);
+Status GraphExport::createFile(const std::string& filePath, const std::string& contents) {
+    SPDLOG_DEBUG("Creating file {}", filePath);
     // Always overwrite
     {
-        std::ofstream graphFile(fullPath, std::ios::trunc | std::ofstream::binary);
+        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
         if (graphFile.is_open()) {
-            graphFile << graphString << std::endl;
+            graphFile << contents << std::endl;
         } else {
-            SPDLOG_ERROR("Unable to open file: ", fullPath);
+            SPDLOG_ERROR("Unable to open file: ", filePath);
             return StatusCode::FILE_INVALID;
         }
     }
     return StatusCode::OK;
+}
+
+Status GraphExport::createGraphFile(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
+        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    std::string graphString = "";
+    if (hfSettings.task == "text_deneration")
+        graphString = createTextGenerationGraphTemplate(hfSettings.graphSettings);
+    else if (hfSettings.task == "embeddings")
+        return StatusCode::INTERNAL_ERROR;
+    else if (hfSettings.task == "rerank") {
+        graphString = createRerankGraphTemplate(hfSettings.rerankGraphSettings);
+        std::string subConfigString = createRerankSubconfigTemplate(hfSettings.rerankGraphSettings);
+        std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+        auto status = createFile(fullPath, subConfigString);
+        if (!status.ok())
+            return status;
+    }
+
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return createFile(fullPath, graphString);
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {

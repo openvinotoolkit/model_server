@@ -27,7 +27,7 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> modelDistributionPolicy;
 };
 
-struct GraphSettingsImpl {
+struct TextGenGraphSettingsImpl {
     std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
@@ -40,12 +40,21 @@ struct GraphSettingsImpl {
     std::optional<std::string> pipelineType;
 };
 
+struct RerankGraphSettingsImpl {
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+    uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint32_t version = 1;
+};
+
 struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
     std::string task = "text_generation";
-    GraphSettingsImpl graphSettings;
+    TextGenGraphSettingsImpl graphSettings;
+    RerankGraphSettingsImpl rerankGraphSettings;
 };
 
 struct ServerSettingsImpl {

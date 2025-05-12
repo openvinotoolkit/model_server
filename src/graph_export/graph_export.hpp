@@ -18,13 +18,16 @@
 
 namespace ovms {
 struct PluginConfigSettingsImpl;
-struct GraphSettingsImpl;
+struct HFSettingsImpl;
 class Status;
 
 class GraphExport {
 public:
     GraphExport();
-    Status createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings);
+    Status createGraphFile(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
     static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
+
+private:
+    Status createFile(const std::string& filePath, const std::string& contents);
 };
 }  // namespace ovms
