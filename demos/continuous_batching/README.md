@@ -243,9 +243,9 @@ Windows Powershell
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"prompt\":\"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\"}"
+curl -s http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"prompt\":\"^<^|begin_of_text^|^>^<^|start_header_id^|^>system^<^|end_header_id^|^>\n\nYou are assistant^<^|eot_id^|^>^<^|start_header_id^|^>user^<^|end_header_id^|^>\n\nWhat is OpenVINO?^<^|eot_id^|^>^<^|start_header_id^|^>assistant^<^|end_header_id^|^>\"}"
 ```
-:::
+::: 
 
 ::::
 
