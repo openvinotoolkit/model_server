@@ -269,11 +269,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
-#ifdef __linux__
-                            } else if (std::regex_match(url.c_str(), std::regex("[^\\0]+"))) {
-#elif _WIN32
-                            } else if (std::regex_match(url.c_str(), std::regex("^[a-zA-Z]:\\(((?![<>:\"\/\\|?*]).)+((?<![ .])\\)?)*$"))) {
-#endif
+
+                            } else {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 if (allowedLocalMediaPath.has_value()) {
                                     const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
@@ -290,8 +287,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
-                            } else {
-                                return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix, path to local filesystem or valid URL");
                             }
 
                         } else {
