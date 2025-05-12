@@ -211,7 +211,6 @@ void CLIParser::parse(int argc, char** argv) {
                         throw std::logic_error("Error: --task parameter unsupported value: " + task);
                     }
                     if (task == "rerank") {
-
                         this->rerankGraphOptionsParser.parse(result->unmatched());
                     }
                 }
