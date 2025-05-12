@@ -194,11 +194,11 @@ Status GraphExport::createGraphFile(const std::string& directoryPath, const HFSe
     }
 
     std::string graphString = "";
-    if (hfSettings.task == "text_deneration")
+    if (hfSettings.task == "text_deneration") {
         graphString = createTextGenerationGraphTemplate(hfSettings.graphSettings);
-    else if (hfSettings.task == "embeddings")
+    } else if (hfSettings.task == "embeddings") {
         return StatusCode::INTERNAL_ERROR;
-    else if (hfSettings.task == "rerank") {
+    } else if (hfSettings.task == "rerank") {
         graphString = createRerankGraphTemplate(hfSettings.rerankGraphSettings);
         std::string subConfigString = createRerankSubconfigTemplate(hfSettings.rerankGraphSettings);
         std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
