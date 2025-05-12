@@ -272,7 +272,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 #ifdef __linux__
                             } else if (std::regex_match(url.c_str(), std::regex("[^\\0]+"))) {
 #elif _WIN32
-                            } else if (std::regex_match(url.c_str(), std::regex("^[a-zA-Z]:\\(((?![<>:\"/\\|?*]).)+((?<![ .])\\)?)*$"))) {
+                            } else if (std::regex_match(url.c_str(), std::regex("^[a-zA-Z]:\\(((?![<>:\"\/\\|?*]).)+((?<![ .])\\)?)*$"))) {
 #endif
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 if (allowedLocalMediaPath.has_value()) {
