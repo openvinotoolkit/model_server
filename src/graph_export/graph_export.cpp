@@ -111,19 +111,19 @@ static std::string createRerankSubconfigTemplate(const RerankGraphSettingsImpl& 
     oss << R"(
     {
         "model_config_list": [
-            { "config": 
+            { "config":
                 {
-                        "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                        "base_path": "tokenizer"
-                    }
+                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
             },
-            { "config": 
+            { "config":
                 {
-                        "name": ")" << graphSettings.modelName << R"(_rerank_model",
-                        "base_path": "rerank",
-                        "target_device": ")" << graphSettings.targetDevice << R"(",
-                        "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                    }
+                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
+                    "base_path": "rerank",
+                    "target_device": ")" << graphSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                }
             }
         ]
     })";
@@ -137,19 +137,19 @@ static std::string createEmbeddingsSubconfigTemplate(const EmbeddingsGraphSettin
     oss << R"(
     {
         "model_config_list": [
-            { "config": 
+            { "config":
                 {
-                        "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                        "base_path": "tokenizer"
-                    }
+                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
             },
-            { "config": 
+            { "config":
                 {
-                        "name": ")" << graphSettings.modelName << R"(_embeddings_model",
-                        "base_path": "rerank",
-                        "target_device": ")" << graphSettings.targetDevice << R"(",
-                        "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                    }
+                    "name": ")" << graphSettings.modelName << R"(_embeddings_model",
+                    "base_path": "rerank",
+                    "target_device": ")" << graphSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                }
             }
         ]
     })";

@@ -46,7 +46,7 @@ struct Libgt2InitGuard {
 
 class HfDownloader {
 public:
-    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy);
+    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
     Status cloneRepository();
     std::string getGraphDirectory();
 
@@ -56,11 +56,13 @@ protected:
     std::string hfEndpoint;
     std::string hfToken;
     std::string httpProxy;
+    bool overwritePath;
 
     HfDownloader();
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
     static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     bool CheckIfProxySet();
+    Status checkIfOverwrite(const std::string& path);
 };
 }  // namespace ovms

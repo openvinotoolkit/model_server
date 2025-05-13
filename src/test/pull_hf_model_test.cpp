@@ -165,8 +165,8 @@ TEST_F(HfDownloaderPullHfModel, NegativeNoDownloadWrongTask) {
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy) {}
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
     std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
@@ -184,11 +184,11 @@ TEST(HfDownloaderClassTest, Methods) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy);
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
     ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "").CheckIfProxySet(), false);
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
@@ -202,9 +202,9 @@ TEST(HfDownloaderClassTest, Methods) {
 }
 
 TEST(HfDownloaderClassTest, MethodsNegative) {
-    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "").cloneRepository(), ovms::StatusCode::PATH_INVALID);
+    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-    EXPECT_EQ(TestHfDownloader("name/test", "/some/path", "", "", "").cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+    EXPECT_EQ(TestHfDownloader("name/test", "/some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {
@@ -303,6 +303,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"--pull",
         (char*)"--source_model",
         (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--pipeline_type",
@@ -313,13 +314,15 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"NPU",
     };
 
-    int arg_count = 12;
+    int arg_count = 13;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(config.getServerSettings().hfSettings.overwriteModels, true);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelName, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.value(), "VLM");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 128);
@@ -332,7 +335,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
 }
 
-TEST(OvmsGraphConfigTest, negativeTaskTextGen) {
+TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
@@ -352,6 +355,7 @@ TEST(OvmsGraphConfigTest, negativeTaskTextGen) {
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelName, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 256);
@@ -382,6 +386,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
     ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(config.getServerSettings().hfSettings.overwriteModels, false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 256);
@@ -392,6 +397,35 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
+}
+
+TEST(OvmsGraphConfigTest, modelSettings) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string servingName = "FastDraft";
+    std::string downloadPath = "test/repository";
+    std::string somePath = "/some/Path";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+        (char*)"--model_path",
+        (char*)somePath.c_str(),
+    };
+
+    int arg_count = 10;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
+    ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, somePath);
+    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelName, servingName);
 }
 
 class HfDownloadModelModule : public TestWithTempDir {};

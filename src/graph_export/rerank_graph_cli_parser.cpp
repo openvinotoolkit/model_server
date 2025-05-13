@@ -95,10 +95,23 @@ void RerankGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSet
         // Pull with default arguments - no arguments from user
         if (serverSettings->hfSettings.pullHfModelMode) {
             serverSettings->hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+            // Deduct model name
+            if (modelsSettings->modelName != "") {
+                serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+            } else {
+                serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+            }
             return;
         } else {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
+    }
+
+    // Deduct model name
+    if (modelsSettings->modelName != "") {
+        serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+    } else {
+        serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
     }
 
     serverSettings->hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();

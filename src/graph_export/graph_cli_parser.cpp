@@ -121,10 +121,33 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
         // Pull with default arguments - no arguments from user
         if (serverSettings->hfSettings.pullHfModelMode) {
             serverSettings->hfSettings.graphSettings = GraphCLIParser::defaultGraphSettings();
+            // Deduct model name
+            if (modelsSettings->modelName != "") {
+                serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+            } else {
+                serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+            }
+
+            // Set model path
+            if (modelsSettings->modelPath != "") {
+                serverSettings->hfSettings.graphSettings.modelPath = modelsSettings->modelPath;
+            }
             return;
         } else {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
+    }
+
+    // Deduct model name
+    if (modelsSettings->modelName != "") {
+        serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+    } else {
+        serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+    }
+
+    // Set model path
+    if (modelsSettings->modelPath != "") {
+        serverSettings->hfSettings.graphSettings.modelPath = modelsSettings->modelPath;
     }
 
     serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
@@ -141,7 +164,7 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
     if (result->count("max_num_batched_tokens")) {
         serverSettings->hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
     }
-    // TODO: modelPath
+
     // Plugin configuration
     if (result->count("max_prompt_len")) {
         serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();

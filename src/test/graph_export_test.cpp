@@ -139,6 +139,78 @@ const std::string expectedDefaultGraphContents = R"(
     }
 )";
 
+const std::string expectedRerankJsonContents = R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": "_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": "_rerank_model",
+                    "base_path": "rerank",
+                    "target_device": "CPU",
+                    "plugin_config": { "NUM_STREAMS": "1" }
+                }
+            }
+        ]
+    }
+)";
+
+const std::string expectedEmbeddingsJsonContents = R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": "_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": "_embeddings_model",
+                    "base_path": "embeddings",
+                    "target_device": "CPU",
+                    "plugin_config": { "NUM_STREAMS": "1" }
+                }
+            }
+        ]
+    }
+)";
+
+const std::string expectedRerankGraphContents = R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:rerank"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "_rerank_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "RERANK_SESSION:rerank"
+        calculator: "RerankCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+    }
+)";
+
 class GraphCreationTest : public TestWithTempDir {
 protected:
     void TearDown() {
@@ -156,6 +228,42 @@ TEST_F(GraphCreationTest, positiveDefault) {
     std::string graphContents = GetFileContents(graphPath);
     std::cout << graphContents << std::endl;
     ASSERT_EQ(expectedDefaultGraphContents, graphContents);
+}
+
+TEST_F(GraphCreationTest, rerankPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = "rerank";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::cout << graphContents << std::endl;
+    ASSERT_EQ(expectedRerankGraphContents, graphContents);
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    std::cout << jsonContents << std::endl;
+    ASSERT_EQ(expectedRerankJsonContents, jsonContents);
+}
+
+TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = "embeddings";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::cout << graphContents << std::endl;
+    ASSERT_EQ(expectedRerankGraphContents, graphContents);
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    std::cout << jsonContents << std::endl;
+    ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {

@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include "../filesystem.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../stringutils.hpp"
 #include "../status.hpp"
@@ -201,6 +202,7 @@ HfDownloader::HfDownloader() {
     this->hfEndpoint = "";
     this->hfToken = "";
     this->httpProxy = "";
+    this->overwritePath = false;
 }
 
 std::string HfDownloader::getGraphDirectory() {
@@ -217,18 +219,47 @@ std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, c
     return fullPath;
 }
 
-HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy) {
+HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) {
     this->sourceModel = inSourceModel;
     this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
     this->hfEndpoint = inHfEndpoint;
     this->hfToken = inHfToken;
     this->httpProxy = inHttpProxy;
+    this->overwritePath = inOverwrite;
+}
+
+Status HfDownloader::checkIfOverwrite(const std::string& path) {
+    auto lfstatus = StatusCode::OK;
+    if (this->overwritePath && std::filesystem::is_directory(path)) {
+        LocalFileSystem lfs;
+        lfstatus = lfs.deleteFileFolder(path);
+        if (lfstatus != StatusCode::OK) {
+            SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
+                path,
+                lfstatus);
+        } else {
+            SPDLOG_DEBUG("Path deleted: {}", path);
+        }
+    }
+
+    return lfstatus;
 }
 
 Status HfDownloader::cloneRepository() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
+    }
+
+    // Repository exists and we do not want to overwrite
+    if (std::filesystem::is_directory(this->downloadPath) && !this->overwritePath) {
+        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        return StatusCode::OK;
+    }
+
+    auto status = checkIfOverwrite(this->downloadPath);
+    if (!status.ok()) {
+        return status;
     }
 
     SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);

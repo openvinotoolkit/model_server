@@ -29,6 +29,7 @@ struct PluginConfigSettingsImpl {
 
 struct TextGenGraphSettingsImpl {
     std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelName = "";
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
@@ -61,6 +62,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
+    bool overwriteModels = false;
     std::string task = "text_generation";
     TextGenGraphSettingsImpl graphSettings;
     RerankGraphSettingsImpl rerankGraphSettings;

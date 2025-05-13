@@ -133,6 +133,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "HF source model path",
                 cxxopts::value<std::string>(),
                 "HF_SOURCE")
+            ("overwrite_models",
+                "Overwrite the model if it already exists in the models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "OVERWRITE_MODELS")
             ("model_repository_path",
                 "HF model destination download path",
                 cxxopts::value<std::string>(),
@@ -302,33 +306,6 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("trace_path"))
         serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
-    // Ovms Pull models mode
-    if (result->count("pull")) {
-        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
-        if (result->count("source_model"))
-            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        if (result->count("model_repository_path"))
-            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
-        if (result->count("task")) {
-            std::string task = result->operator[]("task").as<std::string>();
-            serverSettings->hfSettings.task = task;
-            if (task == "text_generation") {
-                this->graphOptionsParser.prepare(serverSettings, modelsSettings);
-            } else if (task == "embeddings") {
-                this->embeddingsGraphOptionsParser.prepare(serverSettings, modelsSettings);
-            } else if (task == "rerank") {
-                this->rerankGraphOptionsParser.prepare(serverSettings, modelsSettings);
-            } else {
-                throw std::logic_error("Error: --task parameter unsupported value: " + task);
-            }
-        } else {
-            // Default text_generation task
-            this->graphOptionsParser.prepare(serverSettings, modelsSettings);
-        }
-    } else {
-        serverSettings->hfSettings.pullHfModelMode = false;
-    }
-
     // Model settings
     if (result->count("model_name")) {
         modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
@@ -397,6 +374,35 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (result->count("config_path")) {
         modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
         modelsSettings->userSetSingleModelArguments.push_back("config_path");
+    }
+
+    // Ovms Pull models mode
+    if (result->count("pull")) {
+        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
+        if (result->count("overwrite_models"))
+            serverSettings->hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
+        if (result->count("source_model"))
+            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+        if (result->count("model_repository_path"))
+            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        if (result->count("task")) {
+            std::string task = result->operator[]("task").as<std::string>();
+            serverSettings->hfSettings.task = task;
+            if (task == "text_generation") {
+                this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+            } else if (task == "embeddings") {
+                this->embeddingsGraphOptionsParser.prepare(serverSettings, modelsSettings);
+            } else if (task == "rerank") {
+                this->rerankGraphOptionsParser.prepare(serverSettings, modelsSettings);
+            } else {
+                throw std::logic_error("Error: --task parameter unsupported value: " + task);
+            }
+        } else {
+            // Default text_generation task
+            this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+        }
+    } else {
+        serverSettings->hfSettings.pullHfModelMode = false;
     }
 }
 
