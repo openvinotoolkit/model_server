@@ -146,7 +146,7 @@ static std::string createEmbeddingsSubconfigTemplate(const EmbeddingsGraphSettin
             { "config":
                 {
                     "name": ")" << graphSettings.modelName << R"(_embeddings_model",
-                    "base_path": "rerank",
+                    "base_path": "embeddings",
                     "target_device": ")" << graphSettings.targetDevice << R"(",
                     "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
                 }

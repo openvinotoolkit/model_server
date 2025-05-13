@@ -45,9 +45,9 @@ struct EmbeddingsGraphSettingsImpl {
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t version = 1; // FIXME: export_embeddings_tokenizer python method - not supported currently?
+    uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
     std::string normalize = "false";
-    std::string truncate = "false"; // FIXME: export_embeddings_tokenizer python method - not supported currently?
+    std::string truncate = "false";  // FIXME: export_embeddings_tokenizer python method - not supported currently?
 };
 
 struct RerankGraphSettingsImpl {
@@ -55,7 +55,7 @@ struct RerankGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
-    uint32_t version = 1; // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
 };
 
 struct HFSettingsImpl {

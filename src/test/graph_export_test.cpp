@@ -208,10 +208,6 @@ const std::string expectedRerankGraphContents = R"(
         calculator: "RerankCalculator"
         input_stream: "REQUEST_PAYLOAD:input"
         output_stream: "RESPONSE_PAYLOAD:output"
-        node_options: {
-            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
-            normalize_embeddings: true,
-        }
     }
 )";
 
@@ -242,6 +238,11 @@ const std::string expectedEmbeddingsGraphContents = R"(
         calculator: "EmbeddingsCalculator"
         input_stream: "REQUEST_PAYLOAD:input"
         output_stream: "RESPONSE_PAYLOAD:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+            normalize_embeddings: true,
+        }
+    }
     }
 )";
 
