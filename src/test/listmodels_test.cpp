@@ -31,57 +31,6 @@
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
 
-struct EnvGuard {
-    EnvGuard() {
-        SPDLOG_TRACE("EnvGuardConstructor");
-    }
-    void set(const std::string& name, const std::string& value) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set");
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        SetEnvironmentVar(name, value);
-    }
-    void unset(const std::string& name) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set");
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        UnSetEnvironmentVar(name);
-    }
-    ~EnvGuard() {
-        SPDLOG_TRACE("EnvGuardDestructor");
-        for (auto& [k, v] : originalValues) {
-            if (v.has_value()) {
-                SPDLOG_TRACE("Var:{} was set to value:{}", k, v.value());
-                SetEnvironmentVar(k, v.value());
-            } else {
-                SPDLOG_TRACE("Var:{} was empty", k);
-                UnSetEnvironmentVar(k);
-            }
-        }
-    }
-
-private:
-    std::unordered_map<std::string, std::optional<std::string>> originalValues;
-};
-
 class ListModelsTest : public TestWithTempDir {
 };
 
