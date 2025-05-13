@@ -220,9 +220,13 @@ TEST_F(GetPartialPathTest, GetPartialPath) {
     std::ofstream bin(binFile);
     bin.close();
     logDirTree(this->directoryPath);
+    auto sep = ovms::FileSystem::getOsSeparator();
     EXPECT_EQ(getPartialPath(binFile, 0), modelFileName);
-    EXPECT_EQ(getPartialPath(binFile, 1), std::to_string(1) + "/" + modelFileName);
-    EXPECT_EQ(getPartialPath(binFile, 4), std::to_string(4) + "/" + std::to_string(3) + "/" + std::to_string(2) + "/" + std::to_string(1) + "/" + modelFileName);
+    EXPECT_EQ(getPartialPath(binFile, 1), std::to_string(1) + sep + modelFileName);
+    EXPECT_EQ(getPartialPath(binFile, 4), std::to_string(4) + sep +
+                                              std::to_string(3) + sep +
+                                              std::to_string(2) + sep +
+                                              std::to_string(1) + sep + modelFileName);
     // expect to get exception
     EXPECT_THROW(getPartialPath(versionDir, 70), std::runtime_error);
 }
