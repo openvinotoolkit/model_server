@@ -19,6 +19,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "src/filesystem.hpp"
 #include "src/modelextensions.hpp"
 #include "src/logging.hpp"
 
@@ -45,7 +46,7 @@ std::string getPartialPath(const std::filesystem::path& path, int depth) {
             SPDLOG_ERROR("Error trying to get partial path:{}, {}", partialPath, i);
             throw std::runtime_error("Depth is greater than the number of directories");
         }
-        partialPath = parentPath.filename().string() + "/" + partialPath;
+        partialPath = ovms::FileSystem::appendSlash(parentPath.filename().string()) + partialPath;
         parentPath = parentPath.parent_path();
     }
     SPDLOG_TRACE("Current partial path:{}", partialPath);
