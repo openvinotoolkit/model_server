@@ -117,7 +117,7 @@ const std::string expectedGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{ }',
             enable_prefix_caching: true,

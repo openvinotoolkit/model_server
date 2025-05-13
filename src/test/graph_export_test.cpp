@@ -43,7 +43,7 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8"}',
             enable_prefix_caching: true,
@@ -81,7 +81,7 @@ const std::string expectedFullPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":"123","MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
@@ -119,7 +119,7 @@ const std::string expectedDefaultGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{ }',
             enable_prefix_caching: true,

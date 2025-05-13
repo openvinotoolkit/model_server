@@ -6,7 +6,7 @@ This functionality is a work in progress
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --pull_hf_model --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
 ```
 
 | option                    | description                                                                                   |

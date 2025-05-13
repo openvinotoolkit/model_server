@@ -58,8 +58,8 @@ static std::string createTextGenerationGraphTemplate(const TextGenGraphSettingsI
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:)"
         << graphSettings.maxNumSeqs << R"(,
-            device: )"
-        << graphSettings.targetDevice << R"(,
+            device: ")"
+        << graphSettings.targetDevice << R"(",
             models_path: ")"
         << graphSettings.modelPath << R"(",
             plugin_config: ')"

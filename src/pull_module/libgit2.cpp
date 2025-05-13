@@ -228,9 +228,27 @@ HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& 
     this->overwritePath = inOverwrite;
 }
 
+Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        try {
+            std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_read | std::filesystem::perms::group_write | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Faile to set read only permission for: {} .Exception caught: {}", dir_entry.path().string(), e.what());
+            return StatusCode::PATH_INVALID;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
 Status HfDownloader::checkIfOverwrite(const std::string& path) {
     auto lfstatus = StatusCode::OK;
     if (this->overwritePath && std::filesystem::is_directory(path)) {
+        // libgit2 clone sets readonly attributes
+        auto status = RemoveReadonlyFileAttributeFromDir(path);
+        if (!status.ok()) {
+            return status;
+        }
         LocalFileSystem lfs;
         lfstatus = lfs.deleteFileFolder(path);
         if (lfstatus != StatusCode::OK) {
@@ -253,7 +271,7 @@ Status HfDownloader::cloneRepository() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwritePath) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        SPDLOG_ERROR("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
         return StatusCode::OK;
     }
 

@@ -64,5 +64,6 @@ protected:
     static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     bool CheckIfProxySet();
     Status checkIfOverwrite(const std::string& path);
+    Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
 };
 }  // namespace ovms
