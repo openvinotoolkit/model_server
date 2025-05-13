@@ -213,6 +213,17 @@ rerank_subconfig_template = """{
    ]
 }"""
 
+def export_rerank(source_model, destination_path, precision):
+    optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+    if os.system(optimum_command):
+        raise ValueError("Failed to export rerank model", source_model)
+    from transformers import AutoTokenizer
+    hf_tokenizer = AutoTokenizer.from_pretrained(source_model)
+    specialTokensMap = {}
+    specialTokensMap["bos_token_id"] = hf_tokenizer.bos_token_id;
+    specialTokensMap["eos_token_id"] = hf_tokenizer.eos_token_id;
+    set_rt_info(destination_path, 'openvino_model.xml', 'config.json', specialTokensMap)
+
 def export_rerank_tokenizer(source_model, destination_path, max_length):
     import openvino as ov
     from openvino_tokenizers import convert_tokenizer
@@ -222,17 +233,29 @@ def export_rerank_tokenizer(source_model, destination_path, max_length):
     hf_tokenizer.save_pretrained(destination_path)
     ov_tokenizer = convert_tokenizer(hf_tokenizer, add_special_tokens=False)
     ov.save_model(ov_tokenizer, os.path.join(destination_path, "openvino_tokenizer.xml"))
+    specialTokensMap = {}
+    specialTokensMap["bos_token_id"] = hf_tokenizer.bos_token_id;
+    specialTokensMap["eos_token_id"] = hf_tokenizer.eos_token_id;
+    set_rt_info(destination_path, 'openvino_tokenizer.xml', 'tokenizer_config.json', specialTokensMap)
 
-def set_rt_info(model_folder_path, model_filename, config_filename):
+def set_rt_info(model_folder_path, model_filename, config_filename, specialTokensMap = {}):
     import openvino as ov
     model = ov.Core().read_model(os.path.join(model_folder_path, model_filename))
     with open(os.path.join(model_folder_path, config_filename), 'r') as config_file:
         config_data = json.load(config_file)
+        print(model_folder_path, model_filename)
+        didSetBosTokenId = False;
+        didSetEosTokenId = False;
         for key, value in config_data.items():
+          print(str(key), str(value))
           try:
               model.set_rt_info(value, ['model_info', key])
           except Exception as e:
               model.set_rt_info(str(value), ['model_info', key])
+          if (key == "bos_token_id"): didSetBosTokenId = True
+          if (key == "eos_token_id"): didSetBosTokenId = True
+        if(not didSetBosTokenId): model.set_rt_info(specialTokensMap["bos_token_id"], ['model_info', "bos_token_id"])
+        if(not didSetEosTokenId): model.set_rt_info(specialTokensMap["eos_token_id"], ['model_info', "eos_token_id"])
     temp_model_name = model_filename.replace('.xml', '_temp.xml')
     ov.save_model(model, os.path.join(model_folder_path, temp_model_name))
     del model
@@ -420,10 +443,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
-                if os.system(optimum_command):
-                    raise ValueError("Failed to export rerank model", source_model)
-                set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
+                export_rerank(source_model, tmpdirname, precision)
                 os.makedirs(embeddings_path, exist_ok=True)
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
                 shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
@@ -431,7 +451,6 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             print("Exporting tokenizer to ",tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
                 export_rerank_tokenizer(source_model, tmpdirname, max_doc_length)
-                set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
                 os.makedirs(tokenizer_path, exist_ok=True)
                 shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
                 shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
