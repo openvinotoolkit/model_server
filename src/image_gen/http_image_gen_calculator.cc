@@ -94,8 +94,11 @@ public:
         }
         std::string prompt = promptIt->value.GetString();
 
+        // TODO: Support more pipeline types
+        // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
+
         // curl -X POST localhost:11338/v3/images/generations -H "Content-Type: application/json" -d '{ "model": "endpoint", "prompt": "A cute baby sea otter", "n": 1, "size": "1024x1024" }'
-        ov::genai::Text2ImagePipeline::GenerationRequest request = pipe->text2ImagePipeline.create_generation_request();
+        ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
         ov::Tensor image = request.generate(prompt,
             ov::AnyMap{
                 ov::genai::width(512),  // todo: get from req
