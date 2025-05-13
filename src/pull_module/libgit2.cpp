@@ -233,7 +233,7 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
         try {
             std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_read | std::filesystem::perms::group_write | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
         } catch (const std::exception& e) {
-            SPDLOG_ERROR("Faile to set read only permission for: {} .Exception caught: {}", dir_entry.path().string(), e.what());
+            SPDLOG_ERROR("Failed to set read only permission for: {} .Exception caught: {}", dir_entry.path().string(), e.what());
             return StatusCode::PATH_INVALID;
         }
     }
