@@ -144,16 +144,16 @@ const std::string expectedRerankJsonContents = R"(
         "model_config_list": [
             { "config":
                 {
-                    "name": "_tokenizer_model",
+                    "name": "myModel_tokenizer_model",
                     "base_path": "tokenizer"
                 }
             },
             { "config":
                 {
-                    "name": "_rerank_model",
+                    "name": "myModel_rerank_model",
                     "base_path": "rerank",
-                    "target_device": "CPU",
-                    "plugin_config": { "NUM_STREAMS": "1" }
+                    "target_device": "GPU",
+                    "plugin_config": { "NUM_STREAMS": "2" }
                 }
             }
         ]
@@ -165,16 +165,16 @@ const std::string expectedEmbeddingsJsonContents = R"(
         "model_config_list": [
             { "config":
                 {
-                    "name": "_tokenizer_model",
+                    "name": "myModel_tokenizer_model",
                     "base_path": "tokenizer"
                 }
             },
             { "config":
                 {
-                    "name": "_embeddings_model",
+                    "name": "myModel_embeddings_model",
                     "base_path": "embeddings",
-                    "target_device": "CPU",
-                    "plugin_config": { "NUM_STREAMS": "1" }
+                    "target_device": "GPU",
+                    "plugin_config": { "NUM_STREAMS": "2" }
                 }
             }
         ]
@@ -189,7 +189,7 @@ const std::string expectedRerankGraphContents = R"(
     output_side_packet: "SESSION:tokenizer"
     node_options: {
         [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: "_tokenizer_model"
+        servable_name: "myModel_tokenizer_model"
         }
     }
     }
@@ -198,7 +198,7 @@ const std::string expectedRerankGraphContents = R"(
     output_side_packet: "SESSION:rerank"
     node_options: {
         [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: "_rerank_model"
+        servable_name: "myModel_rerank_model"
         }
     }
     }
@@ -206,6 +206,40 @@ const std::string expectedRerankGraphContents = R"(
         input_side_packet: "TOKENIZER_SESSION:tokenizer"
         input_side_packet: "RERANK_SESSION:rerank"
         calculator: "RerankCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+            normalize_embeddings: true,
+        }
+    }
+)";
+
+const std::string expectedEmbeddingsGraphContents = R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:embeddings"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_embeddings_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
+        calculator: "EmbeddingsCalculator"
         input_stream: "REQUEST_PAYLOAD:input"
         output_stream: "RESPONSE_PAYLOAD:output"
     }
@@ -233,6 +267,11 @@ TEST_F(GraphCreationTest, positiveDefault) {
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = "rerank";
+    hfSettings.rerankGraphSettings.targetDevice = "GPU";
+    hfSettings.rerankGraphSettings.modelName = "myModel";
+    hfSettings.rerankGraphSettings.numStreams = 2;
+    hfSettings.rerankGraphSettings.maxDocLength = 18;
+    hfSettings.rerankGraphSettings.version = 2;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -251,6 +290,12 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = "embeddings";
+    hfSettings.embeddingsGraphSettings.targetDevice = "GPU";
+    hfSettings.embeddingsGraphSettings.modelName = "myModel";
+    hfSettings.embeddingsGraphSettings.numStreams = 2;
+    hfSettings.embeddingsGraphSettings.truncate = "true";
+    hfSettings.embeddingsGraphSettings.normalize = "true";
+    hfSettings.embeddingsGraphSettings.version = 2;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -259,7 +304,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
 
     std::string graphContents = GetFileContents(graphPath);
     std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedRerankGraphContents, graphContents);
+    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents);
 
     std::string jsonContents = GetFileContents(subconfigPath);
     std::cout << jsonContents << std::endl;
