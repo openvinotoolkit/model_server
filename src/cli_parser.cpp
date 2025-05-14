@@ -228,11 +228,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (nullptr == result) {
         throw std::logic_error("Tried to prepare server and model settings without parse result");
     }
-    // OVMS list models mode
+    // list models mode
     if (result->count("list_models")) {
-            serverSettings->listServables = result->operator[]("list_models").as<bool>();
+        serverSettings->listServables = result->operator[]("list_models").as<bool>();
+        if (result->count("model_repository_path"))
             serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
-            return;
+        return;
     }
     // Ovms Pull models mode
     if (result->count("pull")) {

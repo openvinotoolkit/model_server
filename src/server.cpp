@@ -125,6 +125,8 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
+    SPDLOG_DEBUG("list_models: {}", config.getServerSettings().listServables);
+    SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
 static void onInterrupt(int status) {

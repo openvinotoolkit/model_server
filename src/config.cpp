@@ -90,7 +90,7 @@ bool Config::validate() {
     }
     if (this->serverSettings.listServables) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
-            std::cerr << "Use list_models with model_repository_path" << std::endl;
+            std::cerr << "Use --list_models with --model_repository_path" << std::endl;
             return false;
         }
         return true;
