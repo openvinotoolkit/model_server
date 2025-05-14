@@ -144,6 +144,7 @@ TEST(LocalFileSystem, DownloadFileFolder) {
 
 TEST(LocalFileSystem, DestroyFileFolder) {
     ovms::LocalFileSystem lfs;
+    createTmpFiles();
     bool exists = false;
     auto status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);

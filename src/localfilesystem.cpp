@@ -165,9 +165,6 @@ StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     if (std::filesystem::is_empty(parentPath)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Deleting empty folder: {}", parentPath.string());
         std::filesystem::remove(parentPath);
-    } else {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error removing folder: {}, not empty.", parentPath.string());
-        return StatusCode::PATH_INVALID;
     }
 
     return StatusCode::OK;
