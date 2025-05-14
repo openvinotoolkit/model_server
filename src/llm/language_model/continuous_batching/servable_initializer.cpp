@@ -42,17 +42,17 @@
 namespace ovms {
 
 ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
-    ov::genai::AggregationMode aggregrationMode;
+    ov::genai::AggregationMode aggregationMode;
     if (nodeOptions.cache_eviction_config().aggregation_mode() == mediapipe::LLMCalculatorOptions::CacheEvictionConfig::SUM) {
-        aggregrationMode = ov::genai::AggregationMode::SUM;
+        aggregationMode = ov::genai::AggregationMode::SUM;
     } else {
-        aggregrationMode = ov::genai::AggregationMode::NORM_SUM;
+        aggregationMode = ov::genai::AggregationMode::NORM_SUM;
     }
     size_t startSize = nodeOptions.cache_eviction_config().start_size();
     size_t recentSize = nodeOptions.cache_eviction_config().recent_size();
     size_t maxCacheSize = nodeOptions.cache_eviction_config().max_cache_size();
     bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
-    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregrationMode, applyRotation);
+    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation);
 }
 
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
