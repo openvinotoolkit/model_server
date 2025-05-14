@@ -157,7 +157,41 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
 }
 
 Status GraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
-    // TODO: CVS-166727 add validation of graphSettings and plugin config
+    std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+    if (std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), serverSettings->hfSettings.graphSettings.pipelineType) == allowedPipelineTypes.end()) {
+        std::cerr << "pipeline_type: " << serverSettings->hfSettings.graphSettings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    std::vector allowedTargeDevices = {"CPU", "GPU", "NPU", "HETERO"};
+    if (std::find(allowedTargeDevices.begin(), allowedTargeDevices.end(), serverSettings->hfSettings.graphSettings.targetDevice) == allowedTargeDevices.end()) {
+        std::cerr << "target_device: " << serverSettings->hfSettings.graphSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO" << std::endl;
+        return StatusCode::INTERNAL_ERROR;
+    }
+    
+    std::vector allowedBoolValues = {"false", "true"};
+    if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), serverSettings->hfSettings.graphSettings.enablePrefixCaching) == allowedBoolValues.end()) {
+        std::cerr << "enable_prefix_caching: " << serverSettings->hfSettings.graphSettings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), serverSettings->hfSettings.graphSettings.dynamicSplitFuse) == allowedBoolValues.end()) {
+        std::cerr << "dynamic_split_fuse: " << serverSettings->hfSettings.graphSettings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    if(serverSettings->hfSettings.graphSettings.targetDevice != "NPU"){
+        if(serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength.has_value()){
+            std::cerr << "max_prompt_length is only supported for NPU target device";
+            return StatusCode::INTERNAL_ERROR;
+        }
+    }
+
+    if(serverSettings->hfSettings.sourceModel.rfind("OpenVINO/", 0) == 0){
+        std::cerr << "For now only OpenVINO models are supported";
+        return StatusCode::INTERNAL_ERROR;
+    }
+
     return StatusCode::OK;
 }
 
