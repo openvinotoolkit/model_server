@@ -92,7 +92,68 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        return true;
+        if (this->serverSettings.hfSettings.task == text_generation) {
+            if (std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for text generation.";
+                return false;
+            }
+            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedTargeDevices = {"CPU", "GPU", "NPU", "HETERO"};
+            if (std::find(allowedTargeDevices.begin(), allowedTargeDevices.end(), settings.targetDevice) == allowedTargeDevices.end()) {
+                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (settings.targetDevice != "NPU") {
+                if (settings.pluginConfig.maxPromptLength.has_value()) {
+                    std::cerr << "max_prompt_len is only supported for NPU target device";
+                    return false;
+                }
+            }
+
+            if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+                std::cerr << "For now only OpenVINO models are supported";
+                return false;
+            }
+            return true;
+        }
+
+        if (this->serverSettings.hfSettings.task == embeddings) {
+            if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for embeddings.";
+                return false;
+            }
+            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+            return true;
+        }
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {

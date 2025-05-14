@@ -29,6 +29,9 @@ cc_library(
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@ovms//src:libovmsschema",
     ],
     visibility = ["//visibility:public"],
 )
