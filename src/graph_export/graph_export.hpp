@@ -26,8 +26,5 @@ public:
     GraphExport();
     Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
     static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
-
-private:
-    Status createFile(const std::string& filePath, const std::string& contents);
 };
 }  // namespace ovms

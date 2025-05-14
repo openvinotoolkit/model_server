@@ -64,41 +64,36 @@ void RerankGraphCLIParser::printHelp() {
 }
 
 void RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
-    try {
-        if (!this->options) {
-            this->createOptions();
-        }
-        std::vector<const char*> cStrArray;
-        cStrArray.reserve(unmatchedOptions.size() + 1);
-        cStrArray.push_back("ovms graph");
-        std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
-        const char* const* args = cStrArray.data();
-        result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
+    if (!this->options) {
+        this->createOptions();
+    }
+    std::vector<const char*> cStrArray;
+    cStrArray.reserve(unmatchedOptions.size() + 1);
+    cStrArray.push_back("ovms graph");
+    std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
+    const char* const* args = cStrArray.data();
+    result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-        if (result->unmatched().size()) {
-            std::cerr << "error parsing options - unmatched arguments: ";
-            for (auto& argument : result->unmatched()) {
-                std::cerr << argument << ", ";
-            }
-            std::cerr << std::endl;
-            exit(OVMS_EX_USAGE);
+    if (result->unmatched().size()) {
+        std::cerr << "error parsing options - unmatched arguments: ";
+        for (auto& argument : result->unmatched()) {
+            std::cerr << argument << ", ";
         }
-    } catch (const std::exception& e) {
-        std::cerr << "error parsing options: " << e.what() << std::endl;
+        std::cerr << std::endl;
         exit(OVMS_EX_USAGE);
     }
 }
 
-void RerankGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverSettings->hfSettings.pullHfModelMode) {
-            serverSettings->hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+        if (hfSettings.pullHfModelMode) {
+            hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
             // Deduct model name
-            if (modelsSettings->modelName != "") {
-                serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+            if (modelName != "") {
+                hfSettings.graphSettings.modelName = modelName;
             } else {
-                serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
             }
             return;
         } else {
@@ -107,30 +102,16 @@ void RerankGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSet
     }
 
     // Deduct model name
-    if (modelsSettings->modelName != "") {
-        serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+    if (modelName != "") {
+        hfSettings.graphSettings.modelName = modelName;
     } else {
-        serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
     }
 
-    serverSettings->hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    serverSettings->hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    serverSettings->hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-    serverSettings->hfSettings.rerankGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
-
-    if (!this->validate(serverSettings)) {
-        throw std::logic_error("Error parsing graph options.");
-    }
-}
-
-bool RerankGraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
-    // TODO: CVS-166727 add validation of rerankGraphSettings and plugin config
-    if (serverSettings->hfSettings.task == "") {
-        std::cerr << "Error: --task parameter not set." << std::endl;
-        return false;
-    }
-
-    return true;
+    hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+    hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
+    hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
+    hfSettings.rerankGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
 }
 
 }  // namespace ovms

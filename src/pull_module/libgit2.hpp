@@ -56,14 +56,14 @@ protected:
     std::string hfEndpoint;
     std::string hfToken;
     std::string httpProxy;
-    bool overwritePath;
+    bool overwriteModels;
 
     HfDownloader();
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
     static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     bool CheckIfProxySet();
-    Status checkIfOverwrite(const std::string& path);
+    Status checkIfOverwriteAndRemove(const std::string& path);
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
 };
 }  // namespace ovms

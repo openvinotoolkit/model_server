@@ -25,8 +25,7 @@
 
 namespace ovms {
 
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
+struct HFSettingsImpl;
 struct EmbeddingsGraphSettingsImpl;
 class Status;
 
@@ -34,10 +33,8 @@ class EmbeddingsGraphCLIParser : public GraphCLIParser {
 public:
     EmbeddingsGraphCLIParser() = default;
     void parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
 
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
-
-    bool validate(ServerSettingsImpl*);
     void printHelp();
     void createOptions();
 

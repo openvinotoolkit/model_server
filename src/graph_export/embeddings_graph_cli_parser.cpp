@@ -68,41 +68,36 @@ void EmbeddingsGraphCLIParser::printHelp() {
 }
 
 void EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
-    try {
-        if (!this->options) {
-            this->createOptions();
-        }
-        std::vector<const char*> cStrArray;
-        cStrArray.reserve(unmatchedOptions.size() + 1);
-        cStrArray.push_back("ovms graph");
-        std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
-        const char* const* args = cStrArray.data();
-        result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
+    if (!this->options) {
+        this->createOptions();
+    }
+    std::vector<const char*> cStrArray;
+    cStrArray.reserve(unmatchedOptions.size() + 1);
+    cStrArray.push_back("ovms graph");
+    std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
+    const char* const* args = cStrArray.data();
+    result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-        if (result->unmatched().size()) {
-            std::cerr << "error parsing options - unmatched arguments: ";
-            for (auto& argument : result->unmatched()) {
-                std::cerr << argument << ", ";
-            }
-            std::cerr << std::endl;
-            exit(OVMS_EX_USAGE);
+    if (result->unmatched().size()) {
+        std::cerr << "error parsing options - unmatched arguments: ";
+        for (auto& argument : result->unmatched()) {
+            std::cerr << argument << ", ";
         }
-    } catch (const std::exception& e) {
-        std::cerr << "error parsing options: " << e.what() << std::endl;
+        std::cerr << std::endl;
         exit(OVMS_EX_USAGE);
     }
 }
 
-void EmbeddingsGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverSettings->hfSettings.pullHfModelMode) {
-            serverSettings->hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
+        if (hfSettings.pullHfModelMode) {
+            hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
             // Deduct model name
-            if (modelsSettings->modelName != "") {
-                serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+            if (modelName != "") {
+                hfSettings.graphSettings.modelName = modelName;
             } else {
-                serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
             }
             return;
         } else {
@@ -111,31 +106,17 @@ void EmbeddingsGraphCLIParser::prepare(ServerSettingsImpl* serverSettings, Model
     }
 
     // Deduct model name
-    if (modelsSettings->modelName != "") {
-        serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+    if (modelName != "") {
+        hfSettings.graphSettings.modelName = modelName;
     } else {
-        serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
     }
 
-    serverSettings->hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    serverSettings->hfSettings.embeddingsGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    serverSettings->hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-    serverSettings->hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
-    serverSettings->hfSettings.embeddingsGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
-
-    if (!this->validate(serverSettings)) {
-        throw std::logic_error("Error parsing graph options.");
-    }
-}
-
-bool EmbeddingsGraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
-    // TODO: CVS-166727 add validation of rerankGraphSettings and plugin config
-    if (serverSettings->hfSettings.task == "") {
-        std::cerr << "Error: --task parameter not set." << std::endl;
-        return false;
-    }
-
-    return true;
+    hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+    hfSettings.embeddingsGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
+    hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
+    hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
+    hfSettings.embeddingsGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
 }
 
 }  // namespace ovms

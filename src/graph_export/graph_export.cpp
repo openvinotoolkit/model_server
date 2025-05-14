@@ -36,7 +36,22 @@
 
 namespace ovms {
 
-static std::string createTextGenerationGraphTemplate(const TextGenGraphSettingsImpl& graphSettings) {
+Status createFile(const std::string& filePath, const std::string& contents) {
+    SPDLOG_DEBUG("Creating file {}", filePath);
+    // Always overwrite
+    {
+        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
+        if (graphFile.is_open()) {
+            graphFile << contents << std::endl;
+        } else {
+            SPDLOG_ERROR("Unable to open file: ", filePath);
+            return StatusCode::FILE_INVALID;
+        }
+    }
+    return StatusCode::OK;
+}
+
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -102,10 +117,11 @@ static std::string createTextGenerationGraphTemplate(const TextGenGraphSettingsI
     })";
 
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return createFile(fullPath, oss.str());
 }
 
-static std::string createRerankSubconfigTemplate(const RerankGraphSettingsImpl& graphSettings) {
+static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -128,10 +144,11 @@ static std::string createRerankSubconfigTemplate(const RerankGraphSettingsImpl& 
         ]
     })";
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+    return createFile(fullPath, oss.str());
 }
 
-static std::string createEmbeddingsSubconfigTemplate(const EmbeddingsGraphSettingsImpl& graphSettings) {
+static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -154,10 +171,11 @@ static std::string createEmbeddingsSubconfigTemplate(const EmbeddingsGraphSettin
         ]
     })";
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+    return createFile(fullPath, oss.str());
 }
 
-static std::string createRerankGraphTemplate(const RerankGraphSettingsImpl& graphSettings) {
+static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -192,10 +210,15 @@ static std::string createRerankGraphTemplate(const RerankGraphSettingsImpl& grap
     })";
 
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    auto status = createFile(fullPath, oss.str());
+    if (!status.ok())
+        return status;
+
+    return createRerankSubconfigTemplate(directoryPath, graphSettings);
 }
 
-static std::string createEmbeddingsGraphTemplate(const EmbeddingsGraphSettingsImpl& graphSettings) {
+static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -236,25 +259,15 @@ static std::string createEmbeddingsGraphTemplate(const EmbeddingsGraphSettingsIm
     })";
 
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    auto status = createFile(fullPath, oss.str());
+    if (!status.ok())
+        return status;
+
+    return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
 }
 
 GraphExport::GraphExport() {
-}
-
-Status GraphExport::createFile(const std::string& filePath, const std::string& contents) {
-    SPDLOG_DEBUG("Creating file {}", filePath);
-    // Always overwrite
-    {
-        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
-        if (graphFile.is_open()) {
-            graphFile << contents << std::endl;
-        } else {
-            SPDLOG_ERROR("Unable to open file: ", filePath);
-            return StatusCode::FILE_INVALID;
-        }
-    }
-    return StatusCode::OK;
 }
 
 Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
@@ -263,27 +276,13 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         return StatusCode::PATH_INVALID;
     }
 
-    std::string graphString = "";
     if (hfSettings.task == "text_generation") {
-        graphString = createTextGenerationGraphTemplate(hfSettings.graphSettings);
+        return createTextGenerationGraphTemplate(directoryPath, hfSettings.graphSettings);
     } else if (hfSettings.task == "embeddings") {
-        graphString = createEmbeddingsGraphTemplate(hfSettings.embeddingsGraphSettings);
-        std::string subConfigString = createEmbeddingsSubconfigTemplate(hfSettings.embeddingsGraphSettings);
-        std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-        auto status = createFile(fullPath, subConfigString);
-        if (!status.ok())
-            return status;
+        return createEmbeddingsGraphTemplate(directoryPath, hfSettings.embeddingsGraphSettings);
     } else if (hfSettings.task == "rerank") {
-        graphString = createRerankGraphTemplate(hfSettings.rerankGraphSettings);
-        std::string subConfigString = createRerankSubconfigTemplate(hfSettings.rerankGraphSettings);
-        std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-        auto status = createFile(fullPath, subConfigString);
-        if (!status.ok())
-            return status;
+        return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
     }
-
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return createFile(fullPath, graphString);
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {

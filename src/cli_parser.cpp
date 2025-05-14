@@ -18,6 +18,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "capi_frontend/server_settings.hpp"
 #include "graph_export/graph_cli_parser.hpp"
@@ -212,15 +213,23 @@ void CLIParser::parse(int argc, char** argv) {
                 if (result->count("task")) {
                     std::string task = result->operator[]("task").as<std::string>();
                     if (task == "text_generation") {
-                        this->graphOptionsParser.parse(result->unmatched());
+                        GraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     } else if (task == "embeddings") {
-                        this->embeddingsGraphOptionsParser.parse(result->unmatched());
+                        EmbeddingsGraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     } else if (task == "rerank") {
-                        this->rerankGraphOptionsParser.parse(result->unmatched());
+                        RerankGraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     }
                 } else {
                     // Default task is text_generation
-                    this->graphOptionsParser.parse(result->unmatched());
+                    GraphCLIParser cliParser;
+                    this->graphOptionsParser = std::move(cliParser);
+                    std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                 }
             } else {
                 std::cerr << "error parsing options - unmatched arguments: ";
@@ -245,9 +254,12 @@ void CLIParser::parse(int argc, char** argv) {
 
         if (result->count("help") || result->arguments().size() == 0) {
             std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
-            this->graphOptionsParser.printHelp();
-            this->rerankGraphOptionsParser.printHelp();
-            this->embeddingsGraphOptionsParser.printHelp();
+            GraphCLIParser parser1;
+            RerankGraphCLIParser parser2;
+            EmbeddingsGraphCLIParser parser3;
+            parser1.printHelp();
+            parser2.printHelp();
+            parser3.printHelp();
             exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
@@ -256,166 +268,179 @@ void CLIParser::parse(int argc, char** argv) {
     }
 }
 
-void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
-    if (nullptr == result) {
-        throw std::logic_error("Tried to prepare server and model settings without parse result");
-    }
-
+void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     // Server settings
-    serverSettings->startedWithCLI = true;
+    serverSettings.startedWithCLI = true;
     // list models mode
     if (result->count("list_models")) {
-        serverSettings->listServables = result->operator[]("list_models").as<bool>();
+        serverSettings.listServables = result->operator[]("list_models").as<bool>();
         if (result->count("model_repository_path"))
-            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+            serverSettings.hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         return;
     }
 
-    serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
-    serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
-    serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
-    serverSettings->metricsList = result->operator[]("metrics_list").as<std::string>();
-    serverSettings->filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
-    serverSettings->sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
-    serverSettings->resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
-    serverSettings->grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
+    serverSettings.grpcPort = result->operator[]("port").as<uint32_t>();
+    serverSettings.restPort = result->operator[]("rest_port").as<uint32_t>();
+    serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
+    serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
+    serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
+    serverSettings.sequenceCleanerPollWaitMinutes = result->operator[]("sequence_cleaner_poll_wait_minutes").as<uint32_t>();
+    serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))
-        serverSettings->logLevel = result->operator[]("log_level").as<std::string>();
+        serverSettings.logLevel = result->operator[]("log_level").as<std::string>();
     if (result->count("log_path"))
-        serverSettings->logPath = result->operator[]("log_path").as<std::string>();
+        serverSettings.logPath = result->operator[]("log_path").as<std::string>();
 
     if (result->count("grpc_channel_arguments"))
-        serverSettings->grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
+        serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
 
     if (result != nullptr && result->count("cache_dir")) {
-        serverSettings->cacheDir = result->operator[]("cache_dir").as<std::string>();
+        serverSettings.cacheDir = result->operator[]("cache_dir").as<std::string>();
     }
     if (result->count("cpu_extension")) {
-        serverSettings->cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
+        serverSettings.cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
 
     if (result->count("grpc_bind_address"))
-        serverSettings->grpcBindAddress = result->operator[]("grpc_bind_address").as<std::string>();
+        serverSettings.grpcBindAddress = result->operator[]("grpc_bind_address").as<std::string>();
 
     if (result->count("rest_bind_address"))
-        serverSettings->restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
+        serverSettings.restBindAddress = result->operator[]("rest_bind_address").as<std::string>();
 
     if (result->count("grpc_max_threads"))
-        serverSettings->grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
+        serverSettings.grpcMaxThreads = result->operator[]("grpc_max_threads").as<uint32_t>();
 
     if (result->count("grpc_memory_quota"))
-        serverSettings->grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
+        serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
     if (result->count("rest_workers"))
-        serverSettings->restWorkers = result->operator[]("rest_workers").as<uint32_t>();
+        serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
 #if (PYTHON_DISABLE == 0)
-        serverSettings->withPython = true;
+        serverSettings.withPython = true;
 #endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))
-        serverSettings->tracePath = result->operator[]("trace_path").as<std::string>();
+        serverSettings.tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
+}
+
+void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
     // Model settings
     if (result->count("model_name")) {
-        modelsSettings->modelName = result->operator[]("model_name").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("model_name");
+        modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("model_name");
     }
     if (result->count("model_path")) {
-        modelsSettings->modelPath = result->operator[]("model_path").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("model_name");
+        modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("model_name");
     }
 
     if (result->count("max_sequence_number")) {
-        modelsSettings->maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings->userSetSingleModelArguments.push_back("max_sequence_number");
+        modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
+        modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
     }
 
     if (result->count("batch_size")) {
-        modelsSettings->batchSize = result->operator[]("batch_size").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("batch_size");
+        modelsSettings.batchSize = result->operator[]("batch_size").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("batch_size");
     }
 
     if (result->count("shape")) {
-        modelsSettings->shape = result->operator[]("shape").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("shape");
+        modelsSettings.shape = result->operator[]("shape").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("shape");
     }
 
     if (result->count("layout")) {
-        modelsSettings->layout = result->operator[]("layout").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("layout");
+        modelsSettings.layout = result->operator[]("layout").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("layout");
     }
 
     if (result->count("model_version_policy")) {
-        modelsSettings->modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("model_version_policy");
+        modelsSettings.modelVersionPolicy = result->operator[]("model_version_policy").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("model_version_policy");
     }
 
     if (result->count("nireq")) {
-        modelsSettings->nireq = result->operator[]("nireq").as<uint32_t>();
-        modelsSettings->userSetSingleModelArguments.push_back("nireq");
+        modelsSettings.nireq = result->operator[]("nireq").as<uint32_t>();
+        modelsSettings.userSetSingleModelArguments.push_back("nireq");
     }
 
     if (result->count("target_device")) {
-        modelsSettings->targetDevice = result->operator[]("target_device").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("target_device");
+        modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("target_device");
     }
 
     if (result->count("plugin_config")) {
-        modelsSettings->pluginConfig = result->operator[]("plugin_config").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("plugin_config");
+        modelsSettings.pluginConfig = result->operator[]("plugin_config").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
     }
 
     if (result->count("stateful")) {
-        modelsSettings->stateful = result->operator[]("stateful").as<bool>();
-        modelsSettings->userSetSingleModelArguments.push_back("stateful");
+        modelsSettings.stateful = result->operator[]("stateful").as<bool>();
+        modelsSettings.userSetSingleModelArguments.push_back("stateful");
     }
 
     if (result->count("idle_sequence_cleanup")) {
-        modelsSettings->idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
-        modelsSettings->userSetSingleModelArguments.push_back("idle_sequence_cleanup");
+        modelsSettings.idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
+        modelsSettings.userSetSingleModelArguments.push_back("idle_sequence_cleanup");
     }
 
     if (result->count("low_latency_transformation")) {
-        modelsSettings->lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
-        modelsSettings->userSetSingleModelArguments.push_back("low_latency_transformation");
+        modelsSettings.lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
+        modelsSettings.userSetSingleModelArguments.push_back("low_latency_transformation");
     }
 
     if (result->count("config_path")) {
-        modelsSettings->configPath = result->operator[]("config_path").as<std::string>();
-        modelsSettings->userSetSingleModelArguments.push_back("config_path");
+        modelsSettings.configPath = result->operator[]("config_path").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("config_path");
     }
+}
 
+void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     // Ovms Pull models mode
     if (result->count("pull")) {
-        serverSettings->hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
+        hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
         if (result->count("overwrite_models"))
-            serverSettings->hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
+            hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model"))
-            serverSettings->hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+            hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
         if (result->count("model_repository_path"))
-            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+            hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
             std::string task = result->operator[]("task").as<std::string>();
-            serverSettings->hfSettings.task = task;
+            hfSettings.task = task;
             if (task == "text_generation") {
-                this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
             } else if (task == "embeddings") {
-                this->embeddingsGraphOptionsParser.prepare(serverSettings, modelsSettings);
+                std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
             } else if (task == "rerank") {
-                this->rerankGraphOptionsParser.prepare(serverSettings, modelsSettings);
+                std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
             } else {
                 throw std::logic_error("Error: --task parameter unsupported value: " + task);
             }
         } else {
             // Default text_generation task
-            this->graphOptionsParser.prepare(serverSettings, modelsSettings);
+            std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
         }
     } else {
-        serverSettings->hfSettings.pullHfModelMode = false;
+        hfSettings.pullHfModelMode = false;
     }
+}
+
+
+void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+    if (nullptr == result) {
+        throw std::logic_error("Tried to prepare server and model settings without parse result");
+    }
+    this->prepareServer(*serverSettings);
+
+    this->prepareModel(*modelsSettings);
+
+    this->prepareGraph(serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
 }
 
 }  // namespace ovms

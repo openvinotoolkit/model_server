@@ -202,7 +202,7 @@ HfDownloader::HfDownloader() {
     this->hfEndpoint = "";
     this->hfToken = "";
     this->httpProxy = "";
-    this->overwritePath = false;
+    this->overwriteModels = false;
 }
 
 std::string HfDownloader::getGraphDirectory() {
@@ -225,7 +225,7 @@ HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& 
     this->hfEndpoint = inHfEndpoint;
     this->hfToken = inHfToken;
     this->httpProxy = inHttpProxy;
-    this->overwritePath = inOverwrite;
+    this->overwriteModels = inOverwrite;
 }
 
 Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
@@ -241,14 +241,9 @@ Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& direc
     return StatusCode::OK;
 }
 
-Status HfDownloader::checkIfOverwrite(const std::string& path) {
+Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
     auto lfstatus = StatusCode::OK;
-    if (this->overwritePath && std::filesystem::is_directory(path)) {
-        // libgit2 clone sets readonly attributes
-        auto status = RemoveReadonlyFileAttributeFromDir(path);
-        if (!status.ok()) {
-            return status;
-        }
+    if (this->overwriteModels && std::filesystem::is_directory(path)) {
         LocalFileSystem lfs;
         lfstatus = lfs.deleteFileFolder(path);
         if (lfstatus != StatusCode::OK) {
@@ -270,12 +265,12 @@ Status HfDownloader::cloneRepository() {
     }
 
     // Repository exists and we do not want to overwrite
-    if (std::filesystem::is_directory(this->downloadPath) && !this->overwritePath) {
-        SPDLOG_ERROR("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
-        return StatusCode::PATH_INVALID;
+    if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
+        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        return StatusCode::OK;
     }
 
-    auto status = checkIfOverwrite(this->downloadPath);
+    auto status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }
@@ -323,6 +318,12 @@ Status HfDownloader::cloneRepository() {
         return StatusCode::HF_GIT_CLONE_FAILED;
     } else if (cloned_repo) {
         git_repository_free(cloned_repo);
+    }
+
+    // libgit2 clone sets readonly attributes
+    status = RemoveReadonlyFileAttributeFromDir(this->downloadPath);
+    if (!status.ok()) {
+        return status;
     }
 
     return StatusCode::OK;

@@ -768,9 +768,6 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
         (char*)task.c_str()};
 
     int argc = 8;
-    if (task == "")
-        argc = 6;
-
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
         ASSERT_EQ(expected_code, server.start(argc, argv));
     }));

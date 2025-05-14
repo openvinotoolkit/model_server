@@ -16,6 +16,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <variant>
 
 #include <cxxopts.hpp>
 
@@ -31,15 +33,17 @@ struct ModelsSettingsImpl;
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
-    GraphCLIParser graphOptionsParser;
-    RerankGraphCLIParser rerankGraphOptionsParser;
-    EmbeddingsGraphCLIParser embeddingsGraphOptionsParser;
+    std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser> graphOptionsParser;
 
 public:
     CLIParser() = default;
     void parse(int argc, char** argv);
-
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+
+protected:
+    void prepareServer(ServerSettingsImpl& serverSettings);
+    void prepareModel(ModelsSettingsImpl& modelsSettings);
+    void prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
 };
 
 }  // namespace ovms

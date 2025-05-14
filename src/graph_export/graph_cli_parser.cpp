@@ -90,46 +90,41 @@ void GraphCLIParser::printHelp() {
 }
 
 void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
-    try {
-        if (!this->options) {
-            this->createOptions();
-        }
-        std::vector<const char*> cStrArray;
-        cStrArray.reserve(unmatchedOptions.size() + 1);
-        cStrArray.push_back("ovms graph");
-        std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
-        const char* const* args = cStrArray.data();
-        result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
+    if (!this->options) {
+        this->createOptions();
+    }
+    std::vector<const char*> cStrArray;
+    cStrArray.reserve(unmatchedOptions.size() + 1);
+    cStrArray.push_back("ovms graph");
+    std::transform(unmatchedOptions.begin(), unmatchedOptions.end(), std::back_inserter(cStrArray), [](const std::string& str) { return str.c_str(); });
+    const char* const* args = cStrArray.data();
+    result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-        if (result->unmatched().size()) {
-            std::cerr << "error parsing options - unmatched arguments: ";
-            for (auto& argument : result->unmatched()) {
-                std::cerr << argument << ", ";
-            }
-            std::cerr << std::endl;
-            exit(OVMS_EX_USAGE);
+    if (result->unmatched().size()) {
+        std::cerr << "error parsing options - unmatched arguments: ";
+        for (auto& argument : result->unmatched()) {
+            std::cerr << argument << ", ";
         }
-    } catch (const std::exception& e) {
-        std::cerr << "error parsing options: " << e.what() << std::endl;
+        std::cerr << std::endl;
         exit(OVMS_EX_USAGE);
     }
 }
 
-void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
+void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (serverSettings->hfSettings.pullHfModelMode) {
-            serverSettings->hfSettings.graphSettings = GraphCLIParser::defaultGraphSettings();
+        if (hfSettings.pullHfModelMode) {
+            hfSettings.graphSettings = GraphCLIParser::defaultGraphSettings();
             // Deduct model name
-            if (modelsSettings->modelName != "") {
-                serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+            if (modelName != "") {
+                hfSettings.graphSettings.modelName = modelName;
             } else {
-                serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
             }
 
             // Set model path
-            if (modelsSettings->modelPath != "") {
-                serverSettings->hfSettings.graphSettings.modelPath = modelsSettings->modelPath;
+            if (modelPath != "") {
+                hfSettings.graphSettings.modelPath = modelPath;
             }
             return;
         } else {
@@ -138,54 +133,40 @@ void GraphCLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsI
     }
 
     // Deduct model name
-    if (modelsSettings->modelName != "") {
-        serverSettings->hfSettings.graphSettings.modelName = modelsSettings->modelName;
+    if (modelName != "") {
+        hfSettings.graphSettings.modelName = modelName;
     } else {
-        serverSettings->hfSettings.graphSettings.modelName = serverSettings->hfSettings.sourceModel;
+        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
     }
 
     // Set model path
-    if (modelsSettings->modelPath != "") {
-        serverSettings->hfSettings.graphSettings.modelPath = modelsSettings->modelPath;
+    if (modelPath != "") {
+        hfSettings.graphSettings.modelPath = modelPath;
     }
 
-    serverSettings->hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
-    serverSettings->hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    serverSettings->hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
-    serverSettings->hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
-    serverSettings->hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
+    hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
+    hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
+    hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
+    hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
+    hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
     if (result->count("draft_source_model")) {
-        serverSettings->hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
+        hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
     }
     if (result->count("pipeline_type")) {
-        serverSettings->hfSettings.graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
+        hfSettings.graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
     }
     if (result->count("max_num_batched_tokens")) {
-        serverSettings->hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
+        hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
     }
 
     // Plugin configuration
     if (result->count("max_prompt_len")) {
-        serverSettings->hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
+        hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
     }
 
     if (result->count("kv_cache_precision")) {
-        serverSettings->hfSettings.graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
+        hfSettings.graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
     }
-
-    if (!this->validate(serverSettings)) {
-        throw std::logic_error("Error parsing graph options.");
-    }
-}
-
-bool GraphCLIParser::validate(ServerSettingsImpl* serverSettings) {
-    // TODO: CVS-166727 add validation of graphSettings and plugin config
-    if (serverSettings->hfSettings.task == "") {
-        std::cerr << "Error: --task parameter not set." << std::endl;
-        return false;
-    }
-
-    return true;
 }
 
 }  // namespace ovms
