@@ -24,7 +24,6 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../ovms_exit_codes.hpp"
-#include "../version.hpp"
 #include "../status.hpp"
 
 namespace ovms {

@@ -88,6 +88,14 @@ bool Config::validate() {
     if (this->serverSettings.hfSettings.pullHfModelMode) {
         return true;
     }
+    if (this->serverSettings.listServables) {
+        if (this->serverSettings.hfSettings.downloadPath.empty()) {
+            std::cerr << "Use --list_models with --model_repository_path" << std::endl;
+            return false;
+        }
+        return true;
+    }
+
     if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
         std::cerr << "Use either config_path or model_path with model_name" << std::endl;
         return false;

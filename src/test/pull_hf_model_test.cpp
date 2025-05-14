@@ -24,6 +24,9 @@
 #include "../filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
+#include "src/servables_config_manager_module/listmodels.hpp"
+#include "src/modelextensions.hpp"
+
 #include "../server.hpp"
 #include "../status.hpp"
 #include "src/stringutils.hpp"
@@ -201,10 +204,11 @@ TEST(HfDownloaderClassTest, Methods) {
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
 }
 
-TEST(HfDownloaderClassTest, MethodsNegative) {
+TEST(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-    EXPECT_EQ(TestHfDownloader("name/test", "/some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+
+    EXPECT_EQ(TestHfDownloader("name/test", this->directoryPath, "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {

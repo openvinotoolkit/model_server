@@ -257,7 +257,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -276,7 +276,7 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -300,7 +300,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -320,7 +320,7 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -334,7 +334,7 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, hfSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
@@ -342,10 +342,13 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents);
 }
 
-TEST_F(GraphCreationTest, negativeCreateFile) {
+TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
     ovms::HFSettingsImpl hfSettings;
 
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile("", hfSettings);
+    auto status = graphExporter->createServableConfig("", hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+
+    status = graphExporter->createServableConfig("/does/not/exist", hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }

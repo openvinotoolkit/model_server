@@ -257,7 +257,7 @@ Status GraphExport::createFile(const std::string& filePath, const std::string& c
     return StatusCode::OK;
 }
 
-Status GraphExport::createGraphFile(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
         SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
         return StatusCode::PATH_INVALID;

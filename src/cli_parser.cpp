@@ -144,7 +144,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK");
+                "TASK")
+            ("list_models",
+                "Directive to show available servables in models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "LIST_MODELS");
 
         options->add_options("single model")
             ("model_name",
@@ -259,6 +263,14 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     // Server settings
     serverSettings->startedWithCLI = true;
+    // list models mode
+    if (result->count("list_models")) {
+        serverSettings->listServables = result->operator[]("list_models").as<bool>();
+        if (result->count("model_repository_path"))
+            serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        return;
+    }
+
     serverSettings->grpcPort = result->operator[]("port").as<uint32_t>();
     serverSettings->restPort = result->operator[]("rest_port").as<uint32_t>();
     serverSettings->metricsEnabled = result->operator[]("metrics_enable").as<bool>();
