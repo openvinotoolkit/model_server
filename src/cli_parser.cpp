@@ -237,7 +237,7 @@ void CLIParser::parse(int argc, char** argv) {
                             break;
                         }
                         case unknown: {
-                            std::cerr << "error parsing options - --task parameter unsupported value: " + task;
+                            std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
                             exit(OVMS_EX_USAGE);
                         }
                     }
