@@ -73,6 +73,7 @@ struct ServerSettingsImpl {
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
+    bool listServables = false;
     HFSettingsImpl hfSettings;
 };
 
