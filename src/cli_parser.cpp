@@ -225,6 +225,9 @@ void CLIParser::parse(int argc, char** argv) {
                         RerankGraphCLIParser cliParser;
                         this->graphOptionsParser = std::move(cliParser);
                         subResult = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                    } else {
+                        std::cerr << "error parsing options - --task parameter unsupported value: " + task;
+                        exit(OVMS_EX_USAGE);
                     }
                 } else {
                     // Default task is text_generation

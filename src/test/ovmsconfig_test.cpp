@@ -341,7 +341,7 @@ TEST_F(OvmsConfigDeathTest, hfWrongTask) {
         "bad_task",
     };
     int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: grpc_workers, 2, ");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter unsupported value: bad_task");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
