@@ -50,10 +50,10 @@ void RerankGraphCLIParser::createOptions() {
             "Maximum length of input documents in tokens.",
             cxxopts::value<uint32_t>()->default_value("16000"),
             "MAX_DOC_LENGTH")
-        ("version",
+        ("model_version",
             "Version of the model.",
             cxxopts::value<uint32_t>()->default_value("1"),
-            "VERSION");
+            "MODEL_VERSION");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -63,7 +63,7 @@ void RerankGraphCLIParser::printHelp() {
     std::cout << options->help({"rerank"}) << std::endl;
 }
 
-void RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+cxxopts::ParseResult RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -74,14 +74,7 @@ void RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOption
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    if (result->unmatched().size()) {
-        std::cerr << "error parsing options - unmatched arguments: ";
-        for (auto& argument : result->unmatched()) {
-            std::cerr << argument << ", ";
-        }
-        std::cerr << std::endl;
-        exit(OVMS_EX_USAGE);
-    }
+    return *this->result;
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -91,9 +84,9 @@ void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string
             hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
             // Deduct model name
             if (modelName != "") {
-                hfSettings.graphSettings.modelName = modelName;
+                hfSettings.rerankGraphSettings.modelName = modelName;
             } else {
-                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
+                hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
             }
             return;
         } else {
@@ -103,15 +96,15 @@ void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string
 
     // Deduct model name
     if (modelName != "") {
-        hfSettings.graphSettings.modelName = modelName;
+        hfSettings.rerankGraphSettings.modelName = modelName;
     } else {
-        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
     }
 
     hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
     hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-    hfSettings.rerankGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
+    hfSettings.rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
 }
 
 }  // namespace ovms

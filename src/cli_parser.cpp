@@ -207,29 +207,39 @@ void CLIParser::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        if (result->unmatched().size()) {
+        if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
             if (result->count("pull")) {
+                cxxopts::ParseResult subResult;
                 if (result->count("task")) {
                     std::string task = result->operator[]("task").as<std::string>();
                     if (task == "text_generation") {
                         GraphCLIParser cliParser;
                         this->graphOptionsParser = std::move(cliParser);
-                        std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     } else if (task == "embeddings") {
                         EmbeddingsGraphCLIParser cliParser;
                         this->graphOptionsParser = std::move(cliParser);
-                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        subResult = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     } else if (task == "rerank") {
                         RerankGraphCLIParser cliParser;
                         this->graphOptionsParser = std::move(cliParser);
-                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        subResult = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                     }
                 } else {
                     // Default task is text_generation
                     GraphCLIParser cliParser;
                     this->graphOptionsParser = std::move(cliParser);
-                    std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                    subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                }
+
+                if (subResult.unmatched().size()) {
+                    std::cerr << "error parsing options - unmatched arguments: ";
+                    for (auto& argument : subResult.unmatched()) {
+                        std::cerr << argument << ", ";
+                    }
+                    std::cerr << std::endl;
+                    exit(OVMS_EX_USAGE);
                 }
             } else {
                 std::cerr << "error parsing options - unmatched arguments: ";

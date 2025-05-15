@@ -54,10 +54,10 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "Normalize the embeddings.",
             cxxopts::value<std::string>()->default_value("false"),
             "NORMALIZE")
-        ("version",
+        ("model_version",
             "Version of the model.",
             cxxopts::value<uint32_t>()->default_value("1"),
-            "VERSION");
+            "MODEL_VERSION");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -67,7 +67,7 @@ void EmbeddingsGraphCLIParser::printHelp() {
     std::cout << options->help({"embeddings"}) << std::endl;
 }
 
-void EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+cxxopts::ParseResult EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -78,14 +78,7 @@ void EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOp
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    if (result->unmatched().size()) {
-        std::cerr << "error parsing options - unmatched arguments: ";
-        for (auto& argument : result->unmatched()) {
-            std::cerr << argument << ", ";
-        }
-        std::cerr << std::endl;
-        exit(OVMS_EX_USAGE);
-    }
+   return *this->result;
 }
 
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
@@ -95,9 +88,9 @@ void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::st
             hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
             // Deduct model name
             if (modelName != "") {
-                hfSettings.graphSettings.modelName = modelName;
+                hfSettings.embeddingsGraphSettings.modelName = modelName;
             } else {
-                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
+                hfSettings.embeddingsGraphSettings.modelName = hfSettings.sourceModel;
             }
             return;
         } else {
@@ -107,16 +100,16 @@ void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::st
 
     // Deduct model name
     if (modelName != "") {
-        hfSettings.graphSettings.modelName = modelName;
+        hfSettings.embeddingsGraphSettings.modelName = modelName;
     } else {
-        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
+        hfSettings.embeddingsGraphSettings.modelName = hfSettings.sourceModel;
     }
 
     hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
     hfSettings.embeddingsGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
     hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
-    hfSettings.embeddingsGraphSettings.version = result->operator[]("version").as<std::uint32_t>();
+    hfSettings.embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
 }
 
 }  // namespace ovms

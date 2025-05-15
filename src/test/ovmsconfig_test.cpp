@@ -487,6 +487,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, false);
+    ASSERT_EQ(hfSettings.task, "text_generation");
     ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 256);
@@ -497,6 +498,230 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.has_value(), false);
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_version",
+        (char*)"2",
+        (char*)"--task",
+        (char*)"rerank",
+        (char*)"--graph_target_device",
+        (char*)"GPU",
+        (char*)"--max_doc_length",
+        (char*)"1002",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 18;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 1002);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+}
+
+TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"rerank",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 1);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, modelName);
+}
+
+TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_version",
+        (char*)"2",
+        (char*)"--task",
+        (char*)"rerank",
+        (char*)"--graph_target_device",
+        (char*)"GPU",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 14;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_version",
+        (char*)"2",
+        (char*)"--task",
+        (char*)"embeddings",
+        (char*)"--graph_target_device",
+        (char*)"GPU",
+        (char*)"--normalize",
+        (char*)"true",
+        (char*)"--truncate",
+        (char*)"true",
+        (char*)"--num_streams",
+        (char*)"2",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 20;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "true");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 2);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
+}
+
+TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"embeddings",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "false");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 1);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, modelName);
+}
+
+TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    std::string servingName = "FastDraft";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_version",
+        (char*)"2",
+        (char*)"--task",
+        (char*)"embeddings",
+        (char*)"--graph_target_device",
+        (char*)"GPU",
+        (char*)"--normalize",
+        (char*)"true",
+        (char*)"--model_name",
+        (char*)servingName.c_str(),
+    };
+
+    int arg_count = 16;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "false");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, modelSettings) {

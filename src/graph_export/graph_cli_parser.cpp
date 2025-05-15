@@ -89,7 +89,7 @@ void GraphCLIParser::printHelp() {
     std::cout << options->help({"text generation", "plugin config"}) << std::endl;
 }
 
-void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -100,14 +100,7 @@ void GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    if (result->unmatched().size()) {
-        std::cerr << "error parsing options - unmatched arguments: ";
-        for (auto& argument : result->unmatched()) {
-            std::cerr << argument << ", ";
-        }
-        std::cerr << std::endl;
-        exit(OVMS_EX_USAGE);
-    }
+    return *this->result;
 }
 
 void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
