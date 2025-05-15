@@ -613,7 +613,7 @@ new_git_repository(
     build_file_content = """
 cc_library(
     name = "image",
-    hdrs = ["stb_image.h"],
+    hdrs = ["stb_image.h", "stb_image_write.h"],
     visibility = ["//visibility:public"],
     local_defines = [
     ],

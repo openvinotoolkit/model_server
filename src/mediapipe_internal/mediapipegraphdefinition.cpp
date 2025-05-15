@@ -48,12 +48,16 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 
+#include "../image_gen/pipelines.hpp"
+#include "src/image_gen/image_gen_calculator.pb.h"
+
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
+const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -123,6 +127,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         return StatusCode::INTERNAL_ERROR;
     }
     if (!this->genAiServableMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (!this->imageGenerationPipelinesMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -257,7 +265,8 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->genAiServableMap, this->imageGenerationPipelinesMap,
+        this->pythonBackend, this->reporter.get());
     return status;
 }
 
@@ -333,12 +342,14 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
     this->genAiServableMap.clear();
+    this->imageGenerationPipelinesMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->pythonNodeResourcesMap.clear();
     this->genAiServableMap.clear();
+    this->imageGenerationPipelinesMap.clear();
     this->status.handle(RetireEvent());
 }
 
@@ -468,6 +479,41 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             this->genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
             genAiServablesCleaningGuard.disableCleaning();
+        }
+        // Passed to both calculators that require Image Generation pipelines
+        if (endsWith(config.node(i).calculator(), IMAGE_GEN_CALCULATOR_NAME)) {
+            ResourcesCleaningGuard<ImageGenerationPipelinesMap> guard(this->imageGenerationPipelinesMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;  // TODO: create new error code
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;  // TODO: create new error code
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->imageGenerationPipelinesMap.find(nodeName) != this->imageGenerationPipelinesMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;  // TODO: create new error code
+            }
+            mediapipe::ImageGenCalculatorOptions nodeOptions;
+            config.node(i).node_options(0).UnpackTo(&nodeOptions);
+            if (!nodeOptions.has_models_path()) {
+                return StatusCode::INTERNAL_ERROR;
+            }
+            std::string modelsPath = nodeOptions.models_path();
+            std::shared_ptr<ImageGenerationPipelines> servable;
+            try {
+                servable = std::make_shared<ImageGenerationPipelines>(modelsPath);
+            } catch (ov::Exception& e) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Error: {}", this->name, e.what());
+                return StatusCode::INTERNAL_ERROR;
+            } catch (...) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Unknown error", this->name);
+                return StatusCode::INTERNAL_ERROR;
+            }
+            this->imageGenerationPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
+            guard.disableCleaning();
         }
     }
     return StatusCode::OK;
