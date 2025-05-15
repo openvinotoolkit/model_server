@@ -104,6 +104,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint32 best_of_limit` - max value of best_of parameter accepted by endpoint [default = 20];
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
+-    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 
 
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -115,6 +116,25 @@ Consider increasing the `cache_size` parameter in case the logs report the usage
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
 utilization of resource will be lower. Old cache will be cleared automatically but it is recommended to increase cache_size to take bigger performance advantage.
+
+Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
+```
+    message CacheEvictionConfig {
+      enum AggregationMode {
+      SUM = 0; // In this mode the importance scores of each token will be summed after each step of generation
+      NORM_SUM = 1; // Same as SUM, but the importance scores are additionally divided by the lifetime (in tokens generated) of a given token in cache
+      }
+
+      optional AggregationMode aggregation_mode = 1 [default = SUM];
+      required uint64 start_size = 2;
+      required uint64 recent_size = 3;
+      required uint64 max_cache_size = 4;
+      optional bool apply_rotation = 5 [default = false];
+    }
+```
+Learn more about the algorithm and above parameters from [GenAI docs](https://github.com/openvinotoolkit/openvino.genai/blob/master/site/docs/concepts/optimization-techniques/kvcache-eviction-algorithm.md). 
+Example of cache eviction config in the node options:
+`cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672}`
 
 `dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
 

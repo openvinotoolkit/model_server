@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -39,6 +40,20 @@
 #include "servable_initializer.hpp"
 
 namespace ovms {
+
+ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    ov::genai::AggregationMode aggregationMode;
+    if (nodeOptions.cache_eviction_config().aggregation_mode() == mediapipe::LLMCalculatorOptions::CacheEvictionConfig::SUM) {
+        aggregationMode = ov::genai::AggregationMode::SUM;
+    } else {
+        aggregationMode = ov::genai::AggregationMode::NORM_SUM;
+    }
+    size_t startSize = nodeOptions.cache_eviction_config().start_size();
+    size_t recentSize = nodeOptions.cache_eviction_config().recent_size();
+    size_t maxCacheSize = nodeOptions.cache_eviction_config().max_cache_size();
+    bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
+    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation);
+}
 
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
     ov::genai::SchedulerConfig config;
@@ -63,6 +78,14 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
     properties->schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
+
+    if (nodeOptions.has_cache_eviction_config()) {
+        properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);
+        properties->schedulerConfig.use_cache_eviction = true;
+    } else {
+        properties->schedulerConfig.use_cache_eviction = false;
+    }
+
     properties->device = nodeOptions.device();
 
     if (!nodeOptions.draft_models_path().empty()) {
