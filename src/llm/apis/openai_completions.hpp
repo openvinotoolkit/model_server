@@ -212,6 +212,7 @@ public:
 
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseMessages();
+    absl::Status parseTools();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);

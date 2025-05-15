@@ -49,8 +49,10 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
             output = ""
             error = ""
             try:
-                messages = json.loads(request_body)["messages"]
-                output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+                request_json = json.loads(request_body)
+                messages = request_json["messages"]
+                tools = request_json["tools"] if "tools" in request_json else None
+                output = chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
             except Exception as e:
                 error = str(e)            
         )",
