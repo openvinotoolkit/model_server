@@ -90,6 +90,7 @@ struct GenAiServableProperties {
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
 #endif
+    std::optional<std::string> allowedLocalMediaPath;
 };
 
 class GenAiServable {
