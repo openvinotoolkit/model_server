@@ -35,6 +35,7 @@ RerankGraphSettingsImpl& RerankGraphCLIParser::defaultGraphSettings() {
 
 void RerankGraphCLIParser::createOptions() {
     this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task rerank graph options");
+    options->allow_unrecognised_options();
 
     // clang-format off
     options->add_options("rerank")

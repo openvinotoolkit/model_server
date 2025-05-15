@@ -344,6 +344,184 @@ TEST_F(OvmsConfigDeathTest, hfWrongTask) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter unsupported value: bad_task");
 }
 
+TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--max_doc_length",
+        "1400",
+    };
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --max_doc_length, 1400,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "rerank",
+        "--normalize",
+        "true",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: rerank - error parsing options - unmatched arguments : --normalize, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "embeddings",
+        "--max_num_batched_tokens",
+        "145",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: embeddings - error parsing options - unmatched arguments : --max_num_batched_tokens, 145,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "text_generation",
+        "--normalize",
+        "true",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --normalize, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameterName) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--min_num_batched_tokens",
+        "145",
+    };
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --min_num_batched_tokens, 145,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameterName) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "rerank",
+        "--min_doc_length",
+        "1400",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: rerank - error parsing options - unmatched arguments : --min_doc_length, 1400,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphParameterName) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "text_generation",
+        "--min_num_batched_tokens",
+        "145",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --min_num_batched_tokens, 145,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameterName) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "embeddings",
+        "--normalizes",
+        "true",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: embeddings - error parsing options - unmatched arguments : --normalizes, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPull) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "embeddings",
+        "--normalizes",
+        "true",
+    };
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --normalizes, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphNoPull) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--normalizes",
+        "true",
+    };
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --normalizes, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadRerankGraphNoPull) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "rerank",
+        "--normalizes",
+        "true",
+    };
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --normalizes, true,");
+}
+
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";

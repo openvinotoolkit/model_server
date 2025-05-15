@@ -211,8 +211,9 @@ void CLIParser::parse(int argc, char** argv) {
             // HF pull mode
             if (result->count("pull")) {
                 cxxopts::ParseResult subResult;
+                std::string task;
                 if (result->count("task")) {
-                    std::string task = result->operator[]("task").as<std::string>();
+                    task = result->operator[]("task").as<std::string>();
                     if (task == "text_generation") {
                         GraphCLIParser cliParser;
                         this->graphOptionsParser = std::move(cliParser);
@@ -231,13 +232,14 @@ void CLIParser::parse(int argc, char** argv) {
                     }
                 } else {
                     // Default task is text_generation
+                    task = "text_generation";
                     GraphCLIParser cliParser;
                     this->graphOptionsParser = std::move(cliParser);
                     subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                 }
 
                 if (subResult.unmatched().size()) {
-                    std::cerr << "error parsing options - unmatched arguments: ";
+                    std::cerr << "task: " << task << " - error parsing options - unmatched arguments : ";
                     for (auto& argument : subResult.unmatched()) {
                         std::cerr << argument << ", ";
                     }
