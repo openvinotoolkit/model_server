@@ -24,6 +24,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../config.hpp"
+#include "../graph_export/graph_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -665,7 +666,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, false);
-    ASSERT_EQ(hfSettings.task, "text_generation");
+    ASSERT_EQ(hfSettings.task, ovms::text_generation);
     ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
     ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 256);
@@ -711,7 +712,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.task, ovms::rerank);
     ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 1002);
     ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
     ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 2);
@@ -742,7 +743,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.task, ovms::rerank);
     ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
     ASSERT_EQ(hfSettings.rerankGraphSettings.version, 1);
     ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
@@ -779,7 +780,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "rerank");
+    ASSERT_EQ(hfSettings.task, ovms::rerank);
     ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
     ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
     ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
@@ -822,7 +823,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.task, ovms::embeddings);
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
@@ -853,7 +854,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.task, ovms::embeddings);
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 1);
@@ -893,7 +894,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.task, "embeddings");
+    ASSERT_EQ(hfSettings.task, ovms::embeddings);
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");

@@ -21,7 +21,10 @@
 #include <utility>
 
 #include "capi_frontend/server_settings.hpp"
+#include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
+#include "graph_export/rerank_graph_cli_parser.hpp"
+#include "graph_export/embeddings_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "version.hpp"
 
@@ -211,35 +214,43 @@ void CLIParser::parse(int argc, char** argv) {
             // HF pull mode
             if (result->count("pull")) {
                 cxxopts::ParseResult subResult;
-                std::string task;
+                ExportType task;
                 if (result->count("task")) {
-                    task = result->operator[]("task").as<std::string>();
-                    if (task == "text_generation") {
-                        GraphCLIParser cliParser;
-                        this->graphOptionsParser = std::move(cliParser);
-                        subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                    } else if (task == "embeddings") {
-                        EmbeddingsGraphCLIParser cliParser;
-                        this->graphOptionsParser = std::move(cliParser);
-                        subResult = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                    } else if (task == "rerank") {
-                        RerankGraphCLIParser cliParser;
-                        this->graphOptionsParser = std::move(cliParser);
-                        subResult = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                    } else {
-                        std::cerr << "error parsing options - --task parameter unsupported value: " + task;
-                        exit(OVMS_EX_USAGE);
+                    task = stringToEnum(result->operator[]("task").as<std::string>());
+                    switch (task) {
+                        case text_generation: {
+                            GraphCLIParser cliParser;
+                            this->graphOptionsParser = std::move(cliParser);
+                            subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            break;
+                        }
+                        case embeddings: {
+                            EmbeddingsGraphCLIParser cliParser;
+                            this->graphOptionsParser = std::move(cliParser);
+                            subResult = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            break;
+                        }
+                        case rerank: {
+                            RerankGraphCLIParser cliParser;
+                            this->graphOptionsParser = std::move(cliParser);
+                            subResult = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            break;
+                        }
+                        case unknown: {
+                            std::cerr << "error parsing options - --task parameter unsupported value: " + task;
+                            exit(OVMS_EX_USAGE);
+                        }
                     }
                 } else {
                     // Default task is text_generation
-                    task = "text_generation";
+                    task = text_generation;
                     GraphCLIParser cliParser;
                     this->graphOptionsParser = std::move(cliParser);
                     subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                 }
 
                 if (subResult.unmatched().size()) {
-                    std::cerr << "task: " << task << " - error parsing options - unmatched arguments : ";
+                    std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
                     for (auto& argument : subResult.unmatched()) {
                         std::cerr << argument << ", ";
                     }
@@ -426,16 +437,24 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
-            std::string task = result->operator[]("task").as<std::string>();
-            hfSettings.task = task;
-            if (task == "text_generation") {
-                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
-            } else if (task == "embeddings") {
-                std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
-            } else if (task == "rerank") {
-                std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
-            } else {
-                throw std::logic_error("Error: --task parameter unsupported value: " + task);
+            hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
+            switch (hfSettings.task) {
+                case text_generation: {
+                    std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                    break;
+                }
+                case embeddings: {
+                    std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    break;
+                }
+                case rerank: {
+                    std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    break;
+                }
+                case unknown: {
+                    throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
+                    break;
+                }
             }
         } else {
             // Default text_generation task

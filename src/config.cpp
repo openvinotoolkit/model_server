@@ -86,7 +86,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 bool Config::validate() {
     // TODO: CVS-166727 Add validation of all parameters once the CLI model export flags will be implemented
     if (this->serverSettings.hfSettings.pullHfModelMode) {
-        if (this->serverSettings.hfSettings.task == "") {
+        if (this->serverSettings.hfSettings.task == unknown) {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }

@@ -19,6 +19,7 @@ cc_library(
     srcs = ["graph_export.cpp"],
     hdrs = ["graph_export.hpp"],
     deps =  [
+        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",
@@ -35,6 +36,7 @@ cc_library(
     srcs = ["graph_cli_parser.cpp"],
     hdrs = ["graph_cli_parser.hpp"],
     deps =  [
+        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
@@ -48,6 +50,7 @@ cc_library(
     srcs = ["rerank_graph_cli_parser.cpp"],
     hdrs = ["rerank_graph_cli_parser.hpp"],
     deps =  [
+        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
@@ -62,11 +65,20 @@ cc_library(
     srcs = ["embeddings_graph_cli_parser.cpp"],
     hdrs = ["embeddings_graph_cli_parser.hpp"],
     deps =  [
+        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "graph_export_types",
+    srcs = ["graph_export_types.cpp"],
+    hdrs = ["graph_export_types.hpp"],
+    deps =  [],
     visibility = ["//visibility:public"],
 )

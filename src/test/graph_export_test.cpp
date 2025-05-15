@@ -267,7 +267,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = "rerank";
+    hfSettings.task = ovms::rerank;
     hfSettings.rerankGraphSettings.targetDevice = "GPU";
     hfSettings.rerankGraphSettings.modelName = "myModel";
     hfSettings.rerankGraphSettings.numStreams = 2;
@@ -290,7 +290,7 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = "embeddings";
+    hfSettings.task = ovms::embeddings;
     hfSettings.embeddingsGraphSettings.targetDevice = "GPU";
     hfSettings.embeddingsGraphSettings.modelName = "myModel";
     hfSettings.embeddingsGraphSettings.numStreams = 2;

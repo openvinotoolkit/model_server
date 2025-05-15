@@ -33,6 +33,7 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "graph_export_types.hpp"
 
 namespace ovms {
 
@@ -276,11 +277,11 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         return StatusCode::PATH_INVALID;
     }
 
-    if (hfSettings.task == "text_generation") {
+    if (hfSettings.task == text_generation) {
         return createTextGenerationGraphTemplate(directoryPath, hfSettings.graphSettings);
-    } else if (hfSettings.task == "embeddings") {
+    } else if (hfSettings.task == embeddings) {
         return createEmbeddingsGraphTemplate(directoryPath, hfSettings.embeddingsGraphSettings);
-    } else if (hfSettings.task == "rerank") {
+    } else if (hfSettings.task == rerank) {
         return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
     }
 }

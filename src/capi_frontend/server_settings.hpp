@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "../graph_export/graph_export_types.hpp"
+
 namespace ovms {
 
 struct PluginConfigSettingsImpl {
@@ -63,7 +65,7 @@ struct HFSettingsImpl {
     std::string downloadPath = "";
     bool pullHfModelMode = false;
     bool overwriteModels = false;
-    std::string task = "text_generation";
+    ExportType task = text_generation;
     TextGenGraphSettingsImpl graphSettings;
     RerankGraphSettingsImpl rerankGraphSettings;
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
