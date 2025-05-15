@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <regex>
+#include <cstdlib>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -160,11 +161,11 @@ TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-#if (USE_DROGON == 0)
-TEST_F(StressCapiConfigChanges, GetMetricsDuringLoad) {
-#else
-TEST_F(StressCapiConfigChanges, DISABLED_GetMetricsDuringLoad) {
-#endif
+// Workaround because we cannot start http server multiple times https://github.com/drogonframework/drogon/issues/2210
+TEST_F(StressCapiConfigChanges, GetMetricsDuringLoad_DROGON) {
+    if (!std::getenv("TEST_DROGON_RESTART")) {
+        GTEST_SKIP() << "Run with TEST_DROGON_RESTART to enable this test";
+    }
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
