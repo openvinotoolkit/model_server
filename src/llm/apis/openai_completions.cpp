@@ -182,10 +182,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
         // Add new message to chat history
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
+            std::cout << "Member name: " << member->name.GetString() << std::endl;   
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
-            if (member->value.IsString()) {
+            if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) { 
                 // Add new field to the last message in history
+                std::cout << "Adding field to last message: " << member->name.GetString() << "value" << member->value.GetString() << std::endl;
                 request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
@@ -259,8 +261,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                     if (member->value.IsString()) {
                         request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                     }
-                } else {
-                    return absl::InvalidArgumentError("Invalid message structure - content should be string or array");
                 }
             }
         }
@@ -274,6 +274,77 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
         Writer<StringBuffer> writer(buffer);
         doc.Accept(writer);
         request.processedJson = buffer.GetString();
+    }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseTools() {
+    auto it = doc.FindMember("tools");
+    if (it == doc.MemberEnd())
+        return absl::OkStatus();
+    if (!it->value.IsArray())
+        return absl::InvalidArgumentError("Tools are not an array");
+    auto tool_choice_it = doc.FindMember("tool_choice");
+    std::string tool_choice{"auto"};
+    if (tool_choice_it != doc.MemberEnd()) {
+        if (tool_choice_it->value.IsString()){
+            tool_choice = tool_choice_it->value.GetString();
+            if (tool_choice != "none" && tool_choice != "auto")
+                return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto'");
+        } else if (tool_choice_it->value.IsObject()) {
+            auto tool_choice_functionIt = tool_choice_it->value.GetObject().FindMember("function");
+            if (tool_choice_functionIt != tool_choice_it->value.GetObject().MemberEnd() && tool_choice_functionIt->value.IsObject()) {
+                auto nameIt = tool_choice_functionIt->value.GetObject().FindMember("name");
+                if (nameIt != tool_choice_functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
+                    tool_choice = nameIt->value.GetString();
+                } else {
+                    return absl::InvalidArgumentError("tool_choice.function.name is not a valid string");
+                }
+            } else {
+                return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
+            }
+        } else
+            return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
+    }
+    std::cout << "Tool choice: " << tool_choice << std::endl;
+
+    bool jsonChanged = false;
+    if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
+        return absl::OkStatus();
+    if (tool_choice == "none") {
+        // remove tools from the request
+        doc.RemoveMember("tools");
+        jsonChanged = true;
+    }
+    for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
+        auto& obj = it->value.GetArray()[i];
+        if (!obj.IsObject())
+            return absl::InvalidArgumentError("Tool is not a JSON object");
+        auto functionIt = obj.FindMember("function");
+        if (functionIt != obj.MemberEnd() && functionIt->value.IsObject()) {
+            auto nameIt = functionIt->value.GetObject().FindMember("name");
+            if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
+                std::string functionName = nameIt->value.GetString();
+                std::cout << "Function name: " << functionName << std::endl;
+                if (tool_choice != functionName) {
+                    it->value.Erase(&obj);
+                    jsonChanged = true;
+                }
+            } else {
+                return absl::InvalidArgumentError("Function object does not contain a valid name field");
+            }
+        } else {
+            return absl::InvalidArgumentError("Function is not a valid JSON object");
+        }
+        // Add new tool to tools list - TBD
+
+    }
+    if (jsonChanged) {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        request.processedJson = buffer.GetString();
+        std::cout << "Processed JSON: " << request.processedJson << std::endl;
     }
     return absl::OkStatus();
 }
@@ -296,6 +367,10 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit) {
     // messages: [{role: content}, {role: content}, ...]; required
     auto status = parseMessages();
+    if (status != absl::OkStatus()) {
+        return status;
+    }
+    status = parseTools();
     if (status != absl::OkStatus()) {
         return status;
     }
