@@ -81,7 +81,7 @@ cxxopts::ParseResult RerankGraphCLIParser::parse(const std::vector<std::string>&
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
+        if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
             hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
             // Deduct model name
             if (modelName != "") {

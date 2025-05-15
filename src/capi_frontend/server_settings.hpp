@@ -64,6 +64,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
+    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
     ExportType task = text_generation;
     TextGenGraphSettingsImpl graphSettings;

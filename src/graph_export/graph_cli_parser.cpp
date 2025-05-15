@@ -107,7 +107,7 @@ cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unma
 void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
+        if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
             hfSettings.graphSettings = GraphCLIParser::defaultGraphSettings();
             // Deduct model name
             if (modelName != "") {

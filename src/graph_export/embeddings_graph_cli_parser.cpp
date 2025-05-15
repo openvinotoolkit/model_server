@@ -85,7 +85,7 @@ cxxopts::ParseResult EmbeddingsGraphCLIParser::parse(const std::vector<std::stri
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
+        if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
             hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
             // Deduct model name
             if (modelName != "") {

@@ -43,7 +43,8 @@ public:
 protected:
     void prepareServer(ServerSettingsImpl& serverSettings);
     void prepareModel(ModelsSettingsImpl& modelsSettings);
-    void prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
+    void prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath); 
+    void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
 };
 
 }  // namespace ovms
