@@ -903,7 +903,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
 }
 
-TEST(OvmsGraphConfigTest, modelSettings) {
+TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string servingName = "FastDraft";
     std::string downloadPath = "test/repository";
