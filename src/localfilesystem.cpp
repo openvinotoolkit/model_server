@@ -163,7 +163,7 @@ StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     }
     // delete empty folder with model version
     if (std::filesystem::is_empty(parentPath)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Deleting empty folder: ()", parentPath.string());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Deleting empty folder: {}", parentPath.string());
         std::filesystem::remove(parentPath);
     }
 

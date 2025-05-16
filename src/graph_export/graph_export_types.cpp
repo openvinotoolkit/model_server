@@ -13,35 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <memory>
+#include <iostream>
+#include <map>
 #include <string>
-#include <vector>
 
-#include <cxxopts.hpp>
-
+#include "graph_export_types.hpp"
 namespace ovms {
 
-struct HFSettingsImpl;
-struct TextGenGraphSettingsImpl;
-class Status;
+std::string enumToString(ExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown";
+}
 
-class GraphCLIParser {
-public:
-    GraphCLIParser() = default;
-    cxxopts::ParseResult parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
-
-    void printHelp();
-    void createOptions();
-
-protected:
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-
-private:
-    static TextGenGraphSettingsImpl& defaultGraphSettings();
-};
-
+ExportType stringToEnum(std::string inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : unknown;
+}
 }  // namespace ovms

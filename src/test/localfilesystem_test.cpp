@@ -144,6 +144,7 @@ TEST(LocalFileSystem, DownloadFileFolder) {
 
 TEST(LocalFileSystem, DestroyFileFolder) {
     ovms::LocalFileSystem lfs;
+    createTmpFiles();
     bool exists = false;
     auto status = lfs.fileExists((TMP_PATH / TMP_DIR1).string(), &exists);
     EXPECT_EQ(status, ovms::StatusCode::OK);
@@ -224,6 +225,11 @@ TEST(FileSystem, CheckIfPathIsEscaped) {
     ASSERT_TRUE(ovms::FileSystem::isPathEscaped("../"));
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/..resnet/"));
     ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("/path/resnet../"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("\\..\\"));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("\\.."));
+    ASSERT_TRUE(ovms::FileSystem::isPathEscaped("..\\"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("\\path\\..resnet\\"));
+    ASSERT_TRUE(!ovms::FileSystem::isPathEscaped("\\path\\resnet..\\"));
 }
 
 TEST(FileSystem, IsLocalFilesystem) {

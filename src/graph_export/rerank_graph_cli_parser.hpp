@@ -21,27 +21,25 @@
 
 #include <cxxopts.hpp>
 
+#include "graph_cli_parser.hpp"
+
 namespace ovms {
 
 struct HFSettingsImpl;
-struct TextGenGraphSettingsImpl;
+struct RerankGraphSettingsImpl;
 class Status;
 
-class GraphCLIParser {
+class RerankGraphCLIParser : public GraphCLIParser {
 public:
-    GraphCLIParser() = default;
+    RerankGraphCLIParser() = default;
     cxxopts::ParseResult parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
+    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
 
     void printHelp();
     void createOptions();
 
-protected:
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-
 private:
-    static TextGenGraphSettingsImpl& defaultGraphSettings();
+    static RerankGraphSettingsImpl& defaultGraphSettings();
 };
 
 }  // namespace ovms
