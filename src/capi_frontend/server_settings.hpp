@@ -61,9 +61,11 @@ struct RerankGraphSettingsImpl {
 };
 
 struct HFSettingsImpl {
+    std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
+    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
     ExportType task = text_generation;
     TextGenGraphSettingsImpl graphSettings;
