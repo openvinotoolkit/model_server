@@ -39,10 +39,6 @@ void EmbeddingsGraphCLIParser::createOptions() {
 
     // clang-format off
     options->add_options("embeddings")
-        ("graph_target_device",
-            "CPU, GPU, NPU or HETERO, default is CPU.",
-            cxxopts::value<std::string>()->default_value("CPU"),
-            "GRAPH_TARGET_DEVICE")
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
@@ -83,6 +79,7 @@ cxxopts::ParseResult EmbeddingsGraphCLIParser::parse(const std::vector<std::stri
 }
 
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+    hfSettings.embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
         if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
@@ -107,7 +104,6 @@ void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::st
     }
 
     hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    hfSettings.embeddingsGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
     hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
     hfSettings.embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();

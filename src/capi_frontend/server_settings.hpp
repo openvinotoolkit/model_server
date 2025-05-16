@@ -61,6 +61,7 @@ struct RerankGraphSettingsImpl {
 };
 
 struct HFSettingsImpl {
+    std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;

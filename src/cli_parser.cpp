@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
-            if (result->count("pull")) {
+            if (isHFPullOrPullAndStart(*result.get())) {
                 cxxopts::ParseResult subResult;
                 ExportType task;
                 if (result->count("task")) {
@@ -355,7 +355,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 #endif
 }
 
-void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
+void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
@@ -399,7 +399,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        if (isHFPullOrPullAndStart(*result.get())) {
+            hfSettings.targetDevice = modelsSettings.targetDevice;
+        } else {
+            modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        }
     }
 
     if (result->count("plugin_config")) {
@@ -428,9 +432,13 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
     }
 }
 
+bool CLIParser::isHFPullOrPullAndStart(cxxopts::ParseResult& result) {
+    return (result.count("pull") || result.count("source_model") || result.count("model_repository_path") || result.count("task"));
+}
+
 void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     // Ovms Pull models mode || pull and start models mode
-    if (result->count("pull") || (result->count("source_model")) || result->count("model_repository_path") || result->count("task")) {
+    if (isHFPullOrPullAndStart(*result.get())) {
         hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
         // Ovms pull and start models mode
         if (!hfSettings.pullHfModelMode)
@@ -490,7 +498,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     }
     this->prepareServer(*serverSettings);
 
-    this->prepareModel(*modelsSettings);
+    this->prepareModel(*modelsSettings, serverSettings->hfSettings);
 
     this->prepareGraph(serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
 

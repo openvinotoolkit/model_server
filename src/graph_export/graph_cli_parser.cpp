@@ -47,10 +47,6 @@ void GraphCLIParser::createOptions() {
             "Type of the pipeline to be used: Choices LM, LM_CB, VLM, VLM_CB, AUTO. AUTO is used by default.",
             cxxopts::value<std::string>(),
             "PIPELINE_TYPE")
-        ("graph_target_device",
-            "CPU, GPU, NPU or HETERO, default is CPU.",
-            cxxopts::value<std::string>()->default_value("CPU"),
-            "GRAPH_TARGET_DEVICE")
         ("enable_prefix_caching",
             "This algorithm is used to cache the prompt tokens.",
             cxxopts::value<std::string>()->default_value("true"),
@@ -90,7 +86,7 @@ void GraphCLIParser::printHelp() {
     std::cout << options->help({"text generation", "plugin config"}) << std::endl;
 }
 
-cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+cxxopts::ParseResult GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -105,6 +101,7 @@ cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unma
 }
 
 void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+    hfSettings.graphSettings.targetDevice = hfSettings.targetDevice;
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
         if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
@@ -139,7 +136,6 @@ void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& mode
     }
 
     hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
-    hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
     hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
     hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();

@@ -39,10 +39,6 @@ void RerankGraphCLIParser::createOptions() {
 
     // clang-format off
     options->add_options("rerank")
-        ("graph_target_device",
-            "CPU, GPU, NPU or HETERO, default is CPU.",
-            cxxopts::value<std::string>()->default_value("CPU"),
-            "GRAPH_TARGET_DEVICE")
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
@@ -79,6 +75,7 @@ cxxopts::ParseResult RerankGraphCLIParser::parse(const std::vector<std::string>&
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+    hfSettings.rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
         if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
@@ -103,7 +100,6 @@ void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string
     }
 
     hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
     hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
     hfSettings.rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
 }
