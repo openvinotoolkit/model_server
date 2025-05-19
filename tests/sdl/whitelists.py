@@ -94,6 +94,7 @@ libraries = {
     OvmsBaseImageType.COMMON: {
         'libazurestorage.so',
         'libcpprest.so',
+        'libgit2.so',
         'libOpenCL.so',
         'libopencv_calib3d.so',
         'libopencv_core.so',

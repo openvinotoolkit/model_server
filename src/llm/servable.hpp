@@ -32,7 +32,9 @@
 
 #include "../http_payload.hpp"
 #include "apis/openai_completions.hpp"
-#include "text_processor.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "py_jinja_template_processor.hpp"
+#endif
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -81,11 +83,13 @@ struct GenAiServableProperties {
     ov::AnyMap tokenizerPluginConfig;
     // Sampling limits
     std::optional<uint32_t> maxTokensLimit;
+    std::optional<uint32_t> maxModelLength;
     uint32_t bestOfLimit;
     // Text processing utilities
     ov::genai::Tokenizer tokenizer;
-    TextProcessor textProcessor;
-    std::optional<uint32_t> maxModelLength;
+#if (PYTHON_DISABLE == 0)
+    PyJinjaTemplateProcessor templateProcessor;
+#endif
 };
 
 class GenAiServable {
