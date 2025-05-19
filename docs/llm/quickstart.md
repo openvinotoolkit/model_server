@@ -103,7 +103,7 @@ curl -s http://localhost:8000/v3/chat/completions \
 :::{tab-item} Windows
 
 Windows Powershell
-```bat
+```powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
