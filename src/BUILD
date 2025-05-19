@@ -69,7 +69,7 @@ cc_shared_library(
         "@aws-sdk-cpp//:__subpackages__",
         "@boost//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
-        "@curl//:__subpackages__",
+        "//third_party:curl//:__subpackages__",
         "@com_github_google_crc32c//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
         "@com_github_libevent_libevent//:__subpackages__",
@@ -326,6 +326,7 @@ cc_library(
         "modelconfig",
         "libovms_cliparser",
         "libovms_systeminfo",
+        "ovms_exit_codes",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -340,6 +341,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "//src/graph_export:graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -415,10 +417,20 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "modelextensions",
+    hdrs = ["modelextensions.hpp",],
+    srcs = ["modelextensions.cpp",],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
     name = "modelinstance_h",
     hdrs = ["modelinstance.hpp",],
     srcs = [],
     deps = [
+        "modelextensions",
         "libovmslogging",
         "libovms_outputkeeper",
         "libovmsprofiler",
@@ -566,7 +578,6 @@ cc_library(
         "modelinstance.hpp",
         "model_service.hpp",
         "model_service.cpp",
-        "ovms_exit_codes.hpp",
         "prediction_service.cpp",
         "prediction_service.hpp",
         "prediction_service_utils.hpp",
@@ -602,10 +613,6 @@ cc_library(
         deps = select({
             "//:not_disable_python": [
                 "//src/python:libovmspythonmodule",
-                # Jinja template processing is done in Python
-                "//src/llm:llmcalculator",
-                "//src/llm:genai_servables",
-                "//src/llm:text_processor",
             ],
             "//:disable_python": []
         }) + select({
@@ -613,10 +620,17 @@ cc_library(
             "//:not_disable_mediapipe" : [
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
-                "//src/rerank:rerankcalculator",],
+                "//src/rerank:rerankcalculator",
+                "//src/llm:llmcalculator",],
         }) + select({
-            "//:enable_drogon": ["libdrogon_http_server"],
-            "//conditions:default" : ["libnet_http_server"],
+            "//:enable_drogon": [
+                "libdrogon_http_server",
+                "libmultipart_parser_drogon_impl",
+            ],
+            "//conditions:default" : [
+                "libnet_http_server",
+                # Add net-http implementation here if we ever want one
+            ],
         }) + [
             "cpp_headers",
             "ovms_header",
@@ -642,6 +656,7 @@ cc_library(
             "node_library_utils",
             "custom_node_library_internal_manager_wrapper",
             "nodeinfo",
+            "ovms_exit_codes",
             "dags_nodestreamidguard",
             "libovms_dags_session_id",
             "libovms_dags_pipelineeventqueue",
@@ -695,6 +710,8 @@ cc_library(
             "//:ovms_dependencies", # TODO dispose or replace
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
+            "//src/pull_module:hf_pull_model_module",
+            "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
             "tfs_backend_impl",
@@ -810,6 +827,7 @@ cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovmsclient_connection",
+        "libmultipart_parser",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
@@ -828,6 +846,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
+
 cc_library(
     name = "libhttpclientconnection",
     hdrs = ["http_frontend/http_client_connection.hpp"],
@@ -840,6 +859,31 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
+)
+
+cc_library(
+    name = "libmultipart_parser",
+    hdrs = ["multi_part_parser.hpp"],
+    deps = [
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
+    name = "libmultipart_parser_drogon_impl",
+    hdrs = ["http_frontend/multi_part_parser_drogon_impl.hpp"],
+    srcs = ["http_frontend/multi_part_parser_drogon_impl.cpp"],
+    deps = [
+        "libmultipart_parser",
+        "@drogon//:drogon_cmake",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -2108,6 +2152,17 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "ovms_exit_codes",
+    hdrs = ["ovms_exit_codes.hpp",],
+    srcs = [],
+    deps = [],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+        
+cc_library(
     name = "libovms_outputkeeper",
     hdrs = ["outputkeeper.hpp",],
     srcs = ["outputkeeper.cpp",],
@@ -2756,6 +2811,12 @@ cc_test(
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
+                "test/multipart_calculator_test.cpp",
+                "test/llm/llmnode_test.cpp",
+                "test/llm/max_model_length_test.cpp",
+                "test/llm/text_streamer_test.cpp",
+                "test/llm/visual_language_model/complete_flow_test.cpp",
+                "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2765,15 +2826,16 @@ cc_test(
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                # LLM logic uses Python for processing Jinja templates
-                "test/llm/llmnode_test.cpp",
-                "test/llm/max_model_length_test.cpp",
+                # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
-                "test/llm/text_streamer_test.cpp",
-                "test/llm/visual_language_model/complete_flow_test.cpp",
-                "test/llm/visual_language_model/initialization_test.cpp",
             ],
             "//:disable_python" : [],
+        }) + select({
+            "//:enable_drogon": [
+                "test/multi_part_parser_drogon_test.cpp",
+            ],
+            "//conditions:default" : [
+            ],
         }),
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -2792,9 +2854,11 @@ cc_test(
         "test/configs/config_dummy_dynamic_shape.json",
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
+        "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
         "test/llm/lm_legacy_regular.pbtxt",
         "test/llm/lm_cb_speculative.pbtxt",
+        "test/llm/lm_cb_prompt_lookup.pbtxt",
         "test/llm/visual_language_model/config.json",
         "test/llm/visual_language_model/vlm_cb_regular.pbtxt",
         "test/llm/visual_language_model/vlm_legacy_regular.pbtxt",
@@ -2823,6 +2887,7 @@ cc_test(
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_mediapipe_two_inputs.json",
         "test/mediapipe/config_mediapipe_two_outputs_dag.json",
+        "test/mediapipe/config_mediapipe_multipart_mock.json",
         "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
@@ -2841,6 +2906,7 @@ cc_test(
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
         "test/mediapipe/graphadapterfull_two_outputs_dag.pbtxt",
         "test/mediapipe/graphdummyadapterfull_two_outputs.pbtxt",
+        "test/mediapipe/graph_multipart.pbtxt",
         "test/mediapipe/negative/config_exception_during_process.json",
         "test/mediapipe/negative/config_no_calc_output_stream.json",
         "test/mediapipe/negative/graph_exception_during_process.pbtxt",
@@ -2910,6 +2976,9 @@ cc_test(
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
+            ":pull_hf_model_test",
+            ":listmodels_test",
+            ":graph_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2922,6 +2991,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
+                "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
             ],
@@ -3008,6 +3078,54 @@ cc_library(
             ":inferenceresponse",
             "@com_google_googletest//:gtest",
     ],
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "pull_hf_model_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/pull_hf_model_test.cpp"],
+    linkopts = [],
+    deps = [
+        "//src/servables_config_manager_module:listmodels",
+        ":test_utils",
+        "//src/pull_module:libgit2",
+        "//src/pull_module:hf_pull_model_module",
+        "//src:ovms_lib",
+        "libovmsstring_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "listmodels_test",
+    srcs = ["test/listmodels_test.cpp"],
+    alwayslink = True,
+    linkopts = [],
+    deps = [
+        "//src/servables_config_manager_module:listmodels",
+        ":test_utils",
+        #"//src:ovms_lib",
+        "libovmsstring_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "graph_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/graph_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/graph_export:graph_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
 cc_library(

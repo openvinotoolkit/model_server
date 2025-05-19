@@ -33,7 +33,10 @@
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
-#include "../../text_processor.hpp"
+#include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 #include "llm_executor.hpp"
 #include "servable.hpp"
 
@@ -62,10 +65,6 @@ std::shared_ptr<GenAiServableExecutionContext> ContinuousBatchingServable::creat
 
 std::shared_ptr<GenAiServableProperties> ContinuousBatchingServable::getProperties() {
     return properties;
-}
-
-bool ContinuousBatchingServable::supportsSpeculativeDecoding() const {
-    return true;
 }
 
 absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {

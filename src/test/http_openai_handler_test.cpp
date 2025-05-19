@@ -37,10 +37,11 @@ protected:
     std::unique_ptr<std::thread> t;
     std::string port = "9173";
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpoint = "/v3/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
     ovms::HttpResponseComponents responseComponents;
 
@@ -52,6 +53,7 @@ protected:
 
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json").c_str());
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
@@ -73,18 +75,23 @@ TEST_F(HttpOpenAIHandlerTest, Unary) {
         }
     )";
 
+    const std::string URI = "/v3/something";
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/v1/completions/", requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(URI, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/v1/completions/
+    std::string expectedResponse = R"(URI: /v3/something
+Key: content-type; Value: application/json
+Body:
 
         {
             "model": "gpt",
             "stream": false,
             "messages": []
         }
-    {"model":"gpt","stream":false,"messages":[]}0)";
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}0)";
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -96,21 +103,27 @@ TEST_F(HttpOpenAIHandlerTest, UnaryWithHeaders) {
             "messages": []
         }
     )";
-    comp.headers.push_back(std::pair<std::string, std::string>("test1", "header"));
-    comp.headers.push_back(std::pair<std::string, std::string>("test2", "header"));
+    comp.headers["test1"] = "header";
+    comp.headers["test2"] = "header";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor("/v3/completions/", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 
-    std::string expectedResponse = R"(/v3/completions/
-test1headertest2header
+    std::string expectedResponse = R"(URI: /v3/completions/
+Key: content-type; Value: application/json
+Key: test1; Value: header
+Key: test2; Value: header
+Body:
+
         {
             "model": "gpt",
             "stream": false,
             "messages": []
         }
-    {"model":"gpt","stream":false,"messages":[]}0)";
+    
+JSON Parser:
+{"model":"gpt","stream":false,"messages":[]}0)";
     ASSERT_EQ(response, expectedResponse);
 }
 
@@ -129,7 +142,7 @@ TEST_F(HttpOpenAIHandlerTest, Stream) {
     EXPECT_CALL(*writer, IsDisconnected()).Times(9);
 
     ASSERT_EQ(
-        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 
     ASSERT_EQ(response, "");
@@ -142,7 +155,7 @@ TEST_F(HttpOpenAIHandlerTest, BodyNotAJson) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - Cannot parse JSON body");
 }
@@ -154,7 +167,7 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyValidButNotAnObject) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body must be an object");
 }
@@ -171,7 +184,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldMissing) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - model field is missing in JSON body");
 }
@@ -189,7 +202,7 @@ TEST_F(HttpOpenAIHandlerTest, ModelFieldNotAString) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - model field is not a string");
 }
@@ -208,7 +221,7 @@ TEST_F(HttpOpenAIHandlerTest, StreamFieldNotABoolean) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - stream field is not a boolean");
 }
@@ -226,7 +239,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
 }
 
@@ -236,7 +249,7 @@ protected:
     std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
 };
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -271,6 +284,76 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
     for (size_t i = 0; i < image.get_size(); i++) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
+    std::string json = R"({
+  "model": "llama",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+          }
+        }
+      ]
+    }
+  ]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  "https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
@@ -334,7 +417,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucce
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
@@ -464,7 +547,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyImageUrlFails) {
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageUrlNotBase64Fails) {
@@ -525,10 +608,9 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
     ASSERT_FALSE(doc.HasParseError());
     uint32_t maxTokensLimit = 10;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_TRUE(apiHandler->getMaxTokens().has_value());
     EXPECT_EQ(apiHandler->getMaxTokens().value(), maxTokensLimit);
 }
@@ -539,7 +621,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
         "logprobs", "max_completion_tokens"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
     std::optional<uint32_t> maxModelLength;
     for (auto param : chatParamsThatAcceptNull) {
         std::string json = R"({
@@ -560,7 +641,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
         doc.Parse(json.c_str());
         ASSERT_FALSE(doc.HasParseError());
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
 }
 
@@ -570,7 +651,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         "logprobs", "echo"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
-    bool isSpeculativePipeline = false;
     std::optional<uint32_t> maxModelLength;
     for (auto param : chatParamsThatAcceptNull) {
         std::string json = R"({
@@ -581,7 +661,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         doc.Parse(json.c_str());
         ASSERT_FALSE(doc.HasParseError());
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, isSpeculativePipeline, maxModelLength), absl::OkStatus());
+        EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
 }
 
@@ -604,6 +684,6 @@ TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
     EXPECT_CALL(*writer, IsDisconnected()).Times(0);
 
-    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer);
+    auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
 }

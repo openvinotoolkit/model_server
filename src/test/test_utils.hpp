@@ -63,6 +63,10 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
+void SetEnvironmentVar(const std::string& var, const std::string& val);
+void UnSetEnvironmentVar(const std::string& var);
+const std::string GetEnvVar(const std::string& var);
+
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
@@ -500,6 +504,8 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
+std::string GetFileContents(const std::string& filePath);
+
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
@@ -779,6 +785,8 @@ public:
     }
 };
 
+void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
+
 class TestWithTempDir : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -1029,6 +1037,15 @@ extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
  *  Waits until server is ready
  */
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
+/*
+ *  Waits until server downloads model
+ */
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
+ */
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */

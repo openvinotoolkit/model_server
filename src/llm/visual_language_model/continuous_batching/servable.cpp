@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "../../../logging.hpp"
+#include "../../text_utils.hpp"
 
 namespace ovms {
 
@@ -37,6 +38,10 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
 absl::Status VisualLanguageModelServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
+    if (payload.parsedJson->HasParseError()) {
+        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+    }
     if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
     } else {
@@ -52,10 +57,6 @@ std::shared_ptr<GenAiServableExecutionContext> VisualLanguageModelServable::crea
 
 std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getProperties() {
     return properties;
-}
-
-bool VisualLanguageModelServable::supportsSpeculativeDecoding() const {
-    return false;
 }
 
 absl::Status VisualLanguageModelServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {

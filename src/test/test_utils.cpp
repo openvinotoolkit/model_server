@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <optional>
 #include <unordered_set>
@@ -303,6 +304,12 @@ void checkIncrement4DimShape(const std::string outputName,
     ASSERT_EQ(output_proto.tensor_shape().dim_size(), expectedShape.size());
     for (size_t i = 0; i < expectedShape.size(); i++) {
         ASSERT_EQ(output_proto.tensor_shape().dim(i).size(), expectedShape[i]);
+    }
+}
+
+void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_read | std::filesystem::perms::group_write | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
     }
 }
 
@@ -624,6 +631,47 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     return content;
 }
 
+std::string GetFileContents(const std::string& filePath) {
+    if (!std::filesystem::exists(filePath)) {
+        std::cout << "File does not exist:" << filePath << std::endl;
+        throw std::runtime_error("Failed to open file: " + filePath);
+    }
+
+    std::ifstream file(filePath, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        std::cout << "File could not be opened:" << filePath << std::endl;
+        throw std::runtime_error("Failed to open file: " + filePath);
+    }
+
+    std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    file.close();
+    return content;
+}
+
+void SetEnvironmentVar(const std::string& var, const std::string& val) {
+    SPDLOG_INFO("Setting environment variable: {} to: {}", var, val);
+#ifdef _WIN32
+    _putenv_s(var.c_str(), val.c_str());
+#elif __linux__
+    ::setenv(var.c_str(), val.c_str(), 1);
+#endif
+}
+void UnSetEnvironmentVar(const std::string& var) {
+    SPDLOG_INFO("Unsetting environment variable: {}", var);
+#ifdef _WIN32
+    _putenv_s(var.c_str(), "");
+#elif __linux__
+    ::unsetenv(var.c_str());
+#endif
+}
+const std::string GetEnvVar(const std::string& var) {
+    std::string val = "";
+    const char* envCred = std::getenv(var.c_str());
+    if (envCred)
+        val = std::string(envCred);
+    return val;
+}
+
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, type] = inputInfo;
@@ -696,6 +744,30 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
 
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds) {
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+    }
+    ASSERT_EQ(server.getModuleState(ovms::HF_MODEL_PULL_MODULE_NAME), ovms::ModuleState::SHUTDOWN) << "OVMS did not download model in allowed time:" << timeoutSeconds << "s. Check machine load and network load";
+}
+
+// --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)source_model.c_str(),
+        (char*)"--model_repository_path",
+        (char*)download_path.c_str()};
+    int argc = 6;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+}
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);

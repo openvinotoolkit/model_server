@@ -242,8 +242,6 @@ build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
 
 # Windows config default flags
 build:windows --define=CLOUD_DISABLE=1
-build:windows --define=PYTHON_DISABLE=0
-build:windows --define=MEDIAPIPE_DISABLE=0
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
 build:windows --action_env OpenCV_DIR="c:/opt/opencv"
@@ -251,6 +249,13 @@ build:windows --action_env OpenCV_DIR="c:/opt/opencv"
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
 build:windows --define=USE_DROGON=1
 build:windows --define=GENAI_USE_BINARY=1
+
+build:win_mp_on_py_on --config=windows
+build:win_mp_on_py_on --define=MEDIAPIPE_DISABLE=0
+build:win_mp_on_py_on --define=PYTHON_DISABLE=0
+build:win_mp_on_py_off --config=windows
+build:win_mp_on_py_off --define=MEDIAPIPE_DISABLE=0
+build:win_mp_on_py_off --define=PYTHON_DISABLE=1
 
 # Tests settings ############################################################################################################################
 # sometimes failed logs exceed this threshold
@@ -261,6 +266,7 @@ test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runti
 # genai hardcodes path during build time so without this so is not visible
 test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
+test:linux --test_env no_proxy=localhost
 
 # Bazelrc imports ############################################################################################################################
 # file below should contain sth like
