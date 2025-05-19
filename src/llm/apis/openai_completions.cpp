@@ -301,8 +301,9 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             } else {
                 return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
             }
-        } else
+        } else {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
+        }
     }
 
     bool jsonChanged = false;
