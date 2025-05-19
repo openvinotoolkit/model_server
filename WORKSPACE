@@ -122,9 +122,8 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
-# overriding GCS curl dependency to force using system provided openssl
 new_local_repository(
-    name = "libcurl",
+    name = "linux_curl",
     path = "/usr/",
     build_file_content = """
 cc_library(
@@ -136,6 +135,21 @@ cc_library(
 )
 """,
 )
+
+new_local_repository(
+    name = "windows_curl",
+    path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
+    build_file_content = """
+cc_library(
+    name = "curl",
+    hdrs = glob(["include/curl/curl.h"]),
+    srcs = glob(["lib/libcurl.dll.a"]),
+    includes = ["include/"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
 
 # Used for gRPC API protos only
 # Tensorflow serving
@@ -471,6 +485,10 @@ aws_sdk_cpp()
 ### OpenVINO GenAI
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
+
+### Libgit2
+load("@//third_party/libgit2:libgit2_engine.bzl", "libgit2_engine")
+libgit2_engine()
 
 load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()

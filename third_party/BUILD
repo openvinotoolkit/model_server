@@ -50,3 +50,12 @@ alias(
     }),
     visibility = ["//visibility:public"],
 )
+
+alias(
+    name = "curl",
+    actual = select({
+        "//src:windows": "@windows_curl//:curl",
+        "//conditions:default": "@linux_curl//:curl",
+    }),
+    visibility = ["//visibility:public"],
+)

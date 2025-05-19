@@ -15,6 +15,10 @@
 ::
 @echo off
 set "OVMS_DIR=%~dp0"
-set "PYTHONHOME=%OVMS_DIR%\python"
-set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PATH%"
+if exist "%OVMS_DIR%\python" (
+    set "PYTHONHOME=%OVMS_DIR%\python"
+    set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PATH%"
+) else (
+    set "PATH=%OVMS_DIR%;%PATH%"
+)
 echo "OpenVINO Model Server Environment Initialized"

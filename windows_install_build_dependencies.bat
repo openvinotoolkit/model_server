@@ -38,9 +38,9 @@ IF "%2"=="1" (
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
-:: Python 39 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python311\;C:\opt\Python311\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
-
+:: Python 312 needs to be first in the windows path, as well as MSYS tools
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
@@ -124,9 +124,9 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.2.0.0.dev20250411_x86_64"
-set "genai_ver=openvino_genai_windows_2025.2.0.0.dev20250411_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.2.0.0.dev20250411/"
+set "genai_dir=openvino_genai_windows_2025.2.0.0.dev20250503_x86_64"
+set "genai_ver=openvino_genai_windows_2025.2.0.0.dev20250503_x86_64.zip"
+set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.2.0.0.dev20250503/"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -247,9 +247,69 @@ IF /I EXIST %bazel_path% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
+
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git-lfs - reinstalled per worker
+set "gitlfs_dir=git-lfs-3.6.1"
+set "gitlfs_short_dir="
+set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
+set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
+
+set "gitlfs_zip=%opt_install_dir%\%gitlfs_ver%"
+
+echo [INFO] Installing git-lfs: %gitlfs_dir% ...
+:: Download git-lfs
+IF /I EXIST %gitlfs_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %gitlfs_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %gitlfs_zip% )
+    
+) ELSE (
+    %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract git-lfs
+IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %opt_install_dir%\%gitlfs_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:: Check git-lfs.exe
+IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %opt_install_dir%\%gitlfs_dir%\git-lfs.exe )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:: Create git-lfs link - always to make sure it points to latest version
+IF /I EXIST %opt_install_dir%\git-lfs.exe (
+    del /Q %opt_install_dir%\git-lfs.exe
+)
+mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.11.9"
+set "python_version=3.12.9"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -258,7 +318,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
@@ -312,13 +372,15 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
-%python_path%\python.exe -m ensurepip --upgrade
+%python_path%\python.exe -m ensurepip
+if !errorlevel! neq 0 exit /b !errorlevel!
+%python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "setuptools<60.0" "numpy==1.23" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
-goto install_opencv
+goto install_curl
 :::::::::::::::::::::: Uninstall function
 :UninstallPython
 start "Unstalling_python" %opt_install_dir%\%python_full_name%.exe /quiet /uninstall /log python/uninstall.log
@@ -358,6 +420,44 @@ for /l %%i in (1,1,300) do (
 :python_install_finished
 exit /b 0
 :::::::::::::::::::::: Uninstall function end
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install curl
+:install_curl
+echo [INFO] Installing curl ...
+
+set "curl_dir=curl-8.13.0_1-win64-mingw"
+set "curl_ver=curl-8.13.0_1-win64-mingw.zip"
+set "curl_http=https://curl.se/windows/dl-8.13.0_1/"
+
+set "curl_zip=%opt_install_dir%\%curl_ver%"
+
+:: Download curl
+IF /I EXIST %curl_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %curl_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %curl_zip% )
+    
+) ELSE (
+    %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract curl
+IF /I EXIST %opt_install_dir%\%curl_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%curl_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %opt_install_dir%\%curl_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV

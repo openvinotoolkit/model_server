@@ -21,6 +21,18 @@
 #    ],
 #)
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("//:common_settings.bzl",
+     "LINUX_COMMON_STATIC_LIBS_COPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS")
+
+COPTS_ADJUSTED = select({
+                "//conditions:default": LINUX_COMMON_STATIC_LIBS_COPTS,
+                "//src:windows" : [],
+                })
+
+LINKOPTS_ADJUSTED = select({
+    "//conditions:default": [],
+    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+})
 
 mediapipe_proto_library(
     name = "ovmscalculatoroptions_proto", # ovmscalculatoroptions_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
@@ -31,6 +43,26 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
 )
+
+cc_library(
+    name = "dependency_free_http_test_calculators",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = [
+        "multipart_accepting_calculator.cpp",
+        "openai_chat_completions_mock_calculator.cpp",
+    ],
+    copts = COPTS_ADJUSTED,
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//src:httppayload",
+        "@mediapipe_calculators//:mediapipe_calculators", # Need this dependencies here because we use ovms/src - cannot add in ovms_dependencies because we copy src directory later in Dockerfile
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 
 cc_library(
     name = "mediapipe_test_calculators",
@@ -48,24 +80,8 @@ cc_library(
         "ovms_kfs_calculator.cc",
         "streaming_test_calculator.cpp",
         "two_input_calculator.cpp",
-        "openai_chat_completions_mock_calculator.cpp",
     ],
-    copts = select({
-            "//conditions:default": [
-                "-Wall",
-                "-Wno-unknown-pragmas",
-                "-Werror",
-                "-Wno-sign-compare",
-            ],
-            "//:fuzzer_build" : [
-                "-fsanitize=address",
-                "-fprofile-generate",
-                "-ftest-coverage",
-            ],
-            "//src:windows" : [
-                "-W0",
-            ],
-        }),
+    copts = COPTS_ADJUSTED,
     visibility = [
         "//visibility:public",
     ],
@@ -76,15 +92,6 @@ cc_library(
         "//third_party:openvino",
         "//src:ovms_header",
     ],
-    linkopts = select({
-        "//conditions:default": [
-        ],
-        "//:fuzzer_build" : [
-            "-fprofile-generate",
-            "-fsanitize=address",
-            "-fsanitize-coverage=trace-pc",
-            "-static-libasan",
-        ],
-    }),
+    linkopts = LINKOPTS_ADJUSTED,
 )
 

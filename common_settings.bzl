@@ -123,8 +123,7 @@ def create_config_settings():
 ###############################
 # compilation settings
 ###############################
-COMMON_STATIC_LIBS_COPTS = select({
-                "//conditions:default": [
+LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Wall",
                     # TODO: was in ovms bin "-Wconversion",
                     "-Wno-unknown-pragmas", 
@@ -133,8 +132,9 @@ COMMON_STATIC_LIBS_COPTS = select({
                     "-Werror", 
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
                     "-Wno-deprecated-declarations",
-                ],
-                "//src:windows" : [
+]
+
+WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/W4",
                         "/WX",
                         "/external:anglebrackets",
@@ -157,7 +157,11 @@ COMMON_STATIC_LIBS_COPTS = select({
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
-                    ],
+]
+
+COMMON_STATIC_LIBS_COPTS = select({
+                "//conditions:default": LINUX_COMMON_STATIC_LIBS_COPTS,
+                "//src:windows" : WINDOWS_COMMON_STATIC_LIBS_COPTS,
                 })
 
 COMMON_STATIC_TEST_COPTS = select({

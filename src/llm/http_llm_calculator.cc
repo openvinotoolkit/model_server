@@ -26,6 +26,7 @@
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
+#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"

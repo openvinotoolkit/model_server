@@ -309,6 +309,12 @@ TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range from 0 to 65535");
 }
 
+TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
+    char* n_argv[] = {"ovms", "--list_models"};
+    int arg_count = 2;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use --list_models with --model_repository_path");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
     char* n_argv[] = {
         "ovms",

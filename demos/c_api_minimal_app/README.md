@@ -92,7 +92,7 @@ run `make` command in ovms git main directory.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-make
+make BASE_OS=ubuntu24
 ```
 
 And then execute the alternative make target:

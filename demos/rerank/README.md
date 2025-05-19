@@ -98,7 +98,6 @@ curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
 HTTP/1.1 200 OK
 content-length: 0
 content-type: application/json; charset=utf-8
-content-type: application/json
 ```
 
 ## Client code
