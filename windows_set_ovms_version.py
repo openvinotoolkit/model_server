@@ -45,6 +45,8 @@ def replace_in_file(file_path, old_string, new_string):
 def get_openvino_name(openvino_dir):
     openvino_name = "Unknown"
     for root, dirs, files in os.walk(openvino_dir):
+        # Start searching from directories with biggest version numbers
+        dirs = sorted(dirs, reverse=True)
         for dir in dirs:
             matches = WIN_OV_VERSION_REGEX.findall(dir)
             if len(matches) > 1:
