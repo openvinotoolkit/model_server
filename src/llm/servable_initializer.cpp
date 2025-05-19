@@ -57,7 +57,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
-
             global json
             import json
             from pathlib import Path
@@ -68,7 +67,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
-
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
@@ -99,18 +97,34 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 eos_token = data.get("eos_token", "")
                 eos_token = "" if eos_token is None else eos_token  # Null token conversion to empty string.
                 chat_template = data.get("chat_template", default_chat_template)
+                if isinstance(chat_template, list):
+                    for template_entry in chat_template:
+                        if isinstance(template_entry, dict):
+                            if template_entry.get("name") == "default":
+                                chat_template = template_entry.get("template", default_chat_template)
+                            elif template_entry.get("name") == "tool_use":
+                                tool_chat_template = template_entry.get("template", default_chat_template)
 
             if template is None:
                 jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
                 jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
                 jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.from_string(chat_template)
+            if tool_chat_template is not None:
+                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
+                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
+                jinja_env.globals["raise_exception"] = raise_exception
+                tool_template = jinja_env.from_string(tool_chat_template)
+            else:
+                tool_template = template
+
         )",
             py::globals(), locals);
 
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
         properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
+        properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());

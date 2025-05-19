@@ -182,12 +182,10 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
         // Add new message to chat history
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
-            std::cout << "Member name: " << member->name.GetString() << std::endl;   
             if (!member->name.IsString())
                 return absl::InvalidArgumentError("Invalid message structure");
-            if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) { 
+            if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
-                std::cout << "Adding field to last message: " << member->name.GetString() << "value" << member->value.GetString() << std::endl;
                 request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
@@ -287,7 +285,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     auto tool_choice_it = doc.FindMember("tool_choice");
     std::string tool_choice{"auto"};
     if (tool_choice_it != doc.MemberEnd()) {
-        if (tool_choice_it->value.IsString()){
+        if (tool_choice_it->value.IsString()) {
             tool_choice = tool_choice_it->value.GetString();
             if (tool_choice != "none" && tool_choice != "auto")
                 return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto'");
@@ -306,7 +304,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         } else
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
     }
-    std::cout << "Tool choice: " << tool_choice << std::endl;
 
     bool jsonChanged = false;
     if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
@@ -325,7 +322,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             auto nameIt = functionIt->value.GetObject().FindMember("name");
             if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                 std::string functionName = nameIt->value.GetString();
-                std::cout << "Function name: " << functionName << std::endl;
                 if (tool_choice != functionName) {
                     it->value.Erase(&obj);
                     jsonChanged = true;
@@ -337,14 +333,12 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             return absl::InvalidArgumentError("Function is not a valid JSON object");
         }
         // Add new tool to tools list - TBD
-
     }
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
         doc.Accept(writer);
         request.processedJson = buffer.GetString();
-        std::cout << "Processed JSON: " << request.processedJson << std::endl;
     }
     return absl::OkStatus();
 }
@@ -709,6 +703,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
         std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
         writer.StartObject();  // {
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
@@ -906,6 +901,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
         std::string completeResponse = tokenizer.decode(tokens);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
         writer.StartObject();  // {
         writer.String("finish_reason");
         writer.String("stop");
@@ -1061,7 +1057,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
-
     writer.StartObject();  // {
 
     // choices: array of size N, where N is related to n request parameter
