@@ -13,11 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "servablesconfigmanagermodule.hpp"
+#include "servables_config_manager_module.hpp"
 
-#include <iostream>
 #include <string>
-#include <sstream>
 
 #include "../config.hpp"
 #include "../logging.hpp"
@@ -41,13 +39,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
-    const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
-    auto map = listServables(repositoryPath);
-    std::stringstream ss;
-    for (const auto& [k, v] : map) {
-        ss << k << std::endl;
-    }
-    std::cout << ss.str() << std::endl;
+    auto map = listServables(config.getServerSettings().hfSettings.downloadPath);
     return StatusCode::OK;
 }
 

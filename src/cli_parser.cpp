@@ -233,6 +233,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
         serverSettings->listServables = result->operator[]("list_models").as<bool>();
         if (result->count("model_repository_path"))
             serverSettings->hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        if(!result->count("log_level")) {
+            serverSettings->logLevel = "ERROR";
+        }
         return;
     }
     // Ovms Pull models mode
