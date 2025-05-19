@@ -255,7 +255,7 @@ public:
         if (FileSystem::getOsSeparator() != "/") {
             std::replace(joined.begin(), joined.end(), '/', '\\');
         }
-        return joined; 
+        return joined;
     }
 
     static std::string getFileMD5(const std::string& filename) {

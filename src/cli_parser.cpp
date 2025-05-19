@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "capi_frontend/server_settings.hpp"
 #include "graph_export/graph_export_types.hpp"
