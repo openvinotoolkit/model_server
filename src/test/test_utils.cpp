@@ -772,6 +772,26 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
 }
+
+void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds) {
+    server.setShutdownRequest(0);
+    char* argv[] = {(char*)"ovms",
+        (char*)"--source_model",
+        (char*)source_model.c_str(),
+        (char*)"--model_repository_path",
+        (char*)download_path.c_str(),
+        (char*)"--task",
+        (char*)task.c_str()};
+
+    int argc = 7;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+
+    EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
+    EnsureServerStartedWithTimeout(server, timeoutSeconds/2);
+}
+
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);

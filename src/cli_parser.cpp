@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
-            if (result->count("pull")) {
+            if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
                 std::vector<std::string> unmatchedOptions;
                 ExportType task;
                 if (result->count("task")) {
@@ -398,7 +398,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+            hfSettings.targetDevice = modelsSettings.targetDevice;
+        } else {
+            modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        }
     }
 
     if (result->count("plugin_config")) {
@@ -427,9 +431,13 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
     }
 }
 
+bool CLIParser::isHFPullOrPullAndStart(bool isPull, bool isSourceModel, bool isModelRepository, bool isTask) {
+    return (isPull || isSourceModel || isModelRepository || isTask);
+}
+
 void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
-    // Ovms Pull models mode
-    if (result->count("pull")) {
+    // Ovms Pull models mode || pull and start models mode
+    if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
         hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();

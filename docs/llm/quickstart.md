@@ -6,7 +6,7 @@ It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5
 ## Requirements
 - Linux or Windows 11
 - Docker Engine or `ovms` binary package [installed](../deploying_server_baremetal.md)
-- Intel iGPU or ARC GPU 
+- Intel iGPU or ARC GPU
 
 ## Deployment Steps
 
@@ -47,7 +47,7 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
+ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --model_name Phi-3.5-mini-instruct --target_device GPU --cache_size 2
 ```
 :::
 ::::
