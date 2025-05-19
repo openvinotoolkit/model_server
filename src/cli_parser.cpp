@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
-            if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+            if (result->count("pull")) {
                 std::vector<std::string> unmatchedOptions;
                 ExportType task;
                 if (result->count("task")) {

@@ -307,6 +307,53 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents) << jsonContents;
 }
 
+TEST_F(GraphCreationTest, rerankPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::rerank;
+    hfSettings.rerankGraphSettings.targetDevice = "GPU";
+    hfSettings.rerankGraphSettings.modelName = "myModel";
+    hfSettings.rerankGraphSettings.numStreams = 2;
+    hfSettings.rerankGraphSettings.maxDocLength = 18;
+    hfSettings.rerankGraphSettings.version = 2;
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::cout << graphContents << std::endl;
+    ASSERT_EQ(expectedRerankGraphContents, graphContents);
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    std::cout << jsonContents << std::endl;
+    ASSERT_EQ(expectedRerankJsonContents, jsonContents);
+}
+
+TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::embeddings;
+    hfSettings.embeddingsGraphSettings.targetDevice = "GPU";
+    hfSettings.embeddingsGraphSettings.modelName = "myModel";
+    hfSettings.embeddingsGraphSettings.numStreams = 2;
+    hfSettings.embeddingsGraphSettings.truncate = "true";
+    hfSettings.embeddingsGraphSettings.normalize = "true";
+    hfSettings.embeddingsGraphSettings.version = 2;
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::cout << graphContents << std::endl;
+    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents);
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    std::cout << jsonContents << std::endl;
+    ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents);
+}
+
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.graphSettings.pluginConfig.kvCachePrecision = "u8";
@@ -333,6 +380,17 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
 
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
+    ovms::HFSettingsImpl hfSettings;
+
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig("", hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+
+    status = graphExporter->createServableConfig("/does/not/exist", hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
 TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
