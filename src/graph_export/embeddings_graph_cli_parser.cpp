@@ -69,7 +69,7 @@ void EmbeddingsGraphCLIParser::printHelp() {
     std::cout << options->help({"embeddings"}) << std::endl;
 }
 
-std::unique_ptr<cxxopts::ParseResult> EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -80,7 +80,7 @@ std::unique_ptr<cxxopts::ParseResult> EmbeddingsGraphCLIParser::parse(const std:
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    return  std::move(result);
+    return  result->unmatched();
 }
 
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {

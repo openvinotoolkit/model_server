@@ -140,12 +140,19 @@ new_local_repository(
     name = "windows_curl",
     path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
     build_file_content = """
+cc_import(
+    name = "curl_lib",
+    hdrs = [],
+    shared_library = "bin/libcurl-x64.dll",
+    visibility = ["//visibility:public"],
+)
 cc_library(
     name = "curl",
     hdrs = glob(["include/curl/curl.h"]),
     srcs = glob(["lib/libcurl.dll.a"]),
     includes = ["include/"],
     visibility = ["//visibility:public"],
+    deps = [":curl_lib"],
 )
 """,
 )

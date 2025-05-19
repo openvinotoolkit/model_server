@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
         if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
             if (result->count("pull")) {
-                std::unique_ptr<cxxopts::ParseResult> subResult;
+                std::vector<std::string> unmatchedOptions;
                 ExportType task;
                 if (result->count("task")) {
                     task = stringToEnum(result->operator[]("task").as<std::string>());
@@ -221,19 +221,19 @@ void CLIParser::parse(int argc, char** argv) {
                         case text_generation: {
                             GraphCLIParser cliParser;
                             this->graphOptionsParser = std::move(cliParser);
-                            subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                             break;
                         }
                         case embeddings: {
                             EmbeddingsGraphCLIParser cliParser;
                             this->graphOptionsParser = std::move(cliParser);
-                            subResult = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            unmatchedOptions = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                             break;
                         }
                         case rerank: {
                             RerankGraphCLIParser cliParser;
                             this->graphOptionsParser = std::move(cliParser);
-                            subResult = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                             break;
                         }
                         case unknown: {
@@ -246,12 +246,12 @@ void CLIParser::parse(int argc, char** argv) {
                     task = text_generation;
                     GraphCLIParser cliParser;
                     this->graphOptionsParser = std::move(cliParser);
-                    subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                    unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                 }
 
-                if (subResult->unmatched().size()) {
+                if (unmatchedOptions.size()) {
                     std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
-                    for (auto& argument : subResult->unmatched()) {
+                    for (auto& argument : unmatchedOptions) {
                         std::cerr << argument << ", ";
                     }
                     std::cerr << std::endl;
