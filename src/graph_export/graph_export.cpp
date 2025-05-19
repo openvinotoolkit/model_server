@@ -33,10 +33,26 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "graph_export_types.hpp"
 
 namespace ovms {
 
-static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& graphSettings) {
+Status createFile(const std::string& filePath, const std::string& contents) {
+    SPDLOG_DEBUG("Creating file {}", filePath);
+    // Always overwrite
+    {
+        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
+        if (graphFile.is_open()) {
+            graphFile << contents << std::endl;
+        } else {
+            SPDLOG_ERROR("Unable to open file: ", filePath);
+            return StatusCode::FILE_INVALID;
+        }
+    }
+    return StatusCode::OK;
+}
+
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -58,8 +74,8 @@ static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& gr
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:)"
         << graphSettings.maxNumSeqs << R"(,
-            device: )"
-        << graphSettings.targetDevice << R"(,
+            device: ")"
+        << graphSettings.targetDevice << R"(",
             models_path: ")"
         << graphSettings.modelPath << R"(",
             plugin_config: ')"
@@ -102,26 +118,172 @@ static std::string createTextGenerationGraphTemplate(const GraphSettingsImpl& gr
     })";
 
     // clang-format on
-    return oss.str();
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return createFile(fullPath, oss.str());
+}
+
+static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
+                    "base_path": "rerank",
+                    "target_device": ")" << graphSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                }
+            }
+        ]
+    })";
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+    return createFile(fullPath, oss.str());
+}
+
+static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_embeddings_model",
+                    "base_path": "embeddings",
+                    "target_device": ")" << graphSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                }
+            }
+        ]
+    })";
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+    return createFile(fullPath, oss.str());
+}
+
+static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:rerank"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_rerank_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "RERANK_SESSION:rerank"
+        calculator: "RerankCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+    })";
+
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    auto status = createFile(fullPath, oss.str());
+    if (!status.ok())
+        return status;
+
+    return createRerankSubconfigTemplate(directoryPath, graphSettings);
+}
+
+static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:embeddings"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: ")"
+        << graphSettings.modelName << R"(_embeddings_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
+        calculator: "EmbeddingsCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+            normalize_embeddings: )"
+            << graphSettings.normalize << R"(,
+        }
+    }
+    })";
+
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    auto status = createFile(fullPath, oss.str());
+    if (!status.ok())
+        return status;
+
+    return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
 }
 
 GraphExport::GraphExport() {
 }
 
-Status GraphExport::createGraphFile(const std::string& directoryPath, const GraphSettingsImpl& graphSettings) {
-    std::string graphString = createTextGenerationGraphTemplate(graphSettings);
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    // Always overwrite
-    {
-        std::ofstream graphFile(fullPath, std::ios::trunc | std::ofstream::binary);
-        if (graphFile.is_open()) {
-            graphFile << graphString << std::endl;
-        } else {
-            SPDLOG_ERROR("Unable to open file: ", fullPath);
-            return StatusCode::FILE_INVALID;
-        }
+Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
+        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
     }
-    return StatusCode::OK;
+
+    if (hfSettings.task == text_generation) {
+        return createTextGenerationGraphTemplate(directoryPath, hfSettings.graphSettings);
+    } else if (hfSettings.task == embeddings) {
+        return createEmbeddingsGraphTemplate(directoryPath, hfSettings.embeddingsGraphSettings);
+    } else if (hfSettings.task == rerank) {
+        return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
+    }
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {
