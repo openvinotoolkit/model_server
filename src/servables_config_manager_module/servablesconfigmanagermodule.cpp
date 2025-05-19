@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "servablesconfigmanagermodule.hpp"
 
+#include <iostream>
 #include <string>
 #include <sstream>
 
@@ -46,7 +47,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     for (const auto& [k, v] : map) {
         ss << k << std::endl;
     }
-    SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+    std::cout << ss.str() << std::endl;
     return StatusCode::OK;
 }
 
