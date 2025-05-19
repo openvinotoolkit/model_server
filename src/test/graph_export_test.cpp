@@ -261,8 +261,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedDefaultGraphContents, graphContents);
+    ASSERT_EQ(expectedDefaultGraphContents, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
@@ -280,12 +279,10 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedRerankGraphContents, graphContents);
+    ASSERT_EQ(expectedRerankGraphContents, graphContents) << graphContents;
 
     std::string jsonContents = GetFileContents(subconfigPath);
-    std::cout << jsonContents << std::endl;
-    ASSERT_EQ(expectedRerankJsonContents, jsonContents);
+    ASSERT_EQ(expectedRerankJsonContents, jsonContents) << jsonContents;
 }
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
@@ -304,12 +301,10 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents);
+    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents) << graphContents;
 
     std::string jsonContents = GetFileContents(subconfigPath);
-    std::cout << jsonContents << std::endl;
-    ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents);
+    ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents) << jsonContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
@@ -324,8 +319,7 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedFullPluginGraphContents, graphContents);
+    ASSERT_EQ(expectedFullPluginGraphContents, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
@@ -338,8 +332,7 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents);
+    ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {

@@ -211,11 +211,6 @@ std::string HfDownloader::getGraphDirectory() {
 
 std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
     std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
-    // Windows path creation
-    if (FileSystem::getOsSeparator() != "/") {
-        std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
-    }
-
     return fullPath;
 }
 

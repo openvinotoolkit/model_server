@@ -64,7 +64,7 @@ void RerankGraphCLIParser::printHelp() {
     std::cout << options->help({"rerank"}) << std::endl;
 }
 
-cxxopts::ParseResult RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+std::unique_ptr<cxxopts::ParseResult> RerankGraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -75,7 +75,7 @@ cxxopts::ParseResult RerankGraphCLIParser::parse(const std::vector<std::string>&
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    return *this->result;
+    return  std::move(result);
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {

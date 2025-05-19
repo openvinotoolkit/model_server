@@ -90,7 +90,7 @@ void GraphCLIParser::printHelp() {
     std::cout << options->help({"text generation", "plugin config"}) << std::endl;
 }
 
-cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
+std::unique_ptr<cxxopts::ParseResult> GraphCLIParser::parse(const std::vector<std::string>& unmatchedOptions) {
     if (!this->options) {
         this->createOptions();
     }
@@ -101,7 +101,7 @@ cxxopts::ParseResult  GraphCLIParser::parse(const std::vector<std::string>& unma
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-    return *this->result;
+    return  std::move(result);
 }
 
 void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {

@@ -30,7 +30,7 @@ class Status;
 class GraphCLIParser {
 public:
     GraphCLIParser() = default;
-    cxxopts::ParseResult parse(const std::vector<std::string>& unmatchedOptions);
+    std::unique_ptr<cxxopts::ParseResult> parse(const std::vector<std::string>& unmatchedOptions);
     void prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
 
     void printHelp();
