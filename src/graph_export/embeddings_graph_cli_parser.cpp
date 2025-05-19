@@ -76,7 +76,7 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
     const char* const* args = cStrArray.data();
     result = std::make_unique<cxxopts::ParseResult>(options->parse(cStrArray.size(), args));
 
-   return  result->unmatched();
+    return  result->unmatched();
 }
 
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
