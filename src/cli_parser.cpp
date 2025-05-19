@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
         if (result->unmatched().size() || result->count("pull")) {
             // HF pull mode
             if (result->count("pull")) {
-                cxxopts::ParseResult subResult;
+                std::unique_ptr<cxxopts::ParseResult> subResult;
                 ExportType task;
                 if (result->count("task")) {
                     task = stringToEnum(result->operator[]("task").as<std::string>());
@@ -249,9 +249,9 @@ void CLIParser::parse(int argc, char** argv) {
                     subResult = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                 }
 
-                if (subResult.unmatched().size()) {
+                if (subResult->unmatched().size()) {
                     std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
-                    for (auto& argument : subResult.unmatched()) {
+                    for (auto& argument : subResult->unmatched()) {
                         std::cerr << argument << ", ";
                     }
                     std::cerr << std::endl;

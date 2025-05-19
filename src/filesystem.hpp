@@ -253,7 +253,7 @@ public:
 
         // Windows path creation
         if (FileSystem::getOsSeparator() != "/") {
-            std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
+            std::replace(joined.begin(), joined.end(), '/', '\\');
         }
         return joined;
     }
