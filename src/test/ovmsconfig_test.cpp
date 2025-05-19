@@ -341,6 +341,28 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("(%$#*F"), false);
     std::string too_long(256, 'a');
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(too_long), false);
+    // Uncompressed IPv6 address
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip(
+                  "fe80:0000:0000:0000:0202:b3ff:fe1e:8329"),
+        true);
+    // Zero compressed IPv6 address
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip(
+                  "2001:db8:85a3::8a2e:370:7334"),
+        true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("::1"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("::"), true);
+    // Link-local IPv6 with zone index (RFC 4007 § 11) - unsupported
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("fe80::1234%eth0"), false);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("fe80::1234%1"), false);
+    // IPv4-Embedded IPv6 addresses
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("64:ff9b::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip(
+                  "2001:db8:122:344::192.0.2.33"),
+        true);
+    // IPv4-mapped IPv6 addresses
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:192.0.2.128"), true);
+    //  IPv4-translated IPv6 addresses
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("::ffff:0:192.0.2.128"), true);
 }
 
 TEST(OvmsConfigTest, positiveMulti) {
