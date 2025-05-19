@@ -321,6 +321,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.serverMode = LIST_MODELS_MODE;
         if (result->count("model_repository_path"))
             serverSettings.hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        // workaround --unless specifically we set log leverl we want to skip logging details about submodules etc
+        if (!result->count("log_level"))
+            serverSettings.logLevel = "ERROR";
         return;
     }
 

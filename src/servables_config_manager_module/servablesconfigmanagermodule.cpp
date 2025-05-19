@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "servablesconfigmanagermodule.hpp"
 
+#include <iostream>
+#include <unordered_map>
 #include <string>
 #include <sstream>
 
@@ -29,6 +31,14 @@
 namespace ovms {
 ServablesConfigManagerModule::ServablesConfigManagerModule() {}
 
+void printServables(const std::unordered_map<std::string, ServableType_t>& servables) {
+    std::stringstream ss;
+    for (const auto& [k, v] : servables) {
+        ss << k << std::endl;
+    }
+    std::cout << ss.str() << std::endl;
+}
+
 Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
@@ -36,12 +46,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     if (config.getServerSettings().serverMode == LIST_MODELS_MODE) {
         const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
-        auto map = listServables(repositoryPath);
-        std::stringstream ss;
-        for (const auto& [k, v] : map) {
-            ss << k << std::endl;
-        }
-        SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+        printServables(listServables(repositoryPath));
     } else {
         return updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
     }
