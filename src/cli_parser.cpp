@@ -212,61 +212,59 @@ void CLIParser::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        if (result->unmatched().size() || result->count("pull")) {
-            // HF pull mode
-            if (result->count("pull")) {
-                std::vector<std::string> unmatchedOptions;
-                ExportType task;
-                if (result->count("task")) {
-                    task = stringToEnum(result->operator[]("task").as<std::string>());
-                    switch (task) {
-                        case text_generation: {
-                            GraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case embeddings: {
-                            EmbeddingsGraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case rerank: {
-                            RerankGraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case unknown: {
-                            std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
-                            exit(OVMS_EX_USAGE);
-                        }
+        // HF pull mode or pull and start mode
+        if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+            std::vector<std::string> unmatchedOptions;
+            ExportType task;
+            if (result->count("task")) {
+                task = stringToEnum(result->operator[]("task").as<std::string>());
+                switch (task) {
+                    case text_generation: {
+                        GraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        break;
                     }
-                } else {
-                    // Default task is text_generation
-                    task = text_generation;
-                    GraphCLIParser cliParser;
-                    this->graphOptionsParser = std::move(cliParser);
-                    unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                }
-
-                if (unmatchedOptions.size()) {
-                    std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
-                    for (auto& argument : unmatchedOptions) {
-                        std::cerr << argument << ", ";
+                    case embeddings: {
+                        EmbeddingsGraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        unmatchedOptions = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        break;
                     }
-                    std::cerr << std::endl;
-                    exit(OVMS_EX_USAGE);
+                    case rerank: {
+                        RerankGraphCLIParser cliParser;
+                        this->graphOptionsParser = std::move(cliParser);
+                        unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                        break;
+                    }
+                    case unknown: {
+                        std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
+                        exit(OVMS_EX_USAGE);
+                    }
                 }
             } else {
-                std::cerr << "error parsing options - unmatched arguments: ";
-                for (auto& argument : result->unmatched()) {
+                // Default task is text_generation
+                task = text_generation;
+                GraphCLIParser cliParser;
+                this->graphOptionsParser = std::move(cliParser);
+                unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+            }
+
+            if (unmatchedOptions.size()) {
+                std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
+                for (auto& argument : unmatchedOptions) {
                     std::cerr << argument << ", ";
                 }
                 std::cerr << std::endl;
                 exit(OVMS_EX_USAGE);
             }
+        } else if (result->unmatched().size()){
+            std::cerr << "error parsing options - unmatched arguments: ";
+            for (auto& argument : result->unmatched()) {
+                std::cerr << argument << ", ";
+            }
+            std::cerr << std::endl;
+            exit(OVMS_EX_USAGE);
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
