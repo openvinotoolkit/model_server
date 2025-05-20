@@ -793,7 +793,7 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
-    EnsureServerStartedWithTimeout(server, timeoutSeconds/2);
+    EnsureServerStartedWithTimeout(server, timeoutSeconds / 2);
 }
 
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {

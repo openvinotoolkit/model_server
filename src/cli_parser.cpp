@@ -501,7 +501,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     this->prepareGraph(serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
 
-    if(serverSettings->hfSettings.pullHfAndStartModelMode)
+    if (serverSettings->hfSettings.pullHfAndStartModelMode)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
 }
 
