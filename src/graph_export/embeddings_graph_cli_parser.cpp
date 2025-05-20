@@ -80,34 +80,25 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
 }
 
 void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    hfSettings.embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
+    EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
+    embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
+    if (modelName != "") {
+        embeddingsGraphSettings.modelName = modelName;
+    } else {
+        embeddingsGraphSettings.modelName = hfSettings.sourceModel;
+    }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
-            hfSettings.embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
-            // Deduct model name
-            if (modelName != "") {
-                hfSettings.embeddingsGraphSettings.modelName = modelName;
-            } else {
-                hfSettings.embeddingsGraphSettings.modelName = hfSettings.sourceModel;
-            }
-            return;
-        } else {
+        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
-    }
-
-    // Deduct model name
-    if (modelName != "") {
-        hfSettings.embeddingsGraphSettings.modelName = modelName;
     } else {
-        hfSettings.embeddingsGraphSettings.modelName = hfSettings.sourceModel;
+        embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
+        embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
+        embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
     }
-
-    hfSettings.embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    hfSettings.embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-    hfSettings.embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
-    hfSettings.embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }
 
 }  // namespace ovms

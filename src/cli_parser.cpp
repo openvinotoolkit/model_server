@@ -451,15 +451,27 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
                 case text_generation: {
-                    std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                    if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case embeddings: {
-                    std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case rerank: {
-                    std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    if (std::holds_alternative<RerankGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case unknown: {
@@ -468,8 +480,11 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                 }
             }
         } else {
-            // Default text_generation task
-            std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+            if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
+                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+            } else {
+                throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+            }
         }
     } else {
         hfSettings.pullHfModelMode = false;

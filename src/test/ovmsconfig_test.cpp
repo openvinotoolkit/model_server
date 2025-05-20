@@ -23,6 +23,7 @@
 
 #include "spdlog/spdlog.h"
 
+#include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../graph_export/graph_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -576,16 +577,17 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(hfSettings.graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.enablePrefixCaching, "false");
-    ASSERT_EQ(hfSettings.graphSettings.cacheSize, 20);
-    ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.value(), 16);
-    ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.value(), "/draft/model/source");
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
+    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(graphSettings.maxNumSeqs, 128);
+    ASSERT_EQ(graphSettings.targetDevice, "GPU");
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
+    ASSERT_EQ(graphSettings.cacheSize, 20);
+    ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
+    ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {
@@ -617,17 +619,18 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.graphSettings.modelName, modelName);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(hfSettings.graphSettings.targetDevice, "NPU");
-    ASSERT_EQ(hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.has_value(), false);
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.modelName, modelName);
+    ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
+    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(graphSettings.maxNumSeqs, 128);
+    ASSERT_EQ(graphSettings.targetDevice, "NPU");
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
+    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
@@ -652,17 +655,18 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.graphSettings.modelName, modelName);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.has_value(), false);
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.modelName, modelName);
+    ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
+    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(graphSettings.maxNumSeqs, 256);
+    ASSERT_EQ(graphSettings.targetDevice, "CPU");
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
+    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
@@ -686,16 +690,17 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, false);
     ASSERT_EQ(hfSettings.task, ovms::text_generation);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.has_value(), false);
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
+    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(graphSettings.maxNumSeqs, 256);
+    ASSERT_EQ(graphSettings.targetDevice, "CPU");
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
+    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultStart) {
@@ -721,16 +726,17 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(hfSettings.overwriteModels, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
     ASSERT_EQ(hfSettings.task, ovms::text_generation);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(hfSettings.graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(hfSettings.graphSettings.draftModelDirName.has_value(), false);
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
+    ASSERT_EQ(graphSettings.modelPath, "./");
+    ASSERT_EQ(graphSettings.maxNumSeqs, 256);
+    ASSERT_EQ(graphSettings.targetDevice, "CPU");
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.enablePrefixCaching, "true");
+    ASSERT_EQ(graphSettings.cacheSize, 10);
+    ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
+    ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
+    ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
@@ -768,11 +774,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::rerank);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 1002);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 2);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
+    ASSERT_EQ(rerankGraphSettings.version, 2);
+    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
+    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
@@ -811,11 +818,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
     ASSERT_EQ(hfSettings.task, ovms::rerank);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 1002);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 2);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
+    ASSERT_EQ(rerankGraphSettings.version, 2);
+    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
+    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
@@ -843,11 +851,12 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::rerank);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 1);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, modelName);
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
+    ASSERT_EQ(rerankGraphSettings.version, 1);
+    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(rerankGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(rerankGraphSettings.modelName, modelName);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
@@ -881,11 +890,12 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::rerank);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.maxDocLength, 16000);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
-    ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
+    ASSERT_EQ(rerankGraphSettings.version, 2);
+    ASSERT_EQ(rerankGraphSettings.numStreams, 1);
+    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
@@ -925,12 +935,13 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::embeddings);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "true");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 2);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
+    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
+    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
@@ -971,12 +982,13 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
     ASSERT_EQ(hfSettings.task, ovms::embeddings);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "true");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 2);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
+    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
+    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
@@ -1003,12 +1015,13 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::embeddings);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "false");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 1);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 1);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, modelName);
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
+    ASSERT_EQ(embeddingsGraphSettings.version, 1);
+    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(embeddingsGraphSettings.modelName, modelName);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
@@ -1044,12 +1057,13 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
     ASSERT_EQ(hfSettings.task, ovms::embeddings);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.version, 2);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.numStreams, 1);
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.truncate, "false");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.embeddingsGraphSettings.modelName, servingName);
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
+    ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
 }
 
 TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {
@@ -1078,9 +1092,10 @@ TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(hfSettings.graphSettings.modelPath, somePath);
-    ASSERT_EQ(hfSettings.graphSettings.modelName, servingName);
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
+    ASSERT_EQ(graphSettings.modelPath, somePath);
+    ASSERT_EQ(graphSettings.modelName, servingName);
 }
 
 class OvmsParamsTest : public ::testing::Test {

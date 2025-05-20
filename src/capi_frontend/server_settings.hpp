@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
@@ -68,9 +69,7 @@ struct HFSettingsImpl {
     bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
     ExportType task = text_generation;
-    TextGenGraphSettingsImpl graphSettings;
-    RerankGraphSettingsImpl rerankGraphSettings;
-    EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {

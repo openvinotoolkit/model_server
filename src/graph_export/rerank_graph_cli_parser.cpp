@@ -76,33 +76,26 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    hfSettings.rerankGraphSettings.targetDevice = hfSettings.targetDevice;
-    if (nullptr == result) {
-        // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode || hfSettings.pullHfAndStartModelMode) {
-            hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
-            // Deduct model name
-            if (modelName != "") {
-                hfSettings.rerankGraphSettings.modelName = modelName;
-            } else {
-                hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
-            }
-            return;
-        } else {
-            throw std::logic_error("Tried to prepare server and model settings without graph parse result");
-        }
-    }
-
+    RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+    rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        hfSettings.rerankGraphSettings.modelName = modelName;
+        rerankGraphSettings.modelName = modelName;
     } else {
-        hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
+        rerankGraphSettings.modelName = hfSettings.sourceModel;
+    }
+    if (nullptr == result) {
+        // Pull with default arguments - no arguments from user
+        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+            throw std::logic_error("Tried to prepare server and model settings without graph parse result");
+        }
+    } else {
+        rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
+        rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
     }
 
-    hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-    hfSettings.rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
 }
 
 }  // namespace ovms
