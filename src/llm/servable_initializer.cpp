@@ -75,8 +75,10 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             bos_token = ""
             eos_token = ""
             chat_template = default_chat_template
+            tool_chat_template = None
 
             template = None
+            tool_template = None
 
             # Try to read template from template.jinja file
             jinja_file = Path(templates_directory + "/template.jinja")
