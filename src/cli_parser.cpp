@@ -132,7 +132,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         options->add_options("pull hf model")
             ("pull",
-                "Pull model from HF",
+                "Pull model from HF. Uses optional environment variables: HF_TOKEN - when set used for authentication, HF_ENDPOINT - when set replaces huggingface.co for model download.",
                 cxxopts::value<bool>()->default_value("false"),
                 "PULL_HF")
             ("source_model",
