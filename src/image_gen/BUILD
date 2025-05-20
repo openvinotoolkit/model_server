@@ -54,6 +54,27 @@ cc_library(
 )
 
 cc_library(
+    name = "imagegenutils",
+    srcs = ["imagegenutils.cpp"],
+    hdrs = ["imagegenutils.hpp"],
+    deps = [
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/status",
+        "//src:httppayload",
+        "//src:libovmslogging",
+        "//src:libimage_conversion",
+        "//src:libovmsstring_utils",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+cc_library(
     name = "image_gen_calculator",
     srcs = ["http_image_gen_calculator.cc"],
     deps = [
@@ -63,6 +84,7 @@ cc_library(
         "image_gen_calculator_cc_proto",
         ":pipelines",
         "//src:libimage_conversion",
+        ":imagegenutils",
     ]+ select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

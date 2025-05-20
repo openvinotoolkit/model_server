@@ -16,6 +16,7 @@
 #include "image_conversion.hpp"
 
 #include <iostream>
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -23,7 +24,7 @@
 #include "profiler.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6262)
-#include "stb_image.h"  // NOLINT
+#include "stb_image.h"        // NOLINT
 #include "stb_image_write.h"  // NOLINT
 #pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -107,13 +108,13 @@ std::string save_image_stbi(ov::Tensor tensor) {
 
     // Write PNG to memory using our buffer
     int success = stbi_write_png_to_func(
-        write_func,             // Our write function
-        &png_buffer,            // Context (our buffer)
-        width,                  // Image width
-        height,                 // Image height
-        channels,              // Number of channels
-        image_data,             // Image data
-        width * channels);      // Stride (bytes per row)
+        write_func,         // Our write function
+        &png_buffer,        // Context (our buffer)
+        width,              // Image width
+        height,             // Image height
+        channels,           // Number of channels
+        image_data,         // Image data
+        width * channels);  // Stride (bytes per row)
 
     if (!success) {
         throw std::runtime_error{"Failed to encode image to PNG format"};

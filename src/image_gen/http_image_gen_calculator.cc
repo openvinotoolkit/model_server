@@ -29,6 +29,7 @@
 #include "../image_conversion.hpp"
 
 #include "pipelines.hpp"
+#include "imagegenutils.hpp"  // FIXME split
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -83,39 +84,29 @@ public:
         if (!payload.parsedJson->IsObject()) {
             return absl::InvalidArgumentError("JSON body must be an object");
         }
-
-        // get prompt field as string
-        auto promptIt = payload.parsedJson->FindMember("prompt");
-        if (promptIt == payload.parsedJson->MemberEnd()) {
-            return absl::InvalidArgumentError("prompt field is missing in JSON body");
-        }
-        if (!promptIt->value.IsString()) {
-            return absl::InvalidArgumentError("prompt field is not a string");
-        }
-        std::string prompt = promptIt->value.GetString();
+        SET_OR_RETURN(std::string, prompt, getPromptField(payload));
 
         // TODO: Support more pipeline types
         // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
 
         // curl -X POST localhost:11338/v3/images/generations -H "Content-Type: application/json" -d '{ "model": "endpoint", "prompt": "A cute baby sea otter", "n": 1, "size": "1024x1024" }'
+        // FIXME routing request to different pipelines (enum?)
         ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
-        ov::Tensor image = request.generate(prompt,
-            ov::AnyMap{
-                ov::genai::width(512),  // todo: get from req
-                ov::genai::height(512),  // todo: get from req
-                ov::genai::num_inference_steps(20),  // todo: get from req
-                ov::genai::num_images_per_prompt(1)});  // todo: get from req
-
-        std::string res = save_image_stbi(image);
+        SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload));
+        std::unique_ptr<ov::Tensor> image;
+        try {
+            image = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
+            return absl::InternalError(absl::StrCat("Error during image generation: ", e.what()));
+        }
+        std::string imageAsString = save_image_stbi(*image);
 
         // Convert the image to a base64 string
-        std::string base64_image;
-        absl::Base64Escape(res, &base64_image);
-
+        std::string base64image;
+        absl::Base64Escape(imageAsString, &base64image);
         // Create the JSON response
-        std::string json_response = absl::StrCat("{\"data\":[{\"b64_json\":\"", base64_image, "\"}]}");
-        // Produce std::string packet
-        auto output = absl::make_unique<std::string>(json_response);
+        auto output = generateJSONResponseFromB64Image(base64image);
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
 
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
