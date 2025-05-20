@@ -213,7 +213,7 @@ void CLIParser::parse(int argc, char** argv) {
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         // HF pull mode or pull and start mode
-        if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+        if (isHFPullOrPullAndStart(this->result)) {
             std::vector<std::string> unmatchedOptions;
             ExportType task;
             if (result->count("task")) {
@@ -221,20 +221,20 @@ void CLIParser::parse(int argc, char** argv) {
                 switch (task) {
                     case text_generation: {
                         GraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
-                        unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                         break;
                     }
                     case embeddings: {
                         EmbeddingsGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
-                        unmatchedOptions = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                         break;
                     }
                     case rerank: {
                         RerankGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
-                        unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                         break;
                     }
                     case unknown: {
@@ -246,8 +246,8 @@ void CLIParser::parse(int argc, char** argv) {
                 // Default task is text_generation
                 task = text_generation;
                 GraphCLIParser cliParser;
+                unmatchedOptions = cliParser.parse(result->unmatched());
                 this->graphOptionsParser = std::move(cliParser);
-                unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
             }
 
             if (unmatchedOptions.size()) {
@@ -397,7 +397,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+        if (isHFPullOrPullAndStart(this->result)) {
             hfSettings.targetDevice = modelsSettings.targetDevice;
         } else {
             modelsSettings.userSetSingleModelArguments.push_back("target_device");
@@ -430,13 +430,13 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
 }
 
-bool CLIParser::isHFPullOrPullAndStart(bool isPull, bool isSourceModel, bool isModelRepository, bool isTask) {
-    return (isPull || isSourceModel || isModelRepository || isTask);
+bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    return (result->count("pull") || result->count("source_model") || result->count("model_repository_path") || result->count("task"));
 }
 
 void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     // Ovms Pull models mode || pull and start models mode
-    if (isHFPullOrPullAndStart(result->count("pull"), result->count("source_model"), result->count("model_repository_path"), result->count("task"))) {
+    if (isHFPullOrPullAndStart(this->result)) {
         hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
         // Ovms pull and start models mode
         if (!hfSettings.pullHfModelMode)
