@@ -20,7 +20,7 @@ import os
 import logging
 
 model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
-base_url = os.getenv("BASE_URL", "http://localhost:8000")
+base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,8 @@ class TestSingleModelInference:
             "model": model_name,
             "messages": messages,
             "tools":tools,
-            "tool_choice": {"type": "function", "function": {"name": "get_weather"}}
+            "tool_choice": {"type": "function", "function": {"name": "get_weather"}},
+            "max_tokens": 1,
         }
         import requests
         response = requests.post(
@@ -114,17 +115,23 @@ class TestSingleModelInference:
         except ValidationError as e:
             assert False, f"tool_call does not match the schema: {e}"
 
+        assert completion.choices[0].message.tool_calls[0].id != ""
+
         messages.append({'role': 'assistant', 'reasoning_content': None, 'content': '', 'tool_calls': [{'id': 'chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec', 'type': 'function', 'function': {'name': 'get_weather', 'arguments': '{"location": "Paris, France"}'}}]})
         messages.append({"role": "tool", "tool_call_id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "content": "15 degrees Celsius"})
 
         print("Messages after tool call:", messages)
 
-        completion2 = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model=model_name,
             messages=messages,
             tools=tools,
         )
-        print(completion2.choices[0].message)
+        print(completion.choices[0].message)
+
+        assert "Paris" in completion.choices[0].message.content
+        assert "15 degrees" in completion.choices[0].message.content
+        assert completion.choices[0].message.tool_calls == []
 
     def test_chat_with_dual_tools_definition(self):
         """
@@ -226,7 +233,7 @@ class TestSingleModelInference:
         print("Messages after tool call:", messages)
 
         try:
-            completion2 = client.chat.completions.create(
+            client.chat.completions.create(
                 model=model_name,
                 messages=messages,
                 tools=tools,
