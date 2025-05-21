@@ -268,7 +268,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
-                            } else if (allowedLocalMediaPath.has_value()){
+                            } else if (allowedLocalMediaPath.has_value()) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
                                 if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
