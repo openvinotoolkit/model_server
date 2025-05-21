@@ -380,7 +380,7 @@ ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
+    apt-get install -y --no-install-recommends git-lfs curl ca-certificates libxml2 && \
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
@@ -407,7 +407,7 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
-COPY /ovms/bin/git-lfs /usr/bin
+RUN rm -rf /ovms/bin/git-lfs /usr/bin
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
