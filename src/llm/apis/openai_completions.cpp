@@ -272,7 +272,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
                                 if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
-                                    return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path provided in graph.pbtxt");
+                                    return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
                                 }
                                 try {
                                     ov::Tensor tensor = loadImageStbiFromFile(url.c_str());
