@@ -377,6 +377,23 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameter) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: rerank - error parsing options - unmatched arguments : --normalize, true,");
 }
 
+TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--unsupported_param",
+        "true",
+    };
+    int arg_count = 10;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: image_generation - error parsing options - unmatched arguments : --unsupported_param, true,");
+}
+
 TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphParameter) {
     char* n_argv[] = {
         "ovms",
@@ -521,6 +538,22 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphNoPull) {
     };
     int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --normalizes, true,");
+}
+
+TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--unsupported_param",
+        "true",
+    };
+    int arg_count = 9;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --unsupported_param, true,");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
@@ -786,6 +819,64 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.rerankGraphSettings.numStreams, 1);
     ASSERT_EQ(hfSettings.rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(hfSettings.rerankGraphSettings.modelName, servingName);
+}
+
+TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"image_generation",
+        (char*)"--graph_target_device",
+        (char*)"GPU",
+        (char*)"--default_resolution",
+        (char*)"1024x1024",
+    };
+
+    int arg_count = 12;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, ovms::image_generation);
+    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.defaultResolution, "1024x1024");
+}
+
+TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"image_generation",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.pullHfModelMode, true);
+    ASSERT_EQ(hfSettings.task, ovms::image_generation);
+    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.defaultResolution, "512x512");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
