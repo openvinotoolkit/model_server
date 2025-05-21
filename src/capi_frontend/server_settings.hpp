@@ -60,6 +60,13 @@ struct RerankGraphSettingsImpl {
     uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
 };
 
+struct ImageGenerationGraphSettingsImpl {
+    std::string modelName = "";
+    std::string modelPath = "./";
+    std::string targetDevice = "CPU";
+    std::string defaultResolution = "512x512";
+};
+
 struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
@@ -69,6 +76,7 @@ struct HFSettingsImpl {
     TextGenGraphSettingsImpl graphSettings;
     RerankGraphSettingsImpl rerankGraphSettings;
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
 };
 
 struct ServerSettingsImpl {

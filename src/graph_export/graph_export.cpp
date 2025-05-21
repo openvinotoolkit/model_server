@@ -268,6 +268,33 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
 }
 
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: ")" << graphSettings.modelPath << R"(",
+      }
+  }
+)";
+
+    // TODO: Remaining params
+
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return createFile(fullPath, oss.str());
+}
+
 GraphExport::GraphExport() {
 }
 
@@ -284,7 +311,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     } else if (hfSettings.task == rerank) {
         return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
     } else if (hfSettings.task == image_generation) {
-        throw std::logic_error("not implemented");
+        return createImageGenerationGraphTemplate(directoryPath, hfSettings.imageGenerationGraphSettings);
     }
 }
 

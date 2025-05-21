@@ -26,6 +26,7 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
+#include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "version.hpp"
 
@@ -238,8 +239,9 @@ void CLIParser::parse(int argc, char** argv) {
                             break;
                         }
                         case image_generation: {
-                            std::cerr << "not implemented" << std::endl;
-                            exit(OVMS_EX_USAGE);
+                            ImageGenerationGraphCLIParser cliParser;
+                            this->graphOptionsParser = std::move(cliParser);
+                            unmatchedOptions = std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
                             break;
                         }
                         case unknown: {
@@ -458,7 +460,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     break;
                 }
                 case image_generation: {
-                    throw std::logic_error("not implemented");
+                    std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
                     break;
                 }
                 case unknown: {
