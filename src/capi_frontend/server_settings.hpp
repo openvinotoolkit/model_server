@@ -83,6 +83,7 @@ struct ServerSettingsImpl {
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
+    std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
 #ifdef MTR_ENABLED

@@ -85,9 +85,6 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
-    if (nodeOptions.has_allowed_local_media_path()) {
-        properties->allowedLocalMediaPath = nodeOptions.allowed_local_media_path();
-    }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
     return StatusCode::OK;

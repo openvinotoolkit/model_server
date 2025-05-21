@@ -140,9 +140,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 20L))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_HTTPPROXYTUNNEL, 1L))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
 
     if (status != CURLE_OK) {
@@ -251,7 +249,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
-                            } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
+                            } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
                                 curl_global_init(CURL_GLOBAL_ALL);
                                 int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
@@ -270,13 +268,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
-                            } else {
+                            } else if (allowedLocalMediaPath.has_value()){
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-                                if (allowedLocalMediaPath.has_value()) {
-                                    const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
-                                    if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
-                                        return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path provided in graph.pbtxt");
-                                    }
+                                const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
+                                if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+                                    return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path provided in graph.pbtxt");
                                 }
                                 try {
                                     ov::Tensor tensor = loadImageStbiFromFile(url.c_str());
@@ -287,6 +283,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
+                            } else {
+                                return absl::InvalidArgumentError("Invalid url value in request.");
                             }
 
                         } else {
