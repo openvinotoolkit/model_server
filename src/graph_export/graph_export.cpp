@@ -284,8 +284,11 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: ")" << graphSettings.modelPath << R"(",
+          target_device: ")" << graphSettings.targetDevice << R"(",
+          default_resolution: ")" << graphSettings.defaultResolution << R"("
       }
   }
+}
 )";
 
     // TODO: Remaining params
