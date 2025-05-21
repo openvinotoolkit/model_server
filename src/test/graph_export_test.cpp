@@ -246,6 +246,27 @@ const std::string expectedEmbeddingsGraphContents = R"(
     }
 )";
 
+const std::string expectedImageGenerationGraphContents = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./",
+          target_device: "GPU",
+          default_resolution: "800x800"
+      }
+  }
+}
+
+)";
+
 class GraphCreationTest : public TestWithTempDir {
 protected:
     void TearDown() {
@@ -344,4 +365,18 @@ TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
 
     status = graphExporter->createServableConfig("/does/not/exist", hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::image_generation;
+    hfSettings.imageGenerationGraphSettings.targetDevice = "GPU";
+    hfSettings.imageGenerationGraphSettings.defaultResolution = "800x800";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedImageGenerationGraphContents, graphContents) << graphContents;
 }

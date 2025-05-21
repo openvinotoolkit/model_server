@@ -13,33 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
-#include <string>
 #pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <cxxopts.hpp>
+
+#include "graph_cli_parser.hpp"
+
 namespace ovms {
-enum ExportType {
-    text_generation,
-    rerank,
-    embeddings,
-    image_generation,
-    unknown
+
+struct HFSettingsImpl;
+struct ImageGenerationGraphSettingsImpl;
+class Status;
+
+class ImageGenerationGraphCLIParser : public GraphCLIParser {
+public:
+    ImageGenerationGraphCLIParser() = default;
+    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
+
+    void printHelp();
+    void createOptions();
+
+private:
+    static ImageGenerationGraphSettingsImpl& defaultGraphSettings();
 };
 
-const std::map<ExportType, std::string> typeToString = {
-    {text_generation, "text_generation"},
-    {rerank, "rerank"},
-    {embeddings, "embeddings"},
-    {image_generation, "image_generation"},
-    {unknown, "unknown"}};
-
-const std::map<std::string, ExportType> stringToType = {
-    {"text_generation", text_generation},
-    {"rerank", rerank},
-    {"embeddings", embeddings},
-    {"image_generation", image_generation},
-    {"unknown", unknown}};
-
-std::string enumToString(ExportType type);
-ExportType stringToEnum(std::string inString);
 }  // namespace ovms
