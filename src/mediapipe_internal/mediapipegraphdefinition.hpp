@@ -59,6 +59,17 @@ using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<P
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
+struct GraphSidePackets {
+    PythonNodeResourcesMap pythonNodeResourcesMap;
+    GenAiServableMap genAiServableMap;
+    ImageGenerationPipelinesMap imageGenPipelinesMap;
+    void clear() {
+        pythonNodeResourcesMap.clear();
+        genAiServableMap.clear();
+        imageGenPipelinesMap.clear();
+    }
+};
+
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
 
@@ -100,6 +111,7 @@ public:
     static constexpr model_version_t VERSION = 1;
 
 protected:
+    GraphSidePackets sidePacketMaps;
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
     ImageGenerationPipelinesMap imageGenerationPipelinesMap;
