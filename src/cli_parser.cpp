@@ -27,7 +27,7 @@
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
-#include "pull_module/libgit2.hpp"
+#include "filesystem.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -501,7 +501,7 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
         modelsSettings.modelName = hfSettings.sourceModel;
     }
 
-    modelsSettings.modelPath = HfDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel);
+    modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
 }
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {

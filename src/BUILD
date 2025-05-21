@@ -341,7 +341,7 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
-        "//src/pull_module:libgit2",
+        "libovmsfilesystem",
         "//src/graph_export:graph_export_types",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
