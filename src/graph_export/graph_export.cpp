@@ -283,6 +283,8 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         return createEmbeddingsGraphTemplate(directoryPath, hfSettings.embeddingsGraphSettings);
     } else if (hfSettings.task == rerank) {
         return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
+    } else if (hfSettings.task == image_generation) {
+        throw std::logic_error("not implemented");
     }
 }
 

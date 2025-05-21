@@ -147,7 +147,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_REPOSITORY_PATH")
             ("task",
-                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint.",
+                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
                 "TASK")
             ("list_models",
@@ -235,6 +235,11 @@ void CLIParser::parse(int argc, char** argv) {
                             RerankGraphCLIParser cliParser;
                             this->graphOptionsParser = std::move(cliParser);
                             unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
+                            break;
+                        }
+                        case image_generation: {
+                            std::cerr << "not implemented" << std::endl;
+                            exit(OVMS_EX_USAGE);
                             break;
                         }
                         case unknown: {
@@ -450,6 +455,10 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                 }
                 case rerank: {
                     std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    break;
+                }
+                case image_generation: {
+                    throw std::logic_error("not implemented");
                     break;
                 }
                 case unknown: {

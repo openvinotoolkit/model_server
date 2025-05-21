@@ -22,6 +22,7 @@ enum ExportType {
     text_generation,
     rerank,
     embeddings,
+    image_generation,
     unknown
 };
 
@@ -29,12 +30,14 @@ const std::map<ExportType, std::string> typeToString = {
     {text_generation, "text_generation"},
     {rerank, "rerank"},
     {embeddings, "embeddings"},
+    {image_generation, "image_generation"},
     {unknown, "unknown"}};
 
 const std::map<std::string, ExportType> stringToType = {
     {"text_generation", text_generation},
     {"rerank", rerank},
     {"embeddings", embeddings},
+    {"image_generation", image_generation},
     {"unknown", unknown}};
 
 std::string enumToString(ExportType type);
