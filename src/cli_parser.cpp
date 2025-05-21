@@ -27,6 +27,7 @@
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
+#include "filesystem.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -131,7 +132,7 @@ void CLIParser::parse(int argc, char** argv) {
 
         options->add_options("pull hf model")
             ("pull",
-                "Pull model from HF",
+                "Pull model from HF. Uses optional environment variables: HF_TOKEN - when set used for authentication, HF_ENDPOINT - when set replaces huggingface.co for model download.",
                 cxxopts::value<bool>()->default_value("false"),
                 "PULL_HF")
             ("source_model",
@@ -211,61 +212,59 @@ void CLIParser::parse(int argc, char** argv) {
 
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
-        if (result->unmatched().size() || result->count("pull")) {
-            // HF pull mode
-            if (result->count("pull")) {
-                std::vector<std::string> unmatchedOptions;
-                ExportType task;
-                if (result->count("task")) {
-                    task = stringToEnum(result->operator[]("task").as<std::string>());
-                    switch (task) {
-                        case text_generation: {
-                            GraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case embeddings: {
-                            EmbeddingsGraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case rerank: {
-                            RerankGraphCLIParser cliParser;
-                            this->graphOptionsParser = std::move(cliParser);
-                            unmatchedOptions = std::get<RerankGraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                            break;
-                        }
-                        case unknown: {
-                            std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
-                            exit(OVMS_EX_USAGE);
-                        }
+        // HF pull mode or pull and start mode
+        if (isHFPullOrPullAndStart(this->result)) {
+            std::vector<std::string> unmatchedOptions;
+            ExportType task;
+            if (result->count("task")) {
+                task = stringToEnum(result->operator[]("task").as<std::string>());
+                switch (task) {
+                    case text_generation: {
+                        GraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
                     }
-                } else {
-                    // Default task is text_generation
-                    task = text_generation;
-                    GraphCLIParser cliParser;
-                    this->graphOptionsParser = std::move(cliParser);
-                    unmatchedOptions = std::get<GraphCLIParser>(this->graphOptionsParser).parse(result->unmatched());
-                }
-
-                if (unmatchedOptions.size()) {
-                    std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
-                    for (auto& argument : unmatchedOptions) {
-                        std::cerr << argument << ", ";
+                    case embeddings: {
+                        EmbeddingsGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
                     }
-                    std::cerr << std::endl;
-                    exit(OVMS_EX_USAGE);
+                    case rerank: {
+                        RerankGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
+                    }
+                    case unknown: {
+                        std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
+                        exit(OVMS_EX_USAGE);
+                    }
                 }
             } else {
-                std::cerr << "error parsing options - unmatched arguments: ";
-                for (auto& argument : result->unmatched()) {
+                // Default task is text_generation
+                task = text_generation;
+                GraphCLIParser cliParser;
+                unmatchedOptions = cliParser.parse(result->unmatched());
+                this->graphOptionsParser = std::move(cliParser);
+            }
+
+            if (unmatchedOptions.size()) {
+                std::cerr << "task: " << enumToString(task) << " - error parsing options - unmatched arguments : ";
+                for (auto& argument : unmatchedOptions) {
                     std::cerr << argument << ", ";
                 }
                 std::cerr << std::endl;
                 exit(OVMS_EX_USAGE);
             }
+        } else if (result->unmatched().size()){
+            std::cerr << "error parsing options - unmatched arguments: ";
+            for (auto& argument : result->unmatched()) {
+                std::cerr << argument << ", ";
+            }
+            std::cerr << std::endl;
+            exit(OVMS_EX_USAGE);
         }
 #pragma warning(push)
 #pragma warning(disable : 4129)
@@ -355,7 +354,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 #endif
 }
 
-void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
+void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {
     // Model settings
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
@@ -398,7 +397,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
 
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
-        modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        if (isHFPullOrPullAndStart(this->result)) {
+            hfSettings.targetDevice = modelsSettings.targetDevice;
+        } else {
+            modelsSettings.userSetSingleModelArguments.push_back("target_device");
+        }
     }
 
     if (result->count("plugin_config")) {
@@ -427,10 +430,17 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings) {
     }
 }
 
+bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
+    return (result->count("pull") || result->count("source_model") || result->count("model_repository_path") || result->count("task"));
+}
+
 void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
-    // Ovms Pull models mode
-    if (result->count("pull")) {
+    // Ovms Pull models mode || pull and start models mode
+    if (isHFPullOrPullAndStart(this->result)) {
         hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
+        // Ovms pull and start models mode
+        if (!hfSettings.pullHfModelMode)
+            hfSettings.pullHfAndStartModelMode = true;
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model"))
@@ -441,15 +451,27 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
                 case text_generation: {
-                    std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                    if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case embeddings: {
-                    std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case rerank: {
-                    std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    if (std::holds_alternative<RerankGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case unknown: {
@@ -458,14 +480,29 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                 }
             }
         } else {
-            // Default text_generation task
-            std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+            if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
+                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+            } else {
+                throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+            }
         }
     } else {
         hfSettings.pullHfModelMode = false;
+        hfSettings.pullHfAndStartModelMode = false;
     }
 }
 
+void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings) {
+    // Ovms pull and start models mode
+    // Model settings
+    if (result->count("model_name")) {
+        modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
+    } else {
+        modelsSettings.modelName = hfSettings.sourceModel;
+    }
+
+    modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+}
 
 void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* modelsSettings) {
     if (nullptr == result) {
@@ -473,9 +510,12 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     }
     this->prepareServer(*serverSettings);
 
-    this->prepareModel(*modelsSettings);
+    this->prepareModel(*modelsSettings, serverSettings->hfSettings);
 
     this->prepareGraph(serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
+
+    if (serverSettings->hfSettings.pullHfAndStartModelMode)
+        this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
 }
 
 }  // namespace ovms

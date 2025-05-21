@@ -92,6 +92,10 @@ protected:
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
+    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
+        ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
+    }
+
     void TearDown() {
         server.setShutdownRequest(1);
         if (t)
@@ -155,9 +159,15 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
 
-    ASSERT_EQ(expectedGraphContents, graphContents);
+    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
+}
+
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
 }
 
 class TestHfDownloader : public ovms::HfDownloader {

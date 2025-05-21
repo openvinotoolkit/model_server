@@ -278,11 +278,29 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     }
 
     if (hfSettings.task == text_generation) {
-        return createTextGenerationGraphTemplate(directoryPath, hfSettings.graphSettings);
+        if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for text generation.");
+            return StatusCode::INTERNAL_ERROR;
+        }
     } else if (hfSettings.task == embeddings) {
-        return createEmbeddingsGraphTemplate(directoryPath, hfSettings.embeddingsGraphSettings);
+        if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for embeddings.");
+            return StatusCode::INTERNAL_ERROR;
+        }
     } else if (hfSettings.task == rerank) {
-        return createRerankGraphTemplate(directoryPath, hfSettings.rerankGraphSettings);
+        if (std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for rerank.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    } else if (hfSettings.task == unknown) {
+        SPDLOG_ERROR("Graph options not initialized.");
+        return StatusCode::INTERNAL_ERROR;
     }
 }
 

@@ -40,10 +40,6 @@ void RerankGraphCLIParser::createOptions() {
 
     // clang-format off
     options->add_options("rerank")
-        ("graph_target_device",
-            "CPU, GPU, NPU or HETERO, default is CPU.",
-            cxxopts::value<std::string>()->default_value("CPU"),
-            "GRAPH_TARGET_DEVICE")
         ("num_streams",
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
@@ -80,33 +76,26 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    if (nullptr == result) {
-        // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
-            hfSettings.rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
-            // Deduct model name
-            if (modelName != "") {
-                hfSettings.rerankGraphSettings.modelName = modelName;
-            } else {
-                hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
-            }
-            return;
-        } else {
-            throw std::logic_error("Tried to prepare server and model settings without graph parse result");
-        }
-    }
-
+    RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+    rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
-        hfSettings.rerankGraphSettings.modelName = modelName;
+        rerankGraphSettings.modelName = modelName;
     } else {
-        hfSettings.rerankGraphSettings.modelName = hfSettings.sourceModel;
+        rerankGraphSettings.modelName = hfSettings.sourceModel;
+    }
+    if (nullptr == result) {
+        // Pull with default arguments - no arguments from user
+        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+            throw std::logic_error("Tried to prepare server and model settings without graph parse result");
+        }
+    } else {
+        rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
+        rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
+        rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
     }
 
-    hfSettings.rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-    hfSettings.rerankGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    hfSettings.rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-    hfSettings.rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
 }
 
 }  // namespace ovms
