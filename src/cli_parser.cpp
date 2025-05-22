@@ -125,7 +125,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>()->default_value(""),
                 "CPU_EXTENSION")
             ("allowed_local_media_path",
-                "Path to directory that contains images that can be used as input for LLMs.",
+                "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH");
 

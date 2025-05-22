@@ -234,6 +234,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             std::string pattern = "base64,";
                             std::size_t pos = url.find(pattern);
                             std::string decoded;
+                            ov::Tensor tensor;
                             if (pos != std::string::npos) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
                                 size_t offset = pos + pattern.length();
@@ -241,8 +242,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     return absl::InvalidArgumentError("Invalid base64 string in request");
                                 }
                                 try {
-                                    ov::Tensor tensor = loadImageStbiFromMemory(decoded);
-                                    request.imageHistory.push_back({i, tensor});
+                                    tensor = loadImageStbiFromMemory(decoded);
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
@@ -259,8 +259,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 }
                                 curl_global_cleanup();
                                 try {
-                                    ov::Tensor tensor = loadImageStbiFromMemory(decoded);
-                                    request.imageHistory.push_back({i, tensor});
+                                    tensor = loadImageStbiFromMemory(decoded);
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
@@ -268,25 +267,25 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
-                            } else if (allowedLocalMediaPath.has_value()) {
+                            } else {
+                                if (!allowedLocalMediaPath.has_value()) {
+                                    return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                                }
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
                                 if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
                                     return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
                                 }
                                 try {
-                                    ov::Tensor tensor = loadImageStbiFromFile(url.c_str());
-                                    request.imageHistory.push_back({i, tensor});
+                                    tensor = loadImageStbiFromFile(url.c_str());
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
                                     SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
-                            } else {
-                                return absl::InvalidArgumentError("Invalid url value in request.");
                             }
-
+                            request.imageHistory.push_back({i, tensor});
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
