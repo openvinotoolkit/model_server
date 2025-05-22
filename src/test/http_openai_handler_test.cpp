@@ -666,7 +666,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_none) {
-
     std::string json = R"({
     "messages": [
       {"role": "user", "content": "What is the weather like in Paris today?"},
@@ -691,7 +690,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_none) {
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_one) {
-
     std::string json = R"({
     "messages": [
       {"role": "user", "content": "What is the weather like in Paris today?"},
@@ -706,7 +704,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_one) {
     "tool_choice": {"type": "function", "function": {"name": "get_weather2"}}
     })";
 
-    std::cout << "original:" << json << std::endl;
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     uint32_t maxTokensLimit = 100;
