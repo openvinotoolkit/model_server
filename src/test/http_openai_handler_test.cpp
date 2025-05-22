@@ -665,6 +665,66 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
     }
 }
 
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_none) {
+
+    std::string json = R"({
+    "messages": [
+      {"role": "user", "content": "What is the weather like in Paris today?"},
+      {"role": "assistant", "reasoning_content": null, "content": "", "tool_calls": [{"id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "type": "function", "function": {"name": "get_weather2", "arguments": "{\"location\": \"Paris, France\"}"}}]},
+      {"role": "tool", "tool_call_id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "content": "15 degrees Celsius"}],
+    "model": "llama",
+    "tools": [
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+       ],
+    "tool_choice": "none"
+    })";
+
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\",\"tool_choice\":\"none\"}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_one) {
+
+    std::string json = R"({
+    "messages": [
+      {"role": "user", "content": "What is the weather like in Paris today?"},
+      {"role": "assistant", "reasoning_content": null, "content": "", "tool_calls": [{"id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "type": "function", "function": {"name": "get_weather2", "arguments": "{\"location\": \"Paris, France\"}"}}]},
+      {"role": "tool", "tool_call_id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "content": "15 degrees Celsius"}],
+    "model": "llama",
+    "tools": [
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+       ],
+    "tool_choice": {"type": "function", "function": {"name": "get_weather2"}}
+    })";
+
+    std::cout << "original:" << json << std::endl;
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    uint32_t maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"messages\":["
+      "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+      "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+      "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+      "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+      "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\"}}}"));
+}
+
+
 TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
     handler.reset();
     server.setShutdownRequest(1);

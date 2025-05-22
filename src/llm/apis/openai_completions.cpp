@@ -277,11 +277,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseTools() {
-    auto it = doc.FindMember("tools");
-    if (it == doc.MemberEnd())
-        return absl::OkStatus();
-    if (!it->value.IsArray())
-        return absl::InvalidArgumentError("Tools are not an array");
     auto tool_choice_it = doc.FindMember("tool_choice");
     std::string tool_choice{"auto"};
     if (tool_choice_it != doc.MemberEnd()) {
@@ -314,26 +309,31 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         doc.RemoveMember("tools");
         jsonChanged = true;
     }
-    for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
-        auto& obj = it->value.GetArray()[i];
-        if (!obj.IsObject())
-            return absl::InvalidArgumentError("Tool is not a JSON object");
-        auto functionIt = obj.FindMember("function");
-        if (functionIt != obj.MemberEnd() && functionIt->value.IsObject()) {
-            auto nameIt = functionIt->value.GetObject().FindMember("name");
-            if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
-                std::string functionName = nameIt->value.GetString();
-                if (tool_choice != functionName) {
-                    it->value.Erase(&obj);
-                    jsonChanged = true;
+    auto it = doc.FindMember("tools");
+    if (it != doc.MemberEnd()){
+        if (!it->value.IsArray())
+            return absl::InvalidArgumentError("Tools are not an array");
+        for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
+            auto& obj = it->value.GetArray()[i];
+            if (!obj.IsObject())
+                return absl::InvalidArgumentError("Tool is not a JSON object");
+            auto functionIt = obj.FindMember("function");
+            if (functionIt != obj.MemberEnd() && functionIt->value.IsObject()) {
+                auto nameIt = functionIt->value.GetObject().FindMember("name");
+                if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
+                    std::string functionName = nameIt->value.GetString();
+                    if (tool_choice != functionName) {
+                        it->value.Erase(&obj);
+                        jsonChanged = true;
+                    }
+                } else {
+                    return absl::InvalidArgumentError("Function object does not contain a valid name field");
                 }
             } else {
-                return absl::InvalidArgumentError("Function object does not contain a valid name field");
+                return absl::InvalidArgumentError("Function is not a valid JSON object");
             }
-        } else {
-            return absl::InvalidArgumentError("Function is not a valid JSON object");
+            // Add new tool to tools list - TBD
         }
-        // Add new tool to tools list - TBD
     }
     if (jsonChanged) {
         StringBuffer buffer;
