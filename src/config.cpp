@@ -132,7 +132,6 @@ bool Config::validate() {
                 std::cerr << "For now only OpenVINO models are supported";
                 return false;
             }
-            return true;
         }
 
         if (this->serverSettings.hfSettings.task == embeddings) {
@@ -149,11 +148,11 @@ bool Config::validate() {
             }
 
             if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
-                std::cerr << "normalize: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
-            return true;
         }
+        return true;
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
