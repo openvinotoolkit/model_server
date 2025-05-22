@@ -823,7 +823,7 @@ TEST(OvmsGraphConfigTest, negativeTargetDevice) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--graph_target_device",
+        (char*)"--target_device",
         (char*)"INVALID",
     };
 

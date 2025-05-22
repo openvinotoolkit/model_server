@@ -93,7 +93,7 @@ bool Config::validate() {
             return false;
         }
         if (this->serverSettings.hfSettings.task == text_generation) {
-            if (std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+            if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
                 return false;
             }
@@ -136,7 +136,7 @@ bool Config::validate() {
         }
 
         if (this->serverSettings.hfSettings.task == embeddings) {
-            if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+            if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for embeddings.";
                 return false;
             }
