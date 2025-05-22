@@ -310,7 +310,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
-    if (it != doc.MemberEnd()){
+    if (it != doc.MemberEnd()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
         for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
