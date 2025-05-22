@@ -450,9 +450,12 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
 
 TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.sourceModel = "\"";
-
+    hfSettings.task = ovms::text_generation;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    graphSettings.modelPath = "invalid\"";
+    hfSettings.graphSettings = std::move(graphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
