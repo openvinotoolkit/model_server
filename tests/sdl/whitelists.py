@@ -135,11 +135,16 @@ libraries = {
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
+        'git.exe',
         'git2.dll',
         'git-lfs.exe',
         'icudt70.dll',
         'icuuc70.dll',
         'libcurl-x64.dll',
+        'libiconv-2.dll',
+        'libintl-8.dll',
+        'libpcre2-8-0.dll',
+        'libssp-0.dll',
         'opencv_world4100.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
@@ -159,6 +164,7 @@ libraries = {
         'openvino_tensorflow_lite_frontend.dll',
         'openvino_tokenizers.dll',
         'tbb12.dll',
+        'zlib1.dll',
     },
 }
 
