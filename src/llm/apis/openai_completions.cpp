@@ -251,7 +251,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-                                curl_global_init(CURL_GLOBAL_ALL);
                                 int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
