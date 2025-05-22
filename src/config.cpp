@@ -104,9 +104,9 @@ bool Config::validate() {
                 return false;
             }
 
-            std::vector allowedTargeDevices = {"CPU", "GPU", "NPU", "HETERO"};
-            if (std::find(allowedTargeDevices.begin(), allowedTargeDevices.end(), settings.targetDevice) == allowedTargeDevices.end()) {
-                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO" << std::endl;
+            std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
+            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
+                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }
 

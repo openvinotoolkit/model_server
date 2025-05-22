@@ -795,6 +795,28 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
+TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--target_device",
+        (char*)"HETERO",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.targetDevice, "HETERO");
+}
+
 TEST(OvmsGraphConfigTest, negativePipelineType) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
