@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,18 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include <iostream>
+#include <map>
 #include <string>
 
+#include "config_export_types.hpp"
 namespace ovms {
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string HF_MODEL_PULL_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
-extern const std::string CAPI_MODULE_NAME;
-extern const std::string SERVABLES_CONFIG_MANAGER_MODULE_NAME;
-extern const std::string CONFIG_EXPORT_MODULE_NAME;
+
+std::string enumToString(ConfigExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown";
+}
+
+ConfigExportType stringToEnum(std::string inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : unknown;
+}
 }  // namespace ovms

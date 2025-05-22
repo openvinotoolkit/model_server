@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,18 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include <iostream>
+#include <map>
 #include <string>
-
+#pragma once
 namespace ovms {
-extern const std::string PROFILER_MODULE_NAME;
-extern const std::string GRPC_SERVER_MODULE_NAME;
-extern const std::string HTTP_SERVER_MODULE_NAME;
-extern const std::string SERVABLE_MANAGER_MODULE_NAME;
-extern const std::string HF_MODEL_PULL_MODULE_NAME;
-extern const std::string METRICS_MODULE_NAME;
-extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
-extern const std::string CAPI_MODULE_NAME;
-extern const std::string SERVABLES_CONFIG_MANAGER_MODULE_NAME;
-extern const std::string CONFIG_EXPORT_MODULE_NAME;
+enum ConfigExportType {
+    enable,
+    disable,
+    delete,
+    unknown
+};
+
+const std::map<ConfigExportType, std::string> typeToString = {
+    {enable, "enable"},
+    {disable, "disable"},
+    {embeddings, "embeddings"},
+    {unknown, "unknown"}};
+
+const std::map<std::string, ConfigExportType> stringToType = {
+    {"enable", enable},
+    {"disable", disable},
+    {"delete", delete},
+    {"unknown", unknown}};
+
+std::string enumToString(ConfigExportType type);
+ConfigExportType stringToEnum(std::string inString);
+
 }  // namespace ovms

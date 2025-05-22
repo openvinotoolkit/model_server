@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "servablesconfigmanagermodule.hpp"
+#include "config_export_module.hpp"
 
 #include <string>
 #include <sstream>
@@ -23,36 +23,31 @@
 #include "../module_names.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
-#include "listmodels.hpp"
+#include "config_export.hpp"
 
 namespace ovms {
-ServablesConfigManagerModule::ServablesConfigManagerModule() {}
+ConfigExportModule::ConfigExportModule() {}
 
-Status ServablesConfigManagerModule::start(const ovms::Config& config) {
+Status ConfigExportModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_INFO("{} starting", CONFIG_EXPORT_MODULE_NAME);
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_INFO("{} started", CONFIG_EXPORT_MODULE_NAME);
     const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
     auto map = listServables(repositoryPath);
-    std::stringstream ss;
-    for (const auto& [k, v] : map) {
-        ss << k << std::endl;
-    }
-    SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
     return StatusCode::OK;
 }
 
-void ServablesConfigManagerModule::shutdown() {
+void ConfigExportModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_INFO("{} shutting down", CONFIG_EXPORT_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_INFO("{} shutdown", CONFIG_EXPORT_MODULE_NAME);
 }
 
-ServablesConfigManagerModule::~ServablesConfigManagerModule() {
+ConfigExportModule::~ConfigExportModule() {
     this->shutdown();
 }
 
