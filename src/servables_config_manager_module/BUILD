@@ -53,6 +53,7 @@ cc_library(
              "//src:libovms_server_settings",
              "//src:libovms_module",
              "//src/graph_export:graph_export_types",
+             "//src/config_export_module:config_export_types",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,

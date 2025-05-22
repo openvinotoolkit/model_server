@@ -19,6 +19,7 @@ cc_library(
     srcs = ["graph_export.cpp"],
     hdrs = ["graph_export.hpp"],
     deps =  [
+        "@ovms//src/config_export_module:config_export_types",
         "@ovms//src/graph_export:graph_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
@@ -37,6 +38,7 @@ cc_library(
     hdrs = ["graph_cli_parser.hpp"],
     deps =  [
         "@ovms//src/graph_export:graph_export_types",
+        "@ovms//src/config_export_module:config_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",

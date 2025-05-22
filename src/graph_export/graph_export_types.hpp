@@ -22,20 +22,20 @@ enum GraphExportType {
     text_generation,
     rerank,
     embeddings,
-    unknown
+    unknown_graph
 };
 
 const std::map<GraphExportType, std::string> typeToString = {
     {text_generation, "text_generation"},
     {rerank, "rerank"},
     {embeddings, "embeddings"},
-    {unknown, "unknown"}};
+    {unknown_graph, "unknown_graph"}};
 
 const std::map<std::string, GraphExportType> stringToType = {
     {"text_generation", text_generation},
     {"rerank", rerank},
     {"embeddings", embeddings},
-    {"unknown", unknown}};
+    {"unknown_graph", unknown_graph}};
 
 std::string enumToString(GraphExportType type);
 GraphExportType stringToEnum(std::string inString);

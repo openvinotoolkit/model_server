@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "capi_frontend/server_settings.hpp"
-#include "config_export/config_export_types.hpp"
+#include "config_export_module/config_export_types.hpp"
 #include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
@@ -247,7 +247,7 @@ void CLIParser::parse(int argc, char** argv) {
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case unknown: {
+                    case unknown_graph: {
                         std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
                         exit(OVMS_EX_USAGE);
                     }
@@ -316,11 +316,11 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     }
 
     if (result->count("add_to_config")) {
-        serverSettings.exportConfig = enable;
+        serverSettings.exportConfigType = enable_model;
     }
 
     if (result->count("remove_from_config")) {
-        serverSettings.exportConfig = disable;
+        serverSettings.exportConfigType = disable_model;
     }
 
     serverSettings.grpcPort = result->operator[]("port").as<uint32_t>();
@@ -492,7 +492,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     }
                     break;
                 }
-                case unknown: {
+                case unknown_graph: {
                     throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
                     break;
                 }
@@ -517,13 +517,13 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
     }
     if (result->count("model_path")) {
         modelsSettings.modelPath = result->operator[]("model_name").as<std::string>();
-    } else if (result->count("model_repository_path") && result->count("model_name"))
-        modelsSettings.modelPath = FileSystem::joinPath(result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName);
+    } else if (result->count("model_repository_path") && result->count("model_name")) {
+        modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
     }
     if (result->count("add_to_config")) {
-        modelSettings.configPath = result->operator[]("add_to_config").as<std::string>();
+        modelsSettings.configPath = result->operator[]("add_to_config").as<std::string>();
     } else if (result->count("remove_from_config")) {
-        modelSettings.configPath = result->operator[]("remove_from_config").as<std::string>();
+        modelsSettings.configPath = result->operator[]("remove_from_config").as<std::string>();
     }
 }
 
@@ -552,7 +552,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (serverSettings->hfSettings.pullHfAndStartModelMode)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
 
-    if (serverSettings->exportConfig != unknown)
+    if (serverSettings->exportConfigType != unknown_model)
         this->prepareConfigExport(*modelsSettings);
 }
 

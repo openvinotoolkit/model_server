@@ -51,9 +51,8 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
+#include "config_export_module/config_export_module.hpp"
 #include "grpcservermodule.hpp"
-#include "pull_module/hf_pull_model_module.hpp"
-#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -65,7 +64,9 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
+#include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -325,7 +326,7 @@ Status Server::startModules(ovms::Config& config) {
         if (config.getServerSettings().hfSettings.pullHfModelMode)
             return status;
     }
-    if (config.getServerSettings().exportConfig) {
+    if (config.getServerSettings().exportConfigType) {
         INSERT_MODULE(CONFIG_EXPORT_MODULE_NAME, it);
         START_MODULE(it);
     }

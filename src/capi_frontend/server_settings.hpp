@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
-#include "../config_export/config_export_types.hpp"
+#include "../config_export_module/config_export_types.hpp"
 
 namespace ovms {
 
@@ -98,7 +98,7 @@ struct ServerSettingsImpl {
     bool withPython = false;
     bool startedWithCLI = false;
     bool listServables = false;
-    exportConfigType exportConfigType = unknown;
+    ConfigExportType exportConfigType = unknown_model;
     HFSettingsImpl hfSettings;
 };
 

@@ -37,21 +37,6 @@
 
 namespace ovms {
 
-Status createFile(const std::string& filePath, const std::string& contents) {
-    SPDLOG_DEBUG("Creating file {}", filePath);
-    // Always overwrite
-    {
-        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
-        if (graphFile.is_open()) {
-            graphFile << contents << std::endl;
-        } else {
-            SPDLOG_ERROR("Unable to open file: ", filePath);
-            return StatusCode::FILE_INVALID;
-        }
-    }
-    return StatusCode::OK;
-}
-
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
@@ -119,7 +104,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -146,7 +131,7 @@ static Status createRerankSubconfigTemplate(const std::string& directoryPath, co
     })";
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
@@ -173,7 +158,7 @@ static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath
     })";
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -212,7 +197,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
@@ -261,7 +246,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
@@ -298,7 +283,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
             SPDLOG_ERROR("Graph options not initialized for rerank.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == unknown) {
+    } else if (hfSettings.task == unknown_graph) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }
