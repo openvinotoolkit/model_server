@@ -622,6 +622,7 @@ cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/image_gen:image_gen_calculator",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",
@@ -2627,6 +2628,27 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+cc_library(
+    name = "libimage_conversion",
+    hdrs = [
+        "image_conversion.hpp",
+    ],
+    srcs = [
+        "image_conversion.cpp",
+    ],
+    deps = [
+        "@stb//:image",
+        "@com_google_absl//absl/strings",
+        "//third_party:openvino",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 # HTTP Server implementation using net_http of tensorflow
 # To use other library simply create new target and implementation of libhttp_async_writer_interface
 cc_library(
@@ -2811,7 +2833,7 @@ cc_test(
                 "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
-                "test/streaming_test.cpp", # Mediapipe enabled
+                "test/streaming_test.cpp",
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
@@ -2999,6 +3021,7 @@ cc_test(
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
+                ":text2image_test",
             ],
             "//:disable_mediapipe" :
             [
@@ -3180,6 +3203,19 @@ cc_library(
         ":test_utils",
         "//src:network_utils",
         "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "text2image_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/text2image_test.cpp"],
+    deps = [
+        "//src:test_utils",
+        "//src/image_gen:imagegenutils",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,

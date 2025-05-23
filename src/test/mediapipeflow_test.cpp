@@ -3800,6 +3800,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ImageToTensorCalculator",
         "ImageTransformationCalculator",
         "ImmediateMuxCalculator",
+        "ImageGenCalculator",
         "InferenceCalculatorCpu",
         "InputSidePacketUserTestCalc",
         "InstanceSegmentationCalculator",

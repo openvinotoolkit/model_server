@@ -54,8 +54,21 @@ class Status;
 class PythonBackend;
 class PythonNodeResources;
 class GenAiServable;
+class ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
+using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
+
+struct GraphSidePackets {
+    PythonNodeResourcesMap pythonNodeResourcesMap;
+    GenAiServableMap genAiServableMap;
+    ImageGenerationPipelinesMap imageGenPipelinesMap;
+    void clear() {
+        pythonNodeResourcesMap.clear();
+        genAiServableMap.clear();
+        imageGenPipelinesMap.clear();
+    }
+};
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -91,14 +104,17 @@ public:
     static const std::string SCHEDULER_CLASS_NAME;
     static const std::string PYTHON_NODE_CALCULATOR_NAME;
     static const std::string LLM_NODE_CALCULATOR_NAME;
+    static const std::string IMAGE_GEN_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
 protected:
+    GraphSidePackets sidePacketMaps;
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
+    ImageGenerationPipelinesMap imageGenerationPipelinesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
