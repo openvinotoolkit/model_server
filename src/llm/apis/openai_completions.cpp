@@ -313,7 +313,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     if (it != doc.MemberEnd()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
-        for (size_t i = 0; i < it->value.GetArray().Size(); i++) {
+        for (size_t i = 0; i < it->value.GetArray().Size();) {
             auto& obj = it->value.GetArray()[i];
             if (!obj.IsObject())
                 return absl::InvalidArgumentError("Tool is not a JSON object");
@@ -325,6 +325,8 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                     if (tool_choice != functionName) {
                         it->value.Erase(&obj);
                         jsonChanged = true;
+                    } else {
+                        i++;
                     }
                 } else {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
