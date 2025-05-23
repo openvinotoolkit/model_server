@@ -311,7 +311,7 @@ Status Server::startModules(ovms::Config& config) {
         START_MODULE(it);
         return status;
     }
-    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+    if (config.getServerSettings().hfSettings.pullHfModelMode || config.getServerSettings().hfSettings.pullHfAndStartModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
         if (!status.ok()) {
@@ -319,7 +319,9 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        return status;
+        // Return from modules only in --pull mode, otherwise start the rest of modules
+        if (config.getServerSettings().hfSettings.pullHfModelMode)
+            return status;
     }
 
 #if (PYTHON_DISABLE == 0)

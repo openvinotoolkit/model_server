@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include <iostream>
+#include <map>
 #include <string>
 
+#include "graph_export_types.hpp"
 namespace ovms {
-struct PluginConfigSettingsImpl;
-struct HFSettingsImpl;
-class Status;
 
-class GraphExport {
-public:
-    GraphExport();
-    Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
-    static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
-};
+std::string enumToString(ExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown";
+}
+
+ExportType stringToEnum(std::string inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : unknown;
+}
 }  // namespace ovms

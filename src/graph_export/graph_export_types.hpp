@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
+#include <iostream>
+#include <map>
 #include <string>
-
+#pragma once
 namespace ovms {
-struct PluginConfigSettingsImpl;
-struct HFSettingsImpl;
-class Status;
-
-class GraphExport {
-public:
-    GraphExport();
-    Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
-    static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
+enum ExportType {
+    text_generation,
+    rerank,
+    embeddings,
+    unknown
 };
+
+const std::map<ExportType, std::string> typeToString = {
+    {text_generation, "text_generation"},
+    {rerank, "rerank"},
+    {embeddings, "embeddings"},
+    {unknown, "unknown"}};
+
+const std::map<std::string, ExportType> stringToType = {
+    {"text_generation", text_generation},
+    {"rerank", rerank},
+    {"embeddings", embeddings},
+    {"unknown", unknown}};
+
+std::string enumToString(ExportType type);
+ExportType stringToEnum(std::string inString);
+
 }  // namespace ovms

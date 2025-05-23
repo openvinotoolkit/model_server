@@ -181,7 +181,7 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
 public:
@@ -210,8 +210,8 @@ public:
 
     ov::genai::GenerationConfig createGenerationConfig() const;
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
-    absl::Status parseMessages();
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt);
+    absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
     absl::Status parseTools();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);

@@ -1,4 +1,4 @@
-//****************************************************************************
+//*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +14,32 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+
+#include <memory>
 #include <string>
+#include <vector>
+
+#include <cxxopts.hpp>
+
+#include "graph_cli_parser.hpp"
 
 namespace ovms {
-struct PluginConfigSettingsImpl;
+
 struct HFSettingsImpl;
+struct EmbeddingsGraphSettingsImpl;
 class Status;
 
-class GraphExport {
+class EmbeddingsGraphCLIParser : public GraphCLIParser {
 public:
-    GraphExport();
-    Status createServableConfig(const std::string& directoryPath, const HFSettingsImpl& graphSettings);
-    static std::string createPluginString(const PluginConfigSettingsImpl& pluginConfig);
+    EmbeddingsGraphCLIParser() = default;
+    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
+
+    void printHelp();
+    void createOptions();
+
+private:
+    static EmbeddingsGraphSettingsImpl& defaultGraphSettings();
 };
+
 }  // namespace ovms

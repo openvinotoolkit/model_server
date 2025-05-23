@@ -17,7 +17,10 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
+
+#include "../graph_export/graph_export_types.hpp"
 
 namespace ovms {
 
@@ -27,10 +30,9 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> modelDistributionPolicy;
 };
 
-struct GraphSettingsImpl {
-    std::string task = "";
-
+struct TextGenGraphSettingsImpl {
     std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelName = "";
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
     std::string enablePrefixCaching = "true";
@@ -42,11 +44,32 @@ struct GraphSettingsImpl {
     std::optional<std::string> pipelineType;
 };
 
+struct EmbeddingsGraphSettingsImpl {
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+    uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
+    std::string normalize = "false";
+    std::string truncate = "false";  // FIXME: export_embeddings_tokenizer python method - not supported currently?
+};
+
+struct RerankGraphSettingsImpl {
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+    uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
+};
+
 struct HFSettingsImpl {
+    std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
-    GraphSettingsImpl graphSettings;
+    bool pullHfAndStartModelMode = false;
+    bool overwriteModels = false;
+    ExportType task = text_generation;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {
@@ -60,6 +83,7 @@ struct ServerSettingsImpl {
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
+    std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
 #ifdef MTR_ENABLED
