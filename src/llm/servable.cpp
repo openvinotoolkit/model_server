@@ -117,7 +117,6 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         inputText = executionContext->apiHandler->getPrompt().value();
     }
     }
-
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
