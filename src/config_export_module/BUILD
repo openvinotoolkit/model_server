@@ -33,6 +33,8 @@ cc_library(
     srcs = ["config_export.cpp",],
     deps = [
         "config_export_types",
+        "//src/graph_export:graph_export_types",
+        "//src:libovms_server_settings",
         "//src:libovmsfilesystem",
         "//src:libovmslogging",
     ],
@@ -47,6 +49,8 @@ cc_library(
     hdrs = ["config_export_module.hpp"],
     deps =  [
              "config_export",
+             "config_export_types",
+             "//src/graph_export:graph_export_types",
              "//src:cpp_headers",
              "//src:libovmsstring_utils",
              "//src:libovmslogging",

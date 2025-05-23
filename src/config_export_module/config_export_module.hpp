@@ -18,10 +18,9 @@
 #include <string>
 
 #include "../module.hpp"
-#include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
-
+class Config;
 class ConfigExportModule : public Module {
 public:
     ConfigExportModule();

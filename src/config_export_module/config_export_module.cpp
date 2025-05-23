@@ -16,14 +16,13 @@
 #include "config_export_module.hpp"
 
 #include <string>
-#include <sstream>
 
+#include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
+#include "../config_export_module/config_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
 #include "../status.hpp"
-#include "../stringutils.hpp"
-#include "config_export.hpp"
 
 namespace ovms {
 ConfigExportModule::ConfigExportModule() {}
@@ -33,9 +32,7 @@ Status ConfigExportModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} starting", CONFIG_EXPORT_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", CONFIG_EXPORT_MODULE_NAME);
-    const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
-    auto map = listServables(repositoryPath);
-    return StatusCode::OK;
+    return createConfig(config.getServerSettings().hfSettings.downloadPath, config.getModelSettings(), config.getServerSettings().exportConfigType);
 }
 
 void ConfigExportModule::shutdown() {

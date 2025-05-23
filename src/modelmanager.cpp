@@ -449,7 +449,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     return ifs.is_open();
 }
 
-Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
+Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
     std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
     std::vector<std::string> usedButdisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {

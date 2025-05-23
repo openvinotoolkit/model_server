@@ -21,12 +21,12 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "src/filesystem.hpp"
-#include "src/modelextensions.hpp"
 #include "src/logging.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
-static Status createConfigTemplate(const std::string& directoryPath, const ModelSettingsImpl& modelSettings) {
+static Status createConfigTemplate(const std::string& directoryPath, const ModelsSettingsImpl& modelSettings) {
     std::ostringstream oss;
     // clang-format off
     oss << R"(
@@ -34,16 +34,16 @@ static Status createConfigTemplate(const std::string& directoryPath, const Model
         "model_config_list": [
             { "config":
                 {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "name": ")" << modelSettings.modelName << R"(_tokenizer_model",
                     "base_path": "tokenizer"
                 }
             },
             { "config":
                 {
-                    "name": ")" << graphSettings.modelName << R"(_embeddings_model",
+                    "name": ")" << modelSettings.modelName << R"(_embeddings_model",
                     "base_path": "embeddings",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                    "target_device": ")" << modelSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << modelSettings.modelName << R"(" }
                 }
             }
         ]
@@ -53,27 +53,24 @@ static Status createConfigTemplate(const std::string& directoryPath, const Model
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-Status createConfig(const std::string& directoryPath, const ModelSettingsImpl& modelSettings, const ConfigExportType& exportType) {
+Status createConfig(const std::string& directoryPath, const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
     if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
         SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
         return StatusCode::PATH_INVALID;
     }
 
     if (exportType == enable_model) {
-            return createConfigTemplate(directoryPath, modelSettings);
-    } else if (exportType == enable_model) {
-        if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for embeddings.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createConfigTemplate(directoryPath, modelSettings);
+    } else if (exportType == disable_model) {
+        return createConfigTemplate(directoryPath, modelSettings);
     } else if (exportType == delete_model) {
         SPDLOG_ERROR("Delete not supported.");
         return StatusCode::INTERNAL_ERROR;
     } else if (exportType == unknown_model) {
-        SPDLOG_ERROR("Graph options not initialized.");
+        SPDLOG_ERROR("Config creation options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }
+
+    return StatusCode::INTERNAL_ERROR;
 }
 }  // namespace ovms

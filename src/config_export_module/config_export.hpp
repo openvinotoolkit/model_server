@@ -14,39 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <algorithm>
-#include <filesystem>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
+
 
 namespace ovms {
-enum ServableType_t {
-    SERVABLE_TYPE_MODEL,
-    SERVABLE_TYPE_MEDIAPIPEGRAPH
-};
+    struct ModelsSettingsImpl;
+    enum ConfigExportType;
+    class Status;
 
-bool isVersionDir(const std::string& path);
-bool isMediapipeGraphDir(const std::string& path);
-std::string getPartialPath(const std::filesystem::path& path, int depth);
-
-template <std::size_t N>
-static bool hasRequiredExtensions(const std::string& directoryPath, const std::array<const char*, N>& extensions) {
-    std::unordered_set<std::string> foundExtensions;
-    for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
-        if (entry.is_regular_file()) {
-            std::string ext = entry.path().extension().string();
-            if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end()) {
-                foundExtensions.insert(ext);
-            }
-        }
-        if (foundExtensions.size() == extensions.size()) {
-            return true;
-        }
-    }
-    return false;
-}
-std::unordered_map<std::string, ServableType_t> listServables(const std::string directoryPath);
-void addEntryAndReturnIfContainsModel(const std::filesystem::path& directoryPath, std::unordered_map<std::string, ovms::ServableType_t>& servablesList, std::string& dirName, bool& retFlag);
-void NewFunction(const std::filesystem::directory_entry& entry, std::unordered_map<std::string, ovms::ServableType_t>& servablesList, std::string& dirName, bool& retFlag);
+    Status createConfig(const std::string& directoryPath, const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
 }  // namespace ovms
