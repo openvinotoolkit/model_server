@@ -28,13 +28,17 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 cc_library(
-    name = "listmodels",
-    hdrs = ["listmodels.hpp",],
-    srcs = ["listmodels.cpp",],
+    name = "config_export",
+    hdrs = ["config_export.hpp",],
+    srcs = ["config_export.cpp",],
     deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "config_export_types",
+        "//src/graph_export:graph_export_types",
+        "//src:libovms_server_settings",
         "//src:libovmsfilesystem",
         "//src:libovmslogging",
-        "//src:modelextensions",
+        "//src:libovmsschema",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -42,21 +46,29 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
-    name = "servablesconfigmanagermodule",
-    srcs = ["servablesconfigmanagermodule.cpp"],
-    hdrs = ["servablesconfigmanagermodule.hpp"],
+    name = "config_export_module",
+    srcs = ["config_export_module.cpp"],
+    hdrs = ["config_export_module.hpp"],
     deps =  [
-             "listmodels",
+             "config_export",
+             "config_export_types",
+             "//src/graph_export:graph_export_types",
              "//src:cpp_headers",
              "//src:libovmsstring_utils",
              "//src:libovmslogging",
              "//src:libovms_server_settings",
              "//src:libovms_module",
-             "//src/graph_export:graph_export_types",
-             "//src/config_export_module:config_export_types",
     ],
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
+    name = "config_export_types",
+    srcs = ["config_export_types.cpp"],
+    hdrs = ["config_export_types.hpp"],
+    deps =  [],
+    visibility = ["//visibility:public"],
 )

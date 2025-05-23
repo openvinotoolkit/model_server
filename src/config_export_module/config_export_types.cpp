@@ -17,16 +17,16 @@
 #include <map>
 #include <string>
 
-#include "graph_export_types.hpp"
+#include "config_export_types.hpp"
 namespace ovms {
 
-std::string enumToString(GraphExportType type) {
-    auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown_graph";
+std::string enumToString(ConfigExportType type) {
+    auto it = configExportTypeToString.find(type);
+    return (it != configExportTypeToString.end()) ? it->second : "unknown_model";
 }
 
-GraphExportType stringToEnum(std::string inString) {
-    auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : unknown_graph;
+ConfigExportType stringToConfigExportEnum(std::string inString) {
+    auto it = stringToConfigExportType.find(inString);
+    return (it != stringToConfigExportType.end()) ? it->second : unknown_model;
 }
 }  // namespace ovms

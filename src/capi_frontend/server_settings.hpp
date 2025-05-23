@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
+#include "../config_export_module/config_export_types.hpp"
 
 namespace ovms {
 
@@ -68,7 +69,7 @@ struct HFSettingsImpl {
     bool pullHfModelMode = false;
     bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
-    ExportType task = text_generation;
+    GraphExportType task = text_generation;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
 };
 
@@ -98,6 +99,7 @@ struct ServerSettingsImpl {
     bool withPython = false;
     bool startedWithCLI = false;
     bool listServables = false;
+    ConfigExportType exportConfigType = unknown_model;
     HFSettingsImpl hfSettings;
 };
 

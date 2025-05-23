@@ -280,6 +280,8 @@ public:
 
     static const std::string& getOsSeparator();
 
+    static Status createFileOverwrite(const std::string& filePath, const std::string& contents);
+
     StatusCode CreateLocalDir(const std::string& path) {
         try {
             fs::create_directory(path);

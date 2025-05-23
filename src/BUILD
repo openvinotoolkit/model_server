@@ -343,6 +343,7 @@ cc_library(
         "libovms_version",
         "libovmsfilesystem",
         "//src/graph_export:graph_export_types",
+        "//src/config_export_module:config_export_types",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
@@ -637,6 +638,7 @@ cc_library(
             ],
         }) + [
             "cpp_headers",
+            "//src/config_export_module:config_export_module",
             "ovms_header",
             "capi_backend_impl",
             "libovms_capi_servable_metadata",
@@ -780,6 +782,7 @@ cc_library(
         "libovms_module",
         "//src:cpp_headers",
         "//src/graph_export:graph_export_types",
+        "//src/config_export_module:config_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovmsprecision",
@@ -1219,6 +1222,7 @@ cc_library(
     srcs = ["schema.cpp",],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
     ],
@@ -2984,6 +2988,7 @@ cc_test(
             ":pull_hf_model_test",
             ":listmodels_test",
             ":graph_export_test",
+            ":config_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3134,6 +3139,21 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "config_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/config_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/config_export_module:config_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
     name = "openvino_remote_tensors_tests",
     linkstatic = 1,
     alwayslink = True,
@@ -3236,6 +3256,7 @@ cc_library(
         "libovms_module",
         "//src:cpp_headers",
         "//src/graph_export:graph_export_types",
+        "//src/config_export_module:config_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
     ],

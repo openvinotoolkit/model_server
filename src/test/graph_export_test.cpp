@@ -368,7 +368,7 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
-    hfSettings.task = ovms::unknown;
+    hfSettings.task = ovms::unknown_graph;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "capi_frontend/server_settings.hpp"
+#include "config_export_module/config_export_types.hpp"
 #include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
@@ -158,7 +159,16 @@ void CLIParser::parse(int argc, char** argv) {
             ("list_models",
                 "Directive to show available servables in models repository",
                 cxxopts::value<bool>()->default_value("false"),
-                "LIST_MODELS");
+                "LIST_MODELS")
+            ("add_to_config",
+                "Path to config file for ovms, where to add specific model",
+                cxxopts::value<std::string>()->default_value("config.json"),
+                "ADD_TO_CONFIG")
+            ("remove_from_config",
+                "Path to config file for ovms, to remove specific model from",
+                cxxopts::value<std::string>()->default_value("config.json"),
+                "REMOVE_FROM_CONFIG");
+            
 
         options->add_options("single model")
             ("model_name",
@@ -218,7 +228,7 @@ void CLIParser::parse(int argc, char** argv) {
         // HF pull mode or pull and start mode
         if (isHFPullOrPullAndStart(this->result)) {
             std::vector<std::string> unmatchedOptions;
-            ExportType task;
+            GraphExportType task;
             if (result->count("task")) {
                 task = stringToEnum(result->operator[]("task").as<std::string>());
                 switch (task) {
@@ -240,7 +250,7 @@ void CLIParser::parse(int argc, char** argv) {
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case unknown: {
+                    case unknown_graph: {
                         std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
                         exit(OVMS_EX_USAGE);
                     }
@@ -306,6 +316,14 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         if (result->count("model_repository_path"))
             serverSettings.hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         return;
+    }
+
+    if (result->count("add_to_config")) {
+        serverSettings.exportConfigType = enable_model;
+    }
+
+    if (result->count("remove_from_config")) {
+        serverSettings.exportConfigType = disable_model;
     }
 
     serverSettings.grpcPort = result->operator[]("port").as<uint32_t>();
@@ -434,7 +452,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
 }
 
 bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result) {
-    return (result->count("pull") || result->count("source_model") || result->count("model_repository_path") || result->count("task"));
+    return (result->count("pull") || result->count("source_model") || result->count("task"));
 }
 
 void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
@@ -477,7 +495,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     }
                     break;
                 }
-                case unknown: {
+                case unknown_graph: {
                     throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
                     break;
                 }
@@ -492,6 +510,23 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
     } else {
         hfSettings.pullHfModelMode = false;
         hfSettings.pullHfAndStartModelMode = false;
+    }
+}
+
+void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
+    // Export config.json mode
+    if (result->count("model_name")) {
+        modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
+    }
+    if (result->count("model_path")) {
+        modelsSettings.modelPath = result->operator[]("model_name").as<std::string>();
+    } else if (result->count("model_repository_path") && result->count("model_name")) {
+        modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
+    }
+    if (result->count("add_to_config")) {
+        modelsSettings.configPath = result->operator[]("add_to_config").as<std::string>();
+    } else if (result->count("remove_from_config")) {
+        modelsSettings.configPath = result->operator[]("remove_from_config").as<std::string>();
     }
 }
 
@@ -519,6 +554,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     if (serverSettings->hfSettings.pullHfAndStartModelMode)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
+
+    if (serverSettings->exportConfigType != unknown_model)
+        this->prepareConfigExport(*modelsSettings);
 }
 
 }  // namespace ovms

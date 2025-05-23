@@ -16,17 +16,28 @@
 #include <iostream>
 #include <map>
 #include <string>
-
-#include "graph_export_types.hpp"
+#pragma once
 namespace ovms {
+enum ConfigExportType {
+    enable_model,
+    disable_model,
+    delete_model,
+    unknown_model
+};
 
-std::string enumToString(GraphExportType type) {
-    auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown_graph";
-}
+const std::map<ConfigExportType, std::string> configExportTypeToString = {
+    {enable_model, "enable_model"},
+    {disable_model, "disable_model"},
+    {delete_model, "delete_model"},
+    {unknown_model, "unknown_model"}};
 
-GraphExportType stringToEnum(std::string inString) {
-    auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : unknown_graph;
-}
+const std::map<std::string, ConfigExportType> stringToConfigExportType = {
+    {"enable_model", enable_model},
+    {"disable_model", disable_model},
+    {"delete_model", delete_model},
+    {"unknown_model", unknown_model}};
+
+std::string enumToString(ConfigExportType type);
+ConfigExportType stringToConfigExportEnum(std::string inString);
+
 }  // namespace ovms

@@ -112,7 +112,7 @@ private:
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
-    Status validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings);
+    Status validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings);
     bool CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath);
 #else
     Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
@@ -201,7 +201,7 @@ protected:
      * Time interval between each config file check
      */
     uint32_t watcherIntervalMillisec = 1000;
-    const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
+    static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
     /**
@@ -480,8 +480,6 @@ public:
      * @brief Check if configuration file reload is needed.
      */
     Status configFileReloadNeeded(bool& isNeeded);
-
-    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
 
     /**
      * @brief Reads models from configuration file

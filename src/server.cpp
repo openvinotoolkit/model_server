@@ -51,9 +51,8 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
+#include "config_export_module/config_export_module.hpp"
 #include "grpcservermodule.hpp"
-#include "pull_module/hf_pull_model_module.hpp"
-#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -65,7 +64,9 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
+#include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -263,6 +264,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HfPullModelModule>();
     if (name == SERVABLES_CONFIG_MANAGER_MODULE_NAME)
         return std::make_unique<ServablesConfigManagerModule>();
+    if (name == CONFIG_EXPORT_MODULE_NAME)
+        return std::make_unique<ConfigExportModule>();
     return nullptr;
 }
 
@@ -322,6 +325,10 @@ Status Server::startModules(ovms::Config& config) {
         // Return from modules only in --pull mode, otherwise start the rest of modules
         if (config.getServerSettings().hfSettings.pullHfModelMode)
             return status;
+    }
+    if (config.getServerSettings().exportConfigType) {
+        INSERT_MODULE(CONFIG_EXPORT_MODULE_NAME, it);
+        START_MODULE(it);
     }
 
 #if (PYTHON_DISABLE == 0)

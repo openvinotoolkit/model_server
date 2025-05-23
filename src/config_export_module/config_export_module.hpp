@@ -1,4 +1,4 @@
-//*****************************************************************************
+//****************************************************************************
 // Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
+#pragma once
+#include <memory>
 #include <string>
 
-#include "graph_export_types.hpp"
+#include "../module.hpp"
+
 namespace ovms {
-
-std::string enumToString(GraphExportType type) {
-    auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown_graph";
-}
-
-GraphExportType stringToEnum(std::string inString) {
-    auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : unknown_graph;
-}
+class Config;
+class ConfigExportModule : public Module {
+public:
+    ConfigExportModule();
+    ~ConfigExportModule();
+    Status start(const ovms::Config& config) override;
+    void shutdown() override;
+};
 }  // namespace ovms
