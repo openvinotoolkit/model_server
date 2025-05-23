@@ -22,5 +22,5 @@ namespace ovms {
     enum ConfigExportType;
     class Status;
 
-    Status createConfig(const std::string& directoryPath, const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
+    Status createConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
 }  // namespace ovms

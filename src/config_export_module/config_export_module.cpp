@@ -32,7 +32,7 @@ Status ConfigExportModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} starting", CONFIG_EXPORT_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", CONFIG_EXPORT_MODULE_NAME);
-    return createConfig(config.getServerSettings().hfSettings.downloadPath, config.getModelSettings(), config.getServerSettings().exportConfigType);
+    return createConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
 }
 
 void ConfigExportModule::shutdown() {

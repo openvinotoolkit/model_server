@@ -21,22 +21,16 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #ifdef __linux__
 #include <dlfcn.h>
+#include <unistd.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <io.h>
-#endif
-
-#ifdef _WIN32
-#include <iomanip>
-
-#include <windows.h>
 #endif
 
 #include <errno.h>
@@ -48,9 +42,6 @@
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 #include <sys/stat.h>
-#ifdef __linux__
-#include <unistd.h>
-#endif
 
 #include "cleaner_utils.hpp"
 #include "config.hpp"
@@ -1024,138 +1015,15 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
-#ifdef _WIN32
-class FileHandle {
-public:
-    FileHandle(const std::string& filename) :
-        filename_(filename) {
-        hFile_ = CreateFileA(
-            filename.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-    }
-    ~FileHandle() {
-        if (hFile_ != INVALID_HANDLE_VALUE) {
-            if (!CloseHandle(hFile_)) {
-                SPDLOG_ERROR("Failed to close file: ", filename_);
-            }
-        }
-    }
-
-    HANDLE getHandle() const { return hFile_; }
-
-private:
-    HANDLE hFile_;
-    std::string filename_;
-};
-#endif
-
-class LoudFileInfoReporter {
-    std::stringstream ss;
-
-public:
-    LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
-#ifdef __linux__
-        struct stat statTime;
-
-        if (stat(filename.c_str(), &statTime) != 0) {
-            SPDLOG_ERROR("Failed to debug-read fileconfig");
-            return;
-        }
-        ss << "FileInfoReporter: " << filename
-           << " time modification [s]: " << statTime.st_ctim.tv_sec
-           << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
-#elif _WIN32
-        // Windows implementation
-        FileHandle fileHandle(filename);
-        if (fileHandle.getHandle() == INVALID_HANDLE_VALUE) {
-            SPDLOG_ERROR("Failed to open file for debug-read on Windows");
-            return;
-        }
-
-        FILETIME creationTime, lastAccessTime, lastWriteTime;
-        if (!GetFileTime(fileHandle.getHandle(), &creationTime, &lastAccessTime, &lastWriteTime)) {
-            SPDLOG_ERROR("Failed to get file time on Windows");
-            return;
-        }
-
-        SYSTEMTIME stUTC;
-        FileTimeToSystemTime(&lastWriteTime, &stUTC);
-
-        ULARGE_INTEGER fileTimeAsUint;  // FILETIME units are 100 nanoseconds
-        fileTimeAsUint.LowPart = lastAccessTime.dwLowDateTime;
-        fileTimeAsUint.HighPart = lastAccessTime.dwHighDateTime;
-        uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100;
-
-        ss << "FileInfoReporter: " << filename
-           << " time modification [s]: " << std::setfill('0') << std::setw(2) << stUTC.wSecond
-           << " [ns]: " << timeInNanoseconds << std::endl;
-#endif
-        std::string some;
-        file.clear();
-        file.seekg(0);
-        while (file) {
-            file >> some;
-            ss << some << std::endl;
-        }
-        file.clear();
-        file.seekg(0);
-    }
-    void log() {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
-    }
-};
-
-Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
-    configFilename = jsonFilename;
-    std::string md5;
-    uint16_t counter = 0;
-    Status intermediateStatus;
-    do {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {} for: {} time", jsonFilename, counter + 1);
-        std::ifstream ifs(jsonFilename.c_str());
-        LoudFileInfoReporter loud(jsonFilename, ifs);
-        if (!ifs.good()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
-            intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
-            loud.log();
-            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
-            continue;
-        }
-        std::stringstream config;
-        config << ifs.rdbuf();
-        auto configContent = config.str();
-        md5 = FileSystem::getStringMD5(configContent);
-        rapidjson::ParseResult parseResult = configJson.Parse(configContent.c_str());
-        if (parseResult.Code()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
-                rapidjson::GetParseError_En(parseResult.Code()));
-            intermediateStatus = StatusCode::JSON_INVALID;
-            loud.log();
-            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
-            continue;
-        }
-        intermediateStatus = StatusCode::OK;
-        break;
-    } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
-    lastConfigFileMD5 = md5;
-    if (!intermediateStatus.ok()) {
-        this->lastLoadConfigStatus = intermediateStatus;
-        return this->lastLoadConfigStatus;
-    }
-    return StatusCode::OK;
-}
-
 Status ModelManager::loadConfig(const std::string& jsonFilename) {
     rapidjson::Document configJson;
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    Status status = parseConfig(jsonFilename, configJson);
-    if (!status.ok())
-        return status;
+    configFilename = jsonFilename;
+    Status status = parseConfig(jsonFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
+    if (!status.ok()) {
+        this->lastLoadConfigStatus = status;
+        return this->lastLoadConfigStatus;
+    }
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
         this->lastLoadConfigStatus = StatusCode::JSON_INVALID;

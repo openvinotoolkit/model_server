@@ -32,11 +32,13 @@ cc_library(
     hdrs = ["config_export.hpp",],
     srcs = ["config_export.cpp",],
     deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
         "config_export_types",
         "//src/graph_export:graph_export_types",
         "//src:libovms_server_settings",
         "//src:libovmsfilesystem",
         "//src:libovmslogging",
+        "//src:libovmsschema",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,

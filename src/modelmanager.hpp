@@ -201,7 +201,7 @@ protected:
      * Time interval between each config file check
      */
     uint32_t watcherIntervalMillisec = 1000;
-    const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
+    static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
     /**
@@ -480,8 +480,6 @@ public:
      * @brief Check if configuration file reload is needed.
      */
     Status configFileReloadNeeded(bool& isNeeded);
-
-    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
 
     /**
      * @brief Reads models from configuration file
