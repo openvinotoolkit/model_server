@@ -90,15 +90,10 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-ov::Tensor load_image_stbi(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
+ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels) {
     if (!image) {
         std::stringstream errorMessage;
-        errorMessage << "Failed to load the image";
+        errorMessage << stbi_failure_reason();
         throw std::runtime_error{errorMessage.str()};
     }
     struct SharedImageAllocator {
@@ -145,9 +140,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 20L))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_HTTPPROXYTUNNEL, 1L))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE, sizeLimit))
 
     if (status != CURLE_OK) {
@@ -166,7 +159,25 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     return absl::OkStatus();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseMessages() {
+ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
+    int x = 0, y = 0, channelsInFile = 0;
+    constexpr int desiredChannels = 3;
+    unsigned char* image = stbi_load_from_memory(
+        (const unsigned char*)imageBytes.data(), imageBytes.size(),
+        &x, &y, &channelsInFile, desiredChannels);
+    return loadImageStbi(image, x, y, desiredChannels);
+}
+
+ov::Tensor loadImageStbiFromFile(char const* filename) {
+    int x = 0, y = 0, channelsInFile = 0;
+    constexpr int desiredChannels = 3;
+    unsigned char* image = stbi_load(
+        filename,
+        &x, &y, &channelsInFile, desiredChannels);
+    return loadImageStbi(image, x, y, desiredChannels);
+}
+
+absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
         return absl::InvalidArgumentError("Messages missing in request");
@@ -223,31 +234,57 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages() {
                             std::string pattern = "base64,";
                             std::size_t pos = url.find(pattern);
                             std::string decoded;
+                            ov::Tensor tensor;
                             if (pos != std::string::npos) {
+                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from base64 string");
                                 size_t offset = pos + pattern.length();
                                 if (!absl::Base64Unescape(std::string_view(url.data() + offset, url.size() - offset), &decoded)) {
                                     return absl::InvalidArgumentError("Invalid base64 string in request");
                                 }
-                            } else if (std::regex_match(url.c_str(), std::regex("^(https?:\\/\\/)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([\\/\\w \\.-]*)*\\/?$"))) {
-                                curl_global_init(CURL_GLOBAL_ALL);
+                                try {
+                                    tensor = loadImageStbiFromMemory(decoded);
+                                } catch (std::runtime_error& e) {
+                                    std::stringstream ss;
+                                    ss << "Image parsing failed: " << e.what();
+                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
+                                }
+                            } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
+                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
                                 int64_t sizeLimit = 20000000;  // restrict single image size to 20MB
                                 auto status = downloadImage(url.c_str(), decoded, sizeLimit);
                                 if (status != absl::OkStatus()) {
                                     return status;
                                 }
                                 curl_global_cleanup();
+                                try {
+                                    tensor = loadImageStbiFromMemory(decoded);
+                                } catch (std::runtime_error& e) {
+                                    std::stringstream ss;
+                                    ss << "Image parsing failed: " << e.what();
+                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError("Image parsing failed");
+                                }
+
                             } else {
-                                return absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix or valid URL");
+                                if (!allowedLocalMediaPath.has_value()) {
+                                    return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                                }
+                                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
+                                const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
+                                if (firstMissmatch.second != allowedLocalMediaPath.value().end()) {
+                                    return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
+                                }
+                                try {
+                                    tensor = loadImageStbiFromFile(url.c_str());
+                                } catch (std::runtime_error& e) {
+                                    std::stringstream ss;
+                                    ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
+                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
+                                }
                             }
-                            try {
-                                ov::Tensor tensor = load_image_stbi(decoded);
-                                request.imageHistory.push_back({i, tensor});
-                            } catch (std::runtime_error& e) {
-                                std::stringstream ss;
-                                ss << "Image parsing failed: " << e.what();
-                                SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
-                                return absl::InvalidArgumentError("Image parsing failed");
-                            }
+                            request.imageHistory.push_back({i, tensor});
                         } else {
                             return absl::InvalidArgumentError("Unsupported content type");
                         }
@@ -293,9 +330,9 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
     return request.maxTokens;
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit) {
+absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
     // messages: [{role: content}, {role: content}, ...]; required
-    auto status = parseMessages();
+    auto status = parseMessages(allowedLocalMediaPath);
     if (status != absl::OkStatus()) {
         return status;
     }
@@ -602,7 +639,7 @@ ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig
     return request.createGenerationConfig();
 }
 
-absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength) {
+absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
 
     if (status != absl::OkStatus())
@@ -611,7 +648,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
-        status = parseChatCompletionsPart(maxTokensLimit);
+        status = parseChatCompletionsPart(maxTokensLimit, allowedLocalMediaPath);
 
     return status;
 }
