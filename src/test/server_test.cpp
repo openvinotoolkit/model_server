@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <cstdlib>
 #include <random>
 #include <thread>
 
@@ -481,8 +482,10 @@ TEST(Server, CAPIAliveGrpcNotHttpNot) {
     requestServerAlive(portOldDefault.c_str(), grpc::StatusCode::UNAVAILABLE, false);
     requestRestServerAlive(typicalRestDefault.c_str(), httplib::StatusCode::NotFound_404, false);
 }
-TEST(Server, CAPIAliveGrpcNotHttpYes) {
-    GTEST_SKIP() << "Until we have a way to launch all tests restarting drogon";  // TODO @dkalinow to enable drogon tests
+TEST(Server, CAPIAliveGrpcNotHttpYes_DROGON) {
+    if (!std::getenv("TEST_DROGON_RESTART")) {
+        GTEST_SKIP() << "Run with TEST_DROGON_RESTART to enable this test";
+    }
     std::string port = "9000";
     randomizeAndEnsureFree(port);
     char* argv[] = {
