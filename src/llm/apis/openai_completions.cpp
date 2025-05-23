@@ -197,10 +197,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 return absl::InvalidArgumentError("Invalid message structure");
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
+                // tools handing to be done later
                 request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
+                    // Adjust content field format when it is passed as an array of objects (typically with images)
                     if (member->value.GetArray().Size() == 0) {
                         return absl::InvalidArgumentError("Invalid message structure - content array is empty");
                     }

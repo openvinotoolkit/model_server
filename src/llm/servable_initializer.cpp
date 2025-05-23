@@ -82,11 +82,11 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             # Try to read template from template.jinja file
             jinja_file = Path(templates_directory + "/template.jinja")
+            template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
+            jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
+            jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
+            jinja_env.globals["raise_exception"] = raise_exception     
             if jinja_file.is_file():
-                template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
-                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
-                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-                jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json
@@ -103,23 +103,15 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                     for template_entry in chat_template:
                         if isinstance(template_entry, dict):
                             if template_entry.get("name") == "default":
-                                chat_template = template_entry.get("template", default_chat_template)
+                                chat_template = template_entry.get("template")
                             elif template_entry.get("name") == "tool_use":
-                                tool_chat_template = template_entry.get("template", default_chat_template)
-
+                                tool_chat_template = template_entry.get("template")
             if template is None:
-                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
-                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-                jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.from_string(chat_template)
             if tool_chat_template is not None:
-                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
-                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-                jinja_env.globals["raise_exception"] = raise_exception
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
-
         )",
             py::globals(), locals);
 
