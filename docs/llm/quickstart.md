@@ -17,7 +17,8 @@ It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
+mkdir models
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 
