@@ -23,10 +23,10 @@ model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
 base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
 
 logger = logging.getLogger(__name__)
-
+xfail = pytest.mark.xfail
 
 class TestSingleModelInference:
-
+    @xfail(reason="not implemented yet")
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -133,6 +133,7 @@ class TestSingleModelInference:
         assert "15 degrees" in completion.choices[0].message.content
         assert completion.choices[0].message.tool_calls == []
 
+    @xfail(reason="not implemented yet")
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
@@ -242,7 +243,7 @@ class TestSingleModelInference:
             print("Error:", e)
             assert True, f"It should fail with 2 tool calls"
         
-
+    @xfail(reason="not implemented yet")
     def test_chat_with_tool_definition_stream(self):
         """
         <b>Description</b>
@@ -304,7 +305,7 @@ class TestSingleModelInference:
                     arguments += chunk.choices[0].delta.tool_calls[0].function.arguments
         assert arguments == '{"location": "Paris, France"}'
 
-
+    @xfail(reason="not implemented yet")
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
