@@ -25,15 +25,6 @@ fi
 
 apt-get update && apt-get install -y libnuma1 ocl-icd-libopencl1 --no-install-recommends && rm -rf /var/lib/apt/lists/* && \
 case $INSTALL_DRIVER_VERSION in \
-"23.22.26516") \
-        mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-level-zero-gpu_1.3.26516.18_amd64.deb ; \
-        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-core_1.0.14062.11_amd64.deb ; \
-        curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.14062.11/intel-igc-opencl_1.0.14062.11_amd64.deb ; \
-        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/intel-opencl-icd_23.22.26516.18_amd64.deb ; \
-        curl -L -O https://github.com/intel/compute-runtime/releases/download/23.22.26516.18/libigdgmm12_22.3.0_amd64.deb ; \
-        dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
-;; \
 "24.26.30049") \
         mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
         curl -L -O https://github.com/intel/compute-runtime/releases/download/24.26.30049.6/intel-level-zero-gpu_1.3.30049.6_amd64.deb ; \
@@ -61,6 +52,15 @@ case $INSTALL_DRIVER_VERSION in \
         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.5.6/intel-igc-opencl-2_2.5.6+18417_amd64.deb ; \
         dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
 ;; \
+"25.18.33578") \
+	mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
+	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.11.7/intel-igc-core-2_2.11.7+19146_amd64.deb; \
+	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.11.7/intel-igc-opencl-2_2.11.7+19146_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/intel-ocloc_25.18.33578.6-0_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/intel-opencl-icd_25.18.33578.6-0_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libigdgmm12_22.7.0_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libze-intel-gpu1_25.18.33578.6-0_amd64.deb; \
+;; \
 *) \
         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
@@ -75,4 +75,5 @@ case $INSTALL_DRIVER_VERSION in \
             intel-media-va-driver-non-free libmfx1 && \
             rm -rf /var/lib/apt/lists/* ; \
 esac
+
 apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
