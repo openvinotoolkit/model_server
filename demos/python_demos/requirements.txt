@@ -1,15 +1,15 @@
 --extra-index-url https://download.pytorch.org/whl/cpu 
-
-git+https://github.com/dtrawins/optimum-intel.git@concurrency_support_cloneall
-## used a fork to provide support for multi concurrency https://github.com/huggingface/optimum-intel/pull/519
-
-onnx==1.17.0
+--extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
+--extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
+--pre
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@69311c0f11c92aff670bc08a3ab0a4653213e25c
+onnx==1.18.0
 pillow==10.3.0
-optimum[diffusers]==1.17.1
-tritonclient[grpc]==2.51.0  # Required to use batch string serialization/deserialization (4byte length prepend)
-transformers==4.49 # 4.50 has a bug
-diffusers==0.29.2
-datasets==2.18.0
+optimum[diffusers]==1.25.3
+tritonclient[grpc]==2.57.0  # Required to use batch string serialization/deserialization (4byte length prepend)
+transformers<4.52 # 4.50 has a bug
+diffusers==0.33.1
+datasets==3.6.0
 numpy<2.0
-huggingface_hub==0.26.0
+huggingface_hub==0.32.0
 
