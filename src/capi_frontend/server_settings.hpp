@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
@@ -68,15 +69,14 @@ struct ImageGenerationGraphSettingsImpl {
 };
 
 struct HFSettingsImpl {
+    std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool pullHfModelMode = false;
+    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
     ExportType task = text_generation;
-    TextGenGraphSettingsImpl graphSettings;
-    RerankGraphSettingsImpl rerankGraphSettings;
-    EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
-    ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {
@@ -90,6 +90,7 @@ struct ServerSettingsImpl {
     bool metricsEnabled = false;
     std::string metricsList;
     std::string cpuExtensionLibraryPath;
+    std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
 #ifdef MTR_ENABLED

@@ -66,7 +66,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     bool isHttpsProxyUsed = !getEnvReturnOrDefaultIfNotSet("https_proxy").empty();
     if (isHttpsProxyUsed) {
         if (timeoutOpt.value() != 0)
-            SPDLOG_WARN("We are not able to set connection timeout when proxy is used");
+            SPDLOG_DEBUG("We are not able to set connection timeout when proxy is used");
     } else {
         opts.serverConnectTimeoutMs = timeoutOpt.value();
     }

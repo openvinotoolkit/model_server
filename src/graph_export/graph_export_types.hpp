@@ -42,4 +42,5 @@ const std::map<std::string, ExportType> stringToType = {
 
 std::string enumToString(ExportType type);
 ExportType stringToEnum(std::string inString);
+
 }  // namespace ovms
