@@ -154,6 +154,7 @@ cc_library(
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
+        "//src/config_export_module:config_export_types",
         "//src/graph_export:graph_export_types",
         "//src:libovmslogging",
         "//src:libovms_module",

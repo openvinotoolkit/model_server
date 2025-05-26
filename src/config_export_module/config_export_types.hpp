@@ -18,7 +18,7 @@
 #include <string>
 #pragma once
 namespace ovms {
-enum ConfigExportType {
+enum ConfigExportType : int {
     enable_model,
     disable_model,
     delete_model,
