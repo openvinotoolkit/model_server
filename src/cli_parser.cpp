@@ -164,7 +164,6 @@ void CLIParser::parse(int argc, char** argv) {
                 "Path to config file for ovms, to remove specific model from",
                 cxxopts::value<std::string>()->default_value("config.json"),
                 "REMOVE_FROM_CONFIG");
-            
 
         options->add_options("single model")
             ("model_name",

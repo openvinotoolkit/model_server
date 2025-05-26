@@ -33,7 +33,7 @@
 namespace ovms {
 
 Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
-    //std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
+    // FIXME:std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     std::string md5;
     Status status = parseConfig(jsonFilename, configJson, md5);
     if (!status.ok()) {
