@@ -22,17 +22,19 @@
 #include <openvino/openvino.hpp>
 #include "absl/status/status.h"
 
+#include "imagegenpipelineargs.hpp"
+
 #define SET_OR_RETURN(TYPE, NAME, RHS)                      \
     auto NAME##_OPT = RHS;                                  \
     if (std::holds_alternative<absl::Status>(NAME##_OPT)) { \
         return std::get<absl::Status>(NAME##_OPT);          \
     }                                                       \
-    TYPE NAME = std::get<TYPE>(NAME##_OPT);
+    auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {
 class HttpPayload;
-using dims_t = std::pair<int64_t, int64_t>;
-std::variant<absl::Status, std::optional<dims_t>> getDimensions(const HttpPayload& payload);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const HttpPayload& payload);
 
 std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload);
 
@@ -42,10 +44,9 @@ std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::Htt
 std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const HttpPayload& payload);
-std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const HttpPayload& payload);
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const HttpPayload& payload);
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
 
 std::unique_ptr<std::string> generateJSONResponseFromB64Image(const std::string& base64_image);
 }  // namespace ovms
-

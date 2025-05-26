@@ -92,7 +92,7 @@ public:
         // curl -X POST localhost:11338/v3/images/generations -H "Content-Type: application/json" -d '{ "model": "endpoint", "prompt": "A cute baby sea otter", "n": 1, "size": "1024x1024" }'
         // FIXME routing request to different pipelines (enum?)
         ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
-        SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload));
+        SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
         std::unique_ptr<ov::Tensor> image;
         try {
             image = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));

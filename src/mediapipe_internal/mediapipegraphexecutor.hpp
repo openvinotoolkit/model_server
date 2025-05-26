@@ -71,7 +71,6 @@ inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     }                                                                    \
     _Pragma("warning(pop)")
 
-
 class MediapipeGraphExecutor {
     const std::string name;
     const std::string version;

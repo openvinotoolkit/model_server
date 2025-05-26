@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,9 @@ cc_library(
     name = "pipelines",
     hdrs = ["pipelines.hpp"],
     srcs = ["pipelines.cpp"],
-    deps = select({
+    deps = [
+        "imagegenpipelineargs",
+    ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
@@ -51,6 +53,37 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
+)
+
+cc_library(
+    name = "imagegen_init",
+    hdrs = ["imagegen_init.hpp"],
+    srcs = ["imagegen_init.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libmodelconfigjsonparser",
+        "//src:libovmsfilesystem",
+        "imagegenutils",
+        "imagegenpipelineargs",
+        "image_gen_calculator_cc_proto",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "imagegenpipelineargs",
+    hdrs = ["imagegenpipelineargs.hpp"],
+    deps = [
+        "//third_party:openvino",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -64,6 +97,7 @@ cc_library(
         "//src:libovmslogging",
         "//src:libimage_conversion",
         "//src:libovmsstring_utils",
+        "imagegenpipelineargs",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

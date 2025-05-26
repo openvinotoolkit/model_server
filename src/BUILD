@@ -609,6 +609,7 @@ cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
+                "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
                 "//src/rerank:rerankcalculator",
@@ -3183,6 +3184,7 @@ cc_library(
     deps = [
         "//src:test_utils",
         "//src/image_gen:imagegenutils",
+        "//src/image_gen:imagegen_init",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,

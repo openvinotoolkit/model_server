@@ -1,3 +1,4 @@
+#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -13,27 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
 #include <string>
-
-#include <openvino/genai/image_generation/text2image_pipeline.hpp>
-#include <openvino/genai/image_generation/image2image_pipeline.hpp>
+#include <variant>
 
 #include "imagegenpipelineargs.hpp"
 
 namespace ovms {
-struct ImageGenerationPipelines {
-    ov::genai::Image2ImagePipeline image2ImagePipeline;
-    ov::genai::Text2ImagePipeline text2ImagePipeline;
-    ImageGenPipelineArgs args;
-
-    ImageGenerationPipelines() = delete;
-    ImageGenerationPipelines(const ImageGenPipelineArgs& args);
-    ImageGenerationPipelines(const ImageGenerationPipelines&) = delete;
-    ImageGenerationPipelines& operator=(const ImageGenerationPipelines&) = delete;
-    ImageGenerationPipelines(ImageGenerationPipelines&&) = delete;
-    ImageGenerationPipelines& operator=(ImageGenerationPipelines&&) = delete;
-};
-
+class Status;
+std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions);
 }  // namespace ovms

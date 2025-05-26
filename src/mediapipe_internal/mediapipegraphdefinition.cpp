@@ -48,7 +48,8 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 
-#include "../image_gen/pipelines.hpp"
+#include "src/image_gen/pipelines.hpp"
+#include "src/image_gen/imagegen_init.hpp"
 #include "src/image_gen/image_gen_calculator.pb.h"
 
 namespace ovms {
@@ -265,7 +266,6 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-//        this->pythonNodeResourcesMap, this->genAiServableMap, this->imageGenerationPipelinesMap,
         this->sidePacketMaps,
         this->pythonBackend, this->reporter.get());
     return status;
@@ -481,8 +481,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
         // Passed to both calculators that require Image Generation pipelines
         if (endsWith(config.node(i).calculator(), IMAGE_GEN_CALCULATOR_NAME)) {
-            auto& imageGenerationPipelinesMap = this->sidePacketMaps.imageGenPipelinesMap;
-            ResourcesCleaningGuard<ImageGenerationPipelinesMap> guard(imageGenerationPipelinesMap);
+            auto& imageGenPipelinesMap = this->sidePacketMaps.imageGenPipelinesMap;
+            ResourcesCleaningGuard<ImageGenerationPipelinesMap> guard(imageGenPipelinesMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node missing options in graph: {}. ", this->name);
                 return StatusCode::LLM_NODE_MISSING_OPTIONS;  // TODO: create new error code
@@ -492,19 +492,18 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_MISSING_NAME;  // TODO: create new error code
             }
             std::string nodeName = config.node(i).name();
-            if (imageGenerationPipelinesMap.find(nodeName) != imageGenerationPipelinesMap.end()) {
+            if (imageGenPipelinesMap.find(nodeName) != imageGenPipelinesMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;  // TODO: create new error code
             }
-            mediapipe::ImageGenCalculatorOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            if (!nodeOptions.has_models_path()) {
-                return StatusCode::INTERNAL_ERROR;
+            auto statusOrArgs = prepareImageGenPipelineArgs(config.node(i).node_options(0));
+            if (std::holds_alternative<Status>(statusOrArgs)) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare Image Gen pipeline args for node: {}. Error: {}", this->name, std::get<Status>(statusOrArgs).string());
+                return std::get<Status>(statusOrArgs);
             }
-            std::string modelsPath = nodeOptions.models_path();
             std::shared_ptr<ImageGenerationPipelines> servable;
             try {
-                servable = std::make_shared<ImageGenerationPipelines>(modelsPath);
+                servable = std::make_shared<ImageGenerationPipelines>(std::get<ImageGenPipelineArgs>(statusOrArgs));
             } catch (ov::Exception& e) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Error: {}", this->name, e.what());
                 return StatusCode::INTERNAL_ERROR;
@@ -512,7 +511,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to create Image Generation pipelines: {}. Unknown error", this->name);
                 return StatusCode::INTERNAL_ERROR;
             }
-            imageGenerationPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
+            imageGenPipelinesMap.insert(std::pair<std::string, std::shared_ptr<ImageGenerationPipelines>>(nodeName, std::move(servable)));
             guard.disableCleaning();
         }
     }

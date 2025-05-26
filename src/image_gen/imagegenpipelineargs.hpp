@@ -16,24 +16,23 @@
 #pragma once
 
 #include <string>
+#include <optional>
+#include <utility>
 
-#include <openvino/genai/image_generation/text2image_pipeline.hpp>
-#include <openvino/genai/image_generation/image2image_pipeline.hpp>
-
-#include "imagegenpipelineargs.hpp"
+#include <openvino/openvino.hpp>
 
 namespace ovms {
-struct ImageGenerationPipelines {
-    ov::genai::Image2ImagePipeline image2ImagePipeline;
-    ov::genai::Text2ImagePipeline text2ImagePipeline;
-    ImageGenPipelineArgs args;
 
-    ImageGenerationPipelines() = delete;
-    ImageGenerationPipelines(const ImageGenPipelineArgs& args);
-    ImageGenerationPipelines(const ImageGenerationPipelines&) = delete;
-    ImageGenerationPipelines& operator=(const ImageGenerationPipelines&) = delete;
-    ImageGenerationPipelines(ImageGenerationPipelines&&) = delete;
-    ImageGenerationPipelines& operator=(ImageGenerationPipelines&&) = delete;
+using resolution_t = std::pair<int64_t, int64_t>;
+struct ImageGenPipelineArgs {
+    std::string modelsPath;
+    std::optional<std::string> device;
+    ov::AnyMap pluginConfig;
+    resolution_t maxResolution;
+    std::optional<resolution_t> defaultResolution;
+    std::optional<uint64_t> seed;
+    uint64_t maxNumImagesPerPrompt;
+    uint64_t defaultNumInferenceSteps;
+    uint64_t maxNumInferenceSteps;
 };
-
 }  // namespace ovms

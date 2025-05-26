@@ -30,37 +30,35 @@
 #include "src/stringutils.hpp"
 namespace ovms {
 
-constexpr dims_t DEFAULT_DIMENSIONS = {512, 512};
-std::variant<absl::Status, std::optional<dims_t>> getDimensions(const ovms::HttpPayload& payload) {
-    auto sizeIt = payload.parsedJson->FindMember("size");
-    if (sizeIt == payload.parsedJson->MemberEnd()) {
-        SPDLOG_ERROR("ER");
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions) {
+    if (dimensions == "auto") {
         return std::nullopt;
     }
-    if (!sizeIt->value.IsString()) {
-        SPDLOG_ERROR("ER");
-        return absl::InvalidArgumentError("size field is not a string");
-    }
-    std::string sizeStr = sizeIt->value.GetString();
-    if (sizeStr == "auto") {
-        SPDLOG_ERROR("ER");
-        return std::nullopt;
-    }
-    size_t xPos = sizeStr.find('x');
+    size_t xPos = dimensions.find('x');
     if (xPos == std::string::npos) {
         return absl::InvalidArgumentError("size field is not in correct format");
     }
-    std::string left = sizeStr.substr(0, xPos);
-    std::string right = sizeStr.substr(xPos + 1);
+    std::string left = dimensions.substr(0, xPos);
+    std::string right = dimensions.substr(xPos + 1);
     auto leftInt = ovms::stoi64(left);
     auto rightInt = ovms::stoi64(right);
-    if (!leftInt.has_value() || !rightInt.has_value() ||
-        rightInt.value() <= 0 || rightInt.value() > 4096 ||
-        leftInt.value() <= 0 || leftInt.value() > 4096) {
-        return absl::InvalidArgumentError(absl::StrCat(sizeStr, " field is not in a correct size format"));
+    if (!leftInt.has_value() || !rightInt.has_value()) {
+        return absl::InvalidArgumentError("size field is not in correct format");
     }
-    SPDLOG_ERROR("ER");
+    if (leftInt.value() <= 0 || rightInt.value() <= 0) {
+        return absl::InvalidArgumentError("size field values must be greater than 0");
+    }
     return std::make_pair(leftInt.value(), rightInt.value());
+}
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::HttpPayload& payload) {
+    auto sizeIt = payload.parsedJson->FindMember("size");
+    if (sizeIt == payload.parsedJson->MemberEnd()) {
+        return std::nullopt;
+    }
+    if (!sizeIt->value.IsString()) {
+        return absl::InvalidArgumentError("size field is not a string");
+    }
+    return getDimensions(sizeIt->value.GetString());
 }
 
 std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
@@ -126,9 +124,37 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
     SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(payload, key)); \
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(key, value);
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ovms::HttpPayload& payload) {
-    // FIXME what to do with unhandled parameters (no mapping to GenAI ignore or return error)?
-    // FIXME what to do if we have N in OpenAI & num_images_per_prompt in GenAI?
+absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    // check if we have any unhandled parameters
+    auto it = requestOptions.find("num_images_per_prompt");
+    if (it != requestOptions.end()) {
+        auto numImages = it->second.as<int>();
+        if (numImages > args.maxNumImagesPerPrompt) {
+            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
+        }
+    }
+    it = requestOptions.find("num_inference_steps");
+    if (it != requestOptions.end()) {
+        auto numInferenceSteps = it->second.as<int>();
+        if (numInferenceSteps > args.maxNumInferenceSteps) {
+            return absl::InvalidArgumentError(absl::StrCat("num_inference_steps is greater than maxNumInferenceSteps: ", args.maxNumInferenceSteps));
+        }
+    } else {
+        requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
+    }
+    it = requestOptions.find("strength");
+    if (it != requestOptions.end()) {
+        auto strength = it->second.as<float>();
+        if (strength > 1.0f) {
+            return absl::InvalidArgumentError(absl::StrCat("strength is greater than maxStrength: ", 1));
+        } else if (strength < 0.0f) {
+            return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
+        }
+    }
+    return absl::OkStatus();
+}
+
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -161,9 +187,8 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // guidance_scale float DONE
     // generator ov::genaiGenerator NO
     // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-
     ov::AnyMap requestOptions{};
-    SET_OR_RETURN(std::optional<dims_t>, dimensionsOpt, getDimensions(payload));
+    SET_OR_RETURN(std::optional<resolution_t>, dimensionsOpt, getDimensions(payload));
     if (dimensionsOpt.has_value()) {
         auto& dimensions = dimensionsOpt.value();
         requestOptions.insert({"width", dimensions.first});
@@ -202,11 +227,13 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         }
     }
     // now insert default values if not already populated ?
-    if (requestOptions.find("height") == requestOptions.end()) {
-        requestOptions.insert({"height", DEFAULT_DIMENSIONS.first});
-    }
-    if (requestOptions.find("width") == requestOptions.end()) {
-        requestOptions.insert({"width", DEFAULT_DIMENSIONS.second});
+    if (args.defaultResolution.has_value()) {
+        if (requestOptions.find("height") == requestOptions.end()) {
+            requestOptions.insert({"height", args.defaultResolution->first});
+        }
+        if (requestOptions.find("width") == requestOptions.end()) {
+            requestOptions.insert({"width", args.defaultResolution->second});
+        }
     }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
     // accepted are: prompt, prompt_2, prompt_3, negative_prompt, negative_prompt_2, negative_prompt_3,
@@ -225,16 +252,21 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
         }
     }
+    auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
+    if (!status.ok()) {
+        return status;
+    }
     // prepare log in string stream of ov::anymap
     std::ostringstream oss;
     for (const auto& [key, value] : requestOptions) {
         oss << key << ": " << value.as<std::string>() << " (type: " << value.type_info().name() << ")" << std::endl;
     }
     SPDLOG_DEBUG("Image generation request options: \n{}", oss.str());
+
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::HttpPayload& payload) {
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/createEdit 20/05/2025
@@ -266,10 +298,10 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Ht
     // guidance_scale float DONE
     // generator ov::genaiGenerator NO
     // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload);  // so far no differences in logic
+    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const ovms::HttpPayload& payload) {
+std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/createVariation 20/05/2025
@@ -298,7 +330,7 @@ std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const ovm
     // guidance_scale float DONE
     // generator ov::genaiGenerator NO
     // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload);  // so far no differences in logic
+    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
 }
 
 std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload) {
