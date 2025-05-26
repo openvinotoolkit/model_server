@@ -60,6 +60,7 @@ case $INSTALL_DRIVER_VERSION in \
 	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/intel-opencl-icd_25.18.33578.6-0_amd64.deb; \
 	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libigdgmm12_22.7.0_amd64.deb; \
 	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libze-intel-gpu1_25.18.33578.6-0_amd64.deb; \
+	dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
 ;; \
 *) \
         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
