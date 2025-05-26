@@ -740,7 +740,6 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     int index = 0;
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
-        std::cout << "BOT_TOKEN_ID: " << botTokenId << std::endl;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
         usage.completionTokens += generationOutput.generated_ids.size();
         if (request.echo)
@@ -892,8 +891,52 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             // Will make sense once we have chat templates? TODO(atobisze)
             writer.String("role");
             writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
+
+            // Tools output serialization
+            if (!toolsResponse.empty()) {
+                // Assuming there's only one tool call in the response
+                rapidjson::Document toolsDoc;
+                toolsDoc.Parse(toolsResponse.c_str());
+                if (toolsDoc.HasParseError()) {
+                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse toolsResponse as JSON");
+                    return "";
+                }
+
+                std::string toolName, toolParameters;
+
+                if (toolsDoc.HasMember("name") && toolsDoc["name"].IsString()) {
+                    toolName = toolsDoc["name"].GetString();
+                }
+
+                if (toolsDoc.HasMember("parameters") && toolsDoc["parameters"].IsObject()) {
+                    rapidjson::StringBuffer sb;
+                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                    toolsDoc["parameters"].Accept(toolWriter);
+                    toolParameters = sb.GetString();
+                } else {
+                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "toolsResponse does not contain valid parameters object");
+                    return "";
+                }
+
+                writer.String("tool_calls");
+                writer.StartArray();  // [
+                writer.StartObject();  // {
+                writer.String("id");
+                writer.String("tool_call_0");  // TODO: generate unique ID for each tool call
+
+                writer.String("type");
+                writer.String("function");
+
+                writer.String("function");
+                writer.StartObject();  // {
+                writer.String("name");
+                writer.String(toolName.c_str());  // TODO: replace with actual tool name from toolsDoc
+                writer.String("arguments");
+                writer.String(toolParameters.c_str());  // Assuming toolsResponse is a valid JSON string
+                writer.EndObject();  // }
+                writer.EndObject();  // }
+                writer.EndArray();   // ]
+            }
             writer.EndObject();  // }
         } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
