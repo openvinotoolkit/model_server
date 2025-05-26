@@ -26,6 +26,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../graph_export/graph_export_types.hpp"
+#include "../config_export_module/config_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -1311,6 +1312,32 @@ TEST(OvmsConfigTest, positiveSingle) {
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
 #endif
+}
+
+TEST(OvmsConfigManipulationTest, positiveTaskTextGen) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)downloadPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+    };
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    auto& serverSettigns = config.getServerSettings();
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::enable_model);
+
+    auto& modelSettings = config.getModelSettings();
+    ASSERT_EQ(modelSettings.modelName, modelName);
+    ASSERT_EQ(modelSettings.modelPath, modelPath);
+    ASSERT_EQ(modelSettings.configPath, downloadPath);
 }
 
 #pragma GCC diagnostic pop

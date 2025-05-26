@@ -102,9 +102,24 @@ bool Config::validate() {
         return true;
     }
 
-    if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
-        std::cerr << "Use either config_path or model_path with model_name" << std::endl;
-        return false;
+    if (this->serverSettings.exportConfigType == unknown_model) {
+        if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
+            std::cerr << "Use either config_path or model_path with model_name" << std::endl;
+            return false;
+        } else {
+            if (configPath().empty()) {
+                std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
+                return false;
+            }
+            if (modelName().empty()) {
+                std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl;
+                return false;
+            }
+            if (modelPath().empty()) {
+                std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
+                return false;
+            }
+        }
     }
 
     if (configPath().empty() && !(!modelName().empty() && !modelPath().empty())) {

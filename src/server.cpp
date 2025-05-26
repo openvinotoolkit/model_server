@@ -326,7 +326,7 @@ Status Server::startModules(ovms::Config& config) {
         if (config.getServerSettings().hfSettings.pullHfModelMode)
             return status;
     }
-    if (config.getServerSettings().exportConfigType) {
+    if (config.getServerSettings().exportConfigType != unknown_model) {
         INSERT_MODULE(CONFIG_EXPORT_MODULE_NAME, it);
         START_MODULE(it);
     }
