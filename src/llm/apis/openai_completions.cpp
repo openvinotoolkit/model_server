@@ -727,7 +727,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
     return status;
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, int64_t botTokenId) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -740,12 +740,30 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     int index = 0;
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
+        std::cout << "BOT_TOKEN_ID: " << botTokenId << std::endl;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
         usage.completionTokens += generationOutput.generated_ids.size();
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
+        // Find botTokenId in generated_ids
+        auto botTokenIt = std::find(generationOutput.generated_ids.begin(), generationOutput.generated_ids.end(), botTokenId);
+        std::string completeResponse, toolsResponse;
+        if (botTokenIt != generationOutput.generated_ids.end()) {
+            // Tokens before botTokenId (not including botTokenId)
+            completeResponse = tokenizer.decode(std::vector<int64_t>(generationOutput.generated_ids.begin(), botTokenIt));
+            // Tokens after botTokenId
+            auto afterBotTokenIt = botTokenIt + 1;
+            if (afterBotTokenIt != generationOutput.generated_ids.end()) {
+            toolsResponse = tokenizer.decode(std::vector<int64_t>(afterBotTokenIt, generationOutput.generated_ids.end()));
+            }
+        } else {
+            // If botTokenId not found, decode all tokens as completeResponse
+            completeResponse = tokenizer.decode(generationOutput.generated_ids);
+        }
+
+        std::cout << "Complete response: " << completeResponse << std::endl;
+        std::cout << "Tools response: " << toolsResponse << std::endl;
+        
         writer.StartObject();  // {
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria

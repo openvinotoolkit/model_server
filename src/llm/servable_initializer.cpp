@@ -74,6 +74,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             bos_token = ""
             eos_token = ""
+
+            bot_token = ""
+            bot_token_id = ""
             chat_template = default_chat_template
             tool_chat_template = None
 
@@ -98,6 +101,16 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.
                 eos_token = data.get("eos_token", "")
                 eos_token = "" if eos_token is None else eos_token  # Null token conversion to empty string.
+                bot_token = data.get("bot_token", "")
+                bot_token = "" if bot_token is None else bot_token  # Null token conversion to empty string.
+                # Map bot_token to it's value in vocabulary        
+                if bot_token != "":
+                    assert(data.get("added_tokens_decoder", None) is not None)
+                    for token_id, token_info in data["added_tokens_decoder"].items():
+                        if token_info["content"] == bot_token:
+                            bot_token_id = token_id
+                            break
+
                 chat_template = data.get("chat_template", default_chat_template)
                 if isinstance(chat_template, list):
                     for template_entry in chat_template:
@@ -117,6 +130,12 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
         properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
+        properties->templateProcessor.botToken = locals["bot_token"].cast<std::string>();
+        std::string botTokenId = locals["bot_token_id"].cast<std::string>();
+        SPDLOG_DEBUG("Bot token id: {}", botTokenId);
+        if (!botTokenId.empty()) {
+            properties->templateProcessor.botTokenId = static_cast<int64_t>(std::stoll(botTokenId));
+        }
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
         properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
     } catch (const pybind11::error_already_set& e) {

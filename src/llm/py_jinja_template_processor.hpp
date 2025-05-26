@@ -34,6 +34,8 @@ class PyJinjaTemplateProcessor {
 public:
     std::string bosToken = "";
     std::string eosToken = "";
+    std::string botToken = "";
+    size_t botTokenId = 0;
     std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
     std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
 

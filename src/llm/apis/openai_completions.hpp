@@ -214,7 +214,7 @@ public:
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
     absl::Status parseTools();
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, int64_t botTokenId);
     std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
