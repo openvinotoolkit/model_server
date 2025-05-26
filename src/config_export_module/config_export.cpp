@@ -52,17 +52,16 @@ Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& conf
 Status createModelConfig(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
     std::ostringstream oss;
     // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << modelSettings.modelName << R"(",
-                    "base_path": ")" << modelSettings.modelPath << R"("
-                }
+    oss << R"({
+    "model_config_list": [
+        { 
+            "config": {
+                "name": ")" << modelSettings.modelName << R"(",
+                "base_path": ")" << modelSettings.modelPath << R"("
             }
-        ]
-    })";
+        }
+    ]
+})";
     // clang-format on
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
@@ -83,16 +82,17 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
     bool erased = false;
     for (const auto& config : modelsItr->value.GetArray()) {
         auto checkItemDelete =  config.FindMember("config");
-        if( checkItemDelete != config.MemberEnd() && config["name"].GetString() == modelSettings.modelName) 
+        if( checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) 
         {
-            configJson.Erase(&config);
+            SPDLOG_DEBUG("Erasing model from config: {}", modelSettings.modelName);
+            configJson.Erase(&config["config"]);
             erased = true;
             break;
         }
     }
 
     if (!erased) {
-        SPDLOG_ERROR("Configuration file doesn't have model with name {}.", modelSettings.modelName);
+        SPDLOG_ERROR("Configuration file doesn't have model with name: {}.", modelSettings.modelName);
         return StatusCode::MODEL_NAME_MISSING;
     }
 
@@ -109,22 +109,65 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
     return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
+
+
 Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << modelSettings.modelName << R"(",
-                    "base_path": ")" << modelSettings.modelPath << R"("
-                }
-            }
-        ]
-    })";
-    // clang-format on
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
+    rapidjson::Document configJson;
+    auto status = loadJsonConfig(fullPath, configJson);
+    if (!status.ok()) {
+        return status;
+    }
+
+    const auto modelsItr = configJson.FindMember("model_config_list");
+    if (modelsItr == configJson.MemberEnd() || !modelsItr->value.IsArray()) {
+        SPDLOG_ERROR("Configuration file doesn't have models property.");
+        return StatusCode::JSON_INVALID;
+    }
+
+    bool alreadyAdded = false;
+    for (const auto& config : modelsItr->value.GetArray()) {
+        auto checkItemDelete =  config.FindMember("config");
+        if( checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) 
+        {
+            alreadyAdded = true;
+            break;
+        }
+    }
+
+    if (alreadyAdded) {
+        SPDLOG_ERROR("Could not add model to configuration file: {}. Model with the same name already exists.", modelSettings.modelName);
+        return StatusCode::MODEL_NAME_OCCUPIED;
+    }
+
+    auto alloc = configJson.GetAllocator();
+    
+    rapidjson::Value newConfig;
+    newConfig.SetObject();
+    rapidjson::Value name;
+    name.SetString(modelSettings.modelName.c_str(), alloc);
+    newConfig.AddMember("name", name, alloc);
+    rapidjson::Value path;
+    path.SetString(modelSettings.modelPath.c_str(), alloc);
+    newConfig.AddMember("base_path", path, alloc);
+
+    rapidjson::Value newConfigItem;
+    newConfigItem.SetObject();
+    newConfigItem.AddMember("config", newConfig, alloc);
+
+    rapidjson::Value& array = configJson["model_config_list"];
+    array.PushBack(newConfigItem, alloc);
+
+    SPDLOG_DEBUG("Model to be added to configuration file: {}", fullPath);
+    std::string configString = "{ }";
+    // Serialize the document to a JSON string
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    configJson.Accept(writer);
+
+    // Output the JSON string
+    configString = buffer.GetString();
+
+    return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
 Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings){
