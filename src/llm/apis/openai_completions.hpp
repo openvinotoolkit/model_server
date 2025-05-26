@@ -101,6 +101,7 @@ struct OpenAIChatCompletionsRequest {
     std::optional<int> maxNgramSize{std::nullopt};
 
     std::optional<uint32_t> maxModelLength;
+    std::optional<std::string> responseSchema{std::nullopt};
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -200,6 +201,7 @@ public:
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
+    std::optional<std::string> getResponseSchema() const;
 
     bool isStream() const;
     std::string getModel() const;
