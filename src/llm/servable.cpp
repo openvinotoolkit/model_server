@@ -26,6 +26,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
@@ -58,8 +59,9 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->endpoint,
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
+    auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -115,7 +117,6 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         inputText = executionContext->apiHandler->getPrompt().value();
     }
     }
-
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
