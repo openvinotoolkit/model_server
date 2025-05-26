@@ -81,9 +81,8 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
 
     bool erased = false;
     for (const auto& config : modelsItr->value.GetArray()) {
-        auto checkItemDelete =  config.FindMember("config");
-        if( checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) 
-        {
+        auto checkItemDelete = config.FindMember("config");
+        if (checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) {
             SPDLOG_DEBUG("Erasing model from config: {}", modelSettings.modelName);
             configJson.Erase(&config["config"]);
             erased = true;
@@ -109,8 +108,6 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
     return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
-
-
 Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
     rapidjson::Document configJson;
     auto status = loadJsonConfig(fullPath, configJson);
@@ -126,9 +123,8 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
 
     bool alreadyAdded = false;
     for (const auto& config : modelsItr->value.GetArray()) {
-        auto checkItemDelete =  config.FindMember("config");
-        if( checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) 
-        {
+        auto checkItemDelete = config.FindMember("config");
+        if (checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) {
             alreadyAdded = true;
             break;
         }
@@ -140,7 +136,7 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     }
 
     auto alloc = configJson.GetAllocator();
-    
+
     rapidjson::Value newConfig;
     newConfig.SetObject();
     rapidjson::Value name;
@@ -170,7 +166,7 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
-Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings){
+Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
     std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
     if (std::filesystem::exists(fullPath)) {
         return updateConfigAddModel(fullPath, modelSettings);
@@ -179,7 +175,7 @@ Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsI
     }
 }
 
-Status DisableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings){
+Status DisableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
     std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
     if (std::filesystem::exists(fullPath)) {
         return removeModelFromConfig(fullPath, modelSettings);

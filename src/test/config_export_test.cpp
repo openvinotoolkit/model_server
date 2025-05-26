@@ -76,7 +76,6 @@ const std::string expected2ModelsConfigContents = R"({
 }
 )";
 
-
 class ConfigCreationTest : public TestWithTempDir {
 protected:
     ovms::ModelsSettingsImpl modelsSettings;
@@ -131,7 +130,6 @@ TEST_F(ConfigCreationTest, positiveAddTwoModelsToNonEmptyConfig) {
     configContents = GetFileContents(configFile);
     ASSERT_EQ(expectedConfigContentsTwoModels, configContents) << configContents;
 }
-
 
 TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
     auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
@@ -223,4 +221,3 @@ TEST_F(ConfigCreationTest, positiveWithStart) {
     status = manager.startFromFile(ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
 }
-

@@ -472,7 +472,6 @@ const std::string MEDIAPIPE_SUBCONFIG_SCHEMA = R"({
 }
 })";
 
-
 #ifdef _WIN32
 class FileHandle {
 public:

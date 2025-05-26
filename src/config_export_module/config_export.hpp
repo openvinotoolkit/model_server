@@ -16,11 +16,10 @@
 //*****************************************************************************
 #include <string>
 
-
 namespace ovms {
-    struct ModelsSettingsImpl;
-    enum ConfigExportType;
-    class Status;
+struct ModelsSettingsImpl;
+enum ConfigExportType;
+class Status;
 
-    Status createConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
+Status createConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
 }  // namespace ovms
