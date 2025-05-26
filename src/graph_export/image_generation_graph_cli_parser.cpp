@@ -72,31 +72,24 @@ std::vector<std::string> ImageGenerationGraphCLIParser::parse(const std::vector<
 }
 
 void ImageGenerationGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+    ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = ImageGenerationGraphCLIParser::defaultGraphSettings();
+    // Deduct model name
+    if (modelName != "") {
+        imageGenerationGraphSettings.modelName = modelName;
+    } else {
+        imageGenerationGraphSettings.modelName = hfSettings.sourceModel;
+    }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
-            hfSettings.imageGenerationGraphSettings = ImageGenerationGraphCLIParser::defaultGraphSettings();
-            // Deduce model name
-            if (modelName != "") {
-                hfSettings.imageGenerationGraphSettings.modelName = modelName;
-            } else {
-                hfSettings.imageGenerationGraphSettings.modelName = hfSettings.sourceModel;
-            }
-            return;
-        } else {
+        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
-    }
-
-    // Deduce model name
-    if (modelName != "") {
-        hfSettings.imageGenerationGraphSettings.modelName = modelName;
     } else {
-        hfSettings.imageGenerationGraphSettings.modelName = hfSettings.sourceModel;
+        imageGenerationGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
+        imageGenerationGraphSettings.defaultResolution = result->operator[]("default_resolution").as<std::string>();
     }
 
-    hfSettings.imageGenerationGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    hfSettings.imageGenerationGraphSettings.defaultResolution = result->operator[]("default_resolution").as<std::string>();
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
 }
 
 }  // namespace ovms

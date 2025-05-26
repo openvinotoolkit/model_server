@@ -570,7 +570,7 @@ TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
         "true",
     };
     int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - unmatched arguments: --unsupported_param, true,");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: image_generation - error parsing options - unmatched arguments : --unsupported_param, true,");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
@@ -958,8 +958,9 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.task, ovms::image_generation);
-    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.defaultResolution, "1024x1024");
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "1024x1024");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
@@ -985,8 +986,9 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.task, ovms::image_generation);
-    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(hfSettings.imageGenerationGraphSettings.defaultResolution, "512x512");
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "CPU");
+    ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "512x512");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {

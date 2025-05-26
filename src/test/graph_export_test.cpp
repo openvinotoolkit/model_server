@@ -406,9 +406,10 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::image_generation;
-    ovms::EmbeddingsGraphSettingsImpl imageGenerationGraphSettings;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
     imageGenerationGraphSettings.targetDevice = "GPU";
     imageGenerationGraphSettings.defaultResolution = "800x800";
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
