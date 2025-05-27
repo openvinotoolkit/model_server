@@ -46,11 +46,30 @@ cc_library(
 )
 
 cc_library(
+    name = "optimum_export",
+    srcs = ["optimum_export.cpp"],
+    hdrs = ["optimum_export.hpp"],
+    deps =  [
+        ":libgit2",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovmsfilesystem",
+        "@ovms//src:libovmslocalfilesystem",
+    ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
     name = "hf_pull_model_module",
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
         ":libgit2",
+        ":optimum_export",
         "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
