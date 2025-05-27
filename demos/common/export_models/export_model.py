@@ -502,13 +502,14 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     task_parameters['plugin_config_str'] = plugin_config_str
 
     # assert that max_resolution if exists, is in WxH format
-    if task_parameters['max_resolution']:
-        if 'x' not in task_parameters['max_resolution']:
-            raise ValueError("max_resolution should be in WxH format, e.g. 1024x768")
-        width, height = task_parameters['max_resolution'].split('x')
-        if not (width.isdigit() and height.isdigit()):
-            raise ValueError("max_resolution should be in WxH format with positive integers, e.g. 1024x768")
-        task_parameters['max_resolution'] = '{}x{}'.format(int(width), int(height))
+    for param in ['max_resolution', 'default_resolution']:
+        if task_parameters[param]:
+            if 'x' not in task_parameters[param]:
+                raise ValueError(param + " should be in WxH format, e.g. 1024x768")
+            width, height = task_parameters[param].split('x')
+            if not (width.isdigit() and height.isdigit()):
+                raise ValueError(param + " should be in WxH format with positive integers, e.g. 1024x768")
+            task_parameters[param] = '{}x{}'.format(int(width), int(height))
 
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(image_generation_graph_template)
     graph_content = gtemplate.render(model_path=model_path, **task_parameters)
