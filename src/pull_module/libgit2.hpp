@@ -49,6 +49,7 @@ public:
     HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
     Status cloneRepository();
     std::string getGraphDirectory();
+    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
 
 protected:
     std::string sourceModel;
@@ -61,7 +62,6 @@ protected:
     HfDownloader();
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
-    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     bool CheckIfProxySet();
     Status checkIfOverwriteAndRemove(const std::string& path);
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);

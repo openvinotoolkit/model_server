@@ -55,6 +55,8 @@ public:
         streamer = std::make_shared<ov::genai::TextStreamer>(*tokenizer, callback);
     }
     static void TearDownTestSuite() {
+        streamer.reset();
+        tokenizer.reset();
         servable.reset();
 #if (PYTHON_DISABLE == 0)
         py::finalize_interpreter();

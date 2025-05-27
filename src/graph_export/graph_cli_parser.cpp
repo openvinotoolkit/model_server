@@ -48,10 +48,6 @@ void GraphCLIParser::createOptions() {
             "Type of the pipeline to be used: Choices LM, LM_CB, VLM, VLM_CB, AUTO. AUTO is used by default.",
             cxxopts::value<std::string>(),
             "PIPELINE_TYPE")
-        ("graph_target_device",
-            "CPU, GPU, NPU or HETERO, default is CPU.",
-            cxxopts::value<std::string>()->default_value("CPU"),
-            "GRAPH_TARGET_DEVICE")
         ("enable_prefix_caching",
             "This algorithm is used to cache the prompt tokens.",
             cxxopts::value<std::string>()->default_value("true"),
@@ -106,62 +102,50 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
 }
 
 void GraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+    TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
+    graphSettings.targetDevice = hfSettings.targetDevice;
+    // Deduct model name
+    if (modelName != "") {
+        graphSettings.modelName = modelName;
+    } else {
+        graphSettings.modelName = hfSettings.sourceModel;
+    }
+    // Set model path
+    if (modelPath != "") {
+        graphSettings.modelPath = modelPath;
+    }
+
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (hfSettings.pullHfModelMode) {
-            hfSettings.graphSettings = GraphCLIParser::defaultGraphSettings();
-            // Deduct model name
-            if (modelName != "") {
-                hfSettings.graphSettings.modelName = modelName;
-            } else {
-                hfSettings.graphSettings.modelName = hfSettings.sourceModel;
-            }
-
-            // Set model path
-            if (modelPath != "") {
-                hfSettings.graphSettings.modelPath = modelPath;
-            }
-            return;
-        } else {
+        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
+        }
+    } else {
+        graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
+        graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
+        graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
+        graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
+        if (result->count("draft_source_model")) {
+            graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
+        }
+        if (result->count("pipeline_type")) {
+            graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
+        }
+        if (result->count("max_num_batched_tokens")) {
+            graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
+        }
+
+        // Plugin configuration
+        if (result->count("max_prompt_len")) {
+            graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
+        }
+
+        if (result->count("kv_cache_precision")) {
+            graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
         }
     }
 
-    // Deduct model name
-    if (modelName != "") {
-        hfSettings.graphSettings.modelName = modelName;
-    } else {
-        hfSettings.graphSettings.modelName = hfSettings.sourceModel;
-    }
-
-    // Set model path
-    if (modelPath != "") {
-        hfSettings.graphSettings.modelPath = modelPath;
-    }
-
-    hfSettings.graphSettings.maxNumSeqs = result->operator[]("max_num_seqs").as<uint32_t>();
-    hfSettings.graphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-    hfSettings.graphSettings.enablePrefixCaching = result->operator[]("enable_prefix_caching").as<std::string>();
-    hfSettings.graphSettings.cacheSize = result->operator[]("cache_size").as<uint32_t>();
-    hfSettings.graphSettings.dynamicSplitFuse = result->operator[]("dynamic_split_fuse").as<std::string>();
-    if (result->count("draft_source_model")) {
-        hfSettings.graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
-    }
-    if (result->count("pipeline_type")) {
-        hfSettings.graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
-    }
-    if (result->count("max_num_batched_tokens")) {
-        hfSettings.graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
-    }
-
-    // Plugin configuration
-    if (result->count("max_prompt_len")) {
-        hfSettings.graphSettings.pluginConfig.maxPromptLength = result->operator[]("max_prompt_len").as<uint32_t>();
-    }
-
-    if (result->count("kv_cache_precision")) {
-        hfSettings.graphSettings.pluginConfig.kvCachePrecision = result->operator[]("kv_cache_precision").as<std::string>();
-    }
+    hfSettings.graphSettings = std::move(graphSettings);
 }
 
 }  // namespace ovms
