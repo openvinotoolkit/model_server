@@ -195,7 +195,7 @@ Status FileSystem::createFileOverwrite(const std::string& filePath, const std::s
         if (graphFile.is_open()) {
             graphFile << contents << std::endl;
         } else {
-            SPDLOG_ERROR("Unable to open file: ", filePath);
+            SPDLOG_ERROR("Unable to open file: {}", filePath);
             return StatusCode::FILE_INVALID;
         }
     }

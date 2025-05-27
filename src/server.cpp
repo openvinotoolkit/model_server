@@ -433,7 +433,8 @@ int Server::start(int argc, char** argv) {
         }
         while (!shutdown_request &&
                !serverSettings.hfSettings.pullHfModelMode &&
-               !serverSettings.listServables) {
+               !serverSettings.listServables &&
+               serverSettings.exportConfigType == unknown_model) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

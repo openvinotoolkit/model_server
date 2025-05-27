@@ -515,7 +515,7 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
     }
     if (result->count("model_path")) {
-        modelsSettings.modelPath = result->operator[]("model_name").as<std::string>();
+        modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
     } else if (result->count("model_repository_path") && result->count("model_name")) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
     }
