@@ -67,7 +67,12 @@ parser_rerank.add_argument('--version', default="1", help='version of the model'
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
-parser_image_generation.add_argument('--plugin_config', default="", help='Plugin config for all models in the pipeline', dest='plugin_config_str')  #
+parser_image_generation.add_argument('--plugin_config', default="", help='Plugin config for all models in the pipeline', dest='plugin_config_str')
+parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
+parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
+parser_image_generation.add_argument('--max_number_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_number_images_per_prompt')
+parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
+parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 args = vars(parser.parse_args())
 
 embedding_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
@@ -229,9 +234,13 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "{{model_path}}",
-          {%- if plugin_config_str %}
-            plugin_config: '{{plugin_config_str}}',
-          {% endif %}
+          {% if plugin_config_str %}plugin_config: '{{plugin_config_str}}',{% endif %}
+          device: "{{target_device|default("CPU", true)}}",
+          {% if max_resolution %}max_resolution: '{{max_resolution}}',{% endif %}
+          {% if default_resolution %}default_resolution: '{{max_resolution}}',{% endif %}
+          {% if max_number_images_per_prompt > 0 %}max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
+          {% if default_num_inference_steps > 0 %}default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
+          {% if max_num_inference_steps > 0 %}max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
       }
   }
 }"""
@@ -490,9 +499,19 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
                 raise ValueError("plugin_config should be a valid JSON object")
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid plugin_config JSON string: {e}")
+    task_parameters['plugin_config_str'] = plugin_config_str
+
+    # assert that max_resolution if exists, is in WxH format
+    if task_parameters['max_resolution']:
+        if 'x' not in task_parameters['max_resolution']:
+            raise ValueError("max_resolution should be in WxH format, e.g. 1024x768")
+        width, height = task_parameters['max_resolution'].split('x')
+        if not (width.isdigit() and height.isdigit()):
+            raise ValueError("max_resolution should be in WxH format with positive integers, e.g. 1024x768")
+        task_parameters['max_resolution'] = '{}x{}'.format(int(width), int(height))
 
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(image_generation_graph_template)
-    graph_content = gtemplate.render(model_path=model_path, plugin_config_str=plugin_config_str)
+    graph_content = gtemplate.render(model_path=model_path, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
          f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -529,5 +548,12 @@ elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'image_generation':
+    template_parameters = {k: v for k, v in args.items() if k in [
+        'target_device',
+        'max_resolution',
+        'default_resolution',
+        'max_number_images_per_prompt',
+        'default_num_inference_steps',
+        'max_num_inference_steps',
+    ]}
     export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['plugin_config_str'])
-
