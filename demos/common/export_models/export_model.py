@@ -67,7 +67,7 @@ parser_rerank.add_argument('--version', default="1", help='version of the model'
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
-parser_image_generation.add_argument('--resolution', default="512x512", help='Resolution of generated images if not specified by the request', dest='resolution')  # unused for now, param as an example
+parser_image_generation.add_argument('--plugin_config', default="", help='Plugin config for all models in the pipeline', dest='plugin_config_str')  #
 args = vars(parser.parse_args())
 
 embedding_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
@@ -153,7 +153,7 @@ node: {
           {%- if pipeline_type %}
           pipeline_type: {{pipeline_type}},{% endif %}
           models_path: "{{model_path}}",
-          plugin_config: '{{plugin_config}}',
+          plugin_config_str: '{{plugin_config_str}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
           {%- if max_num_batched_tokens %}
@@ -229,7 +229,9 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "{{model_path}}",
-          #resolution: "{{resolution}}",  # unused for now
+          {%- if plugin_config_str %}
+            plugin_config: '{{plugin_config_str}}',
+          {% endif %}
       }
   }
 }"""
@@ -469,21 +471,28 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, resolution):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, plugin_config_str):
     model_path = "./"
+    target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
 
     if os.path.isfile(model_index_path):
-        print("Model index file already exists. Skipping conversion.")
-        return
-    
-    optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
+        print("Model index file already exists. Skipping conversion, re-generating graph only.")
+    else:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export image generation model model", source_model)   
 
-    if os.system(optimum_command):
-        raise ValueError("Failed to export image generation model model", source_model)   
+    if plugin_config_str:
+        try:
+            plugin_config = json.loads(plugin_config_str)
+            if not isinstance(plugin_config, dict):
+                raise ValueError("plugin_config should be a valid JSON object")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid plugin_config JSON string: {e}")
 
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(image_generation_graph_template)
-    graph_content = gtemplate.render(model_path=model_path, resolution=resolution)
+    graph_content = gtemplate.render(model_path=model_path, plugin_config_str=plugin_config_str)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
          f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
@@ -520,5 +529,5 @@ elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'image_generation':
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['resolution'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['plugin_config_str'])
 
