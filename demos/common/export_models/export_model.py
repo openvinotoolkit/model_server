@@ -158,7 +158,7 @@ node: {
           {%- if pipeline_type %}
           pipeline_type: {{pipeline_type}},{% endif %}
           models_path: "{{model_path}}",
-          plugin_config_str: '{{plugin_config_str}}',
+          plugin_config: '{{plugin_config}}',
           enable_prefix_caching: {% if not enable_prefix_caching %}false{% else %} true{% endif%},
           cache_size: {{cache_size|default("10", true)}},
           {%- if max_num_batched_tokens %}
