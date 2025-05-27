@@ -66,7 +66,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     bool isHttpsProxyUsed = !getEnvReturnOrDefaultIfNotSet("https_proxy").empty();
     if (isHttpsProxyUsed) {
         if (timeoutOpt.value() != 0)
-            SPDLOG_WARN("We are not able to set connection timeout when proxy is used");
+            SPDLOG_DEBUG("We are not able to set connection timeout when proxy is used");
     } else {
         opts.serverConnectTimeoutMs = timeoutOpt.value();
     }
@@ -107,13 +107,13 @@ Status HfPullModelModule::clone() const {
     if (std::holds_alternative<Status>(guardOrError)) {
         return std::get<Status>(guardOrError);
     }
-    HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
+    HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
     auto status = hfDownloader.cloneRepository();
     if (!status.ok()) {
         return status;
     }
     GraphExport graphExporter;
-    status = graphExporter.createGraphFile(this->hfSettings.downloadPath, this->hfSettings.graphSettings);
+    status = graphExporter.createServableConfig(hfDownloader.getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }

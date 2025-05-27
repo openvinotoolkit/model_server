@@ -287,8 +287,8 @@ RUN bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms 
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
 ARG RUN_TESTS=0
-COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh /ovms/
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+COPY run_unit_tests.sh prepare_llm_models.sh prepare_gpu_models.sh demos/common/export_models/export_model.py /ovms/
+RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 ARG ovms_metadata_file
 
@@ -389,6 +389,8 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
 ENV LD_LIBRARY_PATH=/ovms/lib
 
 COPY --from=pkg /ovms_release /ovms
+# hadolint ignore=SC2114
+RUN mv /ovms/bin/git* /usr/bin
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info

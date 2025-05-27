@@ -53,6 +53,7 @@
 #include "config.hpp"
 #include "grpcservermodule.hpp"
 #include "pull_module/hf_pull_model_module.hpp"
+#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -124,6 +125,8 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
+    SPDLOG_DEBUG("list_models: {}", config.getServerSettings().listServables);
+    SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
 static void onInterrupt(int status) {
@@ -258,6 +261,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<CAPIModule>(*this);
     if (name == HF_MODEL_PULL_MODULE_NAME)
         return std::make_unique<HfPullModelModule>();
+    if (name == SERVABLES_CONFIG_MANAGER_MODULE_NAME)
+        return std::make_unique<ServablesConfigManagerModule>();
     return nullptr;
 }
 
@@ -301,7 +306,12 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 
-    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+    if (config.getServerSettings().listServables) {
+        INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
+        START_MODULE(it);
+        return status;
+    }
+    if (config.getServerSettings().hfSettings.pullHfModelMode || config.getServerSettings().hfSettings.pullHfAndStartModelMode) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
         if (!status.ok()) {
@@ -309,7 +319,9 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        return status;
+        // Return from modules only in --pull mode, otherwise start the rest of modules
+        if (config.getServerSettings().hfSettings.pullHfModelMode)
+            return status;
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -412,7 +424,9 @@ int Server::start(int argc, char** argv) {
         if (!ret.ok()) {
             return statusToExitCode(ret);
         }
-        while (!shutdown_request && !serverSettings.hfSettings.pullHfModelMode) {
+        while (!shutdown_request &&
+               !serverSettings.hfSettings.pullHfModelMode &&
+               !serverSettings.listServables) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

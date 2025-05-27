@@ -151,6 +151,8 @@ public:
     }
 
     static void TearDownTestSuite() {
+        llmExecutorWrapper.reset();
+        cbPipe.reset();
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -3713,6 +3715,7 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
                 enable_prefix_caching: true
                 max_tokens_limit: 700
                 best_of_limit: 3
+                cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672, aggregation_mode: NORM_SUM, apply_rotation: true}
             }
         }
         input_stream_handler {
@@ -3741,6 +3744,11 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, true);
     ASSERT_EQ(properties->maxTokensLimit, 700);
     ASSERT_EQ(properties->bestOfLimit, 3);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_start_size(), 32);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_recent_size(), 128);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_max_cache_size(), 672);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::NORM_SUM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);

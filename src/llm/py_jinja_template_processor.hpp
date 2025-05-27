@@ -35,6 +35,7 @@ public:
     std::string bosToken = "";
     std::string eosToken = "";
     std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
+    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
 
     static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, std::string modelsPath, const std::string& requestBody, std::string& output);
 };

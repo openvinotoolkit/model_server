@@ -341,7 +341,11 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "libovmsfilesystem",
+        "//src/graph_export:graph_export_types",
         "//src/graph_export:graph_cli_parser",
+        "//src/graph_export:rerank_graph_cli_parser",
+        "//src/graph_export:embeddings_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -417,10 +421,20 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 cc_library(
+    name = "modelextensions",
+    hdrs = ["modelextensions.hpp",],
+    srcs = ["modelextensions.cpp",],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+cc_library(
     name = "modelinstance_h",
     hdrs = ["modelinstance.hpp",],
     srcs = [],
     deps = [
+        "modelextensions",
         "libovmslogging",
         "libovms_outputkeeper",
         "libovmsprofiler",
@@ -703,6 +717,7 @@ cc_library(
             "//src/kfserving_api:kfserving_api_cpp",
             "capimodule",
             "//src/pull_module:hf_pull_model_module",
+            "//src/servables_config_manager_module:servablesconfigmanagermodule",
             "predict_request_validation_utils", # to be removed when capi has its own lib and added there @atobisze
             "kfs_backend_impl",
             "tfs_backend_impl",
@@ -766,6 +781,7 @@ cc_library(
         "@minitrace//:trace",
         "libovms_module",
         "//src:cpp_headers",
+        "//src/graph_export:graph_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovmsprecision",
@@ -2989,6 +3005,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
+            ":listmodels_test",
             ":graph_export_test",
             ] + select({
                 "//conditions:default": [
@@ -3099,10 +3116,26 @@ cc_library(
     srcs = ["test/pull_hf_model_test.cpp"],
     linkopts = [],
     deps = [
+        "//src/servables_config_manager_module:listmodels",
         ":test_utils",
         "//src/pull_module:libgit2",
         "//src/pull_module:hf_pull_model_module",
         "//src:ovms_lib",
+        "libovmsstring_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "listmodels_test",
+    srcs = ["test/listmodels_test.cpp"],
+    alwayslink = True,
+    linkopts = [],
+    deps = [
+        "//src/servables_config_manager_module:listmodels",
+        ":test_utils",
+        #"//src:ovms_lib",
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
     ],
@@ -3240,6 +3273,7 @@ cc_library(
     deps = [
         "libovms_module",
         "//src:cpp_headers",
+        "//src/graph_export:graph_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
     ],

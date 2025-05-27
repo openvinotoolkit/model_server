@@ -43,7 +43,7 @@ const std::string expectedOneSettingPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8"}',
             enable_prefix_caching: true,
@@ -81,7 +81,7 @@ const std::string expectedFullPluginGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":"123","MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
@@ -119,7 +119,7 @@ const std::string expectedDefaultGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{ }',
             enable_prefix_caching: true,
@@ -139,6 +139,113 @@ const std::string expectedDefaultGraphContents = R"(
     }
 )";
 
+const std::string expectedRerankJsonContents = R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": "myModel_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": "myModel_rerank_model",
+                    "base_path": "rerank",
+                    "target_device": "GPU",
+                    "plugin_config": { "NUM_STREAMS": "2" }
+                }
+            }
+        ]
+    }
+)";
+
+const std::string expectedEmbeddingsJsonContents = R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": "myModel_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": "myModel_embeddings_model",
+                    "base_path": "embeddings",
+                    "target_device": "GPU",
+                    "plugin_config": { "NUM_STREAMS": "2" }
+                }
+            }
+        ]
+    }
+)";
+
+const std::string expectedRerankGraphContents = R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:rerank"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_rerank_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "RERANK_SESSION:rerank"
+        calculator: "RerankCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+    }
+)";
+
+const std::string expectedEmbeddingsGraphContents = R"(
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:tokenizer"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_tokenizer_model"
+        }
+    }
+    }
+    node {
+    calculator: "OpenVINOModelServerSessionCalculator"
+    output_side_packet: "SESSION:embeddings"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+        servable_name: "myModel_embeddings_model"
+        }
+    }
+    }
+    node {
+        input_side_packet: "TOKENIZER_SESSION:tokenizer"
+        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
+        calculator: "EmbeddingsCalculator"
+        input_stream: "REQUEST_PAYLOAD:input"
+        output_stream: "RESPONSE_PAYLOAD:output"
+        node_options: {
+            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+            normalize_embeddings: true,
+        }
+    }
+    }
+)";
+
 class GraphCreationTest : public TestWithTempDir {
 protected:
     void TearDown() {
@@ -147,43 +254,126 @@ protected:
 };
 
 TEST_F(GraphCreationTest, positiveDefault) {
-    ovms::GraphSettingsImpl graphSettings;
+    ovms::HFSettingsImpl hfSettings;
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedDefaultGraphContents, graphContents);
+    ASSERT_EQ(expectedDefaultGraphContents, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, rerankPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::rerank;
+    ovms::RerankGraphSettingsImpl rerankGraphSettings;
+    rerankGraphSettings.targetDevice = "GPU";
+    rerankGraphSettings.modelName = "myModel";
+    rerankGraphSettings.numStreams = 2;
+    rerankGraphSettings.maxDocLength = 18;
+    rerankGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
+
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedRerankGraphContents, graphContents) << graphContents;
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    ASSERT_EQ(expectedRerankJsonContents, jsonContents) << jsonContents;
+}
+
+TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::embeddings;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    embeddingsGraphSettings.targetDevice = "GPU";
+    embeddingsGraphSettings.modelName = "myModel";
+    embeddingsGraphSettings.numStreams = 2;
+    embeddingsGraphSettings.truncate = "true";
+    embeddingsGraphSettings.normalize = "true";
+    embeddingsGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents) << graphContents;
+
+    std::string jsonContents = GetFileContents(subconfigPath);
+    ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents) << jsonContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
-    ovms::GraphSettingsImpl graphSettings;
+    ovms::HFSettingsImpl hfSettings;
+    ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.pluginConfig.kvCachePrecision = "u8";
     graphSettings.pluginConfig.maxPromptLength = 123;
     graphSettings.pluginConfig.modelDistributionPolicy = "PIPELINE_PARALLEL";
 
+    hfSettings.graphSettings = std::move(graphSettings);
+
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedFullPluginGraphContents, graphContents);
+    ASSERT_EQ(expectedFullPluginGraphContents, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
-    ovms::GraphSettingsImpl graphSettings;
+    ovms::HFSettingsImpl hfSettings;
+    ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.pluginConfig.kvCachePrecision = "u8";
+    hfSettings.graphSettings = std::move(graphSettings);
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
-    auto status = graphExporter->createGraphFile(this->directoryPath, graphSettings);
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
-    ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents);
+    ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
+    ovms::HFSettingsImpl hfSettings;
+
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig("", hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+
+    status = graphExporter->createServableConfig("/does/not/exist", hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
+    ovms::HFSettingsImpl hfSettings;
+
+    hfSettings.task = ovms::rerank;
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+
+    hfSettings.task = ovms::embeddings;
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+
+    hfSettings.task = ovms::unknown;
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+
+    // Default constructable variant
+    hfSettings.task = ovms::text_generation;
+    status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
 }

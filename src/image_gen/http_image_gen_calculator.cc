@@ -100,7 +100,7 @@ public:
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
             return absl::InternalError(absl::StrCat("Error during image generation: ", e.what()));
         }
-        std::string imageAsString = save_image_stbi(*image);
+        std::string imageAsString = saveImageStbi(*image);
 
         // Convert the image to a base64 string
         std::string base64image;

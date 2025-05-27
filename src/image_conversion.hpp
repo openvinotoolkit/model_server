@@ -21,9 +21,9 @@
 
 namespace ovms {
 
-void hello();
-
-ov::Tensor load_image_stbi(const std::string& imageBytes);
-std::string save_image_stbi(ov::Tensor tensor);
+ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels);
+ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes);
+ov::Tensor loadImageStbiFromFile(const char* filename);
+std::string saveImageStbi(ov::Tensor tensor);
 
 }  // namespace ovms

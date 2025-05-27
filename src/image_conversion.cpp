@@ -34,19 +34,10 @@
 
 namespace ovms {
 
-void hello() {
-    std::cout << "Hello, World!" << std::endl;
-}
-
-ov::Tensor load_image_stbi(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
+ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels) {
     if (!image) {
         std::stringstream errorMessage;
-        errorMessage << "Failed to load the image";
+        errorMessage << stbi_failure_reason();
         throw std::runtime_error{errorMessage.str()};
     }
     struct SharedImageAllocator {
@@ -75,7 +66,25 @@ ov::Tensor load_image_stbi(const std::string& imageBytes) {
         SharedImageAllocator{image, desiredChannels, y, x});
 }
 
-std::string save_image_stbi(ov::Tensor tensor) {
+ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
+    int x = 0, y = 0, channelsInFile = 0;
+    constexpr int desiredChannels = 3;
+    unsigned char* image = stbi_load_from_memory(
+        (const unsigned char*)imageBytes.data(), imageBytes.size(),
+        &x, &y, &channelsInFile, desiredChannels);
+    return loadImageStbi(image, x, y, desiredChannels);
+}
+
+ov::Tensor loadImageStbiFromFile(char const* filename) {
+    int x = 0, y = 0, channelsInFile = 0;
+    constexpr int desiredChannels = 3;
+    unsigned char* image = stbi_load(
+        filename,
+        &x, &y, &channelsInFile, desiredChannels);
+    return loadImageStbi(image, x, y, desiredChannels);
+}
+
+std::string saveImageStbi(ov::Tensor tensor) {
     // Validate tensor properties
     if (tensor.get_element_type() != ov::element::u8) {
         throw std::runtime_error{"Only U8 tensor element type is supported for image saving"};
