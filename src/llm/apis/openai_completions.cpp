@@ -753,7 +753,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             // Tokens after botTokenId
             auto afterBotTokenIt = botTokenIt + 1;
             if (afterBotTokenIt != generationOutput.generated_ids.end()) {
-            toolsResponse = tokenizer.decode(std::vector<int64_t>(afterBotTokenIt, generationOutput.generated_ids.end()));
+                toolsResponse = tokenizer.decode(std::vector<int64_t>(afterBotTokenIt, generationOutput.generated_ids.end()));
             }
         } else {
             // If botTokenId not found, decode all tokens as completeResponse
@@ -762,7 +762,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
         std::cout << "Complete response: " << completeResponse << std::endl;
         std::cout << "Tools response: " << toolsResponse << std::endl;
-        
+
         writer.StartObject();  // {
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
@@ -894,48 +894,65 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
 
             // Tools output serialization
             if (!toolsResponse.empty()) {
-                // Assuming there's only one tool call in the response
-                rapidjson::Document toolsDoc;
-                toolsDoc.Parse(toolsResponse.c_str());
-                if (toolsDoc.HasParseError()) {
-                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse toolsResponse as JSON");
-                    return "";
+                // LLama specific tool calls extraction
+                std::vector<std::string> tools;
+                std::string delimiter = ";";
+                size_t start = 0;
+                size_t end = 0;
+                while ((end = toolsResponse.find(delimiter, start)) != std::string::npos) {
+                    std::string tool = toolsResponse.substr(start, end - start);
+                    if (!tool.empty()) {
+                        tools.push_back(tool);
+                    }
+                    start = end + delimiter.length();
                 }
-
-                std::string toolName, toolParameters;
-
-                if (toolsDoc.HasMember("name") && toolsDoc["name"].IsString()) {
-                    toolName = toolsDoc["name"].GetString();
-                }
-
-                if (toolsDoc.HasMember("parameters") && toolsDoc["parameters"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolsDoc["parameters"].Accept(toolWriter);
-                    toolParameters = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, "toolsResponse does not contain valid parameters object");
-                    return "";
+                std::string lastTool = toolsResponse.substr(start);
+                if (!lastTool.empty()) {
+                    tools.push_back(lastTool);
                 }
 
                 writer.String("tool_calls");
                 writer.StartArray();  // [
-                writer.StartObject();  // {
-                writer.String("id");
-                writer.String("tool_call_0");  // TODO: generate unique ID for each tool call
 
-                writer.String("type");
-                writer.String("function");
+                for (const std::string& tool : tools) {
+                    rapidjson::Document toolDoc;
+                    toolDoc.Parse(tool.c_str());
+                    if (toolDoc.HasParseError()) {
+                        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse toolsResponse as JSON");
+                    }
 
-                writer.String("function");
-                writer.StartObject();  // {
-                writer.String("name");
-                writer.String(toolName.c_str());  // TODO: replace with actual tool name from toolsDoc
-                writer.String("arguments");
-                writer.String(toolParameters.c_str());  // Assuming toolsResponse is a valid JSON string
-                writer.EndObject();  // }
-                writer.EndObject();  // }
-                writer.EndArray();   // ]
+                    std::string toolName, toolParameters;
+
+                    if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
+                        toolName = toolDoc["name"].GetString();
+                    }
+
+                    if (toolDoc.HasMember("parameters") && toolDoc["parameters"].IsObject()) {
+                        rapidjson::StringBuffer sb;
+                        rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                        toolDoc["parameters"].Accept(toolWriter);
+                        toolParameters = sb.GetString();
+                    } else {
+                        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "toolsResponse does not contain valid parameters object");
+                        return "";
+                    }
+                    writer.StartObject();  // {
+                    writer.String("id");
+                    writer.String("tool_call_0");  // TODO: generate unique ID for each tool call
+
+                    writer.String("type");
+                    writer.String("function");
+
+                    writer.String("function");
+                    writer.StartObject();  // {
+                    writer.String("name");
+                    writer.String(toolName.c_str());  // TODO: replace with actual tool name from toolsDoc
+                    writer.String("arguments");
+                    writer.String(toolParameters.c_str());  // Assuming toolsResponse is a valid JSON string
+                    writer.EndObject();                     // }
+                    writer.EndObject();                     // }
+                }
+                writer.EndArray();  // ]
             }
             writer.EndObject();  // }
         } else if (endpoint == Endpoint::COMPLETIONS) {

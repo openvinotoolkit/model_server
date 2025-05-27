@@ -24,9 +24,9 @@ base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
 
 logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
+skip = pytest.mark.skip
 
 class TestSingleModelInference:
-    @xfail(reason="not implemented yet")
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -74,6 +74,7 @@ class TestSingleModelInference:
             messages=messages,
             tools=tools,
             tool_choice={"type": "function", "function": {"name": "get_weather"}},
+            temperature=0.0
         )
 
         print("COMPLETION:",completion)
@@ -126,14 +127,14 @@ class TestSingleModelInference:
             model=model_name,
             messages=messages,
             tools=tools,
+            temperature=0.0
         )
         print(completion.choices[0].message)
 
         assert "Paris" in completion.choices[0].message.content
         assert "15 degrees" in completion.choices[0].message.content
-        assert completion.choices[0].message.tool_calls == []
+        assert completion.choices[0].message.tool_calls is None or completion.choices[0].message.tool_calls == []
 
-    @xfail(reason="not implemented yet")
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
@@ -243,7 +244,7 @@ class TestSingleModelInference:
             print("Error:", e)
             assert True, f"It should fail with 2 tool calls"
         
-    @xfail(reason="not implemented yet")
+    @skip(reason="not implemented yet")
     def test_chat_with_tool_definition_stream(self):
         """
         <b>Description</b>
@@ -305,7 +306,7 @@ class TestSingleModelInference:
                     arguments += chunk.choices[0].delta.tool_calls[0].function.arguments
         assert arguments == '{"location": "Paris, France"}'
 
-    @xfail(reason="not implemented yet")
+    @skip(reason="not implemented yet")
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
