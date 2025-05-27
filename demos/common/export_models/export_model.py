@@ -67,7 +67,7 @@ parser_rerank.add_argument('--version', default="1", help='version of the model'
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
-parser_image_generation.add_argument('--plugin_config', default="", help='Plugin config for all models in the pipeline', dest='plugin_config_str')
+parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
 parser_image_generation.add_argument('--max_number_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_number_images_per_prompt')
@@ -232,16 +232,22 @@ node: {
   input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
-      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-          models_path: "{{model_path}}",
-          {% if plugin_config_str %}plugin_config: '{{plugin_config_str}}',{% endif %}
-          device: "{{target_device|default("CPU", true)}}",
-          {% if max_resolution %}max_resolution: '{{max_resolution}}',{% endif %}
-          {% if default_resolution %}default_resolution: '{{max_resolution}}',{% endif %}
-          {% if max_number_images_per_prompt > 0 %}max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
-          {% if default_num_inference_steps > 0 %}default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
-          {% if max_num_inference_steps > 0 %}max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
-      }
+    [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      {%- if plugin_config_str %}
+      plugin_config: '{{plugin_config_str}}',{% endif %}
+      device: "{{target_device|default("CPU", true)}}",
+      {%- if max_resolution %}
+      max_resolution: '{{max_resolution}}',{% endif %}
+      {%- if default_resolution %}
+      default_resolution: '{{default_resolution}}',{% endif %}
+      {%- if max_number_images_per_prompt > 0 %}
+      max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
+      {%- if default_num_inference_steps > 0 %}
+      default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
+      {%- if max_num_inference_steps > 0 %}
+      max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+    }
   }
 }"""
 
@@ -480,7 +486,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
-def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, plugin_config_str):
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
     model_path = "./"
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
@@ -492,14 +498,15 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model model", source_model)   
 
-    if plugin_config_str:
-        try:
-            plugin_config = json.loads(plugin_config_str)
-            if not isinstance(plugin_config, dict):
-                raise ValueError("plugin_config should be a valid JSON object")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid plugin_config JSON string: {e}")
-    task_parameters['plugin_config_str'] = plugin_config_str
+    plugin_config = {}
+    assert num_streams >= 0, "num_streams should be a non-negative integer"
+    if num_streams > 0:
+        plugin_config['NUM_STREAMS'] = num_streams
+    if 'ov_cache_dir' in task_parameters and task_parameters['ov_cache_dir'] is not None:
+        plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
+    
+    if len(plugin_config) > 0:
+        task_parameters['plugin_config_str'] = json.dumps(plugin_config)
 
     # assert that max_resolution if exists, is in WxH format
     for param in ['max_resolution', 'default_resolution']:
@@ -550,6 +557,7 @@ elif args['task'] == 'rerank':
 
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
+        'ov_cache_dir',
         'target_device',
         'max_resolution',
         'default_resolution',
@@ -557,4 +565,4 @@ elif args['task'] == 'image_generation':
         'default_num_inference_steps',
         'max_num_inference_steps',
     ]}
-    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['plugin_config_str'])
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
