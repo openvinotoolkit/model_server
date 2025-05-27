@@ -54,7 +54,7 @@ void ContinuousBatchingServable::notifyExecutorThread() {
 absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         executionContext->inputIds,
-        executionContext->apiHandler->createGenerationConfig());
+        executionContext->apiHandler->createGenerationConfig(properties->baseGenerationConfig));
     return absl::OkStatus();
 }
 

@@ -73,6 +73,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+
+    legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),

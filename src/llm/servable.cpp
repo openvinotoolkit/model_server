@@ -135,6 +135,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", inputText);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
     return absl::OkStatus();

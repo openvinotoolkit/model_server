@@ -49,7 +49,10 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     auto properties = std::static_pointer_cast<LegacyServableProperties>(servable->getProperties());
 
     properties->modelsPath = parsedModelsPath;
-
+    std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
+    if (std::filesystem::exists(modelGenerationConfigPath)) {
+        properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
+    }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();

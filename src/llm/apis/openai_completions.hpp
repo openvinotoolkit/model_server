@@ -105,8 +105,9 @@ struct OpenAIChatCompletionsRequest {
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
 
-    ov::genai::GenerationConfig createGenerationConfig() const {
-        ov::genai::GenerationConfig config;
+    ov::genai::GenerationConfig createGenerationConfig(const ov::genai::GenerationConfig& base) const {
+        // Start with config that may contain some default values for the model
+        ov::genai::GenerationConfig config = base;
         // Generic
         config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
@@ -208,7 +209,7 @@ public:
 
     void incrementProcessedTokens(size_t numTokens = 1);
 
-    ov::genai::GenerationConfig createGenerationConfig() const;
+    ov::genai::GenerationConfig createGenerationConfig(const ov::genai::GenerationConfig& base) const;
 
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt);
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
