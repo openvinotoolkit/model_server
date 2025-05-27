@@ -18,6 +18,7 @@
 #include <variant>
 
 #include "imagegenpipelineargs.hpp"
+#include "src/image_gen/image_gen_calculator.pb.h"
 
 namespace ovms {
 class Status;
