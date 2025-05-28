@@ -470,10 +470,16 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
-        if (result->count("source_model"))
+        if (result->count("source_model")){
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-        if (result->count("model_repository_path"))
+        } else {
+            throw std::logic_error("source_model parameter is required for pull mode");
+        }
+        if (result->count("model_repository_path")){
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
+        } else {
+             throw std::logic_error("model_repository_path parameter is required for pull mode");
+        }
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {

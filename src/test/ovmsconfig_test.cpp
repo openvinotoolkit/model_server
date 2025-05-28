@@ -599,6 +599,32 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
         "/config/path"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
+TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
+    char* n_argv[] = {
+        "ovms",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "embeddings",
+        "--normalize",
+        "true",
+    };
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot both be unset");
+}
+
+TEST_F(OvmsConfigDeathTest, hfPullNoSourceModelRepositoryPath) {
+    char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--task",
+        "embeddings",
+        "--normalize",
+        "true",
+    };
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot both be unset");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {

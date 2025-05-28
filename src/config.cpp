@@ -92,6 +92,12 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
+#if (PYTHON_DISABLE == 1)
+        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+            std::cerr << "For now OVMS version without python supports pulling OpenVINO models only";
+            return false;
+        }
+#endif
         if (this->serverSettings.hfSettings.task == text_generation) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
@@ -126,11 +132,6 @@ bool Config::validate() {
                     std::cerr << "max_prompt_len is only supported for NPU target device";
                     return false;
                 }
-            }
-
-            if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
-                std::cerr << "For now only OpenVINO models are supported";
-                return false;
             }
         }
 

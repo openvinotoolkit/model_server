@@ -111,7 +111,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
-        SPDLOG_ERROR("Created graph config couldn't be parsed.");
+        SPDLOG_ERROR("Created graph config couldn't be parsed - some parameters values are invalid.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
     // clang-format on
