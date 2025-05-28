@@ -159,9 +159,25 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
     ASSERT_EQ(expectedEmptyConfigContents, configContents) << configContents;
 }
 
-TEST_F(ConfigCreationTest, negativeWrongPath) {
+TEST_F(ConfigCreationTest, negativeWrongPathsEnable) {
     this->modelsSettings.configPath = "";
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "some.file";
+    createConfigFileWithContent(expectedConfigContents, this->modelsSettings.configPath);
+    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(ConfigCreationTest, negativeWrongPathsDisable) {
+    this->modelsSettings.configPath = "";
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
+
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "some.file";
+    createConfigFileWithContent(expectedConfigContents, this->modelsSettings.configPath);
+    status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 

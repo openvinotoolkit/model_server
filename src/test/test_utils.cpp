@@ -313,6 +313,13 @@ void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath) {
     }
 }
 
+void SetReadonlyFileAttributeFromDir(std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_write , std::filesystem::perm_options::remove);
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::group_read | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
+    }
+}
+
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {

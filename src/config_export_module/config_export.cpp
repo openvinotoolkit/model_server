@@ -171,7 +171,7 @@ Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsI
     auto status = LocalFileSystem::exists(fullPath, &exists);
     if (!status.ok())
         return status;
-        
+
     if (exists) {
         return updateConfigAddModel(fullPath, modelSettings);
     } else {
@@ -185,7 +185,7 @@ Status DisableModel(const std::string& configDirectoryPath, const ModelsSettings
     auto status = LocalFileSystem::exists(fullPath, &exists);
     if (!status.ok())
         return status;
-        
+
     if (exists) {
         return removeModelFromConfig(fullPath, modelSettings);
     } else {
