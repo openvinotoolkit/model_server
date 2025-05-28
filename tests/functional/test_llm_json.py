@@ -222,14 +222,27 @@ class TestSingleModelInference:
         messages.append({"role": "tool", "tool_call_id": completion.choices[0].message.tool_calls[1].id, "content": "pm10 28µg/m3"})
 
         print("Messages after tool call:", messages)
-
-        with pytest.raises(Exception):
-            # This should raise an exception because we cannot use multiple tools in a single chat completion call
-            client.chat.completions.create(
+    
+        # Qwen3 supports multiple tools in a single chat completion call
+        if "Qwen3" in model_name:
+            completion = client.chat.completions.create(
                 model=model_name,
                 messages=messages,
                 tools=tools
             )
+            content = completion.choices[0].message.content
+            assert "New York" in content
+            assert "15 degrees Celsius" in content or "15°C" in content or "15 °C" in content
+            assert "pm10" in content or "PM10" in content
+            assert "28 µg/m" in content or "28µg/m" in content
+        else:
+            with pytest.raises(Exception):
+                # This should raise an exception because we cannot use multiple tools in a single chat completion call
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    tools=tools
+                )
 
         
     @skip(reason="not implemented yet")

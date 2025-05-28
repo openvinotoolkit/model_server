@@ -142,7 +142,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs, getProperties()->templateProcessor.botTokenId);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs, getProperties()->responseParserName);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

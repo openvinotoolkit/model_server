@@ -79,6 +79,7 @@ struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
     ov::genai::GenerationConfig baseGenerationConfig;
+    std::string responseParserName;
     std::string device;
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;

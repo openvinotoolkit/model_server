@@ -17,7 +17,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
+#include <fstream>
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
@@ -77,6 +77,19 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (std::filesystem::exists(modelGenerationConfigPath)) {
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
     }
+    std::filesystem::path tokenizerConfigPath = std::filesystem::path(parsedModelsPath) / "tokenizer_config.json";
+    if (std::filesystem::exists(tokenizerConfigPath)) {
+        std::ifstream tokenizerConfigFile(tokenizerConfigPath);
+        if (tokenizerConfigFile.is_open()) {
+            std::string jsonContent((std::istreambuf_iterator<char>(tokenizerConfigFile)), std::istreambuf_iterator<char>());
+            rapidjson::Document tokenizerConfigJson;
+            tokenizerConfigJson.Parse(jsonContent.c_str());
+            if (tokenizerConfigJson.HasMember("response_parser_name") && tokenizerConfigJson["response_parser_name"].IsString()) {
+                properties->responseParserName = tokenizerConfigJson["response_parser_name"].GetString();
+            }
+        }
+    }
+
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
