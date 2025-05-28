@@ -124,7 +124,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("cpu_extension",
                 "A path to shared library containing custom CPU layer implementation. Default: empty.",
                 cxxopts::value<std::string>()->default_value(""),
-                "CPU_EXTENSION");
+                "CPU_EXTENSION")
+            ("allowed_local_media_path",
+                "Path to directory that contains multimedia files that can be used as input for LLMs.",
+                cxxopts::value<std::string>(),
+                "ALLOWED_LOCAL_MEDIA_PATH");
 
         options->add_options("multi model")
             ("config_path",
@@ -218,7 +222,6 @@ void CLIParser::parse(int argc, char** argv) {
                 "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
-
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         // HF pull mode or pull and start mode
@@ -344,6 +347,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     }
     if (result->count("cpu_extension")) {
         serverSettings.cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
+    }
+    if (result->count("allowed_local_media_path")) {
+        serverSettings.allowedLocalMediaPath = result->operator[]("allowed_local_media_path").as<std::string>();
     }
 
     if (result->count("grpc_bind_address"))

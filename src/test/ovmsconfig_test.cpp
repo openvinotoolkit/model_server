@@ -1219,13 +1219,14 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_workers", "2",
 #endif
         "--cache_dir", "/tmp/model_cache",
+        "--allowed_local_media_path", "/tmp/path",
         "--log_path", "/tmp/log_path",
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 35;
+    int arg_count = 37;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1247,6 +1248,8 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.grpcWorkers(), 2);
 #endif
     EXPECT_EQ(config.cacheDir(), "/tmp/model_cache");
+    ASSERT_TRUE(config.getServerSettings().allowedLocalMediaPath.has_value());
+    EXPECT_EQ(config.getServerSettings().allowedLocalMediaPath.value(), "/tmp/path");
     EXPECT_EQ(config.logPath(), "/tmp/log_path");
     EXPECT_EQ(config.logLevel(), "ERROR");
     EXPECT_EQ(config.configPath(), "/config.json");
