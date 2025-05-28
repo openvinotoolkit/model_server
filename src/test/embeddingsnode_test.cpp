@@ -353,6 +353,57 @@ TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
+class EmbeddingsNewHttpTest : public V3HttpTest {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    static void SetUpTestSuite() {
+        std::string port = "9173";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings_new.json");
+        SetUpSuite(port, configPath, t);
+    }
+
+    static void TearDownTestSuite() {
+        TearDownSuite(t);
+    }
+};
+std::unique_ptr<std::thread> EmbeddingsNewHttpTest::t;
+
+TEST_F(EmbeddingsNewHttpTest, simplePositive) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
+    double sum = 0;
+    for (auto& value : d["data"][0]["embedding"].GetArray()) {
+        sum += value.GetDouble() * value.GetDouble();
+    }
+    double norm = std::max(std::sqrt(sum), double(1e-12));
+    ASSERT_NEAR(norm, 1.0, 1e-6);
+    ASSERT_EQ(d["data"][0]["index"], 0);
+}
+
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;

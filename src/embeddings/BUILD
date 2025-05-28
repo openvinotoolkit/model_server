@@ -38,6 +38,16 @@ mediapipe_proto_library(
     ],
 )
 
+mediapipe_proto_library(
+    name = "embeddings_calculator_new_proto", # embeddings_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["embeddings_calculator_new.proto"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+
 cc_library(
     name = "embeddingscalculator",
     hdrs = [],
@@ -61,6 +71,29 @@ cc_library(
 )
 
 cc_library(
+    name = "embeddingscalculatornew",
+    hdrs = [],
+    srcs = ["embeddings_calculator_new.cc"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@model_api//:model_api",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+        "embeddings_calculator_new_cc_proto",
+        ":embeddings_api",
+        ":embeddings_servable",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "embeddings_api",
     hdrs = ["embeddings_api.hpp"],
     srcs = ["embeddings_api.cpp"],
@@ -68,6 +101,23 @@ cc_library(
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson",],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "embeddings_servable",
+    hdrs = ["embeddings_servable.hpp", "circular_buffer_queue.hpp"],
+    srcs = ["embeddings_servable.cpp"],
+    deps = ["//src:libovmslogging",
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "@com_github_tencent_rapidjson//:rapidjson",] + select({
+        "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
+        "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
+    }),
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
