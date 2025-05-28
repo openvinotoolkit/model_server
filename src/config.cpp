@@ -87,14 +87,14 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 
 bool Config::validate() {
     // TODO: CVS-166727 Add validation of all parameters once the CLI model export flags will be implemented
-    if (this->serverSettings.hfSettings.pullHfModelMode) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE) {
         if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
         return true;
     }
-    if (this->serverSettings.listServables) {
+    if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
             std::cerr << "Use --list_models with --model_repository_path" << std::endl;
             return false;
@@ -102,7 +102,7 @@ bool Config::validate() {
         return true;
     }
 
-    if (this->serverSettings.exportConfigType == UNKNOWN_MODEL) {
+    if (this->serverSettings.serverMode == SERVING_MODELS_MODE) {
         if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
             std::cerr << "Use either config_path or model_path with model_name" << std::endl;
             return false;
@@ -137,7 +137,7 @@ bool Config::validate() {
             std::cerr << "port and rest_port cannot both be unset" << std::endl;
             return false;
         }
-    } else {
+    } else if (this->serverSettings.serverMode == MODIFY_CONFIG_MODE) {
         if (configPath().empty()) {
             std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
             return false;

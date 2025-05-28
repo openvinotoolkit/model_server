@@ -25,6 +25,15 @@
 
 namespace ovms {
 
+enum OvmsServerMode : int {
+    SERVING_MODELS_MODE,
+    HF_PULL_MODE,
+    HF_PULL_AND_START_MODE,
+    LIST_MODELS_MODE,
+    MODIFY_CONFIG_MODE,
+    UNKNOWN_MODE
+};
+
 struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
@@ -66,8 +75,6 @@ struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
-    bool pullHfModelMode = false;
-    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
     GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
@@ -98,9 +105,9 @@ struct ServerSettingsImpl {
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
-    bool listServables = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
+    OvmsServerMode serverMode = SERVING_MODELS_MODE;
 };
 
 struct ModelsSettingsImpl {

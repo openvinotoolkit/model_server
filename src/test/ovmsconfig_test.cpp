@@ -636,8 +636,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
     ASSERT_EQ(graphSettings.modelPath, "./");
@@ -677,9 +676,8 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.modelName, modelName);
     ASSERT_EQ(graphSettings.pipelineType.value(), "VLM");
@@ -714,8 +712,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.modelName, modelName);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
@@ -748,8 +745,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.overwriteModels, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
@@ -783,9 +779,8 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.overwriteModels, false);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
@@ -832,8 +827,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
@@ -876,8 +870,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, false);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
@@ -909,8 +902,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
@@ -948,8 +940,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
@@ -993,8 +984,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
@@ -1040,8 +1030,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, false);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
@@ -1073,8 +1062,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
@@ -1115,8 +1103,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.version, 2);
@@ -1151,8 +1138,7 @@ TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(graphSettings.modelPath, somePath);

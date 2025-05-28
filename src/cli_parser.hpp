@@ -43,7 +43,7 @@ public:
 protected:
     void prepareServer(ServerSettingsImpl& serverSettings);
     void prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings);
-    void prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
+    void prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
     void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
     void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
     bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);

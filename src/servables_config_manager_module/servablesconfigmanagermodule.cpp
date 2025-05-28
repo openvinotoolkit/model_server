@@ -34,7 +34,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
-    if (config.getServerSettings().listServables) {
+    if (config.getServerSettings().serverMode == LIST_MODELS_MODE) {
         const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
         auto map = listServables(repositoryPath);
         std::stringstream ss;

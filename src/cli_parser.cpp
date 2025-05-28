@@ -311,17 +311,19 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.startedWithCLI = true;
     // list models mode
     if (result->count("list_models")) {
-        serverSettings.listServables = result->operator[]("list_models").as<bool>();
+        serverSettings.serverMode = LIST_MODELS_MODE;
         if (result->count("model_repository_path"))
             serverSettings.hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         return;
     }
 
     if (result->count("add_to_config")) {
+        serverSettings.serverMode = MODIFY_CONFIG_MODE;
         serverSettings.exportConfigType = ENABLE_MODEL;
     }
 
     if (result->count("remove_from_config")) {
+        serverSettings.serverMode = MODIFY_CONFIG_MODE;
         serverSettings.exportConfigType = DISABLE_MODEL;
     }
 
@@ -457,13 +459,15 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
     return (result->count("pull") || result->count("source_model") || result->count("task"));
 }
 
-void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
     // Ovms Pull models mode || pull and start models mode
     if (isHFPullOrPullAndStart(this->result)) {
-        hfSettings.pullHfModelMode = result->operator[]("pull").as<bool>();
-        // Ovms pull and start models mode
-        if (!hfSettings.pullHfModelMode)
-            hfSettings.pullHfAndStartModelMode = true;
+        if (result->count("pull")) {
+            serverSettings.serverMode = HF_PULL_MODE;
+        } else {
+            serverSettings.serverMode = HF_PULL_AND_START_MODE;
+        }
+
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model"))
@@ -475,7 +479,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
             switch (hfSettings.task) {
                 case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
@@ -483,7 +487,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                 }
                 case EMBEDDINGS_GRAPH: {
                     if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
@@ -491,7 +495,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                 }
                 case RERANK_GRAPH: {
                     if (std::holds_alternative<RerankGraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
+                        std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
@@ -504,14 +508,11 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
             }
         } else {
             if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
-                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
+                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
             } else {
                 throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
             }
         }
-    } else {
-        hfSettings.pullHfModelMode = false;
-        hfSettings.pullHfAndStartModelMode = false;
     }
 }
 
@@ -552,9 +553,9 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     this->prepareModel(*modelsSettings, serverSettings->hfSettings);
 
-    this->prepareGraph(serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
+    this->prepareGraph(*serverSettings, serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
 
-    if (serverSettings->hfSettings.pullHfAndStartModelMode)
+    if (serverSettings->serverMode == HF_PULL_AND_START_MODE)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
 
     if (serverSettings->exportConfigType != UNKNOWN_MODEL)
