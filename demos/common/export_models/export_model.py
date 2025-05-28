@@ -59,6 +59,12 @@ parser_embeddings.add_argument('--truncate', default=False, action='store_true',
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
+parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint')
+add_common_arguments(parser_embeddings_ov)
+parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
+parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
+parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+
 parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
@@ -103,6 +109,24 @@ node {
   output_stream: "RESPONSE_PAYLOAD:output"
   node_options: {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+      normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+    }
+  }
+}
+"""
+
+embedding_graph_ov_template = """
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+  name: "EmbeddingsExecutor"
+  input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
+  calculator: "EmbeddingsCalculatorOV"
+  input_stream: "REQUEST_PAYLOAD:input"
+  output_stream: "RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
+      models_path: "{{model_path}}",
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
     }
   }
@@ -443,6 +467,29 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
+def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
+    set_max_context_length = ""
+    destination_path = os.path.join(model_repository_path, model_name, "ov")
+    print("Exporting embeddings model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export embeddings model", source_model)
+        if truncate:
+            max_context_length = get_models_max_context(destination_path, 'config.json')
+            if max_context_length is not None:
+                set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
+        print("Exporting tokenizer to ", destination_path)
+        from openvino_tokenizers import convert_tokenizer
+        convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
+        if (os.system(convert_tokenizer_command)):
+            raise ValueError("Failed to export tokenizer model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name + "_ov", os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
@@ -551,6 +598,9 @@ if args['task'] == 'text_generation':
 
 elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
+
+elif args['task'] == 'embeddings_ov':
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])

@@ -47,6 +47,7 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
+#include "src/embeddings/embeddings_calculator_ov.pb.h"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -54,6 +55,7 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
+const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -123,6 +125,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         return StatusCode::INTERNAL_ERROR;
     }
     if (!this->genAiServableMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (!this->embeddingsServableMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -257,7 +263,7 @@ Status MediapipeGraphDefinition::create(std::shared_ptr<MediapipeGraphExecutor>&
 
     pipeline = std::make_shared<MediapipeGraphExecutor>(getName(), std::to_string(getVersion()),
         this->config, this->inputTypes, this->outputTypes, this->inputNames, this->outputNames,
-        this->pythonNodeResourcesMap, this->genAiServableMap, this->pythonBackend, this->reporter.get());
+        this->pythonNodeResourcesMap, this->genAiServableMap, this->embeddingsServableMap, this->pythonBackend, this->reporter.get());
     return status;
 }
 
@@ -333,12 +339,14 @@ Status MediapipeGraphDefinition::reload(ModelManager& manager, const MediapipeGr
     this->mgconfig = config;
     this->pythonNodeResourcesMap.clear();
     this->genAiServableMap.clear();
+    this->embeddingsServableMap.clear();
     return validate(manager);
 }
 
 void MediapipeGraphDefinition::retire(ModelManager& manager) {
     this->pythonNodeResourcesMap.clear();
     this->genAiServableMap.clear();
+    this->embeddingsServableMap.clear();
     this->status.handle(RetireEvent());
 }
 
@@ -468,6 +476,26 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             this->genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
             genAiServablesCleaningGuard.disableCleaning();
+        }
+
+        if (endsWith(config.node(i).calculator(), EMBEDDINGS_NODE_CALCULATOR_NAME)) {
+            ResourcesCleaningGuard<EmbeddingsServableMap> embeddingsServablesCleaningGuard(this->embeddingsServableMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (this->embeddingsServableMap.find(nodeName) != this->embeddingsServableMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
+            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i), mgconfig.getBasePath());
+            this->embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(embeddings)));
+            embeddingsServablesCleaningGuard.disableCleaning();
         }
     }
     return StatusCode::OK;
