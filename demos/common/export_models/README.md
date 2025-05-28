@@ -13,16 +13,17 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h] {text_generation,embeddings,rerank} ...
+usage: export_model.py [-h] {text_generation,embeddings,rerank,image_generation} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,rerank}
+  {text_generation,embeddings,rerank,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
     embeddings          export model for embeddings endpoint
     rerank              export model for rerank endpoint
+    image_generation    export model for image generation endpoint
 ```
 For every use case subcommand there is adjusted list of parameters:
 
@@ -132,6 +133,15 @@ python export_model.py rerank \
     --weight-format int8 \
     --config_file_path models/config_all.json \
     --num_streams 2
+```
+
+### Image Generation Models
+```console
+python export_model.py image_generation \
+    --source_model dreamlike-art/dreamlike-anime-1.0 \
+    --weight-format int8 \
+    --config_file_path models/config_all.json \
+    --max_resolution 2048x2048
 ```
 
 ## Deployment example
