@@ -338,6 +338,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     if (result->count("cpu_extension")) {
         serverSettings.cpuExtensionLibraryPath = result->operator[]("cpu_extension").as<std::string>();
     }
+    if (result->count("allowed_local_media_path")) {
+        serverSettings.allowedLocalMediaPath = result->operator[]("allowed_local_media_path").as<std::string>();
+    }
 
     if (result->count("grpc_bind_address"))
         serverSettings.grpcBindAddress = result->operator[]("grpc_bind_address").as<std::string>();
