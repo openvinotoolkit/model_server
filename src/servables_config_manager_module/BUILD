@@ -52,6 +52,7 @@ cc_library(
              "//src:libovmslogging",
              "//src:libovms_server_settings",
              "//src:libovms_module",
+             "//src/config_export_module:config_export",
              "//src/graph_export:graph_export_types",
              "//src/config_export_module:config_export_types",
     ],

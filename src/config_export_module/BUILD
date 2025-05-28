@@ -46,25 +46,6 @@ cc_library(
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library(
-    name = "config_export_module",
-    srcs = ["config_export_module.cpp"],
-    hdrs = ["config_export_module.hpp"],
-    deps =  [
-             "config_export",
-             "config_export_types",
-             "//src/graph_export:graph_export_types",
-             "//src:cpp_headers",
-             "//src:libovmsstring_utils",
-             "//src:libovmslogging",
-             "//src:libovms_server_settings",
-             "//src:libovms_module",
-    ],
-    visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
-)
 
 cc_library(
     name = "config_export_types",

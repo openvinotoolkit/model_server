@@ -21,6 +21,8 @@
 
 #include "test_utils.hpp"
 #include "../filesystem.hpp"
+#include "../module_names.hpp"
+#include "../server.hpp"
 #include "../status.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../config_export_module/config_export.hpp"
@@ -236,4 +238,64 @@ TEST_F(ConfigCreationTest, positiveWithStart) {
     ConstructorEnabledModelManager manager;
     status = manager.startFromFile(ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json");
     EXPECT_EQ(status, ovms::StatusCode::OK);
+}
+
+TEST_F(ConfigCreationTest, positiveEndToEndEnableDisable) {
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    server.setShutdownRequest(0);
+    char* argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)this->modelsSettings.configPath.c_str(),
+        (char*)"--model_name",
+        (char*)this->modelsSettings.modelName.c_str(),
+        (char*)"--model_path",
+        (char*)this->modelsSettings.modelPath.c_str(),
+    };
+
+    int argc = 7;
+    t.reset(new std::thread([&argc, &argv, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+    }));
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::NOT_INITIALIZED) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 3)) {
+    }
+
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+
+    server.setShutdownRequest(1);
+    t->join();
+    std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
+    std::string configContents = GetFileContents(configFile);
+    ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+
+    server.setShutdownRequest(0);
+    char* argv2[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)this->modelsSettings.configPath.c_str(),
+        (char*)"--model_name",
+        (char*)this->modelsSettings.modelName.c_str(),
+    };
+
+    argc = 5;
+    t.reset(new std::thread([&argc, &argv2, &server]() {
+        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv2));
+    }));
+
+    start = std::chrono::high_resolution_clock::now();
+    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 3)) {
+    }
+
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::SHUTDOWN);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
+    server.setShutdownRequest(1);
+    t->join();
+    configContents = GetFileContents(configFile);
+    ASSERT_EQ(expectedEmptyConfigContents, configContents) << configContents;
 }

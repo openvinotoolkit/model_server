@@ -638,7 +638,6 @@ cc_library(
             ],
         }) + [
             "cpp_headers",
-            "//src/config_export_module:config_export_module",
             "ovms_header",
             "capi_backend_impl",
             "libovms_capi_servable_metadata",

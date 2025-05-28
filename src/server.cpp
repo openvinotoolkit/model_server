@@ -51,7 +51,6 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
-#include "config_export_module/config_export_module.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
@@ -264,8 +263,6 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HfPullModelModule>();
     if (name == SERVABLES_CONFIG_MANAGER_MODULE_NAME)
         return std::make_unique<ServablesConfigManagerModule>();
-    if (name == CONFIG_EXPORT_MODULE_NAME)
-        return std::make_unique<ConfigExportModule>();
     return nullptr;
 }
 
@@ -309,7 +306,7 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 
-    if (config.getServerSettings().listServables) {
+    if (config.getServerSettings().listServables || config.getServerSettings().exportConfigType != UNKNOWN_MODEL) {
         INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
         START_MODULE(it);
         return status;
@@ -325,10 +322,6 @@ Status Server::startModules(ovms::Config& config) {
         // Return from modules only in --pull mode, otherwise start the rest of modules
         if (config.getServerSettings().hfSettings.pullHfModelMode)
             return status;
-    }
-    if (config.getServerSettings().exportConfigType != UNKNOWN_MODEL) {
-        INSERT_MODULE(CONFIG_EXPORT_MODULE_NAME, it);
-        START_MODULE(it);
     }
 
 #if (PYTHON_DISABLE == 0)

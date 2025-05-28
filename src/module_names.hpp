@@ -26,5 +26,4 @@ extern const std::string METRICS_MODULE_NAME;
 extern const std::string PYTHON_INTERPRETER_MODULE_NAME;
 extern const std::string CAPI_MODULE_NAME;
 extern const std::string SERVABLES_CONFIG_MANAGER_MODULE_NAME;
-extern const std::string CONFIG_EXPORT_MODULE_NAME;
 }  // namespace ovms

@@ -18,6 +18,7 @@
 #include <string>
 #include <sstream>
 
+#include "../config_export_module/config_export.hpp"
 #include "../config.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -33,13 +34,17 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
-    const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
-    auto map = listServables(repositoryPath);
-    std::stringstream ss;
-    for (const auto& [k, v] : map) {
-        ss << k << std::endl;
+    if (config.getServerSettings().listServables) {
+        const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
+        auto map = listServables(repositoryPath);
+        std::stringstream ss;
+        for (const auto& [k, v] : map) {
+            ss << k << std::endl;
+        }
+        SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+    } else {
+        return updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
     }
-    SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
     return StatusCode::OK;
 }
 
