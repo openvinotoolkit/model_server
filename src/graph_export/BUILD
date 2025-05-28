@@ -27,6 +27,7 @@ cc_library(
         "@ovms//src:libovms_server_settings",
         "@ovms//src:libovms_module",
         "@ovms//src:libovmsfilesystem",
+        "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],

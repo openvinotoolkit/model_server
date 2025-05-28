@@ -228,32 +228,32 @@ void CLIParser::parse(int argc, char** argv) {
             if (result->count("task")) {
                 task = stringToEnum(result->operator[]("task").as<std::string>());
                 switch (task) {
-                    case text_generation: {
+                    case TEXT_GENERATION_GRAPH: {
                         GraphCLIParser cliParser;
                         unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case embeddings: {
+                    case EMBEDDINGS_GRAPH: {
                         EmbeddingsGraphCLIParser cliParser;
                         unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case rerank: {
+                    case RERANK_GRAPH: {
                         RerankGraphCLIParser cliParser;
                         unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
                         break;
                     }
-                    case unknown_graph: {
+                    case UNKNOWN_GRAPH: {
                         std::cerr << "error parsing options - --task parameter unsupported value: " + result->operator[]("task").as<std::string>();
                         exit(OVMS_EX_USAGE);
                     }
                 }
             } else {
                 // Default task is text_generation
-                task = text_generation;
+                task = TEXT_GENERATION_GRAPH;
                 GraphCLIParser cliParser;
                 unmatchedOptions = cliParser.parse(result->unmatched());
                 this->graphOptionsParser = std::move(cliParser);
@@ -315,11 +315,11 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     }
 
     if (result->count("add_to_config")) {
-        serverSettings.exportConfigType = enable_model;
+        serverSettings.exportConfigType = ENABLE_MODEL;
     }
 
     if (result->count("remove_from_config")) {
-        serverSettings.exportConfigType = disable_model;
+        serverSettings.exportConfigType = DISABLE_MODEL;
     }
 
     serverSettings.grpcPort = result->operator[]("port").as<uint32_t>();
@@ -467,7 +467,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
         if (result->count("task")) {
             hfSettings.task = stringToEnum(result->operator[]("task").as<std::string>());
             switch (hfSettings.task) {
-                case text_generation: {
+                case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
                         std::get<GraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName, modelPath);
                     } else {
@@ -475,7 +475,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     }
                     break;
                 }
-                case embeddings: {
+                case EMBEDDINGS_GRAPH: {
                     if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
                         std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
                     } else {
@@ -483,7 +483,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     }
                     break;
                 }
-                case rerank: {
+                case RERANK_GRAPH: {
                     if (std::holds_alternative<RerankGraphCLIParser>(this->graphOptionsParser)) {
                         std::get<RerankGraphCLIParser>(this->graphOptionsParser).prepare(hfSettings, modelName);
                     } else {
@@ -491,7 +491,7 @@ void CLIParser::prepareGraph(HFSettingsImpl& hfSettings, const std::string& mode
                     }
                     break;
                 }
-                case unknown_graph: {
+                case UNKNOWN_GRAPH: {
                     throw std::logic_error("Error: --task parameter unsupported value: " + result->operator[]("task").as<std::string>());
                     break;
                 }
@@ -551,7 +551,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
     if (serverSettings->hfSettings.pullHfAndStartModelMode)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
 
-    if (serverSettings->exportConfigType != unknown_model)
+    if (serverSettings->exportConfigType != UNKNOWN_MODEL)
         this->prepareConfigExport(*modelsSettings);
 }
 

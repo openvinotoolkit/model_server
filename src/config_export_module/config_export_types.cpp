@@ -22,11 +22,11 @@ namespace ovms {
 
 std::string enumToString(ConfigExportType type) {
     auto it = configExportTypeToString.find(type);
-    return (it != configExportTypeToString.end()) ? it->second : "unknown_model";
+    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
 }
 
 ConfigExportType stringToConfigExportEnum(std::string inString) {
     auto it = stringToConfigExportType.find(inString);
-    return (it != stringToConfigExportType.end()) ? it->second : unknown_model;
+    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
 }
 }  // namespace ovms

@@ -15,7 +15,6 @@
 //*****************************************************************************
 #include "config_export.hpp"
 
-#include <filesystem>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -26,6 +25,7 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "src/filesystem.hpp"
+#include "src/localfilesystem.hpp"
 #include "src/logging.hpp"
 #include "src/schema.hpp"
 #include "src/status.hpp"
@@ -154,21 +154,25 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     array.PushBack(newConfigItem, alloc);
 
     SPDLOG_DEBUG("Model to be added to configuration file: {}", fullPath);
-    std::string configString = "{ }";
     // Serialize the document to a JSON string
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     configJson.Accept(writer);
 
     // Output the JSON string
-    configString = buffer.GetString();
+    std::string configString = buffer.GetString();
 
     return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
 Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
     std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
-    if (std::filesystem::exists(fullPath)) {
+    bool exists;
+    auto status = LocalFileSystem::exists(fullPath, &exists);
+    if (!status.ok())
+        return status;
+        
+    if (exists) {
         return updateConfigAddModel(fullPath, modelSettings);
     } else {
         return createModelConfig(fullPath, modelSettings);
@@ -177,7 +181,12 @@ Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsI
 
 Status DisableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
     std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
-    if (std::filesystem::exists(fullPath)) {
+    bool exists;
+    auto status = LocalFileSystem::exists(fullPath, &exists);
+    if (!status.ok())
+        return status;
+        
+    if (exists) {
         return removeModelFromConfig(fullPath, modelSettings);
     } else {
         SPDLOG_ERROR("Config path does not exist: {}", fullPath);
@@ -185,22 +194,32 @@ Status DisableModel(const std::string& configDirectoryPath, const ModelsSettings
     }
 }
 
-Status createConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
+Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
     if (modelSettings.configPath.empty()) {
         SPDLOG_ERROR("Directory path empty: {}", modelSettings.configPath);
         return StatusCode::PATH_INVALID;
     }
 
-    if (exportType == enable_model) {
+    bool is_dir = false;
+    auto status = LocalFileSystem::isDir(modelSettings.configPath, &is_dir);
+    if (!status.ok())
+        return status;
+
+    if (!is_dir) {
+        SPDLOG_ERROR("Config path is not a directory: {}", modelSettings.configPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    if (exportType == ENABLE_MODEL) {
         return EnableModel(modelSettings.configPath, modelSettings);
-    } else if (exportType == disable_model) {
+    } else if (exportType == DISABLE_MODEL) {
         return DisableModel(modelSettings.configPath, modelSettings);
-    } else if (exportType == delete_model) {
+    } else if (exportType == DELETE_MODEL) {
         SPDLOG_ERROR("Delete not supported.");
-        return StatusCode::INTERNAL_ERROR;
-    } else if (exportType == unknown_model) {
+        return StatusCode::NOT_IMPLEMENTED;
+    } else if (exportType == UNKNOWN_MODEL) {
         SPDLOG_ERROR("Config creation options not initialized.");
-        return StatusCode::INTERNAL_ERROR;
+        return StatusCode::NOT_IMPLEMENTED;
     }
 
     return StatusCode::INTERNAL_ERROR;

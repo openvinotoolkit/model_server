@@ -19,23 +19,23 @@
 #pragma once
 namespace ovms {
 enum ConfigExportType : int {
-    enable_model,
-    disable_model,
-    delete_model,
-    unknown_model
+    ENABLE_MODEL,
+    DISABLE_MODEL,
+    DELETE_MODEL,
+    UNKNOWN_MODEL
 };
 
 const std::map<ConfigExportType, std::string> configExportTypeToString = {
-    {enable_model, "enable_model"},
-    {disable_model, "disable_model"},
-    {delete_model, "delete_model"},
-    {unknown_model, "unknown_model"}};
+    {ENABLE_MODEL, "ENABLE_MODEL"},
+    {DISABLE_MODEL, "DISABLE_MODEL"},
+    {DELETE_MODEL, "DELETE_MODEL"},
+    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
 
 const std::map<std::string, ConfigExportType> stringToConfigExportType = {
-    {"enable_model", enable_model},
-    {"disable_model", disable_model},
-    {"delete_model", delete_model},
-    {"unknown_model", unknown_model}};
+    {"ENABLE_MODEL", ENABLE_MODEL},
+    {"DISABLE_MODEL", DISABLE_MODEL},
+    {"DELETE_MODEL", DELETE_MODEL},
+    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
 
 std::string enumToString(ConfigExportType type);
 ConfigExportType stringToConfigExportEnum(std::string inString);

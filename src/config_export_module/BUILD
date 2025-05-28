@@ -37,6 +37,7 @@ cc_library(
         "//src/graph_export:graph_export_types",
         "//src:libovms_server_settings",
         "//src:libovmsfilesystem",
+        "//src:libovmslocalfilesystem",
         "//src:libovmslogging",
         "//src:libovmsschema",
     ],

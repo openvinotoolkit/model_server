@@ -76,7 +76,7 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
 }
 
 void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
     rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {

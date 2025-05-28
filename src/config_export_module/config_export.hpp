@@ -21,5 +21,5 @@ struct ModelsSettingsImpl;
 enum ConfigExportType : int;
 class Status;
 
-Status createConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
+Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
 }  // namespace ovms

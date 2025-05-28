@@ -30,6 +30,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
@@ -257,33 +258,48 @@ GraphExport::GraphExport() {
 }
 
 Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
-    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
-        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+    if (directoryPath.empty()) {
+        SPDLOG_ERROR("Directory path empty: {}", directoryPath);
         return StatusCode::PATH_INVALID;
     }
 
-    if (hfSettings.task == text_generation) {
+    bool exists = false;
+    auto status = LocalFileSystem::exists(directoryPath, &exists);
+    if (!status.ok())
+        return status;
+
+    bool is_dir = false;
+    status = LocalFileSystem::isDir(directoryPath, &is_dir);
+    if (!status.ok())
+        return status;
+
+    if (!is_dir) {
+        SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == embeddings) {
+    } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
         if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for embeddings.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == rerank) {
+    } else if (hfSettings.task == RERANK_GRAPH) {
         if (std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for rerank.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == unknown_graph) {
+    } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }

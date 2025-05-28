@@ -326,7 +326,7 @@ Status Server::startModules(ovms::Config& config) {
         if (config.getServerSettings().hfSettings.pullHfModelMode)
             return status;
     }
-    if (config.getServerSettings().exportConfigType != unknown_model) {
+    if (config.getServerSettings().exportConfigType != UNKNOWN_MODEL) {
         INSERT_MODULE(CONFIG_EXPORT_MODULE_NAME, it);
         START_MODULE(it);
     }
@@ -434,7 +434,7 @@ int Server::start(int argc, char** argv) {
         while (!shutdown_request &&
                !serverSettings.hfSettings.pullHfModelMode &&
                !serverSettings.listServables &&
-               serverSettings.exportConfigType == unknown_model) {
+               serverSettings.exportConfigType == UNKNOWN_MODEL) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {

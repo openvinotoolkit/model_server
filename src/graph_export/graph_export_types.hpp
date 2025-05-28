@@ -19,23 +19,23 @@
 #pragma once
 namespace ovms {
 enum GraphExportType {
-    text_generation,
-    rerank,
-    embeddings,
-    unknown_graph
+    TEXT_GENERATION_GRAPH,
+    RERANK_GRAPH,
+    EMBEDDINGS_GRAPH,
+    UNKNOWN_GRAPH
 };
 
 const std::map<GraphExportType, std::string> typeToString = {
-    {text_generation, "text_generation"},
-    {rerank, "rerank"},
-    {embeddings, "embeddings"},
-    {unknown_graph, "unknown_graph"}};
+    {TEXT_GENERATION_GRAPH, "text_generation"},
+    {RERANK_GRAPH, "rerank"},
+    {EMBEDDINGS_GRAPH, "embeddings"},
+    {UNKNOWN_GRAPH, "unknown_graph"}};
 
 const std::map<std::string, GraphExportType> stringToType = {
-    {"text_generation", text_generation},
-    {"rerank", rerank},
-    {"embeddings", embeddings},
-    {"unknown_graph", unknown_graph}};
+    {"text_generation", TEXT_GENERATION_GRAPH},
+    {"rerank", RERANK_GRAPH},
+    {"embeddings", EMBEDDINGS_GRAPH},
+    {"unknown_graph", UNKNOWN_GRAPH}};
 
 std::string enumToString(GraphExportType type);
 GraphExportType stringToEnum(std::string inString);

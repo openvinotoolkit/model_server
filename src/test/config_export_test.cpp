@@ -91,7 +91,7 @@ protected:
 };
 
 TEST_F(ConfigCreationTest, positiveAddModel) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
@@ -100,14 +100,14 @@ TEST_F(ConfigCreationTest, positiveAddModel) {
 }
 
 TEST_F(ConfigCreationTest, positiveRemoveOneModelToEmptyConfig) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
     std::string configContents = GetFileContents(configFile);
     ASSERT_EQ(expectedConfigContents, configContents) << configContents;
 
-    status = ovms::createConfig(this->modelsSettings, ovms::disable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
 
     configContents = GetFileContents(configFile);
@@ -115,7 +115,7 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToEmptyConfig) {
 }
 
 TEST_F(ConfigCreationTest, positiveAddTwoModelsToNonEmptyConfig) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
@@ -125,14 +125,14 @@ TEST_F(ConfigCreationTest, positiveAddTwoModelsToNonEmptyConfig) {
     // Add second model
     this->modelsSettings.modelName = "model2";
     this->modelsSettings.modelPath = "/model2/Path";
-    status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
     configContents = GetFileContents(configFile);
     ASSERT_EQ(expectedConfigContentsTwoModels, configContents) << configContents;
 }
 
 TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
@@ -142,17 +142,17 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
     // Add second model
     this->modelsSettings.modelName = "model2";
     this->modelsSettings.modelPath = "/model2/Path";
-    status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     // Add third model
     this->modelsSettings.modelName = "model3";
     this->modelsSettings.modelPath = "/model3/Path";
-    status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     this->modelsSettings.modelName = "model2";
-    status = ovms::createConfig(this->modelsSettings, ovms::disable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
 
     configContents = GetFileContents(configFile);
@@ -161,19 +161,19 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
 
 TEST_F(ConfigCreationTest, negativeWrongPath) {
     this->modelsSettings.configPath = "";
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
 TEST_F(ConfigCreationTest, negativeInternalErrorForType) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::delete_model);
-    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
-    status = ovms::createConfig(this->modelsSettings, ovms::unknown_model);
-    ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::DELETE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
+    status = ovms::updateConfig(this->modelsSettings, ovms::UNKNOWN_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
 TEST_F(ConfigCreationTest, negativeAddTheSameModelName) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
@@ -181,12 +181,12 @@ TEST_F(ConfigCreationTest, negativeAddTheSameModelName) {
     ASSERT_EQ(expectedConfigContents, configContents) << configContents;
 
     // Add second model
-    status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::MODEL_NAME_OCCUPIED);
 }
 
 TEST_F(ConfigCreationTest, negativeRemoveNotExistingName) {
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
@@ -195,7 +195,7 @@ TEST_F(ConfigCreationTest, negativeRemoveNotExistingName) {
 
     // Add third model
     this->modelsSettings.modelName = "model3";
-    status = ovms::createConfig(this->modelsSettings, ovms::disable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::MODEL_NAME_MISSING);
 }
 
@@ -205,16 +205,16 @@ TEST_F(ConfigCreationTest, negativeInvalidJson) {
     "model_confdffig_list":[]
     })";
     createConfigFileWithContent(configStr, ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json");
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
 
-    status = ovms::createConfig(this->modelsSettings, ovms::disable_model);
+    status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
 }
 
 TEST_F(ConfigCreationTest, positiveWithStart) {
     this->modelsSettings.modelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy");
-    auto status = ovms::createConfig(this->modelsSettings, ovms::enable_model);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     ConstructorEnabledModelManager manager;

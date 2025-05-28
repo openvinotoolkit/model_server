@@ -542,18 +542,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPort) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot both be unset");
 }
 
-TEST_F(OvmsConfigDeathTest, createModelConfigEnableMissigModelPath) {
-    char* n_argv[] = {
-        "ovms",
-        "--model_name",
-        "name",
-        "--remove_from_config",
-        "/config/path"};
-    int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config");
-}
-
-TEST_F(OvmsConfigDeathTest, createModelConfigDisableMissigModelPath) {
+TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
     char* n_argv[] = {
         "ovms",
         "--model_name",
@@ -564,7 +553,7 @@ TEST_F(OvmsConfigDeathTest, createModelConfigDisableMissigModelPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config");
 }
 
-TEST_F(OvmsConfigDeathTest, createModelConfigEnableMissigModelName) {
+TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
     char* n_argv[] = {
         "ovms",
         "--model_repository_path",
@@ -575,7 +564,7 @@ TEST_F(OvmsConfigDeathTest, createModelConfigEnableMissigModelName) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
-TEST_F(OvmsConfigDeathTest, createModelConfigDisableMissigModelName) {
+TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
     char* n_argv[] = {
         "ovms",
         "--model_repository_path",
@@ -586,7 +575,7 @@ TEST_F(OvmsConfigDeathTest, createModelConfigDisableMissigModelName) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
-TEST_F(OvmsConfigDeathTest, createModelConfigEnableMissigModelNameWithPath) {
+TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelNameWithPath) {
     char* n_argv[] = {
         "ovms",
         "--model_path",
@@ -599,7 +588,7 @@ TEST_F(OvmsConfigDeathTest, createModelConfigEnableMissigModelNameWithPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
-TEST_F(OvmsConfigDeathTest, createModelConfigDisableMissigModelNameWithPath) {
+TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
     char* n_argv[] = {
         "ovms",
         "--model_path",
@@ -761,7 +750,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.overwriteModels, false);
-    ASSERT_EQ(hfSettings.task, ovms::text_generation);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(graphSettings.modelPath, "./");
@@ -797,7 +786,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.overwriteModels, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
-    ASSERT_EQ(hfSettings.task, ovms::text_generation);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
     ASSERT_EQ(graphSettings.modelPath, "./");
@@ -845,7 +834,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::rerank);
+    ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
     ASSERT_EQ(rerankGraphSettings.version, 2);
@@ -889,7 +878,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
-    ASSERT_EQ(hfSettings.task, ovms::rerank);
+    ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 1002);
     ASSERT_EQ(rerankGraphSettings.version, 2);
@@ -922,7 +911,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::rerank);
+    ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
     ASSERT_EQ(rerankGraphSettings.version, 1);
@@ -961,7 +950,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::rerank);
+    ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxDocLength, 16000);
     ASSERT_EQ(rerankGraphSettings.version, 2);
@@ -1006,7 +995,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::embeddings);
+    ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
@@ -1053,7 +1042,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, false);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, true);
-    ASSERT_EQ(hfSettings.task, ovms::embeddings);
+    ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
@@ -1086,7 +1075,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::embeddings);
+    ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
@@ -1128,7 +1117,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.pullHfModelMode, true);
     ASSERT_EQ(hfSettings.pullHfAndStartModelMode, false);
-    ASSERT_EQ(hfSettings.task, ovms::embeddings);
+    ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.version, 2);
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
@@ -1388,11 +1377,11 @@ TEST(OvmsConfigTest, positiveSingle) {
 TEST(OvmsConfigManipulationTest, positiveEnableModel) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
-    std::string downloadPath = "test/repository";
+    std::string configPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
-        (char*)downloadPath.c_str(),
+        (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_path",
@@ -1403,22 +1392,22 @@ TEST(OvmsConfigManipulationTest, positiveEnableModel) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::enable_model);
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::ENABLE_MODEL);
 
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.modelPath, modelPath);
-    ASSERT_EQ(modelSettings.configPath, downloadPath);
+    ASSERT_EQ(modelSettings.configPath, configPath);
 }
 
 TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
-    std::string downloadPath = "test/repository";
+    std::string configPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--add_to_config",
-        (char*)downloadPath.c_str(),
+        (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
@@ -1429,22 +1418,22 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::enable_model);
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::ENABLE_MODEL);
 
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.modelPath, ovms::FileSystem::joinPath({modelPath, modelName}));
-    ASSERT_EQ(modelSettings.configPath, downloadPath);
+    ASSERT_EQ(modelSettings.configPath, configPath);
 }
 
 TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
-    std::string downloadPath = "test/repository";
+    std::string configPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
-        (char*)downloadPath.c_str(),
+        (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_path",
@@ -1455,22 +1444,22 @@ TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::disable_model);
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::DISABLE_MODEL);
 
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.modelPath, modelPath);
-    ASSERT_EQ(modelSettings.configPath, downloadPath);
+    ASSERT_EQ(modelSettings.configPath, configPath);
 }
 
 TEST(OvmsConfigManipulationTest, positiveDisableModelRepoParam) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
-    std::string downloadPath = "test/repository";
+    std::string configPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
         (char*)"--remove_from_config",
-        (char*)downloadPath.c_str(),
+        (char*)configPath.c_str(),
         (char*)"--model_name",
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
@@ -1481,12 +1470,36 @@ TEST(OvmsConfigManipulationTest, positiveDisableModelRepoParam) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::disable_model);
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::DISABLE_MODEL);
 
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
     ASSERT_EQ(modelSettings.modelPath, ovms::FileSystem::joinPath({modelPath, modelName}));
-    ASSERT_EQ(modelSettings.configPath, downloadPath);
+    ASSERT_EQ(modelSettings.configPath, configPath);
+}
+
+TEST(OvmsConfigManipulationTest, positiveDisableModelNoModelPath) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+    };
+
+    int arg_count = 5;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    auto& serverSettigns = config.getServerSettings();
+    ASSERT_EQ(serverSettigns.exportConfigType, ovms::DISABLE_MODEL);
+
+    auto& modelSettings = config.getModelSettings();
+    ASSERT_EQ(modelSettings.modelName, modelName);
+    ASSERT_EQ(modelSettings.modelPath, "");
+    ASSERT_EQ(modelSettings.configPath, configPath);
 }
 
 #pragma GCC diagnostic pop

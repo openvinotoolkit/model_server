@@ -266,7 +266,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::rerank;
+    hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel";
@@ -290,7 +290,7 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::embeddings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel";
@@ -359,21 +359,21 @@ TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
 TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
     ovms::HFSettingsImpl hfSettings;
 
-    hfSettings.task = ovms::rerank;
+    hfSettings.task = ovms::RERANK_GRAPH;
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
-    hfSettings.task = ovms::embeddings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
-    hfSettings.task = ovms::unknown_graph;
+    hfSettings.task = ovms::UNKNOWN_GRAPH;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::INTERNAL_ERROR);
 
     // Default constructable variant
-    hfSettings.task = ovms::text_generation;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
 }

@@ -69,7 +69,7 @@ struct HFSettingsImpl {
     bool pullHfModelMode = false;
     bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
-    GraphExportType task = text_generation;
+    GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
 };
 
@@ -98,7 +98,7 @@ struct ServerSettingsImpl {
     bool withPython = false;
     bool startedWithCLI = false;
     bool listServables = false;
-    ConfigExportType exportConfigType = unknown_model;
+    ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
 };
 

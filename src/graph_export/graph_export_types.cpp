@@ -27,6 +27,6 @@ std::string enumToString(GraphExportType type) {
 
 GraphExportType stringToEnum(std::string inString) {
     auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : unknown_graph;
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }
 }  // namespace ovms
