@@ -728,7 +728,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
     return status;
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string responseParserName) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string& responseParserName) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -747,15 +747,11 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             usage.completionTokens -= usage.promptTokens;
 
         ParsedResponse parsedResponse;
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            if (!responseParserName.empty()) {
-                ResponseParser responseParser(tokenizer, responseParserName);
-                parsedResponse = responseParser.parse(generationOutput.generated_ids);
-            } else {
-                parsedResponse.content = tokenizer.decode(generationOutput.generated_ids);
-            }
-        } else {
+        if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParserName.empty()) {
             parsedResponse.content = tokenizer.decode(generationOutput.generated_ids);
+        } else {
+            ResponseParser responseParser(tokenizer, responseParserName);
+            parsedResponse = responseParser.parse(generationOutput.generated_ids);
         }
 
         writer.StartObject();  // {
@@ -955,7 +951,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string responseParserName) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string& responseParserName) {  // TODO separate common part with function implemented above
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -975,15 +971,11 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
             usage.completionTokens -= usage.promptTokens;
 
         ParsedResponse parsedResponse;
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            if (!responseParserName.empty()) {
-                ResponseParser responseParser(tokenizer, responseParserName);
-                parsedResponse = responseParser.parse(tokens);
-            } else {
-                parsedResponse.content = tokenizer.decode(tokens);
-            }
-        } else {
+        if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParserName.empty()) {
             parsedResponse.content = tokenizer.decode(tokens);
+        } else {
+            ResponseParser responseParser(tokenizer, responseParserName);
+            parsedResponse = responseParser.parse(tokens);
         }
 
         writer.StartObject();  // {

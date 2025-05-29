@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
