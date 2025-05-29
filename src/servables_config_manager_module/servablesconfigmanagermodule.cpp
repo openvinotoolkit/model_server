@@ -18,6 +18,7 @@
 #include <string>
 #include <sstream>
 
+#include "../config_export_module/config_export.hpp"
 #include "../config.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -28,25 +29,22 @@
 namespace ovms {
 ServablesConfigManagerModule::ServablesConfigManagerModule() {}
 
-#define RETURN_IF_ERROR(StatusOr)                       \
-    do {                                                \
-        if (std::holds_alternative<Status>(StatusOr)) { \
-            return std::get<Status>(StatusOr);          \
-        }                                               \
-    } while (0)
-
 Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
-    const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
-    auto map = listServables(repositoryPath);
-    std::stringstream ss;
-    for (const auto& [k, v] : map) {
-        ss << k << std::endl;
+    if (config.getServerSettings().serverMode == LIST_MODELS_MODE) {
+        const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
+        auto map = listServables(repositoryPath);
+        std::stringstream ss;
+        for (const auto& [k, v] : map) {
+            ss << k << std::endl;
+        }
+        SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+    } else {
+        return updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
     }
-    SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
     return StatusCode::OK;
 }
 

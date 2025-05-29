@@ -28,12 +28,13 @@ namespace ovms {
 struct HFSettingsImpl;
 struct RerankGraphSettingsImpl;
 class Status;
+enum OvmsServerMode : int;
 
 class RerankGraphCLIParser : public GraphCLIParser {
 public:
     RerankGraphCLIParser() = default;
     std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
 
     void printHelp();
     void createOptions();
