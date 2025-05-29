@@ -70,9 +70,6 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
             return false;
         }
 
-        std::cout << "\n\n\n\nPrompt after applying chat template: " << result << std::endl
-                  << std::endl;
-
         output = std::move(result);
         return true;
     } catch (const pybind11::error_already_set& e) {
