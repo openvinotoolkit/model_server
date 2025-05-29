@@ -25,6 +25,8 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 
 #include "../capi_frontend/server_settings.hpp"
@@ -34,7 +36,11 @@
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "../schema.hpp"
 #include "graph_export_types.hpp"
+
+#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/calculator_graph.h"
 
 namespace ovms {
 
@@ -102,10 +108,29 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
-
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
+static Status validateSubconfigSchema(const std::string& subconfig, const std::string& type) {
+    rapidjson::Document subconfigJson;
+    rapidjson::ParseResult parseResult = subconfigJson.Parse(subconfig.c_str());
+    if (parseResult.Code()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Created {} subconfig file is not a valid JSON file. Error: {}", type, rapidjson::GetParseError_En(parseResult.Code()));
+        return StatusCode::JSON_INVALID;
+    }
+    if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
+        SPDLOG_ERROR("Created {} subconfig file is not in valid configuration format", type);
+        return StatusCode::JSON_INVALID;
+    }
+    return StatusCode::OK;
 }
 
 static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -130,6 +155,10 @@ static Status createRerankSubconfigTemplate(const std::string& directoryPath, co
             }
         ]
     })";
+    auto status = validateSubconfigSchema(oss.str(), "rerank");
+    if (!status.ok()){
+        return status;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -157,6 +186,10 @@ static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath
             }
         ]
     })";
+    auto status = validateSubconfigSchema(oss.str(), "embeddings");
+    if (!status.ok()){
+        return status;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -196,6 +229,12 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
         output_stream: "RESPONSE_PAYLOAD:output"
     })";
 
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created rerank graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -245,6 +284,12 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     }
     })";
 
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     auto status = FileSystem::createFileOverwrite(fullPath, oss.str());

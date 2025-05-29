@@ -86,11 +86,72 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validate() {
-    // TODO: CVS-166727 Add validation of all parameters once the CLI model export flags will be implemented
     if (this->serverSettings.serverMode == HF_PULL_MODE) {
+        if (!serverSettings.hfSettings.sourceModel.size()) {
+            std::cerr << "source_model parameter is required for pull mode";
+            return false;
+        }
+        if (!serverSettings.hfSettings.downloadPath.size()) {
+            std::cerr << "model_repository_path parameter is required for pull mode";
+            return false;
+        }
         if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
+        }
+        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+            std::cerr << "For now only OpenVINO models are supported in pulling mode";
+            return false;
+        }
+        if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
+            if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for text generation.";
+                return false;
+            }
+            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
+            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
+                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (settings.targetDevice != "NPU") {
+                if (settings.pluginConfig.maxPromptLength.has_value()) {
+                    std::cerr << "max_prompt_len is only supported for NPU target device";
+                    return false;
+                }
+            }
+        }
+
+        if (this->serverSettings.hfSettings.task == EMBEDDINGS_GRAPH) {
+            if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for embeddings.";
+                return false;
+            }
+            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
         }
         return true;
     }

@@ -60,7 +60,6 @@ struct EmbeddingsGraphSettingsImpl {
     uint32_t numStreams = 1;
     uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
     std::string normalize = "false";
-    std::string truncate = "false";  // FIXME: export_embeddings_tokenizer python method - not supported currently?
 };
 
 struct RerankGraphSettingsImpl {

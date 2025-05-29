@@ -334,6 +334,40 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
     ASSERT_EQ(expectedRerankJsonContents, jsonContents) << jsonContents;
 }
 
+TEST_F(GraphCreationTest, rerankCreatedJsonInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::RERANK_GRAPH;
+    ovms::RerankGraphSettingsImpl rerankGraphSettings;
+    rerankGraphSettings.targetDevice = "GPU";
+    rerankGraphSettings.modelName = "myModel\t";
+    rerankGraphSettings.numStreams = 2;
+    rerankGraphSettings.maxDocLength = 18;
+    rerankGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::RERANK_GRAPH;
+    ovms::RerankGraphSettingsImpl rerankGraphSettings;
+    rerankGraphSettings.targetDevice = "GPU";
+    rerankGraphSettings.modelName = "myModel\"";
+    rerankGraphSettings.numStreams = 2;
+    rerankGraphSettings.maxDocLength = 18;
+    rerankGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+}
+
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::EMBEDDINGS_GRAPH;
@@ -341,7 +375,6 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel";
     embeddingsGraphSettings.numStreams = 2;
-    embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.version = 2;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -356,6 +389,40 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
 
     std::string jsonContents = GetFileContents(subconfigPath);
     ASSERT_EQ(expectedEmbeddingsJsonContents, jsonContents) << jsonContents;
+}
+
+TEST_F(GraphCreationTest, embeddingsCreatedJsonInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    embeddingsGraphSettings.targetDevice = "GPU";
+    embeddingsGraphSettings.modelName = "myModel\t";
+    embeddingsGraphSettings.numStreams = 2;
+    embeddingsGraphSettings.normalize = "true";
+    embeddingsGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+}
+
+TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    embeddingsGraphSettings.targetDevice = "GPU";
+    embeddingsGraphSettings.modelName = "myModel\"";
+    embeddingsGraphSettings.numStreams = 2;
+    embeddingsGraphSettings.normalize = "true";
+    embeddingsGraphSettings.version = 2;
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
@@ -426,6 +493,19 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    graphSettings.modelPath = "invalid\"";
+    hfSettings.graphSettings = std::move(graphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
