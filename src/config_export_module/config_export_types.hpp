@@ -13,34 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <memory>
+#include <iostream>
+#include <map>
 #include <string>
-#include <vector>
-
-#include <cxxopts.hpp>
-
-#include "graph_cli_parser.hpp"
-
+#pragma once
 namespace ovms {
-
-struct HFSettingsImpl;
-struct EmbeddingsGraphSettingsImpl;
-class Status;
-enum OvmsServerMode : int;
-
-class EmbeddingsGraphCLIParser : public GraphCLIParser {
-public:
-    EmbeddingsGraphCLIParser() = default;
-    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
-
-    void printHelp();
-    void createOptions();
-
-private:
-    static EmbeddingsGraphSettingsImpl& defaultGraphSettings();
+enum ConfigExportType : int {
+    ENABLE_MODEL,
+    DISABLE_MODEL,
+    DELETE_MODEL,
+    UNKNOWN_MODEL
 };
+
+const std::map<ConfigExportType, std::string> configExportTypeToString = {
+    {ENABLE_MODEL, "ENABLE_MODEL"},
+    {DISABLE_MODEL, "DISABLE_MODEL"},
+    {DELETE_MODEL, "DELETE_MODEL"},
+    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
+
+const std::map<std::string, ConfigExportType> stringToConfigExportType = {
+    {"ENABLE_MODEL", ENABLE_MODEL},
+    {"DISABLE_MODEL", DISABLE_MODEL},
+    {"DELETE_MODEL", DELETE_MODEL},
+    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
+
+std::string enumToString(ConfigExportType type);
+ConfigExportType stringToConfigExportEnum(std::string inString);
 
 }  // namespace ovms

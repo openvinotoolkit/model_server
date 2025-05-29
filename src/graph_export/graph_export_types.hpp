@@ -18,26 +18,26 @@
 #include <string>
 #pragma once
 namespace ovms {
-enum ExportType {
-    text_generation,
-    rerank,
-    embeddings,
-    unknown
+enum GraphExportType {
+    TEXT_GENERATION_GRAPH,
+    RERANK_GRAPH,
+    EMBEDDINGS_GRAPH,
+    UNKNOWN_GRAPH
 };
 
-const std::map<ExportType, std::string> typeToString = {
-    {text_generation, "text_generation"},
-    {rerank, "rerank"},
-    {embeddings, "embeddings"},
-    {unknown, "unknown"}};
+const std::map<GraphExportType, std::string> typeToString = {
+    {TEXT_GENERATION_GRAPH, "text_generation"},
+    {RERANK_GRAPH, "rerank"},
+    {EMBEDDINGS_GRAPH, "embeddings"},
+    {UNKNOWN_GRAPH, "unknown_graph"}};
 
-const std::map<std::string, ExportType> stringToType = {
-    {"text_generation", text_generation},
-    {"rerank", rerank},
-    {"embeddings", embeddings},
-    {"unknown", unknown}};
+const std::map<std::string, GraphExportType> stringToType = {
+    {"text_generation", TEXT_GENERATION_GRAPH},
+    {"rerank", RERANK_GRAPH},
+    {"embeddings", EMBEDDINGS_GRAPH},
+    {"unknown_graph", UNKNOWN_GRAPH}};
 
-std::string enumToString(ExportType type);
-ExportType stringToEnum(std::string inString);
+std::string enumToString(GraphExportType type);
+GraphExportType stringToEnum(std::string inString);
 
 }  // namespace ovms
