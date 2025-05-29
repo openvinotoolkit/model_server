@@ -47,7 +47,7 @@
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
-#include "src/embeddings/embeddings_calculator_new.pb.h"
+#include "src/embeddings/embeddings_calculator_ov.pb.h"
 
 namespace ovms {
 MediapipeGraphConfig MediapipeGraphDefinition::MGC;
@@ -55,7 +55,7 @@ MediapipeGraphConfig MediapipeGraphDefinition::MGC;
 const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonExecutorCalculator"};
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
-const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorNew"};
+const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -491,18 +491,12 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 return StatusCode::LLM_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
-            SPDLOG_ERROR("NODE NAME: {}", nodeName);
             if (this->embeddingsServableMap.find(nodeName) != this->embeddingsServableMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            mediapipe::EmbeddingsCalculatorNewOptions nodeOptions;
-            config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::string model_dir = nodeOptions.models_path();
-            SPDLOG_ERROR(model_dir);
-            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(model_dir);
+            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i));
             this->embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(embeddings)));
-            SPDLOG_ERROR("MAP SIZE {}", embeddingsServableMap.size());
             embeddingsServablesCleaningGuard.disableCleaning();
         }
     }

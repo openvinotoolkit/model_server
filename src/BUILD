@@ -624,7 +624,7 @@ cc_library(
             "//:not_disable_mediapipe" : [
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
-                "//src/embeddings:embeddingscalculatornew",
+                "//src/embeddings:EmbeddingsCalculatorOV",
                 "//src/rerank:rerankcalculator",
                 "//src/llm:llmcalculator",],
         }) + select({
