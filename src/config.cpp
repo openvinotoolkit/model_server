@@ -100,7 +100,7 @@ bool Config::validate() {
             return false;
         }
         if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
-            std::cerr << "For now OVMS version without python supports pulling OpenVINO models only";
+            std::cerr << "For now only OpenVINO models are supported in pulling mode";
             return false;
         }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {

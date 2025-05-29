@@ -950,7 +950,7 @@ TEST(OvmsGraphConfigTest, negativeSourceModel) {
     };
 
     int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "or now OVMS version without python supports pulling OpenVINO models only");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
