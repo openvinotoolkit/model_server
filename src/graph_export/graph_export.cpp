@@ -308,8 +308,6 @@ node: {
 }
 )";
 
-    // TODO: Remaining params
-
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
