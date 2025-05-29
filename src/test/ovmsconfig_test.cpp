@@ -604,6 +604,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
 TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
     char* n_argv[] = {
         "ovms",
+        "--pull",
         "--model_repository_path",
         "/some/path",
         "--task",
@@ -611,13 +612,14 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
         "--normalize",
         "true",
     };
-    int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot both be unset");
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "source_model parameter is required for pull mode");
 }
 
-TEST_F(OvmsConfigDeathTest, hfPullNoSourceModelRepositoryPath) {
+TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     char* n_argv[] = {
         "ovms",
+        "--pull",
         "--source_model",
         "some/model",
         "--task",
@@ -625,8 +627,8 @@ TEST_F(OvmsConfigDeathTest, hfPullNoSourceModelRepositoryPath) {
         "--normalize",
         "true",
     };
-    int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "port and rest_port cannot both be unset");
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
@@ -948,7 +950,7 @@ TEST(OvmsGraphConfigTest, negativeSourceModel) {
     };
 
     int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "or now OVMS version without python supports pulling OpenVINO models only");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
