@@ -2821,11 +2821,13 @@ cc_test(
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
                 "test/multipart_calculator_test.cpp",
+                "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
+                "test/llm/response_parsers/llama3_response_parser_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -3000,6 +3002,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
+                "//src/llm:response_parsers",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
