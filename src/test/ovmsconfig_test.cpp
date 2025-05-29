@@ -994,13 +994,25 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)downloadPath.c_str(),
         (char*)"--task",
         (char*)"image_generation",
-        (char*)"target_device",
+        (char*)"--cache_dir",
+        (char*)"/cache",
+        (char*)"--target_device",
         (char*)"GPU",
+        (char*)"--num_streams",
+        (char*)"14",
+        (char*)"--max_resolution",
+        (char*)"3000x4000",
         (char*)"--default_resolution",
-        (char*)"1024x1024",
+        (char*)"300x400",
+        (char*)"--max_number_images_per_prompt",
+        (char*)"7",
+        (char*)"--default_num_inference_steps",
+        (char*)"2",
+        (char*)"--max_num_inference_steps",
+        (char*)"3",
     };
 
-    int arg_count = 12;
+    int arg_count = 24;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1011,7 +1023,15 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "1024x1024");
+    ASSERT_EQ(imageGenerationGraphSettings.maxResolution, "3000x4000");
+    ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "300x400");
+    ASSERT_TRUE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
+    ASSERT_EQ(imageGenerationGraphSettings.maxNumberImagesPerPrompt.value(), 7);
+    ASSERT_TRUE(imageGenerationGraphSettings.defaultNumInferenceSteps.has_value());
+    ASSERT_EQ(imageGenerationGraphSettings.defaultNumInferenceSteps.value(), 2);
+    ASSERT_TRUE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
+    ASSERT_EQ(imageGenerationGraphSettings.maxNumInferenceSteps.value(), 3);
+    ASSERT_EQ(imageGenerationGraphSettings.pluginConfig, "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
@@ -1038,8 +1058,13 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "CPU");
-    ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "512x512");
+    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU");
+    ASSERT_TRUE(imageGenerationGraphSettings.maxResolution.empty());
+    ASSERT_TRUE(imageGenerationGraphSettings.defaultResolution.empty());
+    ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
+    ASSERT_FALSE(imageGenerationGraphSettings.defaultNumInferenceSteps.has_value());
+    ASSERT_FALSE(imageGenerationGraphSettings.maxNumInferenceSteps.has_value());
+    ASSERT_TRUE(imageGenerationGraphSettings.pluginConfig.empty());
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {

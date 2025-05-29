@@ -258,9 +258,14 @@ node: {
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-          models_path: "./",
-          target_device: "GPU",
-          default_resolution: "800x800"
+          models_path: "./"
+          target_device: "GPU"
+          plugin_config: '{"NUM_STREAMS":14,"CACHE_DIR":"/cache"}'
+          max_resolution: "3000x4000"
+          default_resolution: "300x400"
+          max_number_images_per_prompt: 7
+          default_num_inference_steps: 2
+          max_num_inference_steps: 3
       }
   }
 }
