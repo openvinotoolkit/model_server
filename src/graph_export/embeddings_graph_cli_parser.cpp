@@ -79,7 +79,7 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
     return  result->unmatched();
 }
 
-void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
     embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
     if (modelName != "") {
@@ -89,7 +89,7 @@ void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::st
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {

@@ -33,7 +33,7 @@ class ImageGenerationGraphCLIParser : public GraphCLIParser {
 public:
     ImageGenerationGraphCLIParser() = default;
     std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
 
     void printHelp();
     void createOptions();

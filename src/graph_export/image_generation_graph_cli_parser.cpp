@@ -35,19 +35,37 @@ ImageGenerationGraphSettingsImpl& ImageGenerationGraphCLIParser::defaultGraphSet
 }
 
 void ImageGenerationGraphCLIParser::createOptions() {
-    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "-pull --task image generation/edit/inpainting graph options");
+    this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull --task image generation/edit/inpainting graph options");
     options->allow_unrecognised_options();
+
+        std::cout << "AA" << std::endl;
 
     // clang-format off
     options->add_options("image_generation")
-        ("graph_target_device",
+        ("graph_target_device",  // TODO: Remove
             "CPU, GPU, NPU or HETERO, default is CPU.",
             cxxopts::value<std::string>()->default_value("CPU"),
             "GRAPH_TARGET_DEVICE")
+        ("max_resolution",
+            "Max allowed resolution in a format of WxH; W=width H=height. If not specified, inherited from model.",
+            cxxopts::value<std::string>(),
+            "MAX_RESOLUTION")
         ("default_resolution",
-            "Default width and height of requested image in case user does not provide it.",
-            cxxopts::value<std::string>()->default_value("512x512"),
-            "DEFAULT_RESOLUTION");
+            "Default resolution when not specified by client. If not specified, inherited from model.",
+            cxxopts::value<std::string>(),
+            "DEFAULT_RESOLUTION")
+        ("max_number_images_per_prompt",
+            "Max allowed number of images client is allowed to request for a given prompt.",
+            cxxopts::value<uint32_t>(),
+            "MAX_NUMBER_IMAGES_PER_PROMPT")
+        ("default_num_inference_steps",
+            "Default number of inference steps when not specified by client.",
+            cxxopts::value<uint32_t>(),
+            "DEFAULT_NUM_INFERENCE_STEPS")
+        ("max_num_inference_steps",
+            "Max allowed number of inference steps client is allowed to request for a given prompt.",
+            cxxopts::value<uint32_t>(),
+            "MAX_NUM_INFERENCE_STEPS");
 }
 
 void ImageGenerationGraphCLIParser::printHelp() {
@@ -71,7 +89,7 @@ std::vector<std::string> ImageGenerationGraphCLIParser::parse(const std::vector<
     return  result->unmatched();
 }
 
-void ImageGenerationGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+void ImageGenerationGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = ImageGenerationGraphCLIParser::defaultGraphSettings();
     // Deduct model name
     if (modelName != "") {
@@ -81,12 +99,19 @@ void ImageGenerationGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const st
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
         imageGenerationGraphSettings.targetDevice = result->operator[]("graph_target_device").as<std::string>();
-        imageGenerationGraphSettings.defaultResolution = result->operator[]("default_resolution").as<std::string>();
+        imageGenerationGraphSettings.maxResolution = result->count("max_resolution") ? result->operator[]("max_resolution").as<std::string>() : "";
+        imageGenerationGraphSettings.defaultResolution = result->count("default_resolution") ? result->operator[]("default_resolution").as<std::string>() : "";
+        if (result->count("max_number_images_per_prompt"))  // TODO: Validate zeros?
+            imageGenerationGraphSettings.maxNumberImagesPerPrompt = result->operator[]("max_number_images_per_prompt").as<uint32_t>();
+        if (result->count("default_num_inference_steps"))
+            imageGenerationGraphSettings.defaultNumInferenceSteps = result->operator[]("default_num_inference_steps").as<uint32_t>();
+        if (result->count("max_num_inference_steps"))
+            imageGenerationGraphSettings.maxNumInferenceSteps = result->operator[]("max_num_inference_steps").as<uint32_t>();
     }
 
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);

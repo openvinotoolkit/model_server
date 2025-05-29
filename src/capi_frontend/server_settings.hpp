@@ -21,8 +21,18 @@
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
+#include "../config_export_module/config_export_types.hpp"
 
 namespace ovms {
+
+enum OvmsServerMode : int {
+    SERVING_MODELS_MODE,
+    HF_PULL_MODE,
+    HF_PULL_AND_START_MODE,
+    LIST_MODELS_MODE,
+    MODIFY_CONFIG_MODE,
+    UNKNOWN_MODE
+};
 
 struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
@@ -65,17 +75,20 @@ struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
-    std::string defaultResolution = "512x512";
+    std::string maxResolution = "";  // Format WxH, e.g., 1024x1024, TODO: Validate for WxH
+    std::string defaultResolution = "";  // Format WxH, e.g., 1024x1024, TODO: Validate for WxH
+    std::optional<uint32_t> maxNumberImagesPerPrompt;
+    std::optional<uint32_t> defaultNumInferenceSteps;
+    std::optional<uint32_t> maxNumInferenceSteps;
+    std::optional<uint32_t> numStreams;  // ?
 };
 
 struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
-    bool pullHfModelMode = false;
-    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
-    ExportType task = text_generation;
+    GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
@@ -104,8 +117,9 @@ struct ServerSettingsImpl {
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
-    bool listServables = false;
+    ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
+    OvmsServerMode serverMode = SERVING_MODELS_MODE;
 };
 
 struct ModelsSettingsImpl {
