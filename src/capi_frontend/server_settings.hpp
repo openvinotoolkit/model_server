@@ -75,7 +75,7 @@ struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
-    std::string maxResolution = "";  // Format WxH, e.g., 1024x1024, TODO: Validate for WxH
+    std::string maxResolution = "";      // Format WxH, e.g., 1024x1024, TODO: Validate for WxH
     std::string defaultResolution = "";  // Format WxH, e.g., 1024x1024, TODO: Validate for WxH
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;

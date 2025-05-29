@@ -38,8 +38,6 @@ void ImageGenerationGraphCLIParser::createOptions() {
     this->options = std::make_unique<cxxopts::Options>("ovms --pull [PULL OPTIONS ... ]", "--pull --task image generation/edit/inpainting graph options");
     options->allow_unrecognised_options();
 
-        std::cout << "AA" << std::endl;
-
     // clang-format off
     options->add_options("image_generation")
         ("graph_target_device",  // TODO: Remove
