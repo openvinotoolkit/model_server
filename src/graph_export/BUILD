@@ -74,6 +74,7 @@ cc_library(
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
 )

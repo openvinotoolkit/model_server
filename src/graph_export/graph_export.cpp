@@ -272,6 +272,11 @@ node: {
           models_path: ")" << graphSettings.modelPath << R"(",
           target_device: ")" << graphSettings.targetDevice << R"(")";
 
+    if (graphSettings.pluginConfig.size()) {
+        oss << R"(
+          plugin_config: ')" << graphSettings.pluginConfig << R"(')";
+    }
+
     if (graphSettings.maxResolution.size()) {
         oss << R"(
           max_resolution: ")" << graphSettings.maxResolution << R"(")";

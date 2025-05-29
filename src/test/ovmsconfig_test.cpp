@@ -994,7 +994,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)downloadPath.c_str(),
         (char*)"--task",
         (char*)"image_generation",
-        (char*)"--graph_target_device",
+        (char*)"target_device",
         (char*)"GPU",
         (char*)"--default_resolution",
         (char*)"1024x1024",

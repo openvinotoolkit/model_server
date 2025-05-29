@@ -27,13 +27,14 @@ namespace ovms {
 
 struct HFSettingsImpl;
 struct ImageGenerationGraphSettingsImpl;
+struct ServerSettingsImpl;
 class Status;
 
 class ImageGenerationGraphCLIParser : public GraphCLIParser {
 public:
     ImageGenerationGraphCLIParser() = default;
     std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
+    void prepare(ServerSettingsImpl& serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
 
     void printHelp();
     void createOptions();
