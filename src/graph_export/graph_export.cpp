@@ -30,27 +30,13 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "graph_export_types.hpp"
 
 namespace ovms {
-
-Status createFile(const std::string& filePath, const std::string& contents) {
-    SPDLOG_DEBUG("Creating file {}", filePath);
-    // Always overwrite
-    {
-        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
-        if (graphFile.is_open()) {
-            graphFile << contents << std::endl;
-        } else {
-            SPDLOG_ERROR("Unable to open file: ", filePath);
-            return StatusCode::FILE_INVALID;
-        }
-    }
-    return StatusCode::OK;
-}
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
@@ -119,7 +105,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -146,7 +132,7 @@ static Status createRerankSubconfigTemplate(const std::string& directoryPath, co
     })";
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
@@ -173,7 +159,7 @@ static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath
     })";
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -212,7 +198,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
@@ -261,7 +247,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
 
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
@@ -272,33 +258,48 @@ GraphExport::GraphExport() {
 }
 
 Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
-    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
-        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+    if (directoryPath.empty()) {
+        SPDLOG_ERROR("Directory path empty: {}", directoryPath);
         return StatusCode::PATH_INVALID;
     }
 
-    if (hfSettings.task == text_generation) {
+    bool exists = false;
+    auto status = LocalFileSystem::exists(directoryPath, &exists);
+    if (!status.ok())
+        return status;
+
+    bool is_dir = false;
+    status = LocalFileSystem::isDir(directoryPath, &is_dir);
+    if (!status.ok())
+        return status;
+
+    if (!is_dir) {
+        SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == embeddings) {
+    } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
         if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for embeddings.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == rerank) {
+    } else if (hfSettings.task == RERANK_GRAPH) {
         if (std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for rerank.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == unknown) {
+    } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }

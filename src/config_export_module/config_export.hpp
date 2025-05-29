@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2020 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,21 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
 #include <string>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/schema.h>
-#pragma warning(pop)
 
 namespace ovms {
+struct ModelsSettingsImpl;
+enum ConfigExportType : int;
 class Status;
-extern const std::string MODELS_CONFIG_SCHEMA;
-extern const std::string MODEL_CONFIG_DEFINITION2;
-extern const char* MODELS_MAPPING_SCHEMA;
-extern const std::string MEDIAPIPE_SUBCONFIG_SCHEMA;
 
-Status validateJsonAgainstSchema(rapidjson::Document& json, const char* schema, bool detailedError = false);
-Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson, std::string& jsonMd5, int wrongConfigFileRetryDelayMs = 10, int maxConfigJsonReadRetry = 3);
+Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType);
 }  // namespace ovms
