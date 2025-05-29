@@ -31,9 +31,9 @@ ServablesConfigManagerModule::ServablesConfigManagerModule() {}
 
 Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     if (config.getServerSettings().serverMode == LIST_MODELS_MODE) {
         const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
         auto map = listServables(repositoryPath);
@@ -52,9 +52,9 @@ void ServablesConfigManagerModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} shutting down", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} shutdown", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
 }
 
 ServablesConfigManagerModule::~ServablesConfigManagerModule() {
