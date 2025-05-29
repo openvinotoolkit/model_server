@@ -216,7 +216,7 @@ public:
     absl::Status parseTools();
 
     std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string responseParserName = "");
-    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
+    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string responseParserName = "");
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);

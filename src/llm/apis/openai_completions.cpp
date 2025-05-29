@@ -955,7 +955,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string responseParserName) {  // TODO separate common part with function implemented above
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -973,8 +973,19 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         usage.completionTokens += tokens.size();
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(tokens);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
+
+        ParsedResponse parsedResponse;
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            if (!responseParserName.empty()) {
+                ResponseParser responseParser(tokenizer, responseParserName);
+                parsedResponse = responseParser.parse(tokens);
+            } else {
+                parsedResponse.content = tokenizer.decode(tokens);
+            }
+        } else {
+            parsedResponse.content = tokenizer.decode(tokens);
+        }
+
         writer.StartObject();  // {
         writer.String("finish_reason");
         writer.String("stop");
@@ -988,17 +999,36 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
             writer.String("content");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
             // role: string; Role of the text producer
             // Will make sense once we have chat templates? TODO(atobisze)
             writer.String("role");
             writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
+
+            writer.String("tool_calls");
+            writer.StartArray();  // [
+            for (const ToolCall& toolCall : parsedResponse.toolCalls) {
+                writer.StartObject();  // {
+                writer.String("id");
+                writer.String(toolCall.id.c_str());  // Generate a random ID for the tool call
+
+                writer.String("type");
+                writer.String("function");
+
+                writer.String("function");
+                writer.StartObject();  // {
+                writer.String("name");
+                writer.String(toolCall.name.c_str());
+                writer.String("arguments");
+                writer.String(toolCall.arguments.c_str());  // Assuming toolsResponse is a valid JSON string
+                writer.EndObject();                         // }
+                writer.EndObject();                         // }
+            }
+            writer.EndArray();   // ]
             writer.EndObject();  // }
         } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
         }
 
         writer.EndObject();  // }

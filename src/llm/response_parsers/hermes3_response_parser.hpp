@@ -24,64 +24,33 @@
 #include "utils.hpp"
 
 namespace ovms {
-class Qwen3ResponseParser : public BaseResponseParser {
+class Hermes3ResponseParser : public BaseResponseParser {
 protected:
     // Tool calls are wrapped in <tool_call> and </tool_call> tags
     std::string toolCallStartTag = "<tool_call>";
-    int64_t toolCallStartTokenId = 151657;  // This is the token ID for <tool_call> in Qwen3 tokenizer
+    int64_t toolCallStartTokenId = 128002;  // This is the token ID for <tool_call> in Hermes3 tokenizer
     std::string toolCallEndTag = "</tool_call>";
-    int64_t toolCallEndTokenId = 151658;  // This is the token ID for </tool_call> in Qwen3 tokenizer
-
-    std::string reasoningStartTag = "<think>";
-    int64_t reasoningStartTokenId = 151667;  // This is the token ID for <think> in Qwen3 tokenizer
-    std::string reasoningEndTag = "</think>";
-    int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
+    int64_t toolCallEndTokenId = 128013;  // This is the token ID for </tool_call> in Hermes3 tokenizer
 
 public:
-    Qwen3ResponseParser() = delete;
-    explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
+    Hermes3ResponseParser() = delete;
+    explicit Hermes3ResponseParser(ov::genai::Tokenizer& tokenizer) :
         BaseResponseParser(tokenizer) {}
 
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override {
         ParsedResponse parsedResponse;
 
-        auto reasoningStartIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
-        auto reasoningEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
-
-        if (reasoningStartIt != generatedTokens.end() && reasoningEndIt != generatedTokens.end() && reasoningStartIt < reasoningEndIt) {
-            // Tokens between <think> and </think>, exclusive
-            std::vector<int64_t> reasoningTokens(reasoningStartIt + 1, reasoningEndIt);
-            parsedResponse.reasoning = tokenizer.decode(reasoningTokens);
-            parsedResponse.reasoningTokenCount = reasoningTokens.size();
-        } else {
-            parsedResponse.reasoning.clear();
-            parsedResponse.reasoningTokenCount = 0;
-        }
-
-        // If reasoning happened, we assume that the content starts after the reasoning end tag,
-        // otherwise we assume that the content starts from the beginning of the generated_ids
-        auto contentStartIt = reasoningEndIt != generatedTokens.end() ? reasoningEndIt + 1 : generatedTokens.begin();
         // Assuming content ends when tool calls start, so we find the first occurrence of <tool_call> after the content start
-        auto contentEndIt = std::find(contentStartIt, generatedTokens.end(), toolCallStartTokenId);
+        auto contentEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), toolCallStartTokenId);
 
-        if (contentStartIt != generatedTokens.end() && contentEndIt != generatedTokens.end() && contentStartIt < contentEndIt) {
-            parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, contentEndIt));
+        if (contentEndIt != generatedTokens.end()) {
+            parsedResponse.content = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin(), contentEndIt));
         } else {
-            parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, generatedTokens.end()));
-        }
-
-        // Remove all leading whitespace from the content only if reasoning is present since they are separate reasoning part from the actual content
-        if (parsedResponse.reasoningTokenCount > 0 && !parsedResponse.content.empty()) {
-            size_t first_non_ws = parsedResponse.content.find_first_not_of(" \t\n\r\f\v");
-            if (first_non_ws != std::string::npos) {
-                parsedResponse.content = parsedResponse.content.substr(first_non_ws);
-            } else {
-                parsedResponse.content.clear();
-            }
+            parsedResponse.content = tokenizer.decode(generatedTokens);
         }
 
         // Assuming tool calls are the last part of the output
-        auto it = contentStartIt;
+        auto it = generatedTokens.begin();
         std::vector<std::string> tools;
         while (it != generatedTokens.end()) {
             // Find the next <tool_call> tag
@@ -91,16 +60,22 @@ public:
             }
             // Find the next </tool_call> tag after <tool_call>
             auto toolCallEndIt = std::find(toolCallStartIt + 1, generatedTokens.end(), toolCallEndTokenId);
-            if (toolCallEndIt == generatedTokens.end()) {
-                break;
+
+            std::vector<int64_t> toolTokens;
+            if (toolCallEndIt != generatedTokens.end()) {
+                // Extract tokens between <tool_call> and </tool_call>
+                toolTokens.assign(toolCallStartIt + 1, toolCallEndIt);
+                it = toolCallEndIt + 1;
+            } else {
+                // No closing tag, take everything until the end
+                toolTokens.assign(toolCallStartIt + 1, generatedTokens.end());
+                it = generatedTokens.end();
             }
-            // Extract tokens between <tool_call> and </tool_call>
-            std::vector<int64_t> toolTokens(toolCallStartIt + 1, toolCallEndIt);
+
             std::string tool = tokenizer.decode(toolTokens);
             if (!tool.empty()) {
                 tools.push_back(tool);
             }
-            it = toolCallEndIt + 1;
         }
 
         for (const std::string& tool : tools) {

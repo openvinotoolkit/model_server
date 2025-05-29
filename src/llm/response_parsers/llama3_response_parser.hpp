@@ -23,6 +23,7 @@
 #include "base_response_parser.hpp"
 #include "utils.hpp"
 
+namespace ovms {
 class Llama3ResponseParser : public BaseResponseParser {
 protected:
     // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
@@ -95,3 +96,4 @@ public:
         return parsedResponse;
     }
 };
+}  // namespace ovms

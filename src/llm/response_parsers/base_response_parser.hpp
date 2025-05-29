@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
@@ -49,3 +50,4 @@ public:
     virtual ~BaseResponseParser() = default;
     virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
 };
+}  // namespace ovms

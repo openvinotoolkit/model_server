@@ -53,6 +53,11 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     if (std::filesystem::exists(modelGenerationConfigPath)) {
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
     }
+
+    if (nodeOptions.has_response_parser()) {
+        properties->responseParserName = nodeOptions.response_parser();
+    }
+
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();

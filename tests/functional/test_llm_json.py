@@ -223,8 +223,8 @@ class TestSingleModelInference:
 
         print("Messages after tool call:", messages)
     
-        # Qwen3 supports multiple tools in a single chat completion call
-        if "Qwen3" in model_name:
+        # Qwen3 and Hermes3 supports multiple tools in a single chat completion call
+        if "Qwen3" in model_name or "Hermes3" in model_name:
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=messages,
