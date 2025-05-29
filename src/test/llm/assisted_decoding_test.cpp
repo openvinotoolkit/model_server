@@ -37,6 +37,7 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
+#include "../../llm/text_utils.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
