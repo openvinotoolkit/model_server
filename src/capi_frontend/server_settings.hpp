@@ -42,6 +42,8 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
+    std::optional<std::string> precision;
+    std::optional<std::string> extra_quantization_params;
 };
 
 struct EmbeddingsGraphSettingsImpl {

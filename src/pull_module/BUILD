@@ -54,6 +54,7 @@ cc_library(
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovms_server_settings",
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
     ],

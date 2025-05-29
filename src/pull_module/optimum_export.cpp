@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 
+#include "../capi_frontend/server_settings.hpp"
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -26,7 +27,21 @@
 
 namespace ovms {
 
-Op
+std::string getTextGenCmd(const std::string& directoryPath, TextGenGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // NPU specific settings
+    if (graphSettings.targetDevice == "NPU" && !graphSettings.extra_quantization_params.has_value()){
+        graphSettings.extra_quantization_params.value() = "--sym --ratio 1.0 --group-size -1";
+    }
+    // clang-format off
+    oss << "optimum-cli export openvino --model " << graphSettings.modelName << " --trust-remote-code ";
+    oss << " --weight-format " <<graphSettings.precision.has_value() ? graphSettings.precision.value() : std::string();
+    oss << graphSettings.extra_quantization_params.has_value() ? graphSettings.extra_quantization_params.value() : std::string();
+    oss << " " << directoryPath;
+    // clang-format on
+
+    return oss.str();
+}
 
 OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
@@ -66,7 +81,6 @@ Status OptimumDownloader::cloneRepository() {
     if (!status.ok()) {
         return status;
     }
-
 
     return StatusCode::OK;
 }
