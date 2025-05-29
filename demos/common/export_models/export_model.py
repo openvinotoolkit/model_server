@@ -409,39 +409,39 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
             print("Exporting embeddings model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, "./models")
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
-    #             set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
-    #             if truncate:
-    #                 max_context_length = get_models_max_context(tmpdirname, 'config.json')
-    #                 if max_context_length is not None:
-    #                     set_max_context_length = "--max_length " + str(get_models_max_context(tmpdirname, 'config.json'))
-    #             os.makedirs(embeddings_path, exist_ok=True)
-    #             shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
-    #             shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
-    #         tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
-    #         print("Exporting tokenizer to ", tokenizer_path)
-    #         if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
+                set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
+                if truncate:
+                    max_context_length = get_models_max_context(tmpdirname, 'config.json')
+                    if max_context_length is not None:
+                        set_max_context_length = "--max_length " + str(get_models_max_context(tmpdirname, 'config.json'))
+                os.makedirs(embeddings_path, exist_ok=True)
+                shutil.move(os.path.join(tmpdirname, 'openvino_model.xml'), os.path.join(embeddings_path, 'model.xml'))
+                shutil.move(os.path.join(tmpdirname, 'openvino_model.bin'), os.path.join(embeddings_path, 'model.bin'))
+            tokenizer_path = os.path.join(model_repository_path, model_name,'tokenizer', version)
+            print("Exporting tokenizer to ", tokenizer_path)
+            if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
                 from openvino_tokenizers import convert_tokenizer
-                convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format("./models", source_model, set_max_context_length) 
+                convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length) 
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)
-    #             set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
-    #             os.makedirs(tokenizer_path, exist_ok=True)
-    #             shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
-    #             shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
-    # gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_template)
-    # graph_content = gtemplate.render(model_name=model_name, **task_parameters)
-    # with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
-    #     f.write(graph_content)
-    # print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    # stemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embeddings_subconfig_template)
-    # subconfig_content = stemplate.render(model_name=model_name, **task_parameters)
-    # with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
-    #     f.write(subconfig_content)
-    # print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
-    # add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+                set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
+                os.makedirs(tokenizer_path, exist_ok=True)
+                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.xml'), os.path.join(tokenizer_path, 'model.xml'))
+                shutil.move(os.path.join(tmpdirname, 'openvino_tokenizer.bin'), os.path.join(tokenizer_path, 'model.bin'))
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_template)
+    graph_content = gtemplate.render(model_name=model_name, **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    stemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embeddings_subconfig_template)
+    subconfig_content = stemplate.render(model_name=model_name, **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'subconfig.json'), 'w') as f:
+        f.write(subconfig_content)
+    print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
