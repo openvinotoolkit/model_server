@@ -41,9 +41,15 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
         for (const auto& [k, v] : map) {
             ss << k << std::endl;
         }
-        SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+        std::cout << "Available servables to serve from path: " << repositoryPath << " are: " << std::endl << ss.str();
     } else {
-        return updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
+        auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
+        if (status.ok()) {
+            std::cout << "Config updated: " << config.getModelSettings().configPath << std::endl;
+        } else {
+            std::cout << "Error on config update : " << status.string() << std::endl;
+        }
+        return status;
     }
     return StatusCode::OK;
 }

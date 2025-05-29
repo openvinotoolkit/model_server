@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "libgit2.hpp"
 
+#include <iostream>
 #include <string>
 #include <memory>
 
@@ -261,7 +262,7 @@ Status HfDownloader::cloneRepository() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        std::cout << "Path already exists on local filesystem. Not downloading to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
 

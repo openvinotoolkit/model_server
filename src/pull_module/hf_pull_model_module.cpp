@@ -117,6 +117,8 @@ Status HfPullModelModule::clone() const {
     if (!status.ok()) {
         return status;
     }
+
+    std::cout << "Model downloaded: " << this->hfSettings.sourceModel << std::endl;
     return StatusCode::OK;
 }
 
