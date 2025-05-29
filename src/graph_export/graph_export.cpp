@@ -299,6 +299,65 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
 }
 
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: ")" << graphSettings.modelPath << R"("
+          target_device: ")" << graphSettings.targetDevice << R"(")";
+
+    if (graphSettings.pluginConfig.size()) {
+        oss << R"(
+          plugin_config: ')" << graphSettings.pluginConfig << R"(')";
+    }
+
+    if (graphSettings.maxResolution.size()) {
+        oss << R"(
+          max_resolution: ")" << graphSettings.maxResolution << R"(")";
+    }
+
+    if (graphSettings.defaultResolution.size()) {
+        oss << R"(
+          default_resolution: ")" << graphSettings.defaultResolution << R"(")";
+    }
+
+    if (graphSettings.maxNumberImagesPerPrompt.has_value()) {
+        oss << R"(
+          max_number_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
+    }
+
+    if (graphSettings.defaultNumInferenceSteps.has_value()) {
+        oss << R"(
+          default_num_inference_steps: )" << graphSettings.defaultNumInferenceSteps.value();
+    }
+
+    if (graphSettings.maxNumInferenceSteps.has_value()) {
+        oss << R"(
+          max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
+    }
+
+    oss << R"(
+      }
+  }
+}
+)";
+
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
 GraphExport::GraphExport() {
 }
 
@@ -342,6 +401,13 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
             return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for rerank.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
+        if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createImageGenerationGraphTemplate(directoryPath, std::get<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for image generation.");
             return StatusCode::INTERNAL_ERROR;
         }
     } else if (hfSettings.task == UNKNOWN_GRAPH) {

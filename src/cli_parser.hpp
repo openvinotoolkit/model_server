@@ -24,6 +24,7 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
+#include "graph_export/image_generation_graph_cli_parser.hpp"
 
 namespace ovms {
 
@@ -33,7 +34,7 @@ struct ModelsSettingsImpl;
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
-    std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser> graphOptionsParser;
+    std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser, ImageGenerationGraphCLIParser> graphOptionsParser;
 
 public:
     CLIParser() = default;

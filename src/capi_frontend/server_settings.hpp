@@ -70,13 +70,25 @@ struct RerankGraphSettingsImpl {
     uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
 };
 
+struct ImageGenerationGraphSettingsImpl {
+    std::string modelName = "";
+    std::string modelPath = "./";
+    std::string targetDevice = "CPU";
+    std::string maxResolution = "";
+    std::string defaultResolution = "";
+    std::optional<uint32_t> maxNumberImagesPerPrompt;
+    std::optional<uint32_t> defaultNumInferenceSteps;
+    std::optional<uint32_t> maxNumInferenceSteps;
+    std::string pluginConfig;
+};
+
 struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool overwriteModels = false;
     GraphExportType task = TEXT_GENERATION_GRAPH;
-    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {
