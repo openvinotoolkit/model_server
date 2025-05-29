@@ -412,8 +412,13 @@ TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    imageGenerationGraphSettings.pluginConfig = "{\"NUM_STREAMS\":14,\"CACHE_DIR\":\"/cache\"}";
     imageGenerationGraphSettings.targetDevice = "GPU";
-    imageGenerationGraphSettings.defaultResolution = "800x800";
+    imageGenerationGraphSettings.defaultResolution = "300x400";
+    imageGenerationGraphSettings.maxResolution = "3000x4000";
+    imageGenerationGraphSettings.maxNumberImagesPerPrompt = 7;
+    imageGenerationGraphSettings.defaultNumInferenceSteps = 2;
+    imageGenerationGraphSettings.maxNumInferenceSteps = 3;
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
