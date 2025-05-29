@@ -269,7 +269,7 @@ node: {
   output_stream: "HTTP_RESPONSE_PAYLOAD:output"
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-          models_path: ")" << graphSettings.modelPath << R"(",
+          models_path: ")" << graphSettings.modelPath << R"("
           target_device: ")" << graphSettings.targetDevice << R"(")";
 
     if (graphSettings.pluginConfig.size()) {
