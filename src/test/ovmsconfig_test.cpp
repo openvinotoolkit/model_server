@@ -599,6 +599,8 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
         "/config/path"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
+}
+
 TEST_F(OvmsConfigDeathTest, hfPullNoSourceModel) {
     char* n_argv[] = {
         "ovms",
@@ -1123,15 +1125,13 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"GPU",
         (char*)"--normalize",
         (char*)"true",
-        (char*)"--truncate",
-        (char*)"true",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
     };
 
-    int arg_count = 20;
+    int arg_count = 18;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1142,7 +1142,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.version, 2);
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
@@ -1167,8 +1166,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)"GPU",
         (char*)"--normalize",
         (char*)"true",
-        (char*)"--truncate",
-        (char*)"true",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
@@ -1177,7 +1174,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)"8080",
     };
 
-    int arg_count = 21;
+    int arg_count = 19;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1188,7 +1185,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.version, 2);
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
@@ -1220,7 +1216,6 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.version, 1);
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
@@ -1263,7 +1258,6 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(embeddingsGraphSettings.version, 2);
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
 }
@@ -1287,27 +1281,6 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
     int arg_count = 10;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "normalize: INVALID is not allowed. Supported values: true, false");
-}
-
-TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidTruncate) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)"embeddings",
-        (char*)"--truncate",
-        (char*)"INVALID",
-    };
-
-    int arg_count = 10;
-
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "truncate: INVALID is not allowed. Supported values: true, false");
 }
 
 TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {

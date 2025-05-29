@@ -44,10 +44,6 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS")
-        ("truncate",
-            "Truncate the prompts to fit to the embeddings model.",
-            cxxopts::value<std::string>()->default_value("false"),
-            "TRUNCATE")
         ("normalize",
             "Normalize the embeddings.",
             cxxopts::value<std::string>()->default_value("false"),
@@ -95,7 +91,6 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
     } else {
         embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-        embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
         embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);

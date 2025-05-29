@@ -290,7 +290,7 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
 
 TEST_F(GraphCreationTest, rerankCreatedJsonInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::rerank;
+    hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel\t";
@@ -307,7 +307,7 @@ TEST_F(GraphCreationTest, rerankCreatedJsonInvalid) {
 
 TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::rerank;
+    hfSettings.task = ovms::RERANK_GRAPH;
     ovms::RerankGraphSettingsImpl rerankGraphSettings;
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel\"";
@@ -329,7 +329,6 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel";
     embeddingsGraphSettings.numStreams = 2;
-    embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.version = 2;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -348,12 +347,11 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
 
 TEST_F(GraphCreationTest, embeddingsCreatedJsonInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::embeddings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel\t";
     embeddingsGraphSettings.numStreams = 2;
-    embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.version = 2;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -366,12 +364,11 @@ TEST_F(GraphCreationTest, embeddingsCreatedJsonInvalid) {
 
 TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::embeddings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
     embeddingsGraphSettings.targetDevice = "GPU";
     embeddingsGraphSettings.modelName = "myModel\"";
     embeddingsGraphSettings.numStreams = 2;
-    embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.normalize = "true";
     embeddingsGraphSettings.version = 2;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
@@ -450,7 +447,7 @@ TEST_F(GraphCreationTest, negativeGraphOptionsNotInitialized) {
 
 TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
     ovms::HFSettingsImpl hfSettings;
-    hfSettings.task = ovms::text_generation;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.modelPath = "invalid\"";
     hfSettings.graphSettings = std::move(graphSettings);

@@ -86,19 +86,16 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validate() {
-    // TODO: CVS-166727 Add validation of all parameters once the CLI model export flags will be implemented
     if (this->serverSettings.serverMode == HF_PULL_MODE) {
         if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-#if (PYTHON_DISABLE == 1)
         if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
             std::cerr << "For now OVMS version without python supports pulling OpenVINO models only";
             return false;
         }
-#endif
-        if (this->serverSettings.hfSettings.task == text_generation) {
+        if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
                 return false;
@@ -135,7 +132,7 @@ bool Config::validate() {
             }
         }
 
-        if (this->serverSettings.hfSettings.task == embeddings) {
+        if (this->serverSettings.hfSettings.task == EMBEDDINGS_GRAPH) {
             if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for embeddings.";
                 return false;
@@ -145,11 +142,6 @@ bool Config::validate() {
             std::vector allowedBoolValues = {"false", "true"};
             if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
                 std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
-                return false;
-            }
-
-            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
-                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
         }
