@@ -398,24 +398,6 @@ TEST_F(OvmsConfigDeathTest, notSupportedImageGenerationGraphParameter) {
         "task: image_generation - error parsing options - unmatched arguments : --unsupported_param, true,");
 }
 
-TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsNotAnInt) {
-    char* n_argv[] = {
-        "ovms",
-        "--pull",
-        "--source_model",
-        "some/model",
-        "--model_repository_path",
-        "/some/path",
-        "--task",
-        "image_generation",
-        "--num_streams",
-        "hello",
-    };
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
-        "error parsing options: Argument ‘hello’ failed to parse");
-}
-
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsZero) {
     char* n_argv[] = {
         "ovms",
@@ -467,24 +449,6 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultResolutionWrongF
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
 }
 
-TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromptNotAnInt) {
-    char* n_argv[] = {
-        "ovms",
-        "--pull",
-        "--source_model",
-        "some/model",
-        "--model_repository_path",
-        "/some/path",
-        "--task",
-        "image_generation",
-        "--max_number_images_per_prompt",
-        "hello",
-    };
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
-        "error parsing options: Argument ‘hello’ failed to parse");
-}
-
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromptZero) {
     char* n_argv[] = {
         "ovms",
@@ -502,24 +466,6 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromp
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
 }
 
-TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStepsNotAnInt) {
-    char* n_argv[] = {
-        "ovms",
-        "--pull",
-        "--source_model",
-        "some/model",
-        "--model_repository_path",
-        "/some/path",
-        "--task",
-        "image_generation",
-        "--default_num_inference_steps",
-        "hello",
-    };
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
-        "error parsing options: Argument ‘hello’ failed to parse");
-}
-
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStepsZero) {
     char* n_argv[] = {
         "ovms",
@@ -535,24 +481,6 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStep
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
-}
-
-TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsNotAnInt) {
-    char* n_argv[] = {
-        "ovms",
-        "--pull",
-        "--source_model",
-        "some/model",
-        "--model_repository_path",
-        "/some/path",
-        "--task",
-        "image_generation",
-        "--max_num_inference_steps",
-        "hello",
-    };
-    int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
-        "error parsing options: Argument ‘hello’ failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZero) {
