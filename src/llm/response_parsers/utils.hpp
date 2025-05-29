@@ -19,7 +19,7 @@
 #include <string>
 
 namespace ovms {
-std::string generateRandomId() {
+static std::string generateRandomId() {
     static const char alphanum[] =
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
