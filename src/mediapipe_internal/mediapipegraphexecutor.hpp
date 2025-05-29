@@ -141,7 +141,6 @@ public:
         inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
 
         inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->embeddingsResourcesMap).At(STARTING_TIMESTAMP);
-        SPDLOG_ERROR("MAP {}", this->embeddingsResourcesMap.size());
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;

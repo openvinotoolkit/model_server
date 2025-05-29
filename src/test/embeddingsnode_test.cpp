@@ -360,7 +360,7 @@ protected:
 public:
     static void SetUpTestSuite() {
         std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings_new.json");
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings_ov.json");
         SetUpSuite(port, configPath, t);
     }
 
@@ -402,6 +402,240 @@ TEST_F(EmbeddingsNewHttpTest, simplePositive) {
     double norm = std::max(std::sqrt(sum), double(1e-12));
     ASSERT_NEAR(norm, 1.0, 1e-6);
     ASSERT_EQ(d["data"][0]["index"], 0);
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveNoNorm) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_no_norm",
+            "input": "dummyInput"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
+    double sum = 0;
+    for (auto& value : d["data"][0]["embedding"].GetArray()) {
+        sum += value.GetDouble() * value.GetDouble();
+    }
+    double norm = std::max(std::sqrt(sum), double(1e-12));
+    ASSERT_NEAR(norm, 9.5, 1);  // norm of a not normalized vector
+    ASSERT_EQ(d["data"][0]["index"], 0);
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveBase64) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": "dummyInput",
+            "encoding_format": "base64"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsString());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), ((4 * (EMBEDDING_OUTPUT_SIZE * sizeof(float)) / 3) + 3) & ~3);  // In base64 each symbol represents 3/4 of a byte rounded up
+    ASSERT_EQ(d["data"][0]["index"], 0);
+    ASSERT_TRUE(d.HasMember("usage"));
+    ASSERT_TRUE(d["usage"].IsObject());
+    ASSERT_TRUE(d["usage"].HasMember("prompt_tokens"));
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_TRUE(d["usage"].HasMember("total_tokens"));
+    ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveInt) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveMultipleInts) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[111, 222, 121], [123, 221, 311]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 2);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveMultipleIntLengths) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 3);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_TRUE(d["data"][2]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][2]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsNewHttpTest, simplePositiveMultipleStrings) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": ["one", "two"]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 2);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+    ASSERT_EQ(d["data"][1]["object"], "embedding");
+    ASSERT_TRUE(d["data"][1]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsNewHttpTest, positiveLongInput) {
+    std::string words;
+    for (int i = 0; i < 500; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_TRUE(d["usage"]["prompt_tokens"].IsInt());
+    ASSERT_EQ(d["usage"]["prompt_tokens"], 502);  // 500 words + 2 special tokens
+}
+
+TEST_F(EmbeddingsNewHttpTest, negativeTooLongInput) {
+    std::string words;
+    for (int i = 0; i < 511; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 1);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
+
+TEST_F(EmbeddingsNewHttpTest, negativeTooLongInputPair) {
+    std::string words;
+    for (int i = 0; i < 511; i++) {
+        words += "hello ";
+    }
+    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": [\"" + words + " \", \"short prompt\"]}";
+
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    std::cout << response << std::endl;
+    ASSERT_EQ(ok.Code(), 1);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
+
+TEST_F(EmbeddingsNewHttpTest, accessingCalculatorWithInvalidJson) {
+    std::string requestBody = R"(
+        {
+           WRONG JSON
+        }
+    )";
+
+    // new routing will forward invalid JSON to graph named "embeddings"
+    const std::string uriThatMatchesGraphName = "/v3/embeddings";
+
+    headers.clear();  // no sign of application/json
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(uriThatMatchesGraphName, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 class EmbeddingsExtensionTest : public ::testing::Test {
