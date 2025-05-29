@@ -382,8 +382,16 @@ TEST_F(OvmsConfigDeathTest, hfBadRerankGraphParameter) {
 
 TEST_F(OvmsConfigDeathTest, notSupportedImageGenerationGraphParameter) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--unsupported_param", "true",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--unsupported_param",
+        "true",
     };
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
@@ -392,8 +400,16 @@ TEST_F(OvmsConfigDeathTest, notSupportedImageGenerationGraphParameter) {
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsNotAnInt) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--num_streams", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--num_streams",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
@@ -402,8 +418,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsNotAnInt) {
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsZero) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--num_streams", "0",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--num_streams",
+        "0",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -411,8 +435,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_NumStreamsZero) {
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxResolutionWrongFormat) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--max_resolution", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--max_resolution",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -420,8 +452,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxResolutionWrongForma
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultResolutionWrongFormat) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--default_resolution", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--default_resolution",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -429,8 +469,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultResolutionWrongF
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromptNotAnInt) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--max_number_images_per_prompt", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--max_number_images_per_prompt",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
@@ -439,8 +487,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromp
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromptZero) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--max_number_images_per_prompt", "0",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--max_number_images_per_prompt",
+        "0",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -448,8 +504,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromp
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStepsNotAnInt) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--default_num_inference_steps", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--default_num_inference_steps",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
@@ -458,8 +522,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStep
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStepsZero) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--default_num_inference_steps", "0",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--default_num_inference_steps",
+        "0",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -467,8 +539,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_DefaultNumInferenceStep
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsNotAnInt) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--max_num_inference_steps", "hello",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--max_num_inference_steps",
+        "hello",
     };
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE),
@@ -477,8 +557,16 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsNot
 
 TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumInferenceStepsZero) {
     char* n_argv[] = {
-        "ovms", "--pull", "--source_model", "some/model", "--model_repository_path", "/some/path",
-        "--task", "image_generation", "--max_num_inference_steps", "0",
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+        "--task",
+        "image_generation",
+        "--max_num_inference_steps",
+        "0",
     };
     int arg_count = 10;
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::invalid_argument);
@@ -1145,7 +1233,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultImageGeneration) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU");
+    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "CPU");
     ASSERT_TRUE(imageGenerationGraphSettings.maxResolution.empty());
     ASSERT_TRUE(imageGenerationGraphSettings.defaultResolution.empty());
     ASSERT_FALSE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
