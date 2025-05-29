@@ -87,11 +87,11 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 
 bool Config::validate() {
     if (this->serverSettings.serverMode == HF_PULL_MODE) {
-        if (!serverSettings.hfSettings.sourceModel.size()){
+        if (!serverSettings.hfSettings.sourceModel.size()) {
             std::cerr << "source_model parameter is required for pull mode";
             return false;
         }
-        if (!serverSettings.hfSettings.downloadPath.size()){
+        if (!serverSettings.hfSettings.downloadPath.size()) {
             std::cerr << "model_repository_path parameter is required for pull mode";
             return false;
         }
