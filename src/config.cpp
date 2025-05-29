@@ -102,7 +102,7 @@ bool Config::validate() {
         return true;
     }
 
-    if (this->serverSettings.serverMode == SERVING_MODELS_MODE) {
+    if (this->serverSettings.serverMode != MODIFY_CONFIG_MODE) {
         if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
             std::cerr << "Use either config_path or model_path with model_name" << std::endl;
             return false;
@@ -137,7 +137,7 @@ bool Config::validate() {
             std::cerr << "port and rest_port cannot both be unset" << std::endl;
             return false;
         }
-    } else if (this->serverSettings.serverMode == MODIFY_CONFIG_MODE) {
+    } else {
         if (configPath().empty()) {
             std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
             return false;
