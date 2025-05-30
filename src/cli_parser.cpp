@@ -494,7 +494,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 }
                 case EMBEDDINGS_GRAPH: {
                     if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
