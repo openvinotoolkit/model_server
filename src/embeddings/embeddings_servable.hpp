@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+#include <memory> 
+#include <unordered_map>
+#include <string>
 
 #include "openvino/op/constant.hpp"
 #include "openvino/runtime/core.hpp"

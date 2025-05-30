@@ -14,7 +14,10 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <memory> 
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "embeddings_servable.hpp"
 #include <spdlog/spdlog.h>
