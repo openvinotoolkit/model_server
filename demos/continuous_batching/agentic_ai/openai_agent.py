@@ -43,7 +43,7 @@ async def run(mcp_server: MCPServer):
         name="Assistant",
         instructions="Use the tools to answer the questions.",
         mcp_servers=[mcp_server],
-        model_settings=ModelSettings(tool_choice="required", temperature=0.0),
+        model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
     )
 
     # Run the `get_weather` tool
