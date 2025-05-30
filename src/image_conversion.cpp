@@ -22,8 +22,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "logging.hpp"
 #include "profiler.hpp"
+// FIXME check compilation warnings
 #pragma warning(push)
-#pragma warning(disable : 6262)
+#pragma warning(disable : 6262 2220 6386 6385 )
 #include "stb_image.h"        // NOLINT
 #include "stb_image_write.h"  // NOLINT
 #pragma warning(default : 6262)
