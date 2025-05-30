@@ -42,8 +42,6 @@
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "embeddings_servable.hpp"
 
-
-
 using namespace rapidjson;
 using namespace ovms;
 class EmbeddingsServable;
@@ -120,10 +118,9 @@ public:
         ov::Tensor embeddingsTensor;
         size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
-        if(embeddings_session->getMaxModelLength().has_value()){
+        if (embeddings_session->getMaxModelLength().has_value()) {
             max_context_length = embeddings_session->getMaxModelLength().value();
-        }
-        else{
+        } else {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
         }
         try {
@@ -157,8 +154,7 @@ public:
                     }
                 }
                 handler.setPromptTokensUsage(attendedTokens);
-            }
-            else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
+            } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 received_batch_size = tokenized_documents->size();
                 size_t tokens = 0;
                 size_t token_count_of_longest_document = 0;
@@ -194,11 +190,11 @@ public:
                     SPDLOG_DEBUG("Caught generic exception from preparing embeddings inputs: {}", e.what());
                 }
                 ov::Tensor typeIds;
-                if(inferRequest.get_compiled_model().inputs().size() == 3){
+                if (inferRequest.get_compiled_model().inputs().size() == 3) {
                     typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
                     int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
                     std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
-                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);   
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
                 }
 
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, inputsIds);

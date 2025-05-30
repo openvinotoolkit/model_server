@@ -40,7 +40,7 @@ class EmbeddingsModel {
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
 public:
-    void prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests );
+    void prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests);
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }

@@ -89,7 +89,8 @@ TEST_P(EmbeddingsHttpTest, simplePositive) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": "dummyInput"
         }
     )";
@@ -124,7 +125,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveNoNorm) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(_no_norm",
+            "model": ")" + modelName +
+                              R"(_no_norm",
             "input": "dummyInput"
         }
     )";
@@ -159,7 +161,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveBase64) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": "dummyInput",
             "encoding_format": "base64"
         }
@@ -189,7 +192,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveInt) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": [111, 222, 121]
         }
     )";
@@ -212,7 +216,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleInts) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": [[111, 222, 121], [123, 221, 311]]
         }
     )";
@@ -238,7 +243,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
         }
     )";
@@ -266,7 +272,8 @@ TEST_P(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
     auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": ")" + modelName + R"(",
+            "model": ")" + modelName +
+                              R"(",
             "input": ["one", "two"]
         }
     )";
