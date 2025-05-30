@@ -6,7 +6,7 @@ This functionality is a work in progress
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --task <task> --task_params <task_params>
 ```
 
 | option                    | description                                                                                   |
@@ -19,7 +19,7 @@ docker run -d --rm -v <models_repository>:/models openvino/model_server:latest -
 | `--task_params`           | Task-specific parameters in a format to be determined (TBD FIXME)                             |
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
@@ -29,7 +29,7 @@ It will prepare all needed configuration files to support LLMS with OVMS in mode
 Now you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
 
 ```
-docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d --rm -v <models_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
 ```
 
@@ -42,7 +42,7 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_model_files> --model_name <ovms_servable_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> --task_params <task_params>
 ```
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
@@ -51,7 +51,7 @@ It will download required model files, prepare configuration for OVMS and start 
 
 In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_path <model_files_path> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_path <model_files_path> --model_name <external_model_name> --task <task> --task_params <task_params>
 ```
 
 # Simplified mediapipe graphs and LLM models loading
@@ -88,8 +88,8 @@ For example, the `model_config` section in `config.json` could look like this:
 
 To check what models are servable from specified model repository:
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
---models_repository /models --list_models
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
+--models_repository_path /models --list_models
 ```
 
 For following directory structure:
@@ -120,8 +120,8 @@ resnet
 To add model to ovms configuration file with specific model use either:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
---models_repository /models/<model_path> --add_to_config <config_file_path> --model_name <name>
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
+--models_repository_path /models/<model_path> --add_to_config <config_file_path> --model_name <name>
 ```
 
 When model is directly inside `/models`.
@@ -129,7 +129,7 @@ When model is directly inside `/models`.
 Or
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
 --add_to_config <config_file_path> --model_name <name> --model_path <model_path>
 ```
 when there is no model_repository specified.
@@ -139,7 +139,7 @@ when there is no model_repository specified.
 If you want to remove model from configuration file you can do it either manually or use command:
 
 ```
-docker run -d --rm -v <models_repository>:/models openvino/model_server:latest \
+docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_path> --model_name <name>
 ```
 

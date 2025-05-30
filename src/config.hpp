@@ -51,7 +51,7 @@ public:
     const ServerSettingsImpl& getServerSettings() const {
         return serverSettings;
     }
-    ModelsSettingsImpl& getModelSettings() {
+    const ModelsSettingsImpl& getModelSettings() const {
         return modelsSettings;
     }
     /**

@@ -26,12 +26,13 @@ namespace ovms {
 struct HFSettingsImpl;
 struct TextGenGraphSettingsImpl;
 class Status;
+enum OvmsServerMode : int;
 
 class GraphCLIParser {
 public:
     GraphCLIParser() = default;
     std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
 
     void printHelp();
     void createOptions();

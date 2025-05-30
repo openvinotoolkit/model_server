@@ -1,8 +1,0 @@
-# Note that using unreleased optimum from master might not work.
-# git+https://github.com/huggingface/optimum-intel.git
-# Optimum here is needed to download the model
---extra-index-url "https://download.pytorch.org/whl/cpu"
-onnx
-nncf
-openvino
-optimum[diffusers,openvino]
