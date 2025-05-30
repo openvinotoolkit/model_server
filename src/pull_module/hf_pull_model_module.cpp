@@ -112,13 +112,14 @@ Status HfPullModelModule::clone() const {
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << hfDownloader.getGraphDirectory() << std::endl;
     GraphExport graphExporter;
     status = graphExporter.createServableConfig(hfDownloader.getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }
-
-    std::cout << "Model downloaded: " << this->hfSettings.sourceModel << std::endl;
+    std::cout << "Graph: graph.pbtxt created in: " << hfDownloader.getGraphDirectory() << std::endl;
+    
     return StatusCode::OK;
 }
 
