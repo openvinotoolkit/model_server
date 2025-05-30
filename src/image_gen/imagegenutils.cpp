@@ -36,14 +36,14 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std:
     }
     size_t xPos = dimensions.find('x');
     if (xPos == std::string::npos) {
-        return absl::InvalidArgumentError("size field is not in correct format");
+        return absl::InvalidArgumentError("size field is not in correct format - WxH");
     }
     std::string left = dimensions.substr(0, xPos);
     std::string right = dimensions.substr(xPos + 1);
     auto leftInt = ovms::stoi64(left);
     auto rightInt = ovms::stoi64(right);
     if (!leftInt.has_value() || !rightInt.has_value()) {
-        return absl::InvalidArgumentError("size field is not in correct format");
+        return absl::InvalidArgumentError("size field is not in correct format - WxH");
     }
     if (leftInt.value() <= 0 || rightInt.value() <= 0) {
         return absl::InvalidArgumentError("size field values must be greater than 0");
