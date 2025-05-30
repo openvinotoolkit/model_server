@@ -52,54 +52,38 @@ public:
                                      decoded.substr(match.position() + match.length());
 
             std::string toolsStr = match[1].str();
-            // Split by JSON object boundaries to get individual tool calls
-            size_t start = 0;
-            while (start < toolsStr.size()) {
-                size_t open = toolsStr.find('{', start);
-                if (open == std::string::npos)
-                    break;
-                int braceCount = 0;
-                size_t end = open;
-                do {
-                    if (toolsStr[end] == '{')
-                        ++braceCount;
-                    else if (toolsStr[end] == '}')
-                        --braceCount;
-                    ++end;
-                } while (end < toolsStr.size() && braceCount > 0);
-                if (braceCount == 0) {
-                    tools.push_back(toolsStr.substr(open, end - open));
-                    start = end;
-                } else {
-                    break;
+            std::string toolsJson = "{\"functools\": [" + toolsStr + "]}";  // Wrap in JSON array
+
+            rapidjson::Document toolsDoc;
+            toolsDoc.Parse(toolsJson.c_str());
+            if (!toolsDoc.HasParseError() && toolsDoc.IsObject() && toolsDoc.HasMember("functools") && toolsDoc["functools"].IsArray()) {
+                const rapidjson::Value& toolsArray = toolsDoc["functools"];
+                for (auto& toolVal : toolsArray.GetArray()) {
+                    if (!toolVal.IsObject()) {
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
+                        continue;
+                    }
+                    ToolCall toolCall;
+                    toolCall.id = generateRandomId();  // Generate a random ID for the tool call
+                    if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
+                        toolCall.name = toolVal["name"].GetString();
+                    }
+                    if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
+                        rapidjson::StringBuffer sb;
+                        rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                        toolVal["arguments"].Accept(toolWriter);
+                        toolCall.arguments = sb.GetString();
+                    } else {
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
+                        continue;
+                    }
+                    parsedResponse.toolCalls.push_back(toolCall);
                 }
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse toolsJson or extract tools array");
             }
         } else {
             throw std::runtime_error("Multiple 'functools[...]' matches found in the response.");
-        }
-
-        for (const std::string& tool : tools) {
-            ToolCall toolCall;
-            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-            rapidjson::Document toolDoc;
-            toolDoc.Parse(tool.c_str());
-            if (toolDoc.HasParseError()) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-                continue;
-            }
-            if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
-                toolCall.name = toolDoc["name"].GetString();
-            }
-            if (toolDoc.HasMember("arguments") && toolDoc["arguments"].IsObject()) {
-                rapidjson::StringBuffer sb;
-                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                toolDoc["arguments"].Accept(toolWriter);
-                toolCall.arguments = sb.GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                continue;
-            }
-            parsedResponse.toolCalls.push_back(toolCall);
         }
         return parsedResponse;
     }
