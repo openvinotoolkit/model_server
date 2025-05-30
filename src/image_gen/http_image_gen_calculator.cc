@@ -72,9 +72,9 @@ public:
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process start", cc->NodeName());
 
-        ImageGenerationPipelinesMap pipelinesNap = cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Get<ImageGenerationPipelinesMap>();
-        auto it = pipelinesNap.find(cc->NodeName());
-        RET_CHECK(it != pipelinesNap.end()) << "Could not find initialized Image Gen node named: " << cc->NodeName();
+        ImageGenerationPipelinesMap pipelinesMap = cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Get<ImageGenerationPipelinesMap>();
+        auto it = pipelinesMap.find(cc->NodeName());
+        RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized Image Gen node named: " << cc->NodeName();
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
