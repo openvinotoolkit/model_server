@@ -786,6 +786,7 @@ public:
 };
 
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
+void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
 
 class TestWithTempDir : public ::testing::Test {
 protected:

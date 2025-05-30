@@ -1,4 +1,0 @@
-tritonclient[grpc]==2.51.0
-pillow==10.3.0
-opencv-python==4.8.1.78
-numpy<2.0.0

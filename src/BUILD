@@ -186,7 +186,8 @@ cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
     srcs = [],
-    deps = [],
+    deps = ["//src/config_export_module:config_export_types",
+            "//src/graph_export:graph_export_types",],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -342,10 +343,10 @@ cc_library(
         "libovms_server_settings",
         "libovms_version",
         "libovmsfilesystem",
-        "//src/graph_export:graph_export_types",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -780,7 +781,6 @@ cc_library(
         "@minitrace//:trace",
         "libovms_module",
         "//src:cpp_headers",
-        "//src/graph_export:graph_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovmsprecision",
@@ -1220,6 +1220,7 @@ cc_library(
     srcs = ["schema.cpp",],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
     ],
@@ -2662,7 +2663,10 @@ cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [],
+    deps = [
+        "//src/graph_export:graph_export_types",
+        "//src/config_export_module:config_export_types",
+    ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -2985,6 +2989,7 @@ cc_test(
             ":pull_hf_model_test",
             ":listmodels_test",
             ":graph_export_test",
+            ":config_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -3135,6 +3140,21 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "config_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/config_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/config_export_module:config_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
     name = "openvino_remote_tensors_tests",
     linkstatic = 1,
     alwayslink = True,
@@ -3236,7 +3256,6 @@ cc_library(
     deps = [
         "libovms_module",
         "//src:cpp_headers",
-        "//src/graph_export:graph_export_types",
         "//src:libovmslogging",
         "//src:libovmsstatus",
     ],
