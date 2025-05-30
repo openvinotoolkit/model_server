@@ -2631,7 +2631,7 @@ cc_library(
 )
 
 cc_library(
-    name = "libimage_conversion",
+    name = "image_conversion",
     hdrs = [
         "image_conversion.hpp",
     ],

@@ -95,7 +95,7 @@ cc_library(
         "@com_google_absl//absl/status",
         "//src:httppayload",
         "//src:libovmslogging",
-        "//src:libimage_conversion",
+        "//src:image_conversion",
         "//src:libovmsstring_utils",
         "imagegenpipelineargs",
     ] + select({
@@ -117,7 +117,7 @@ cc_library(
         "//src:libovmslogging",
         "image_gen_calculator_cc_proto",
         ":pipelines",
-        "//src:libimage_conversion",
+        "//src:image_conversion",
         ":imagegenutils",
     ]+ select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],

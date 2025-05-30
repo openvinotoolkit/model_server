@@ -79,7 +79,7 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
-        "//src:libimage_conversion",
+        "//src:image_conversion",
         "//src:libovmsfilesystem",
         "@stb//:image",
         ":response_parsers",
