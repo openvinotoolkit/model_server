@@ -249,7 +249,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
@@ -265,7 +265,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
@@ -276,7 +276,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 if (FileSystem::isPathEscaped(url)) {
                                     std::stringstream ss;
                                     ss << "Path " << url.c_str() << " escape with .. is forbidden.";
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
@@ -289,7 +289,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             }
