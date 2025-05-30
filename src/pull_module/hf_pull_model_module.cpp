@@ -119,7 +119,7 @@ Status HfPullModelModule::clone() const {
         return status;
     }
     std::cout << "Graph: graph.pbtxt created in: " << hfDownloader.getGraphDirectory() << std::endl;
-    
+
     return StatusCode::OK;
 }
 
