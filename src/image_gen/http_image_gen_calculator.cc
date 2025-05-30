@@ -108,11 +108,18 @@ public:
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
             return absl::InternalError(absl::StrCat("Error during images generation: ", e.what()));
         }
-        std::string imageAsString = saveImageStbi(*images);
+        // temp try-catch to rework to statuses later TODO
+        auto imageAsString = std::make_unique<std::string>();
+        try {
+            *imageAsString = saveImageStbi(*images);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
+            return absl::InternalError(absl::StrCat("Error during image conversion: ", e.what()));
+        }
 
         // Convert the images to a base64 strings
         std::string base64image;
-        absl::Base64Escape(imageAsString, &base64image);
+        absl::Base64Escape(*imageAsString, &base64image);
         // Create the JSON response
         auto output = generateJSONResponseFromB64Image(base64image);
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
