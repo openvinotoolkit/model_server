@@ -27,33 +27,6 @@ if [ -z "$DNF_TOOL" ]; then
 fi
 
 case $INSTALL_DRIVER_VERSION in \
-"22.28.23726") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-gmmlib-22.1.7-i419.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-core-1.0.11485-i419.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-igc-opencl-1.0.11485-i419.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5/intel-opencl-22.28.23726.1-i419.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/intel-level-zero-gpu-1.3.23453-i392.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.5-devel/level-zero-1.8.1-i392.el8.x86_64.rpm ; \
-;; \
-"22.43.24595") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-gmmlib-22.3.1-i529.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-core-1.0.12504.6-i537.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-igc-opencl-1.0.12504.6-i537.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-opencl-22.43.24595.35-i538.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/intel-level-zero-gpu-1.3.24595.35-i538.el8.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/graphics/rhel/8.6/level-zero-1.8.8-i524.el8.x86_64.rpm ; \
-;; \
-"23.22.26516") \
-        $DNF_TOOL install --nodocs -y libedit ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-gmmlib-22.3.7-i678.el8_6.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-core-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-igc-opencl-1.0.14062.14-682.el8_6.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-opencl-23.22.26516.25-682.el8_6.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/i/intel-level-zero-gpu-1.3.26516.25-682.el8_6.x86_64.rpm ; \
-        rpm -ivh https://repositories.intel.com/gpu/rhel/8.6/pool/l/level-zero-1.11.0-674.el8_6.x86_64.rpm ; \
-;; \
 "24.45.31740") \
         $DNF_TOOL install --nodocs -y libedit ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.4/pool/i/intel-gmmlib-22.5.3-i1057.el9_4.x86_64.rpm ; \
@@ -71,6 +44,15 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-24.52.32224.14-1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-level-zero-gpu-1.6.32224.14-1077.el9_5.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/l/level-zero-1.19.2.0-1077.el9_5.x86_64.rpm ; \
+;; \
+"25.05.32567") \
+	$DNF_TOOL install --nodocs -y libedit libnl3; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-gmmlib-22.6.0-i1091.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-core-2.7.11-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-opencl-2.7.11-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-25.05.32567.19-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-level-zero-gpu-1.6.32567.19-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/l/level-zero-1.20.2.0-1098.el9_5.x86_64.rpm ; \
 ;; \
 
         *) \
