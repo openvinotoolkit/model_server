@@ -488,8 +488,9 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
                       }
                 }
             )pb");
+    const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
-    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy");
@@ -521,8 +522,9 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
                       }
                 }
             )pb");
+    const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
-    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy");
@@ -551,13 +553,36 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
                       }
                 }
             )pb");
+    const std::string graphPath = "";
     auto nodeOptions = node.node_options(0);
-    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy");
     ASSERT_FALSE(imageGenArgs.device.has_value());
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
+}
+TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
+    auto node =
+        mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(
+            R"pb(
+                name: "ImageGenExecutor"
+                calculator: "ImageGenCalculator"
+                input_stream: "HTTP_REQUEST_PAYLOAD:input"
+                input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+                output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+                node_options: {
+                      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                        models_path: "./"
+                      }
+                }
+            )pb");
+    const std::string graphPath = "/ovms/src";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/./");
 }
 // write parametrized test for ImageGenCalculatorOptions with negative cases
 // parameter will be a tuple of <node_options, ovms::StatusCode, expected_error_message>
@@ -583,9 +608,10 @@ TEST_P(ImageGenCalculatorOptionsNegative, NegativeCases) {
         }
         )pb";
     SPDLOG_DEBUG("Node string: {}", nodeString);
+    const std::string graphPath = "";
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodeString);
     auto nodeOptions = node.node_options(0);
-    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ovms::Status>(imageGenArgsOrStatus));
     auto status = std::get<ovms::Status>(imageGenArgsOrStatus);
     EXPECT_EQ(status.getCode(), expectedCode) << status.string();
