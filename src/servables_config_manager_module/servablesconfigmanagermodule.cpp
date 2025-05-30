@@ -41,13 +41,15 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
         for (const auto& [k, v] : map) {
             ss << k << std::endl;
         }
-        std::cout << "Available servables to serve from path: " << repositoryPath << " are: " << std::endl << ss.str();
+        std::cout << "Available servables to serve from path: " << repositoryPath << " are: " << std::endl
+                  << ss.str();
     } else {
         auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
         if (status.ok()) {
             std::cout << "Config updated: " << config.getModelSettings().configPath << "config.json" << std::endl;
         } else {
-            std::cout << config.getModelSettings().configPath << "config.json" << " error on config update : " << status.string() << std::endl;
+            std::cout << config.getModelSettings().configPath << "config.json"
+                      << " error on config update : " << status.string() << std::endl;
         }
         return status;
     }

@@ -28,10 +28,22 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 })
 
 cc_library(
+    name = "cmd_exec",
+    srcs = ["cmd_exec.cpp"],
+    hdrs = ["cmd_exec.hpp"],
+    deps =  [],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
+cc_library(
     name = "libgit2",
     srcs = ["libgit2.cpp"],
     hdrs = ["libgit2.hpp"],
     deps =  [
+        ":cmd_exec",
         "@libgit2_engine//:libgit2_engine",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
