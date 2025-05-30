@@ -218,7 +218,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         SET_OPTIONAL_KEY_OR_RETURN(size_t, getSizetFromPayload);
     }
     // return error on unhandled parameters
-    // bakcground/moderation/output_compression/output_format/quality/style
+    // background/moderation/output_compression/output_format/quality/style
     // TODO possibly to be handled outside since output_compresiont/format are nonGenai
     for (auto key : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
         auto it = payload.parsedJson->FindMember(key);

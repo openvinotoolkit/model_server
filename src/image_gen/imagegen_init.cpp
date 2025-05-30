@@ -16,6 +16,8 @@
 #include "imagegen_init.hpp"
 
 #include <optional>
+#include <utility>
+
 #include "src/filesystem.hpp"
 #include "src/image_gen/image_gen_calculator.pb.h"
 #include "src/json_parser.hpp"

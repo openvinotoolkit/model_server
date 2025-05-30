@@ -630,7 +630,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     args.maxNumImagesPerPrompt = 4;
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 100;
-    // now validate agains args one by one
+    // now validate against args one by one
     std::unordered_map<std::string, std::string> payloadMap = {
         {"exceeded_num_images_per_prompt", R"({"prompt": "test prompt", "image": "base64_image", "n": 101, "model": "test model"})"},
         {"exceeded_num_inference_steps", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "num_inference_steps": 101})"},
