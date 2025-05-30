@@ -218,6 +218,8 @@ node {
     name: "myModel",
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "/model1/path",
@@ -237,6 +239,8 @@ node {
     name: "",
     calculator: "EmbeddingsCalculatorOV"
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_stream: "REQUEST_PAYLOAD:input"
+    output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "./",
