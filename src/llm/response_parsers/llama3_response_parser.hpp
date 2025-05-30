@@ -19,6 +19,13 @@
 #include <string>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
 #include "../../logging.hpp"
 #include "base_response_parser.hpp"
 #include "utils.hpp"
