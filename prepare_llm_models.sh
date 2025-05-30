@@ -22,9 +22,10 @@ fi
 
 CB_MODEL="facebook/opt-125m"
 EMBEDDING_MODEL="thenlper/gte-small"
+EMBEDDING_MODEL_FLAT="thenlper_flat"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
-if [ -d "$1/$CB_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ] && [ -d "$1/$VLM_MODEL" ]; then
+if [ -d "$1/$CB_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL" ] && [ -d "$1/$RERANK_MODEL" ] && [ -d "$1/$VLM_MODEL" ] && [ -d "$1/$EMBEDDING_MODEL_FLAT" ]; then
   echo "Models directory $1 exists. Skipping downloading models."
   exit 0
 fi
@@ -61,6 +62,13 @@ if [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
+fi
+
+if [ -d "$1/$EMBEDDING_MODEL_FLAT" ]; then
+  echo "Models directory $1/$EMBEDDING_MODEL_FLAT exists. Skipping downloading models."
+else
+  optimum-cli export openvino --disable-convert-tokenizer --model "$EMBEDDING_MODEL" --task feature-extraction --weight-format  int8 --trust-remote-code --library sentence_transformers $1/$EMBEDDING_MODEL_FLAT
+  convert_tokenizer -o $1/$EMBEDDING_MODEL_FLAT $EMBEDDING_MODEL
 fi
 
 if [ -d "$1/$RERANK_MODEL" ]; then

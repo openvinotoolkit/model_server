@@ -140,9 +140,8 @@ public:
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
-                inferRequest.set_tensor("input_ids", tokens.input_ids);
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
-
                 size_t attendedTokens = 0;
                 if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i64) {
                     for (int i = 0; i < tokens.attention_mask.get_size(); i++) {
@@ -158,14 +157,6 @@ public:
                     }
                 }
                 handler.setPromptTokensUsage(attendedTokens);
-                for (auto& modelInput : inferRequest.get_compiled_model().inputs()) {
-                    if (modelInput.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
-                        ov::Tensor token_type_ids{ov::element::i64, tokens.input_ids.get_shape()};
-                        std::fill_n(token_type_ids.data<int64_t>(), tokens.attention_mask.get_size(), 0);
-                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, token_type_ids);
-                        break;
-                    }
-                }
             }
             else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 received_batch_size = tokenized_documents->size();
@@ -202,22 +193,16 @@ public:
                 } catch (std::exception& e) {
                     SPDLOG_DEBUG("Caught generic exception from preparing embeddings inputs: {}", e.what());
                 }
+                ov::Tensor typeIds;
                 if(inferRequest.get_compiled_model().inputs().size() == 3){
-                    auto typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
+                    typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
                     int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
                     std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);   
                 }
 
-                inferRequest.set_tensor("input_ids", inputsIds);
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, inputsIds);
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, attentionMask);
-                for (auto& modelInput : inferRequest.get_compiled_model().inputs()) {
-                    if (modelInput.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
-                        ov::Tensor token_type_ids{ov::element::i64, inputsIds.get_shape()};
-                        std::fill_n(token_type_ids.data<int64_t>(), attentionMask.get_size(), 0);
-                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, token_type_ids);
-                        break;
-                    }
-                }
             }
             inferRequest.start_async();
             inferRequest.wait();

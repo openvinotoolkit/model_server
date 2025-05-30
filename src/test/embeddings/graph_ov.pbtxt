@@ -23,7 +23,7 @@ node {
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
       node_options: {
       [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
-        models_path: "/ovms/src/test/llm_testing/embeddings"
+        models_path: "/ovms/src/test/llm_testing/thenlper_flat"
       }
     }
 }

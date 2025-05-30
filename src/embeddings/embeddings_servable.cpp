@@ -38,17 +38,7 @@ EmbeddingsModel::EmbeddingsModel(const std::filesystem::path& model_dir,
 }
 
 void EmbeddingsModel::prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests ) {
-    // if (numberOfParallelInferRequests == 0) {
-    //     return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
-    // }
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
-    //SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
-    // auto batchSize = getBatchSize();
-    // SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
-    //     getName(),
-    //     getVersion(),
-    //     batchSize.has_value() ? batchSize.value().toString() : std::string{"none"},
-    //     numberOfParallelInferRequests);
 }
 
 EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
