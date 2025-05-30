@@ -98,7 +98,7 @@ public:
         if (imagesPerPromptIt != requestOptions.end()) {
             auto numImages = imagesPerPromptIt->second.as<int>();
             if (numImages != 1) {
-                return absl::InvalidArgumentError(absl::StrCat("In 2025.2 only 1 image in response is supported but requested:", numImages));
+                return absl::InvalidArgumentError(absl::StrCat("Only 1 image in response can be requested. n value:", numImages, " is not supported."));
             }
         }
         std::unique_ptr<ov::Tensor> images;
