@@ -32,7 +32,7 @@
     auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {
-class HttpPayload;
+struct HttpPayload;
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const HttpPayload& payload);
 
