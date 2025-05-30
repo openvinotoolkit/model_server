@@ -42,7 +42,6 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
             ss << k << std::endl;
         }
         std::cout << ss.str();
-                  << ss.str();
     } else {
         auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
         if (status.ok()) {
