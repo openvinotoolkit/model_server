@@ -62,10 +62,10 @@ void ImageGenerationGraphCLIParser::createOptions() {
             "Default resolution when not specified by client in a format of WxH; W=width H=height. If not specified, inherited from model.",
             cxxopts::value<std::string>(),
             "DEFAULT_RESOLUTION")
-        ("max_number_images_per_prompt",
+        ("max_num_images_per_prompt",
             "Max allowed number of images client is allowed to request for a given prompt.",
             cxxopts::value<uint32_t>(),
-            "MAX_NUMBER_IMAGES_PER_PROMPT")
+            "MAX_NUM_IMAGES_PER_PROMPT")
         ("default_num_inference_steps",
             "Default number of inference steps when not specified by client.",
             cxxopts::value<uint32_t>(),
@@ -124,10 +124,10 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
         if (!imageGenerationGraphSettings.defaultResolution.empty() && !isValidResolution(imageGenerationGraphSettings.defaultResolution)) {
             throw std::invalid_argument("Invalid default_resolution format. Expected WxH, e.g., 1024x1024");
         }
-        if (result->count("max_number_images_per_prompt")) {
-            imageGenerationGraphSettings.maxNumberImagesPerPrompt = result->operator[]("max_number_images_per_prompt").as<uint32_t>();
+        if (result->count("max_num_images_per_prompt")) {
+            imageGenerationGraphSettings.maxNumberImagesPerPrompt = result->operator[]("max_num_images_per_prompt").as<uint32_t>();
             if (imageGenerationGraphSettings.maxNumberImagesPerPrompt == 0) {
-                throw std::invalid_argument("max_number_images_per_prompt must be greater than 0");
+                throw std::invalid_argument("max_num_images_per_prompt must be greater than 0");
             }
         }
         if (result->count("default_num_inference_steps")) {
