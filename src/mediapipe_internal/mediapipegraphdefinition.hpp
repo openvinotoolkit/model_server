@@ -43,6 +43,8 @@
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
+#include "../embeddings/embeddings_servable.hpp"
+
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
 class MetricConfig;
@@ -56,6 +58,7 @@ class PythonNodeResources;
 class GenAiServable;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -91,6 +94,7 @@ public:
     static const std::string SCHEDULER_CLASS_NAME;
     static const std::string PYTHON_NODE_CALCULATOR_NAME;
     static const std::string LLM_NODE_CALCULATOR_NAME;
+    static const std::string EMBEDDINGS_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
@@ -99,6 +103,7 @@ public:
 protected:
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
+    EmbeddingsServableMap embeddingsServableMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
