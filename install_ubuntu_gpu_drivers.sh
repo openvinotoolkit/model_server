@@ -52,14 +52,13 @@ case $INSTALL_DRIVER_VERSION in \
         curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.5.6/intel-igc-opencl-2_2.5.6+18417_amd64.deb ; \
         dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
 ;; \
-"25.18.33578") \
+"25.13.33276") \
 	mkdir /tmp/gpu_deps && cd /tmp/gpu_deps ; \
-	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.11.7/intel-igc-core-2_2.11.7+19146_amd64.deb; \
-	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.11.7/intel-igc-opencl-2_2.11.7+19146_amd64.deb; \
-	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/intel-ocloc_25.18.33578.6-0_amd64.deb; \
-	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/intel-opencl-icd_25.18.33578.6-0_amd64.deb; \
-	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libigdgmm12_22.7.0_amd64.deb; \
-	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.18.33578.6/libze-intel-gpu1_25.18.33578.6-0_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.13.33276.16/intel-level-zero-gpu_1.6.33276.16_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.13.33276.16/intel-opencl-icd_25.13.33276.16_amd64.deb; \
+	curl -L -O https://github.com/intel/compute-runtime/releases/download/25.13.33276.16/libigdgmm12_22.7.0_amd64.deb; \
+	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.10.8/intel-igc-core-2_2.10.8+18926_amd64.deb; \
+	curl -L -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.10.8/intel-igc-opencl-2_2.10.8+18926_amd64.deb; \
 	dpkg -i *.deb && rm -Rf /tmp/gpu_deps ; \
 ;; \
 *) \

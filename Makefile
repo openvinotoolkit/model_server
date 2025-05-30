@@ -160,7 +160,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.18.33578"
+	INSTALL_DRIVER_VERSION ?= "25.13.33276"
 	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18918-5928ba60fd5/openvino_toolkit_ubuntu24_2025.2.0.dev20250503_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
