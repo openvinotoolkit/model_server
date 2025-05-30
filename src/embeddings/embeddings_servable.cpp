@@ -21,7 +21,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
 
-#include <vector> 
+#include <vector>
 #include <string>
 #include <memory>
 
