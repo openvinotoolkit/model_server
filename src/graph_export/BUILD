@@ -29,6 +29,9 @@ cc_library(
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@ovms//src:libovmsschema",
     ],
     visibility = ["//visibility:public"],
 )
@@ -59,6 +62,22 @@ cc_library(
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "image_generation_graph_cli_parser",
+    srcs = ["image_generation_graph_cli_parser.cpp"],
+    hdrs = ["image_generation_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_export_types",
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+        "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
 )

@@ -27,6 +27,7 @@
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
+#include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
 #include "version.hpp"
@@ -153,7 +154,7 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "MODEL_REPOSITORY_PATH")
             ("task",
-                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint.",
+                "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
                 "TASK")
             ("list_models",
@@ -245,6 +246,12 @@ void CLIParser::parse(int argc, char** argv) {
                     }
                     case RERANK_GRAPH: {
                         RerankGraphCLIParser cliParser;
+                        unmatchedOptions = cliParser.parse(result->unmatched());
+                        this->graphOptionsParser = std::move(cliParser);
+                        break;
+                    }
+                    case IMAGE_GENERATION_GRAPH: {
+                        ImageGenerationGraphCLIParser cliParser;
                         unmatchedOptions = cliParser.parse(result->unmatched());
                         this->graphOptionsParser = std::move(cliParser);
                         break;
@@ -499,6 +506,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
+                    break;
+                }
+                case IMAGE_GENERATION_GRAPH: {
+                    std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
                     break;
                 }
                 case UNKNOWN_GRAPH: {
