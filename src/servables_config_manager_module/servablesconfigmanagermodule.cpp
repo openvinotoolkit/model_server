@@ -41,7 +41,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
         for (const auto& [k, v] : map) {
             ss << k << std::endl;
         }
-        std::cout << "Available servables to serve from path: " << repositoryPath << " are: " << std::endl
+        std::cout << ss.str();
                   << ss.str();
     } else {
         auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
