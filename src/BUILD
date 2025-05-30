@@ -2827,9 +2827,6 @@ cc_test(
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
-                "test/llm/response_parsers/llama3_response_parser_test.cpp",
-                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
-                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
             ],
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
@@ -2841,6 +2838,10 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                # Tools support is limited to configuration with Python enabled
+                "test/llm/response_parsers/llama3_response_parser_test.cpp",
+                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
+                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
