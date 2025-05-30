@@ -158,8 +158,8 @@ public:
                     }
                 }
                 handler.setPromptTokensUsage(attendedTokens);
-                for (auto& input : inferRequest.get_compiled_model().inputs()) {
-                    if (input.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
+                for (auto& modelInput : inferRequest.get_compiled_model().inputs()) {
+                    if (modelInput.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
                         ov::Tensor token_type_ids{ov::element::i64, tokens.input_ids.get_shape()};
                         std::fill_n(token_type_ids.data<int64_t>(), tokens.attention_mask.get_size(), 0);
                         inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, token_type_ids);
@@ -221,24 +221,25 @@ public:
             }
             inferRequest.start_async();
             inferRequest.wait();
+            std::string outputTensorName;
             if (inferRequest.get_compiled_model().outputs().size() == 2) {  // GTE
                 // Search by number of dimensions, should be 3
-                // bool found = false;
-                // for (const auto& [name, tensor] : embeddingsOutputMap) {
-                //     if (tensor.get_shape().size() == 3) {
-                //         embeddingsTensor = tensor;
-                //         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
-                //         found = true;
-                //         break;
-                //     }
-                // }
-                // RET_CHECK(found);
+                bool found = false;
+                for (const auto& output : inferRequest.get_compiled_model().outputs()) {
+                    if (output.get_partial_shape().size() == 3) {
+                        outputTensorName = output.get_any_name();
+                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
+                        found = true;
+                        break;
+                    }
+                }
+                RET_CHECK(found);
             } else {  // BGE
                 RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
-                // embeddingsTensor = embeddingsOutputMap.begin()->second;
-                // SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
+                outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
             }
-            embeddingsTensor = inferRequest.get_tensor("token_embeddings");
+            embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
