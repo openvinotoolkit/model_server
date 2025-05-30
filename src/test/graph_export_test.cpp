@@ -259,7 +259,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          target_device: "GPU"
+          device: "GPU"
           plugin_config: '{"NUM_STREAMS":14,"CACHE_DIR":"/cache"}'
           max_resolution: "3000x4000"
           default_resolution: "300x400"
@@ -285,7 +285,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: "./"
-          target_device: "CPU"
+          device: "CPU"
       }
   }
 }
