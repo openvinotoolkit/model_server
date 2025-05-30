@@ -364,8 +364,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsDefaultSizeBehavior) {
         "prompt": "test prompt",
     })");
     EXPECT_EQ(options.size(), 3);
-    EXPECT_EQ(options.at("height").as<int64_t>(), 512);
-    EXPECT_EQ(options.at("width").as<int64_t>(), 256);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 256);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 512);
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
     // OpenAI fields background, mask, quality, response_format, user

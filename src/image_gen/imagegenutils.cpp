@@ -229,10 +229,10 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // now insert default values if not already populated ?
     if (args.defaultResolution.has_value()) {
         if (requestOptions.find("height") == requestOptions.end()) {
-            requestOptions.insert({"height", args.defaultResolution->first});
+            requestOptions.insert({"height", args.defaultResolution->second});
         }
         if (requestOptions.find("width") == requestOptions.end()) {
-            requestOptions.insert({"width", args.defaultResolution->second});
+            requestOptions.insert({"width", args.defaultResolution->first});
         }
     }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
