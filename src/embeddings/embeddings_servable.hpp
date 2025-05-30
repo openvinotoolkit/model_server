@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory> 
+#include <memory>
 #include <unordered_map>
 #include <string>
 

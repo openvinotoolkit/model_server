@@ -14,7 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <memory> 
+#include <memory>
 #include <numeric>
 #include <string>
 #include <vector>
