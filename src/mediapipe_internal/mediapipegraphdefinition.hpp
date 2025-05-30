@@ -112,9 +112,6 @@ public:
 
 protected:
     GraphSidePackets sidePacketMaps;
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
-    ImageGenerationPipelinesMap imageGenerationPipelinesMap;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :
