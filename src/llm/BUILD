@@ -97,6 +97,7 @@ cc_library(
     hdrs = ["response_parsers/base_response_parser.hpp", 
             "response_parsers/hermes3_response_parser.hpp",
             "response_parsers/llama3_response_parser.hpp",
+            "response_parsers/phi4_response_parser.hpp",
             "response_parsers/qwen3_response_parser.hpp",
             "response_parsers/response_parser.hpp",
             "response_parsers/utils.hpp"],

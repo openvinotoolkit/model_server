@@ -223,8 +223,16 @@ class TestSingleModelInference:
 
         print("Messages after tool call:", messages)
     
-        # Qwen3 and Hermes3 supports multiple tools in a single chat completion call
-        if "Qwen3" in model_name or "Hermes3" in model_name:
+        # Llama3 does not support multiple tools in a single chat completion call
+        if "Llama3" in model_name:
+            with pytest.raises(Exception):
+                # This should raise an exception because we cannot use multiple tools in a single chat completion call
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    tools=tools
+                )
+        else:
             completion = client.chat.completions.create(
                 model=model_name,
                 messages=messages,
@@ -235,14 +243,6 @@ class TestSingleModelInference:
             assert "15 degrees Celsius" in content or "15°C" in content or "15 °C" in content
             assert "pm10" in content or "PM10" in content
             assert "28 µg/m" in content or "28µg/m" in content
-        else:
-            with pytest.raises(Exception):
-                # This should raise an exception because we cannot use multiple tools in a single chat completion call
-                client.chat.completions.create(
-                    model=model_name,
-                    messages=messages,
-                    tools=tools
-                )
 
         
     @skip(reason="not implemented yet")
