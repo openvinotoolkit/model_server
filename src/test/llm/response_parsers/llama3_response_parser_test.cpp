@@ -25,7 +25,7 @@ using namespace ovms;
 
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-int64_t botTokenId = 128010;
+constexpr int64_t botTokenId = 128010;
 
 class Llama3ResponseParserTest : public ::testing::Test {
 protected:

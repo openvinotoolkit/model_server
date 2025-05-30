@@ -92,7 +92,6 @@ public:
             toolDoc.Parse(tool.c_str());
             if (toolDoc.HasParseError()) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-                std::cout << "\nFailed to parse tool call as JSON: " << tool << std::endl;
                 continue;
             }
             if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
