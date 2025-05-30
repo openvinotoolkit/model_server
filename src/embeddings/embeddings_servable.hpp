@@ -13,12 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
 #include "openvino/op/constant.hpp"
 #include "openvino/runtime/core.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/op/multiply.hpp"
 #include "../ovinferrequestsqueue.hpp"
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)

@@ -21,6 +21,10 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
 
+#include <vector> 
+#include <string>
+#include <memory>
+
 #include "../json_parser.hpp"
 #include "../status.hpp"
 
