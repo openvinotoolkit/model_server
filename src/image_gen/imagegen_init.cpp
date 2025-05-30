@@ -80,9 +80,6 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         }
     }
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();
-    if (nodeOptions.has_seed()) {
-        args.seed = nodeOptions.seed();
-    }
     args.defaultNumInferenceSteps = nodeOptions.default_num_inference_steps();
     args.maxNumInferenceSteps = nodeOptions.max_num_inference_steps();
     return std::move(args);

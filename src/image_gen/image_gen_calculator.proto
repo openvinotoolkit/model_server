@@ -33,7 +33,6 @@ message ImageGenCalculatorOptions {
     optional string max_resolution = 4 [default = "4096x4096"];
     optional string default_resolution = 5;
     optional uint64 max_num_images_per_prompt = 6 [default = 10];
-    optional uint64 seed = 7;
-    optional uint64 default_num_inference_steps = 8 [default = 10];
-    optional uint64 max_num_inference_steps = 9 [default = 100];
+    optional uint64 default_num_inference_steps = 7 [default = 10];
+    optional uint64 max_num_inference_steps = 8 [default = 100];
 }
