@@ -248,41 +248,26 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     std::ostringstream oss;
     // clang-format off
     oss << R"(
-    input_stream: "REQUEST_PAYLOAD:input"
-    output_stream: "RESPONSE_PAYLOAD:output"
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:tokenizer"
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "EmbeddingsCalculatorOV"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
     node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_tokenizer_model"
-        }
-    }
-    }
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:embeddings"
-    node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_embeddings_model"
-        }
-    }
-    }
-    node {
-        input_side_packet: "TOKENIZER_SESSION:tokenizer"
-        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
-        calculator: "EmbeddingsCalculator"
-        input_stream: "REQUEST_PAYLOAD:input"
-        output_stream: "RESPONSE_PAYLOAD:output"
-        node_options: {
-            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+        [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
+            models_path: ")"
+            << graphSettings.modelPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
+            mean_pooling: )"
+            << graphSettings.meanPooling << R"(,
+            device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
     }
-    })";
+})";
 
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
@@ -292,11 +277,7 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
-    if (!status.ok())
-        return status;
-
-    return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {

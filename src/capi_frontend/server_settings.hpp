@@ -41,7 +41,7 @@ struct PluginConfigSettingsImpl {
 };
 
 struct TextGenGraphSettingsImpl {
-    std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelPath = "./";
     std::string modelName = "";
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
@@ -55,11 +55,12 @@ struct TextGenGraphSettingsImpl {
 };
 
 struct EmbeddingsGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
-    std::string normalize = "false";
+    std::string normalize = "true";
+    std::string meanPooling = "false"; 
 };
 
 struct RerankGraphSettingsImpl {
