@@ -65,7 +65,6 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
 
 protected:
-    //std::shared_ptr<::InferenceAdapter> tokenizer_session{nullptr};
     std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
 
 public:
@@ -74,7 +73,6 @@ public:
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
-        //cc->InputSidePackets().Tag("TOKENIZER_SESSION").Set<std::shared_ptr<InferenceAdapter>>();
         cc->InputSidePackets().Tag(EMBEDDINGS_SESSION_SIDE_PACKET_TAG).Set<ovms::EmbeddingsServableMap>();
         return absl::OkStatus();
     }
@@ -91,7 +89,6 @@ public:
                                .Tag(EMBEDDINGS_SESSION_SIDE_PACKET_TAG)
                                .Get<ovms::EmbeddingsServableMap>();
         auto it = servableMap.find(cc->NodeName());
-        SPDLOG_ERROR("SIZE: {}", servableMap.size());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized Embeddings node named: " << cc->NodeName();
         embeddings_session = it->second;
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculatorOV  [Node: {}] Open start", cc->NodeName());
@@ -121,29 +118,30 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings request deserialization time: {} ms", time / 1000);
 
         ov::Tensor embeddingsTensor;
+        size_t received_batch_size = 1;
+        size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
+        if(embeddings_session->getMaxModelLength().has_value()){
+            max_context_length = embeddings_session->getMaxModelLength().value();
+        }
+        else{
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
+        }
         try {
+            ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
+            auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), tmp);
+            ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                received_batch_size = strings->size();
                 auto tokens = embeddings_session->getTokenizer().encode(*strings);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
                 size_t input_ids_size = tokens.input_ids.get_shape()[1];
-                size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
-                if(embeddings_session->getMaxModelLength().has_value()){
-                    max_context_length = embeddings_session->getMaxModelLength().value();
-                }
-                else{
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
-                }
-                SPDLOG_ERROR("MAX_CONTENT_LENGTH {} input_ids_size {}", max_context_length, input_ids_size);
                 if (input_ids_size > max_context_length) {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
-                ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
-                auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), tmp);
-                ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
                 inferRequest.set_tensor("input_ids", tokens.input_ids);
-                inferRequest.set_tensor("attention_mask", tokens.attention_mask);
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
 
                 size_t attendedTokens = 0;
                 if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i64) {
@@ -161,22 +159,16 @@ public:
                 }
                 handler.setPromptTokensUsage(attendedTokens);
                 for (auto& input : inferRequest.get_compiled_model().inputs()) {
-                    if (input.get_any_name() == "token_type_ids") {
+                    if (input.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
                         ov::Tensor token_type_ids{ov::element::i64, tokens.input_ids.get_shape()};
                         std::fill_n(token_type_ids.data<int64_t>(), tokens.attention_mask.get_size(), 0);
-                        inferRequest.set_tensor("token_type_ids", token_type_ids);
+                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, token_type_ids);
                         break;
                     }
                 }
-                inferRequest.start_async();
-                inferRequest.wait();
-                embeddingsTensor = inferRequest.get_tensor("token_embeddings");
             }
             else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
-                ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
-                auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), tmp);
-                ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-                auto received_batch_size = tokenized_documents->size();
+                received_batch_size = tokenized_documents->size();
                 size_t tokens = 0;
                 size_t token_count_of_longest_document = 0;
                 for (const auto& document_tokens : *tokenized_documents) {
@@ -187,6 +179,11 @@ public:
                 auto inputsIds = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
+                size_t input_ids_size = inputsIds.get_shape()[1];
+                if (input_ids_size > max_context_length) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+                }
                 auto attentionMask = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
@@ -205,27 +202,43 @@ public:
                 } catch (std::exception& e) {
                     SPDLOG_DEBUG("Caught generic exception from preparing embeddings inputs: {}", e.what());
                 }
-                //EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME ??
-                auto typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
-                int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
-                std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
+                if(inferRequest.get_compiled_model().inputs().size() == 3){
+                    auto typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
+                    int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
+                    std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
+                }
+
                 inferRequest.set_tensor("input_ids", inputsIds);
-                inferRequest.set_tensor("attention_mask", attentionMask);
-                // if(typeIds.get_size() > 0){
-                //     m_request.set_tensor("token_type_ids", typeIds);
-                // }
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, attentionMask);
                 for (auto& input : inferRequest.get_compiled_model().inputs()) {
-                    if (input.get_any_name() == "token_type_ids") {
+                    if (input.get_any_name() == EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME) {
                         ov::Tensor token_type_ids{ov::element::i64, inputsIds.get_shape()};
                         std::fill_n(token_type_ids.data<int64_t>(), attentionMask.get_size(), 0);
-                        inferRequest.set_tensor("token_type_ids", token_type_ids);
+                        inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, token_type_ids);
                         break;
                     }
                 }
-                inferRequest.start_async();
-                inferRequest.wait();
-                embeddingsTensor = inferRequest.get_tensor("token_embeddings");
             }
+            inferRequest.start_async();
+            inferRequest.wait();
+            if (inferRequest.get_compiled_model().outputs().size() == 2) {  // GTE
+                // Search by number of dimensions, should be 3
+                // bool found = false;
+                // for (const auto& [name, tensor] : embeddingsOutputMap) {
+                //     if (tensor.get_shape().size() == 3) {
+                //         embeddingsTensor = tensor;
+                //         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
+                //         found = true;
+                //         break;
+                //     }
+                // }
+                // RET_CHECK(found);
+            } else {  // BGE
+                RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
+                // embeddingsTensor = embeddingsOutputMap.begin()->second;
+                // SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
+            }
+            embeddingsTensor = inferRequest.get_tensor("token_embeddings");
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
@@ -234,27 +247,10 @@ public:
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught unknown exception from session infer()");
             RET_CHECK(false);
         }
-        // if (embeddingsOutputMap.size() == 2) {  // GTE
-        //     // Search by number of dimensions, should be 3
-        //     bool found = false;
-        //     for (const auto& [name, tensor] : embeddingsOutputMap) {
-        //         if (tensor.get_shape().size() == 3) {
-        //             embeddingsTensor = tensor;
-        //             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", name);
-        //             found = true;
-        //             break;
-        //         }
-        //     }
-        //     RET_CHECK(found);
-        // } else {  // BGE
-        //     RET_CHECK(embeddingsOutputMap.size() == 1);
-        //     embeddingsTensor = embeddingsOutputMap.begin()->second;
-        //     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", embeddingsOutputMap.begin()->first);
-        // }
 
-        // RET_CHECK(embeddingsTensor.get_shape().size() == 3);
-        // RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
-        // RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
+        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;

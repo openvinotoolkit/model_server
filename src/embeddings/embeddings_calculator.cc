@@ -151,7 +151,6 @@ public:
                 RET_CHECK(tokenizerOutputMap.find(EMBEDDINGS_MODEL_INPUT_IDS_NAME) != tokenizerOutputMap.end());
                 RET_CHECK(tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape().size() == 2);
                 size_t input_ids_size = tokenizerOutputMap[EMBEDDINGS_MODEL_INPUT_IDS_NAME].get_shape()[1];
-                SPDLOG_ERROR("MAX_CONTENT_LENGTH {} input_ids_size {}", max_context_length, input_ids_size);
                 if (input_ids_size > max_context_length) {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));

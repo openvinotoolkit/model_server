@@ -24,6 +24,7 @@ node {
       node_options: {
       [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
         models_path: "/ovms/src/test/llm_testing/embeddings"
+        normalize_embeddings: false
       }
     }
 }

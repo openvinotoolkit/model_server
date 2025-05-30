@@ -40,7 +40,6 @@ class EmbeddingsModel {
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
 
 public:
-    ov::Tensor infer(ov::Tensor& inputIds, ov::Tensor& attentionMask, ov::Tensor& typeIds);
     void prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests );
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
@@ -70,8 +69,6 @@ public:
     std::optional<uint32_t>& getMaxModelLength() {
         return maxModelLength;
     }
-    ov::Tensor infer(std::vector<std::string>& prompts);
-    ov::Tensor infer(std::vector<std::vector<int64_t>>& tokenized_documents);
 };
 
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;

@@ -85,7 +85,7 @@ mediapipe_proto_library(
 )
 
 cc_library(
-    name = "EmbeddingsCalculatorOV",
+    name = "embeddingscalculator_ov",
     hdrs = [],
     srcs = ["embeddings_calculator_ov.cc"],
     deps = [
