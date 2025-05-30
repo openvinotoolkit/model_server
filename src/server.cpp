@@ -458,7 +458,8 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
-        logConfig(config);
+        if (serverSettings->serverMode == HF_PULL_AND_START_MODE || serverSettings->serverMode == SERVING_MODELS_MODE)
+            logConfig(config);
         return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());

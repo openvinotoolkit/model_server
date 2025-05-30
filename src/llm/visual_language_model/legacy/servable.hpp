@@ -34,6 +34,8 @@ struct VisualLanguageModelLegacyServableExecutionContext : public GenAiServableE
     std::vector<ov::Tensor> inputImages;
     std::condition_variable executionInProgress;
     std::string inputText;
+    // Workaround needed to pass generation config to the executor that requires it
+    ov::genai::GenerationConfig baseGenerationConfig;
     bool success = true;
 };
 
