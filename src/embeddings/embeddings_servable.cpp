@@ -37,18 +37,8 @@ EmbeddingsModel::EmbeddingsModel(const std::filesystem::path& model_dir,
     prepareInferenceRequestsQueue(numberOfParallelInferRequests);
 }
 
-void EmbeddingsModel::prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests ) {
-    // if (numberOfParallelInferRequests == 0) {
-    //     return Status(StatusCode::INVALID_NIREQ, "Exceeded allowed nireq value");
-    // }
+void EmbeddingsModel::prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests) {
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
-    //SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, numberOfParallelInferRequests);
-    // auto batchSize = getBatchSize();
-    // SPDLOG_INFO("Loaded model {}; version: {}; batch size: {}; No of InferRequests: {}",
-    //     getName(),
-    //     getVersion(),
-    //     batchSize.has_value() ? batchSize.value().toString() : std::string{"none"},
-    //     numberOfParallelInferRequests);
 }
 
 EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
@@ -58,7 +48,7 @@ EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig:
     std::string configPath = FileSystem::appendSlash(model_dir) + "config.json";
     if (std::filesystem::exists(configPath.c_str())) {
         std::ifstream ifs(configPath);
-        if (ifs.is_open()) { 
+        if (ifs.is_open()) {
             rapidjson::Document modelConfig;
             rapidjson::IStreamWrapper isw(ifs);
             rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
