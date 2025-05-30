@@ -93,16 +93,24 @@ public:
         // FIXME routing request to different pipelines (enum?)
         ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
         SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
-        std::unique_ptr<ov::Tensor> image;
+        // preview limitation put here to not mess up tests underneath
+        auto imagesPerPromptIt = requestOptions.find("num_images_per_prompt");
+        if (imagesPerPromptIt != requestOptions.end()) {
+            auto numImages = imagesPerPromptIt->second.as<int>();
+            if (numImages != 1) {
+                return absl::InvalidArgumentError(absl::StrCat("In 2025.2 only 1 image in response is supported but requested:", numImages));
+            }
+        }
+        std::unique_ptr<ov::Tensor> images;
         try {
-            image = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
+            images = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
-            return absl::InternalError(absl::StrCat("Error during image generation: ", e.what()));
+            return absl::InternalError(absl::StrCat("Error during images generation: ", e.what()));
         }
-        std::string imageAsString = saveImageStbi(*image);
+        std::string imageAsString = saveImageStbi(*images);
 
-        // Convert the image to a base64 string
+        // Convert the images to a base64 strings
         std::string base64image;
         absl::Base64Escape(imageAsString, &base64image);
         // Create the JSON response
