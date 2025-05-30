@@ -283,7 +283,7 @@ Status HfDownloader::cloneRepository() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        std::cout << "Path already exists on local filesystem. Not downloading to path: " << this->downloadPath << std::endl;
+        std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
 
