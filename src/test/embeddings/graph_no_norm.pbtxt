@@ -26,7 +26,7 @@ node {
 }
 node {
   calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:embeddings"
+  output_side_packet: "SESSION:embeddings_session"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
       servable_name: "embeddings_model"
@@ -36,7 +36,7 @@ node {
 }
 node {
   input_side_packet: "TOKENIZER_SESSION:tokenizer"
-  input_side_packet: "EMBEDDINGS_SESSION:embeddings"
+  input_side_packet: "EMBEDDINGS_SESSION:embeddings_session"
   calculator: "EmbeddingsCalculator"
   input_stream: "REQUEST_PAYLOAD:input"
   output_stream: "RESPONSE_PAYLOAD:output"
