@@ -1,0 +1,107 @@
+//*****************************************************************************
+// Copyright 2025 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#pragma once
+
+#include <openvino/genai/tokenizer.hpp>
+#include <string>
+#include <vector>
+#include <regex>
+
+#include "../../logging.hpp"
+#include "base_response_parser.hpp"
+#include "utils.hpp"
+
+namespace ovms {
+class Phi4ResponseParser : public BaseResponseParser {
+public:
+    Phi4ResponseParser() = delete;
+    explicit Phi4ResponseParser(ov::genai::Tokenizer& tokenizer) :
+        BaseResponseParser(tokenizer) {}
+
+    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override {
+        ParsedResponse parsedResponse;
+        std::vector<std::string> tools;
+
+        // Phi4 with vLLM template produces tool calls in the format:
+        // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
+        std::string decoded = tokenizer.decode(generatedTokens);
+        std::regex toolRegex(R"(functools\[(.*?)\])");
+        std::sregex_iterator begin(decoded.begin(), decoded.end(), toolRegex);
+        std::sregex_iterator end;
+        size_t matchCount = std::distance(begin, end);
+
+        if (matchCount == 0) {
+            parsedResponse.content = decoded;
+        } else if (matchCount == 1) {
+            std::smatch match = *begin;
+            // Put everything, but functools[...] part into the response content
+            parsedResponse.content = decoded.substr(0, match.position()) +
+                                     decoded.substr(match.position() + match.length());
+
+            std::string toolsStr = match[1].str();
+            // Split by JSON object boundaries to get individual tool calls
+            size_t start = 0;
+            while (start < toolsStr.size()) {
+                size_t open = toolsStr.find('{', start);
+                if (open == std::string::npos)
+                    break;
+                int braceCount = 0;
+                size_t end = open;
+                do {
+                    if (toolsStr[end] == '{')
+                        ++braceCount;
+                    else if (toolsStr[end] == '}')
+                        --braceCount;
+                    ++end;
+                } while (end < toolsStr.size() && braceCount > 0);
+                if (braceCount == 0) {
+                    tools.push_back(toolsStr.substr(open, end - open));
+                    start = end;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            throw std::runtime_error("Multiple 'functools[...]' matches found in the response.");
+        }
+
+        for (const std::string& tool : tools) {
+            ToolCall toolCall;
+            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
+            rapidjson::Document toolDoc;
+            toolDoc.Parse(tool.c_str());
+            if (toolDoc.HasParseError()) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
+                continue;
+            }
+            if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
+                toolCall.name = toolDoc["name"].GetString();
+            }
+            if (toolDoc.HasMember("arguments") && toolDoc["arguments"].IsObject()) {
+                rapidjson::StringBuffer sb;
+                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                toolDoc["arguments"].Accept(toolWriter);
+                toolCall.arguments = sb.GetString();
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
+                continue;
+            }
+            parsedResponse.toolCalls.push_back(toolCall);
+        }
+        return parsedResponse;
+    }
+};
+}  // namespace ovms
