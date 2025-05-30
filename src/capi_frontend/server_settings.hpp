@@ -60,7 +60,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     std::string normalize = "true";
-    std::string meanPooling = "false"; 
+    std::string meanPooling = "false";
 };
 
 struct RerankGraphSettingsImpl {
