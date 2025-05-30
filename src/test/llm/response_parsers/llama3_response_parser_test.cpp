@@ -56,8 +56,8 @@ TEST_F(Llama3ResponseParserTest, ParseToolCallOutputWithSingleToolCall) {
 
 TEST_F(Llama3ResponseParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}};"
-                       "{\"name\": \"another_tool\", \"parameters\": {\"param1\": \"data\", \"param2\": true}};"
-                       "{\"name\": \"third_tool\", \"parameters\": {\"key\": \"value\"}}";
+                        "{\"name\": \"another_tool\", \"parameters\": {\"param1\": \"data\", \"param2\": true}};"
+                        "{\"name\": \"third_tool\", \"parameters\": {\"key\": \"value\"}}";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     generatedTokens.insert(generatedTokens.begin(), botTokenId);  // Prepend bot token ID
@@ -85,7 +85,7 @@ TEST_F(Llama3ResponseParserTest, ParseToolCallOutputWithThreeToolCalls) {
     EXPECT_EQ(parsedResponse.toolCalls[2].arguments, "{\"key\":\"value\"}");
     EXPECT_EQ(parsedResponse.toolCalls[2].id.empty(), false);  // ID should be generated
     auto thirdToolCallId = parsedResponse.toolCalls[2].id;
-    EXPECT_NE(firstToolCallId, thirdToolCallId);  // IDs should be different
+    EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
     EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
 }
 
@@ -100,7 +100,6 @@ TEST_F(Llama3ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
 }
 
-// This is not a real example, but tests parser logic for a case where the response contains content and a single tool call
 TEST_F(Llama3ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string content = "This is a content part and next will be a tool call.";
     std::string toolCall = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";

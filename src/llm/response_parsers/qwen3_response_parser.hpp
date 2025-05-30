@@ -71,9 +71,14 @@ public:
         // Assuming content ends when tool calls start, so we find the first occurrence of <tool_call> after the content start
         auto contentEndIt = std::find(contentStartIt, generatedTokens.end(), toolCallStartTokenId);
 
-        if (contentStartIt != generatedTokens.end() && contentEndIt != generatedTokens.end() && contentStartIt < contentEndIt) {
+        if (contentStartIt == contentEndIt) {
+            // If tool call tag starts immediately after reasoning or at the beginning, we assume no content
+            parsedResponse.content.clear();
+        } else if (contentStartIt != generatedTokens.end() && contentEndIt != generatedTokens.end() && contentStartIt < contentEndIt) {
+            // Tokens between start or reasoning end and the first <tool_call> tag, exclusive
             parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, contentEndIt));
         } else {
+            // If no tool call tags are found, we assume the content is the rest of the generated tokens
             parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, generatedTokens.end()));
         }
 
