@@ -135,13 +135,14 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", inputText);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
     return absl::OkStatus();
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs, getProperties()->responseParserName);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

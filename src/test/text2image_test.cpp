@@ -483,7 +483,6 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
                         max_resolution: "512x256",
                         default_resolution: "256x256",
                         max_num_images_per_prompt: 4,
-                        seed: 123456789,
                         default_num_inference_steps: 10,
                         max_num_inference_steps: 50,
                       }
@@ -494,13 +493,16 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy");
+    ASSERT_TRUE(imageGenArgs.device.has_value());
     ASSERT_EQ(imageGenArgs.device.value(), "GPU");
     ASSERT_EQ(imageGenArgs.pluginConfig.size(), 1);
     ASSERT_EQ(imageGenArgs.pluginConfig["NUM_STREAMS"].as<int>(), 2);
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(512, 256));
+    ASSERT_TRUE(imageGenArgs.defaultResolution.has_value());
     ASSERT_EQ(imageGenArgs.defaultResolution.value(), resolution_t(256, 256));
     ASSERT_EQ(imageGenArgs.maxNumImagesPerPrompt, 4);
-    ASSERT_EQ(imageGenArgs.seed.value(), 123456789);
+    // ASSERT_TRUE(imageGenArgs.seed.has_value());
+    // ASSERT_EQ(imageGenArgs.seed.value(), 123456789);
     ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 10);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 50);
 }

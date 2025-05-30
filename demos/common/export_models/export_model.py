@@ -64,6 +64,15 @@ add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
+
+parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
+add_common_arguments(parser_image_generation)
+parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
+parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
+parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
+parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
+parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 args = vars(parser.parse_args())
 
 embedding_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
@@ -211,6 +220,35 @@ rerank_subconfig_template = """{
             }
 	}
    ]
+}"""
+
+image_generation_graph_template = """input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      {%- if plugin_config_str %}
+      plugin_config: '{{plugin_config_str}}',{% endif %}
+      device: "{{target_device|default("CPU", true)}}",
+      {%- if max_resolution %}
+      max_resolution: '{{max_resolution}}',{% endif %}
+      {%- if default_resolution %}
+      default_resolution: '{{default_resolution}}',{% endif %}
+      {%- if max_num_images_per_prompt > 0 %}
+      max_num_images_per_prompt: {{max_num_images_per_prompt}},{% endif %}
+      {%- if default_num_inference_steps > 0 %}
+      default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
+      {%- if max_num_inference_steps > 0 %}
+      max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+    }
+  }
 }"""
 
 def export_rerank_tokenizer(source_model, destination_path, max_length):
@@ -448,6 +486,46 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 
+def export_image_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, num_streams):
+    model_path = "./"
+    target_path = os.path.join(model_repository_path, model_name)
+    model_index_path = os.path.join(target_path, 'model_index.json')
+
+    if os.path.isfile(model_index_path):
+        print("Model index file already exists. Skipping conversion, re-generating graph only.")
+    else:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export image generation model model", source_model)   
+
+    plugin_config = {}
+    assert num_streams >= 0, "num_streams should be a non-negative integer"
+    if num_streams > 0:
+        plugin_config['NUM_STREAMS'] = num_streams
+    if 'ov_cache_dir' in task_parameters and task_parameters['ov_cache_dir'] is not None:
+        plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
+    
+    if len(plugin_config) > 0:
+        task_parameters['plugin_config_str'] = json.dumps(plugin_config)
+
+    # assert that max_resolution if exists, is in WxH format
+    for param in ['max_resolution', 'default_resolution']:
+        if task_parameters[param]:
+            if 'x' not in task_parameters[param]:
+                raise ValueError(param + " should be in WxH format, e.g. 1024x768")
+            width, height = task_parameters[param].split('x')
+            if not (width.isdigit() and height.isdigit()):
+                raise ValueError(param + " should be in WxH format with positive integers, e.g. 1024x768")
+            task_parameters[param] = '{}x{}'.format(int(width), int(height))
+
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(image_generation_graph_template)
+    graph_content = gtemplate.render(model_path=model_path, **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+         f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+
 if not os.path.isdir(args['model_repository_path']):
     raise ValueError(f"The model repository path '{args['model_repository_path']}' is not a valid directory.")
 if args['source_model'] is None:
@@ -477,4 +555,14 @@ elif args['task'] == 'embeddings':
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
-
+elif args['task'] == 'image_generation':
+    template_parameters = {k: v for k, v in args.items() if k in [
+        'ov_cache_dir',
+        'target_device',
+        'max_resolution',
+        'default_resolution',
+        'max_num_images_per_prompt',
+        'default_num_inference_steps',
+        'max_num_inference_steps',
+    ]}
+    export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])

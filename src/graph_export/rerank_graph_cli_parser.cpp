@@ -75,8 +75,8 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
     return  result->unmatched();
 }
 
-void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
     rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
@@ -86,7 +86,7 @@ void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
