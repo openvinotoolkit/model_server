@@ -31,7 +31,7 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         vlmExecutionContext->inputText, vlmExecutionContext->inputImages,
-        vlmExecutionContext->apiHandler->createGenerationConfig());
+        vlmExecutionContext->apiHandler->createGenerationConfig(properties->baseGenerationConfig));
     return absl::OkStatus();
 }
 
