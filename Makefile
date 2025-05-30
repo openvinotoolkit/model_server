@@ -174,13 +174,8 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-<<<<<<< HEAD
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.2.0-18918-5928ba60fd5/openvino_toolkit_rhel8_2025.2.0.dev20250503_x86_64.tgz
-  INSTALL_DRIVER_VERSION ?= "25.05.32567"
-=======
   DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/pre-release/2025.2.0rc1/openvino_toolkit_rhel8_2025.2.0.dev20250522_x86_64.tgz
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
->>>>>>> origin/main
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
