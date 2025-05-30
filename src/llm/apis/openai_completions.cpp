@@ -126,24 +126,6 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     return absl::OkStatus();
 }
 
-// ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
-//     int x = 0, y = 0, channelsInFile = 0;
-//     constexpr int desiredChannels = 3;
-//     unsigned char* image = stbi_load_from_memory(
-//         (const unsigned char*)imageBytes.data(), imageBytes.size(),
-//         &x, &y, &channelsInFile, desiredChannels);
-//     return loadImageStbi(image, x, y, desiredChannels);
-// }
-
-// ov::Tensor loadImageStbiFromFile(char const* filename) {
-//     int x = 0, y = 0, channelsInFile = 0;
-//     constexpr int desiredChannels = 3;
-//     unsigned char* image = stbi_load(
-//         filename,
-//         &x, &y, &channelsInFile, desiredChannels);
-//     return loadImageStbi(image, x, y, desiredChannels);
-// }
-
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
