@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "graph_export.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -246,6 +247,12 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
+
     // clang-format off
     oss << R"(
 input_stream: "REQUEST_PAYLOAD:input"
@@ -260,7 +267,7 @@ node {
     node_options: {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: ")"
-            << graphSettings.modelPath << R"(",
+            << graphOkPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
             mean_pooling: )"
