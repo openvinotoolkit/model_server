@@ -41,7 +41,6 @@ OVMS_MODEL_PROVIDER = OVMSModelProvider()
 async def run(mcp_server: MCPServer):
     agent = Agent(
         name="Assistant",
-        instructions="Use the tools to answer the questions.",
         mcp_servers=[mcp_server],
         model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
     )
