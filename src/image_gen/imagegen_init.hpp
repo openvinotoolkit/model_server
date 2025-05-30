@@ -22,5 +22,5 @@
 
 namespace ovms {
 class Status;
-std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions);
+std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions, const std::string& graphPath);
 }  // namespace ovms

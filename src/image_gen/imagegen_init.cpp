@@ -37,14 +37,21 @@ std::variant<Status, std::optional<resolution_t>> getDimensionsConfig(const std:
     return std::get<std::optional<resolution_t>>(dimsOrStatus);
 }
 
-std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions) {
+std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const google::protobuf::Any& calculatorOptions, const std::string& graphPath) {
     mediapipe::ImageGenCalculatorOptions nodeOptions;
     if (!calculatorOptions.UnpackTo(&nodeOptions)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to unpack calculator options");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+    auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
+    std::string pipelinePath;
+    if (fsModelsPath.is_relative()) {
+        pipelinePath = (std::filesystem::path(graphPath) / fsModelsPath).string();
+    } else {
+        pipelinePath = fsModelsPath.string();
+    }
     ImageGenPipelineArgs args;
-    args.modelsPath = nodeOptions.models_path();
+    args.modelsPath = pipelinePath;
     if (!FileSystem::dirExists(args.modelsPath)) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models path does not exist: {}", args.modelsPath);
         return StatusCode::PATH_INVALID;
