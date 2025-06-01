@@ -93,12 +93,12 @@ std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
 
 Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
     auto guardOrError = createGuard();
     RETURN_IF_ERROR(guardOrError);
     this->hfSettings = config.getServerSettings().hfSettings;
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} started", HF_MODEL_PULL_MODULE_NAME);
     return StatusCode::OK;
 }
 
@@ -112,11 +112,14 @@ Status HfPullModelModule::clone() const {
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << hfDownloader.getGraphDirectory() << std::endl;
     GraphExport graphExporter;
     status = graphExporter.createServableConfig(hfDownloader.getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Graph: graph.pbtxt created in: " << hfDownloader.getGraphDirectory() << std::endl;
+
     return StatusCode::OK;
 }
 
@@ -140,9 +143,9 @@ void HfPullModelModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
 }
 
 HfPullModelModule::~HfPullModelModule() {

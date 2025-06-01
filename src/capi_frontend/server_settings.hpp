@@ -21,8 +21,18 @@
 #include <vector>
 
 #include "../graph_export/graph_export_types.hpp"
+#include "../config_export_module/config_export_types.hpp"
 
 namespace ovms {
+
+enum OvmsServerMode : int {
+    SERVING_MODELS_MODE,
+    HF_PULL_MODE,
+    HF_PULL_AND_START_MODE,
+    LIST_MODELS_MODE,
+    MODIFY_CONFIG_MODE,
+    UNKNOWN_MODE
+};
 
 struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
@@ -50,7 +60,6 @@ struct EmbeddingsGraphSettingsImpl {
     uint32_t numStreams = 1;
     uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
     std::string normalize = "false";
-    std::string truncate = "false";  // FIXME: export_embeddings_tokenizer python method - not supported currently?
 };
 
 struct RerankGraphSettingsImpl {
@@ -61,15 +70,25 @@ struct RerankGraphSettingsImpl {
     uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
 };
 
+struct ImageGenerationGraphSettingsImpl {
+    std::string modelName = "";
+    std::string modelPath = "./";
+    std::string targetDevice = "CPU";
+    std::string maxResolution = "";
+    std::string defaultResolution = "";
+    std::optional<uint32_t> maxNumberImagesPerPrompt;
+    std::optional<uint32_t> defaultNumInferenceSteps;
+    std::optional<uint32_t> maxNumInferenceSteps;
+    std::string pluginConfig;
+};
+
 struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
     std::string downloadPath = "";
-    bool pullHfModelMode = false;
-    bool pullHfAndStartModelMode = false;
     bool overwriteModels = false;
-    ExportType task = text_generation;
-    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl> graphSettings;
+    GraphExportType task = TEXT_GENERATION_GRAPH;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {
@@ -97,8 +116,9 @@ struct ServerSettingsImpl {
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
-    bool listServables = false;
+    ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
+    OvmsServerMode serverMode = SERVING_MODELS_MODE;
 };
 
 struct ModelsSettingsImpl {

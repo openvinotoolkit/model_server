@@ -25,32 +25,24 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../status.hpp"
 #include "../stringutils.hpp"
+#include "../schema.hpp"
 #include "graph_export_types.hpp"
 
-namespace ovms {
+#include "mediapipe/framework/port/parse_text_proto.h"
+#include "mediapipe/framework/calculator_graph.h"
 
-Status createFile(const std::string& filePath, const std::string& contents) {
-    SPDLOG_DEBUG("Creating file {}", filePath);
-    // Always overwrite
-    {
-        std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
-        if (graphFile.is_open()) {
-            graphFile << contents << std::endl;
-        } else {
-            SPDLOG_ERROR("Unable to open file: ", filePath);
-            return StatusCode::FILE_INVALID;
-        }
-    }
-    return StatusCode::OK;
-}
+namespace ovms {
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
@@ -116,10 +108,29 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
-
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
+static Status validateSubconfigSchema(const std::string& subconfig, const std::string& type) {
+    rapidjson::Document subconfigJson;
+    rapidjson::ParseResult parseResult = subconfigJson.Parse(subconfig.c_str());
+    if (parseResult.Code()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Created {} subconfig file is not a valid JSON file. Error: {}", type, rapidjson::GetParseError_En(parseResult.Code()));
+        return StatusCode::JSON_INVALID;
+    }
+    if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
+        SPDLOG_ERROR("Created {} subconfig file is not in valid configuration format", type);
+        return StatusCode::JSON_INVALID;
+    }
+    return StatusCode::OK;
 }
 
 static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -144,9 +155,13 @@ static Status createRerankSubconfigTemplate(const std::string& directoryPath, co
             }
         ]
     })";
+    auto status = validateSubconfigSchema(oss.str(), "rerank");
+    if (!status.ok()){
+        return status;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
@@ -171,9 +186,13 @@ static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath
             }
         ]
     })";
+    auto status = validateSubconfigSchema(oss.str(), "embeddings");
+    if (!status.ok()){
+        return status;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return createFile(fullPath, oss.str());
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -210,9 +229,15 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
         output_stream: "RESPONSE_PAYLOAD:output"
     })";
 
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created rerank graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
@@ -259,46 +284,133 @@ static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, co
     }
     })";
 
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = createFile(fullPath, oss.str());
+    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
     if (!status.ok())
         return status;
 
     return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
 }
 
+static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: ")" << graphSettings.modelPath << R"("
+          target_device: ")" << graphSettings.targetDevice << R"(")";
+
+    if (graphSettings.pluginConfig.size()) {
+        oss << R"(
+          plugin_config: ')" << graphSettings.pluginConfig << R"(')";
+    }
+
+    if (graphSettings.maxResolution.size()) {
+        oss << R"(
+          max_resolution: ")" << graphSettings.maxResolution << R"(")";
+    }
+
+    if (graphSettings.defaultResolution.size()) {
+        oss << R"(
+          default_resolution: ")" << graphSettings.defaultResolution << R"(")";
+    }
+
+    if (graphSettings.maxNumberImagesPerPrompt.has_value()) {
+        oss << R"(
+          max_number_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
+    }
+
+    if (graphSettings.defaultNumInferenceSteps.has_value()) {
+        oss << R"(
+          default_num_inference_steps: )" << graphSettings.defaultNumInferenceSteps.value();
+    }
+
+    if (graphSettings.maxNumInferenceSteps.has_value()) {
+        oss << R"(
+          max_num_inference_steps: )" << graphSettings.maxNumInferenceSteps.value();
+    }
+
+    oss << R"(
+      }
+  }
+}
+)";
+
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
 GraphExport::GraphExport() {
 }
 
 Status GraphExport::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
-    if (directoryPath.empty() || !std::filesystem::exists(directoryPath)) {
-        SPDLOG_ERROR("Directory path empty or does not exist: {}", directoryPath);
+    if (directoryPath.empty()) {
+        SPDLOG_ERROR("Directory path empty: {}", directoryPath);
         return StatusCode::PATH_INVALID;
     }
 
-    if (hfSettings.task == text_generation) {
+    bool exists = false;
+    auto status = LocalFileSystem::exists(directoryPath, &exists);
+    if (!status.ok())
+        return status;
+
+    bool is_dir = false;
+    status = LocalFileSystem::isDir(directoryPath, &is_dir);
+    if (!status.ok())
+        return status;
+
+    if (!is_dir) {
+        SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == embeddings) {
+    } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
         if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for embeddings.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == rerank) {
+    } else if (hfSettings.task == RERANK_GRAPH) {
         if (std::holds_alternative<RerankGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createRerankGraphTemplate(directoryPath, std::get<RerankGraphSettingsImpl>(hfSettings.graphSettings));
         } else {
             SPDLOG_ERROR("Graph options not initialized for rerank.");
             return StatusCode::INTERNAL_ERROR;
         }
-    } else if (hfSettings.task == unknown) {
+    } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
+        if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createImageGenerationGraphTemplate(directoryPath, std::get<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for image generation.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }

@@ -151,6 +151,8 @@ public:
     }
 
     static void TearDownTestSuite() {
+        llmExecutorWrapper.reset();
+        cbPipe.reset();
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();

@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <string>
 #include <memory>
 
@@ -65,5 +66,6 @@ protected:
     bool CheckIfProxySet();
     Status checkIfOverwriteAndRemove(const std::string& path);
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
+    Status checkRequiredToolsArePresent();
 };
 }  // namespace ovms

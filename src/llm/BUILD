@@ -79,8 +79,28 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
+        "//src:libovmsfilesystem",
         "@stb//:image",
+        ":response_parsers",
     ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "response_parsers",
+    hdrs = ["response_parsers/base_response_parser.hpp", 
+            "response_parsers/hermes3_response_parser.hpp",
+            "response_parsers/llama3_response_parser.hpp",
+            "response_parsers/qwen3_response_parser.hpp",
+            "response_parsers/response_parser.hpp",
+            "response_parsers/utils.hpp"],
+    deps = select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),

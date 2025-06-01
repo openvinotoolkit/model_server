@@ -98,6 +98,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.
                 eos_token = data.get("eos_token", "")
                 eos_token = "" if eos_token is None else eos_token  # Null token conversion to empty string.
+
                 chat_template = data.get("chat_template", default_chat_template)
                 if isinstance(chat_template, list):
                     for template_entry in chat_template:
