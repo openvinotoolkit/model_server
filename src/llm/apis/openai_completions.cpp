@@ -454,17 +454,23 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             if (std::string(typeIt->value.GetString()) != "json_schema") {
                 return absl::InvalidArgumentError("response_format.type can be only json_schema");
             } else {
-                auto schemaIt = responseFormat.FindMember("schema");
-                if (schemaIt != responseFormat.MemberEnd()) {
+                auto jsonschemaIt = responseFormat.FindMember("json_schema");
+                if (jsonschemaIt != responseFormat.MemberEnd()) {
+                    if (!jsonschemaIt->value.IsObject())
+                        return absl::InvalidArgumentError("response_format.json_schema is not an object");
+                    auto jsonSchema = jsonschemaIt->value.GetObject();
+                    auto schemaIt = jsonSchema.FindMember("schema");
+                    if (schemaIt == jsonSchema.MemberEnd())
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
                     if (!schemaIt->value.IsObject())
-                        return absl::InvalidArgumentError("response_format.schema is not an object");
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is not an object");
                     // Convert schema value to a JSON string and assign to optional string responseSchema
                     StringBuffer schemaBuffer;
                     Writer<StringBuffer> schemaWriter(schemaBuffer);
                     schemaIt->value.Accept(schemaWriter);
                     request.responseSchema = std::make_optional<std::string>(schemaBuffer.GetString());
                 } else {
-                    return absl::InvalidArgumentError("response_format.schema is missing");
+                    return absl::InvalidArgumentError("response_format.json_schema is missing");
                 }
             }
         }

@@ -20,7 +20,7 @@ import os
 import logging
 
 model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
-base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
+base_url = os.getenv("BASE_URL", "http://localhost:10000/v3")
 
 logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
@@ -305,7 +305,7 @@ class TestSingleModelInference:
                     arguments += chunk.choices[0].delta.tool_calls[0].function.arguments
         assert arguments == '{"location": "Paris, France"}'
 
-    @xfail(reason="not implemented yet")
+    #@xfail(reason="not implemented yet")
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
@@ -334,11 +334,16 @@ class TestSingleModelInference:
         completion = client.beta.chat.completions.parse(
             model=model_name,
             messages=[
-                {"role": "system", "content": "Extract the event information."},
+                {"role": "system", "content": "Extract the event information and place them in json format."},
                 {"role": "user", "content": "Alice and Bob are going to a Science Fair on Friday."},
             ],
+            temperature=0.0,
+            max_tokens=30,
+            stop=["#"],
             response_format=CalendarEvent,
         )
+        print("COMPLETION:", completion)
+
         print("CalendarEvent as JSON:", json.dumps(CalendarEvent.schema(), indent=2))
         print("COMPLETION CONTENT:",completion.choices[0].message.content)
         json_str = completion.choices[0].message.content

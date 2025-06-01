@@ -165,7 +165,12 @@ struct OpenAIChatCompletionsRequest {
             config.assistant_confidence_threshold = assistantConfidenceThreshold.value();
         if (maxNgramSize.has_value())
             config.max_ngram_size = maxNgramSize.value();
-
+        if (responseSchema.has_value()){
+            ov::genai::GuidedGenerationConfig guided_config;
+            guided_config.json_schema = responseSchema.value();
+            std::cout << "Guided generation config: " << responseSchema.value() << std::endl;
+            config.guided_generation_config = guided_config;
+        }
         return config;
     }
 };
