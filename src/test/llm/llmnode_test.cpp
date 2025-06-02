@@ -2523,7 +2523,8 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
+TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
+    // Note that this passes validation, but such content is not visible in non-Python build
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2542,7 +2543,30 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, toolCallsInsteadOfContent) {
+    // Note that this passes validation, but tool calls are not visible in non-Python build
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
+            }
+            ]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
