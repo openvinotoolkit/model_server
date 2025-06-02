@@ -18,7 +18,7 @@
 namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
-    text2ImagePipeline(ov::genai::Image2ImagePipeline(args.modelsPath,
+    text2ImagePipeline(ov::genai::Text2ImagePipeline(args.modelsPath,
         args.device.value_or("CPU"),
         args.pluginConfig)),
     args(args) {}
