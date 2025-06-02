@@ -45,6 +45,11 @@ using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_
 
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
 
+static bool progress_bar(size_t step, size_t num_steps, ov::Tensor& /* latent */) {
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step, num_steps);
+    return false;
+}
+
 class ImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -103,6 +108,7 @@ public:
         }
         std::unique_ptr<ov::Tensor> images;
         try {
+            requestOptions.insert(ov::genai::callback(progress_bar));
             images = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Error: {}", cc->NodeName(), e.what());
