@@ -18,10 +18,9 @@
 namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
-    image2ImagePipeline(ov::genai::Image2ImagePipeline(args.modelsPath,
+    text2ImagePipeline(ov::genai::Image2ImagePipeline(args.modelsPath,
         args.device.value_or("CPU"),
         args.pluginConfig)),
-    text2ImagePipeline(image2ImagePipeline),
     args(args) {}
 // TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
 }  // namespace ovms
