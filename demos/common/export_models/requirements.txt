@@ -2,7 +2,7 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git@69311c0f11c92aff670bc08a3ab0a4653213e25c
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@3b2cffb40c3de6bd3bf90c1e8a98d902e87db80d
 openvino-tokenizers[transformers]<=2025.2.0.0rc1
 openvino<=2025.2.0rc1
 nncf>=2.11.0 

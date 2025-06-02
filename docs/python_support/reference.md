@@ -936,8 +936,6 @@ class OvmsPythonModel:
 
 In such case, the client could implement different actions depending on which output it receives on the stream.
 
-Another example of such configuration is signaling that generation is finished when running in [generative mode](#generative-mode). This solution is used in [image generation demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/stable_diffusion).
-
 
 ### Calculator type conversions
 
