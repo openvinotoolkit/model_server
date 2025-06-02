@@ -157,6 +157,10 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
+                        "/wd6385",
+                        "/wd6001",
+                        "/wd6386",
+                        "/wd4099",
 ]
 
 COMMON_STATIC_LIBS_COPTS = select({
