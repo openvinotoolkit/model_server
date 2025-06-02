@@ -38,6 +38,16 @@ mediapipe_proto_library(
     ],
 )
 
+mediapipe_proto_library(
+    name = "rerank_calculator_ov_proto", # rerank_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
+    srcs = ["rerank_calculator_ov.proto"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
+
 cc_library(
     name = "rerankcalculator",
     srcs = ["rerank_calculator.cc"],
@@ -60,6 +70,31 @@ cc_library(
 )
 
 cc_library(
+    name = "rerankcalculator_ov",
+    srcs = ["rerank_calculator_ov.cc"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@model_api//:model_api",
+        "//src:httppayload",
+        "//src:libhttpclientconnection",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+	    "rerank_calculator_ov_cc_proto",
+        ":rerank_api_handler",
+        ":rerank_servable",
+        "//src:model_metric_reporter",
+        "//src:executingstreamidguard",
+        "//src:libovms_execution_context",
+    ],
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
     name = "rerank_api_handler",
     hdrs = ["rerank_utils.hpp"],
     srcs = ["rerank_utils.cpp"],
@@ -69,6 +104,29 @@ cc_library(
         "//src:libovmsprofiler",
         "//third_party:openvino",
     ],
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "rerank_servable",
+    hdrs = ["rerank_servable.hpp"],
+    srcs = ["rerank_servable.cpp"],
+    deps = ["//src:libovmslogging",
+            "rerank_calculator_ov_cc_proto",
+            "//src:libmodelconfigjsonparser",
+            "//src:libovmsstatus",
+            "//src:libovmsfilesystem",
+            "//src:libovmsmodelversioning",
+            "//src:libovms_ovinferrequestsqueue",
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "@com_github_tencent_rapidjson//:rapidjson",] + select({
+            "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
+            "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
+    }),
     visibility = ["//visibility:public"],
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,

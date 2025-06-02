@@ -61,6 +61,7 @@ const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonE
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
 const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
 const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
+const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
@@ -138,6 +139,10 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         return StatusCode::INTERNAL_ERROR;
     }
     if (!this->sidePacketMaps.embeddingsServableMap.empty()) {
+        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    if (!this->rerankServableMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -539,6 +544,26 @@ Status MediapipeGraphDefinition::initializeNodes() {
             std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i), mgconfig.getBasePath());
             embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(embeddings)));
             embeddingsServablesCleaningGuard.disableCleaning();
+        }
+        if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
+            auto& rerankServableMap = this->sidePacketMaps.embeddingsServableMap;
+            ResourcesCleaningGuard<RerankServableMap> rerankServablesCleaningGuard(rerankServableMap);
+            if (!config.node(i).node_options().size()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node missing options in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_OPTIONS;
+            }
+            if (config.node(i).name().empty()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node name is missing in graph: {}. ", this->name);
+                return StatusCode::LLM_NODE_MISSING_NAME;
+            }
+            std::string nodeName = config.node(i).name();
+            if (rerankServableMap.find(nodeName) != rerankServableMap.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node name: {} already used in graph: {}. ", nodeName, this->name);
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
+            }
+            std::shared_ptr<RerankServable> rerank = std::make_shared<RerankServable>(config.node(i));
+            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(rerank)));
+            rerankServablesCleaningGuard.disableCleaning();
         }
     }
     return StatusCode::OK;
