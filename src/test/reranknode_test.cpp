@@ -69,7 +69,10 @@ public:
     }
 };
 
-class RerankHttpTest : public V3HttpTest {
+auto graphs = ::testing::Values(
+    "rerank", "rerank_ov");
+
+class RerankHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -86,10 +89,12 @@ public:
 };
 std::unique_ptr<std::thread> RerankHttpTest::t;
 
-TEST_F(RerankHttpTest, simplePositive) {
+TEST_P(RerankHttpTest, simplePositive) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "rerank",
+            "model": ")" + modelName +
+                              R"(",
             "query": "What is the capital of the United States?",
             "documents": ["Carson City is the capital city of the American state of Nevada.",
                         "The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.",
@@ -117,10 +122,12 @@ TEST_F(RerankHttpTest, simplePositive) {
     }
 }
 
-TEST_F(RerankHttpTest, positiveTopN) {
+TEST_P(RerankHttpTest, positiveTopN) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "rerank",
+            "model": ")" + modelName +
+                              R"(",
             "query": "What is the capital of the United States?",
             "top_n": 3,
             "documents": ["Carson City is the capital city of the American state of Nevada.",
@@ -149,10 +156,12 @@ TEST_F(RerankHttpTest, positiveTopN) {
     }
 }
 
-TEST_F(RerankHttpTest, positiveReturnDocuments) {
+TEST_P(RerankHttpTest, positiveReturnDocuments) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "rerank",
+            "model": ")" + modelName +
+                              R"(",
             "query": "What is the capital of the United States?",
             "return_documents": true,
             "documents": ["Carson City is the capital city of the American state of Nevada.",
@@ -186,7 +195,12 @@ TEST_F(RerankHttpTest, positiveReturnDocuments) {
     }
 }
 
-class RerankWithParamsHttpTest : public V3HttpTest {
+INSTANTIATE_TEST_SUITE_P(
+    RerankHttpTestInstances,
+    RerankHttpTest,
+    graphs);
+
+class RerankWithParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -215,14 +229,14 @@ public:
 };
 std::unique_ptr<std::thread> RerankWithParamsHttpTest::t;
 
-TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
+TEST_P(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-
+    auto modelName = GetParam();
     // Populate the JSON document with data
-    document.AddMember("model", "rerank", allocator);
+    document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
 
     rapidjson::Value documents(rapidjson::kArrayType);
@@ -243,14 +257,14 @@ TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
         ovms::StatusCode::OK);
 }
 
-TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunking) {
+TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunking) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-
+    auto modelName = GetParam();
     // Populate the JSON document with data
-    document.AddMember("model", "rerank", allocator);
+    document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
 
     // Test fail due number of documents exceeding number of max chunks
@@ -272,14 +286,14 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Number of documents exceeds max_allowed_chunks"));  // 5 because we prepared 1 document more than allowed
 }
 
-TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
+TEST_P(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-
+    auto modelName = GetParam();
     // Populate the JSON document with data
-    document.AddMember("model", "rerank", allocator);
+    document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);  // Will be trimmed to 6 tokens
 
     // Test fail due number of documents exceeding number of max chunks
@@ -304,7 +318,12 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
 }
 
-class RerankWithInvalidParamsHttpTest : public V3HttpTest {
+INSTANTIATE_TEST_SUITE_P(
+    RerankWithParamsHttpTestInstances,
+    RerankWithParamsHttpTest,
+    graphs);
+
+class RerankWithInvalidParamsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -331,14 +350,14 @@ public:
 };
 std::unique_ptr<std::thread> RerankWithInvalidParamsHttpTest::t;
 
-TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
+TEST_P(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     // Create a JSON document
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-
+    auto modelName = GetParam();
     // Populate the JSON document with data
-    document.AddMember("model", "rerank", allocator);
+    document.AddMember("model", rapidjson::StringRef(modelName.c_str()), allocator);
     document.AddMember("query", "What is the capital of the United States?", allocator);
 
     rapidjson::Value documents(rapidjson::kArrayType);
@@ -358,3 +377,8 @@ TEST_F(RerankWithInvalidParamsHttpTest, AnyRequestNegativeWithInvalidSetup) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS"));
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    RerankWithInvalidParamsHttpTestInstances,
+    RerankWithInvalidParamsHttpTest,
+    graphs);

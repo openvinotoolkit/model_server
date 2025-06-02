@@ -14,34 +14,16 @@
 #
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
+
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:tokenizer"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "tokenizer_model"
-    }
-  }
-}
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:rerank"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "rerank_model"
-    }
-  }
-}
-node {
-    input_side_packet: "TOKENIZER_SESSION:tokenizer"
-    input_side_packet: "RERANK_SESSION:rerank"
-    calculator: "RerankCalculator"
+    name: "rerankNode1"
+    input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
+    calculator: "RerankCalculatorOV"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {
-      [type.googleapis.com / mediapipe.RerankCalculatorOptions]: {
-        max_allowed_chunks: 4
-        max_position_embeddings: 12
+      [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+        models_path: "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/ov"
       }
     }
 }

@@ -1,0 +1,261 @@
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include <algorithm>
+#include <exception>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
+#pragma warning(push)
+#pragma warning(disable : 6001 6385 6386 6326 6011 4309 6246 4005 4456)
+#include "absl/strings/escaping.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/canonical_errors.h"
+#include "mediapipe/framework/port/ret_check.h"
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+
+#include <adapters/inference_adapter.h>
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../http_payload.hpp"
+#include "../logging.hpp"
+#include "../profiler.hpp"
+#include "src/rerank/rerank_calculator_ov.pb.h"
+#include "src/rerank/rerank_utils.hpp"
+#include "rerank_servable.hpp"
+#include "../model_metric_reporter.hpp"
+#include "../executingstreamidguard.hpp"
+
+using namespace rapidjson;
+using namespace ovms;
+
+namespace mediapipe {
+
+const std::string RERANK_SESSION_SIDE_PACKET_TAG = "RERANK_NODE_RESOURCES";
+
+using InputDataType = ovms::HttpPayload;
+using OutputDataType = std::string;
+
+class RerankCalculatorOV : public CalculatorBase {
+    static const std::string INPUT_TAG_NAME;
+    static const std::string OUTPUT_TAG_NAME;
+    static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
+
+    mediapipe::Timestamp timestamp{0};
+    std::chrono::time_point<std::chrono::system_clock> created;
+
+    int64_t bos_token{0};
+    int64_t eos_token{0};
+    int64_t sep_token{0};
+    int64_t pad_token{0};
+
+    uint64_t max_position_embeddings{512};
+
+    size_t max_allowed_chunks{0};  // Read from options in ::Open()
+
+protected:
+    std::shared_ptr<ovms::RerankServable> rerank_session{nullptr};
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        RET_CHECK(!cc->Inputs().GetTags().empty());
+        RET_CHECK(!cc->Outputs().GetTags().empty());
+        cc->Inputs().Tag(INPUT_TAG_NAME).Set<InputDataType>();
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<OutputDataType>();
+        cc->InputSidePackets().Tag(RERANK_SESSION_SIDE_PACKET_TAG).Set<ovms::RerankServableMap>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "RerankCalculatorOV [Node: {} ] Close", cc->NodeName());
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "RerankCalculatorOV  [Node: {}] Open start", cc->NodeName());
+        auto servableMap = cc->InputSidePackets()
+                               .Tag(RERANK_SESSION_SIDE_PACKET_TAG)
+                               .Get<ovms::RerankServableMap>();
+        auto it = servableMap.find(cc->NodeName());
+        RET_CHECK(it != servableMap.end()) << "Could not find initialized Rerank node named: " << cc->NodeName();
+        rerank_session = it->second;
+
+        const auto& options = cc->Options<RerankCalculatorOVOptions>();
+        this->max_allowed_chunks = options.max_allowed_chunks();
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Max allowed chunks: {}", this->max_allowed_chunks);
+
+        // max_position_embeddings
+        if (options.has_max_position_embeddings()) {
+            this->max_position_embeddings = options.max_position_embeddings();
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Options defined max_position_embeddings: {}", this->max_position_embeddings);
+        } else {
+            if (rerank_session->getMaxModelLength().has_value()) {
+                this->max_position_embeddings = rerank_session->getMaxModelLength().value();
+            } else {
+                SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", this->max_position_embeddings);
+            }
+        }
+
+        // post-validation
+        if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
+            return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
+        }
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "RerankCalculatorOV [Node: {}] Open end", cc->NodeName());
+        return absl::OkStatus();
+    }
+
+    std::vector<int64_t> ComputeTokensForString(std::string str) const {
+        auto tokens = rerank_session->getTokenizer().encode(str);
+        auto& input_ids = tokens.input_ids;
+        if (input_ids.get_shape().size() != 2)
+            throw std::runtime_error("input_ids should have 2 dimensions");
+        if (input_ids.get_shape()[0] != 1)
+            throw std::runtime_error("input_ids should have 1 batch size");
+        if (input_ids.get_element_type() != ov::element::i64)
+            throw std::runtime_error("input_ids should have i64 element type");  // TODO: Add support for other precisions?
+
+        int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data());
+        return std::vector<int64_t>(input_ids_data, input_ids_data + input_ids.get_shape()[1]);
+    }
+
+    std::pair<ov::Tensor, ov::Tensor> PrepareInputsForRerankModel(const RerankHandler& handler, std::vector<size_t>& chunk_mapping) const {
+        // Validate batch size before tokenizing
+        if (handler.getDocumentsList().size() > this->max_allowed_chunks)
+            throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
+
+        // Compute Query Tokens
+        auto query_tokens = ComputeTokensForString(handler.getQuery());
+
+        const size_t max_query_tokens = this->max_position_embeddings / 2;
+        if (query_tokens.size() > max_query_tokens) {
+            query_tokens.resize(max_query_tokens);
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of query tokens: {} exceeded half of max_position_embeddings: {}, truncating to {}", query_tokens.size(), this->max_position_embeddings, max_query_tokens);
+        } else {
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of query tokens: {}", query_tokens.size());
+        }
+        auto tokens = rerank_session->getTokenizer().encode(handler.getDocumentsList());
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "\nMax position embeddings: {}\nQuery tokens: {}\nSpecial tokens: {}\nRemaining space for chunk: {}",
+            this->max_position_embeddings, query_tokens.size(), NUMBER_OF_SPECIAL_TOKENS, this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of documents: {}; with max token count: {} before chunking", tokens.input_ids.get_shape()[0], tokens.input_ids.get_shape()[1]);
+        size_t max_tokens_per_chunk = this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS;
+        ov::Tensor out_input_ids, out_attention_mask;
+        auto status = chunkDocuments(
+            tokens.input_ids,
+            tokens.attention_mask,
+            out_input_ids, out_attention_mask,
+            chunk_mapping, max_tokens_per_chunk,
+            this->max_allowed_chunks, this->pad_token);
+        if (!status.ok()) {
+            throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
+        }
+        return std::make_pair(out_input_ids, out_attention_mask);
+    }
+
+    std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
+        ov::InferRequest inferRequest;
+        ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
+        auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getRerankInferRequestsQueue(), tmp);
+        inferRequest = executingStreamIdGuard->getInferRequest();
+        inferRequest.set_tensor("input_ids", input_ids);
+        inferRequest.set_tensor("attention_mask", attention_mask);
+        inferRequest.start_async();
+        inferRequest.wait();
+        auto logits = inferRequest.get_tensor("logits");
+        if (logits.get_shape().size() != 2)  // 2D tensor
+            throw std::runtime_error("Logits should be 2D tensor");
+        if (logits.get_shape()[0] != input_ids.get_shape()[0])
+            throw std::runtime_error("Batch size mismatch");
+        std::vector<float> scores;
+        scores.resize(actual_batch_size, 0);
+
+        size_t logits_dim = logits.get_shape()[1];
+
+        for (int i = 0; i < input_ids.get_shape()[0]; ++i) {
+            size_t score_index = chunkMapping[i];
+            if (score_index >= actual_batch_size)
+                throw std::runtime_error("score_index out of bounds");  // should never happen
+            float logit = logits_dim > 1 ? reinterpret_cast<float*>(logits.data())[i * logits_dim + 1] : reinterpret_cast<float*>(logits.data())[i];
+            float score = 1 / (1 + std::exp(-logit));
+            float current_highest_score = scores[score_index];
+            scores[score_index] = std::max(current_highest_score, score);
+        }
+        return scores;
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        OVMS_PROFILE_FUNCTION();
+        RET_CHECK(rerank_session != nullptr);
+        if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+            return absl::InvalidArgumentError("Input is empty");
+        }
+        InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request body: {}", payload.body);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Request uri: {}", payload.uri);
+        RerankHandler handler(*payload.parsedJson);
+        absl::Status status = handler.parseRequest();
+        if (!status.ok()) {
+            return status;
+        }
+
+        try {
+            // Prepare inputs for rerank model
+            std::vector<size_t> chunk_mapping;
+            auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
+
+            // Compute scores using rerank model
+            size_t batch_size = handler.getDocumentsList().size();
+            auto scores = ComputeScoresUsingRerankModel(
+                input_ids,
+                attention_mask,
+                chunk_mapping,
+                batch_size);
+
+            // Serialize scores
+            StringBuffer buffer;
+            status = handler.parseResponse(buffer, scores);
+            if (!status.ok()) {
+                return status;
+            }
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), timestamp);
+            return absl::OkStatus();
+        } catch (ov::AssertFailure& e) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "OpenVINO Assert Failure: {}", e.what());
+            return absl::InternalError(e.what());
+        } catch (std::runtime_error& e) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "runtime_error: {}", e.what());
+            return absl::InternalError(e.what());
+        } catch (...) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "Unknown error");
+            return absl::InternalError("Unknown error");
+        }
+    }
+};
+const std::string RerankCalculatorOV::INPUT_TAG_NAME{"REQUEST_PAYLOAD"};
+const std::string RerankCalculatorOV::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
+
+REGISTER_CALCULATOR(RerankCalculatorOV);
+
+}  // namespace mediapipe

@@ -632,6 +632,7 @@ cc_library(
                 "//src/embeddings:embeddingscalculator",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
+                "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",],
         }) + select({
             "//:enable_drogon": [
