@@ -67,7 +67,7 @@ def _impl(repository_ctx):
         "X86_64": "True",
         "BUILD_TOKENIZERS": "OFF",
         """
-        jobs_param = "\"-j 24\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
+        jobs_param = "\"-j 8\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
     else:
         lib_name = "libopenvino_genai"
         out_dll_dir_win = ""

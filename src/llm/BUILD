@@ -84,7 +84,7 @@ cc_library(
         "@stb//:image",
         ":response_parsers",
     ] + select({
-        "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine_cmake"],
+        "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
