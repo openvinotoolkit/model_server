@@ -14,25 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <random>
 #include <string>
 
 namespace ovms {
-static std::string generateRandomId() {
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-    static constexpr int idLength = 9;
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    static thread_local std::uniform_int_distribution<> dist(0, sizeof(alphanum) - 2);
-
-    std::string id;
-    id.reserve(idLength);
-    for (int i = 0; i < idLength; ++i) {
-        id += alphanum[dist(rng)];
-    }
-    return id;
-}
+std::string generateRandomId();
 }  // namespace ovms

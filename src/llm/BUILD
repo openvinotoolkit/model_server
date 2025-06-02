@@ -100,8 +100,13 @@ cc_library(
             "response_parsers/qwen3_response_parser.hpp",
             "response_parsers/response_parser.hpp",
             "response_parsers/utils.hpp"],
+    srcs = ["response_parsers/hermes3_response_parser.cpp",
+            "response_parsers/llama3_response_parser.cpp",
+            "response_parsers/qwen3_response_parser.cpp",
+            "response_parsers/utils.cpp"],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson"
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

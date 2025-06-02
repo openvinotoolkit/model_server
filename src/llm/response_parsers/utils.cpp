@@ -13,26 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <openvino/genai/tokenizer.hpp>
+#include <random>
 #include <string>
-#include <vector>
-#include "base_response_parser.hpp"
+
+#include "utils.hpp"
 
 namespace ovms {
-class Llama3ResponseParser : public BaseResponseParser {
-protected:
-    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    int64_t botTokenId = 128010;
-    // ";" is used as a separator between tool calls in the response
-    std::string separator = ";";
+std::string generateRandomId() {
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    static constexpr int idLength = 9;
+    static thread_local std::mt19937 rng{std::random_device{}()};
+    static thread_local std::uniform_int_distribution<> dist(0, sizeof(alphanum) - 2);
 
-public:
-    Llama3ResponseParser() = delete;
-    explicit Llama3ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
-
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
-};
+    std::string id;
+    id.reserve(idLength);
+    for (int i = 0; i < idLength; ++i) {
+        id += alphanum[dist(rng)];
+    }
+    return id;
+}
 }  // namespace ovms

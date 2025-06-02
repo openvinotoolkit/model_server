@@ -50,7 +50,7 @@ TEST_F(Hermes3ResponseParserTest, ParseToolCallOutputWithSingleToolCall) {
         EXPECT_EQ(parsedResponse.content, "");
         EXPECT_EQ(parsedResponse.reasoning, "");
         EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
-        EXPECT_EQ(parsedResponse.toolCalls.size(), 1);
+        ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
         EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
         // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
@@ -77,7 +77,7 @@ TEST_F(Hermes3ResponseParserTest, ParseToolCallOutputWithThreeToolCalls) {
         EXPECT_EQ(parsedResponse.reasoning, "");
         EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
 
-        EXPECT_EQ(parsedResponse.toolCalls.size(), 3);
+        ASSERT_EQ(parsedResponse.toolCalls.size(), 3);
         EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
         // Parser removes whitespaces, so we expect arguments value to be without spaces
         EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
@@ -107,7 +107,7 @@ TEST_F(Hermes3ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) 
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
     EXPECT_EQ(parsedResponse.content, "This is a regular model response without tool calls.");
-    EXPECT_EQ(parsedResponse.toolCalls.size(), 0);
+    ASSERT_EQ(parsedResponse.toolCalls.size(), 0);
     EXPECT_EQ(parsedResponse.reasoning, "");
     EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
 }
@@ -121,7 +121,7 @@ TEST_F(Hermes3ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCal
     EXPECT_EQ(parsedResponse.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedResponse.reasoning, "");
     EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
-    EXPECT_EQ(parsedResponse.toolCalls.size(), 1);
+    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
     EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
