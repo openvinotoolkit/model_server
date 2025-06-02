@@ -54,7 +54,7 @@ class Status;
 class PythonBackend;
 class PythonNodeResources;
 class GenAiServable;
-class ImageGenerationPipelines;
+struct ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
