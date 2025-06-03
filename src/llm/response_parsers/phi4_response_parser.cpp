@@ -50,7 +50,7 @@ ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTo
         std::smatch match = *begin;
         // Put everything, but functools[...] part into the response content
         parsedResponse.content = decoded.substr(0, match.position()) +
-                                    decoded.substr(match.position() + match.length());
+                                 decoded.substr(match.position() + match.length());
 
         std::string toolsStr = match[1].str();
         std::string toolsJson = "{\"functools\": [" + toolsStr + "]}";  // Wrap in JSON array

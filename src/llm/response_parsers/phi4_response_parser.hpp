@@ -20,7 +20,6 @@
 #include <vector>
 #include "base_response_parser.hpp"
 
-
 namespace ovms {
 class Phi4ResponseParser : public BaseResponseParser {
 public:
