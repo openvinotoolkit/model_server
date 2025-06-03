@@ -18,11 +18,8 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
-#include <regex>
-
-#include "../../logging.hpp"
 #include "base_response_parser.hpp"
-#include "utils.hpp"
+
 
 namespace ovms {
 class Phi4ResponseParser : public BaseResponseParser {
@@ -31,61 +28,6 @@ public:
     explicit Phi4ResponseParser(ov::genai::Tokenizer& tokenizer) :
         BaseResponseParser(tokenizer) {}
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override {
-        ParsedResponse parsedResponse;
-        std::vector<std::string> tools;
-
-        // Phi4 with vLLM template produces tool calls in the format:
-        // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-        std::string decoded = tokenizer.decode(generatedTokens);
-        std::regex toolRegex(R"(functools\[(.*?)\])");
-        std::sregex_iterator begin(decoded.begin(), decoded.end(), toolRegex);
-        std::sregex_iterator end;
-        size_t matchCount = std::distance(begin, end);
-
-        if (matchCount == 0) {
-            parsedResponse.content = decoded;
-        } else if (matchCount == 1) {
-            std::smatch match = *begin;
-            // Put everything, but functools[...] part into the response content
-            parsedResponse.content = decoded.substr(0, match.position()) +
-                                     decoded.substr(match.position() + match.length());
-
-            std::string toolsStr = match[1].str();
-            std::string toolsJson = "{\"functools\": [" + toolsStr + "]}";  // Wrap in JSON array
-
-            rapidjson::Document toolsDoc;
-            toolsDoc.Parse(toolsJson.c_str());
-            if (!toolsDoc.HasParseError() && toolsDoc.IsObject() && toolsDoc.HasMember("functools") && toolsDoc["functools"].IsArray()) {
-                const rapidjson::Value& toolsArray = toolsDoc["functools"];
-                for (auto& toolVal : toolsArray.GetArray()) {
-                    if (!toolVal.IsObject()) {
-                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                        continue;
-                    }
-                    ToolCall toolCall;
-                    toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                    if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                        toolCall.name = toolVal["name"].GetString();
-                    }
-                    if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                        rapidjson::StringBuffer sb;
-                        rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                        toolVal["arguments"].Accept(toolWriter);
-                        toolCall.arguments = sb.GetString();
-                    } else {
-                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                        continue;
-                    }
-                    parsedResponse.toolCalls.push_back(toolCall);
-                }
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse toolsJson or extract tools array");
-            }
-        } else {
-            throw std::runtime_error("Multiple 'functools[...]' matches found in the response.");
-        }
-        return parsedResponse;
-    }
+    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
 };
 }  // namespace ovms
