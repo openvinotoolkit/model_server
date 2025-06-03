@@ -167,9 +167,9 @@ struct OpenAIChatCompletionsRequest {
         if (maxNgramSize.has_value())
             config.max_ngram_size = maxNgramSize.value();
         if (responseSchema.has_value()) {
-            ov::genai::GuidedGenerationConfig guided_config;
+            ov::genai::StructuredOutputConfig guided_config;
             guided_config.json_schema = responseSchema.value();
-            config.guided_generation_config = guided_config;
+            config.structured_output_config = guided_config;
             config.stop_strings.insert("#");
         }
         return config;
