@@ -534,7 +534,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_FALSE(imageGenArgs.defaultResolution.has_value());
     ASSERT_EQ(imageGenArgs.maxNumImagesPerPrompt, 10);
     ASSERT_FALSE(imageGenArgs.seed.has_value());
-    ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 10);
+    ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 50);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 100);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
