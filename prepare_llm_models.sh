@@ -30,7 +30,7 @@ QWEN3_MODEL="Qwen/Qwen3-8B"
 LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 
-MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL")
+MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$EMBEDDING_MODEL/ov")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -78,6 +78,12 @@ if [ -d "$1/$EMBEDDING_MODEL" ]; then
   echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
+fi
+
+if [ -d "$1/$EMBEDDING_MODEL/ov" ]; then
+  echo "Models directory "$1/$EMBEDDING_MODEL/ov" exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
 if [ -d "$1/$RERANK_MODEL" ]; then
