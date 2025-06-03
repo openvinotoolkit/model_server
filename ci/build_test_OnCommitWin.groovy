@@ -1,4 +1,4 @@
-def windows_success = ""
+boolean windows_success = false
 
 pipeline {
     options {
@@ -23,7 +23,7 @@ pipeline {
                         } finally {
                           windows.archive_build_artifacts()
                           windows.archive_test_artifacts()
-                          windows_success = "True"
+                          windows_success = true
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
@@ -36,7 +36,7 @@ pipeline {
         always {
             node("${agent_name_windows}") {
                 script {
-                    if (windows_success == "True") {
+                    if (windows_success) {
                         bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_ovms-windows_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-with_python-main-latest.zip")
                     }
                 }
