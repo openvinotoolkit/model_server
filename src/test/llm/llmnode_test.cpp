@@ -2524,7 +2524,6 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
 }
 
 TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
-    // Expecting failure because with such request pipeline input would be empty and we don't accept that
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2542,12 +2541,17 @@ TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    /*
+        This test checks if API handler validation allows messages with content that is not a string or an object.
+        The reason why we expect error here is that for the tested model, such content is not processed correctly and pipeline input is empty.
+        On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+    */
     ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
 }
 
 TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
-    // Note that this passes validation, but tool calls are not visible in non-Python build
+    // Note that tool calls are not visible in non-Python build
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2571,7 +2575,6 @@ TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
 }
 
 TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
-    // Expecting failure because with such request pipeline input would be empty and we don't accept that
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2589,6 +2592,11 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    /*
+        This test checks if API handler validation allows messages without content.
+        The reason why we expect error here is that for the tested model, lack of content means that pipeline input is empty.
+        On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+    */
     ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
     ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
 }
