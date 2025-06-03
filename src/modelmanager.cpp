@@ -229,7 +229,7 @@ Status ModelManager::startFromConfig() {
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
-        status = validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
         if (!status.ok())
             return status;
 
@@ -441,7 +441,7 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
-    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
     std::vector<std::string> usedButdisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;

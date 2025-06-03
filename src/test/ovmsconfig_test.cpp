@@ -685,7 +685,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
         "--model_path",
         "/model/path"};
     int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Starting config.json add/remove model with unsupported model settings: target_device,");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: target_device,");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {

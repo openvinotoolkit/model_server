@@ -87,7 +87,7 @@ bool Config::check_hostname_or_ip(const std::string& input) {
 }
 
 bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
-    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
     std::vector<std::string> usedButdisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
@@ -105,7 +105,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
         for (const std::string& userSetting : usedButdisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
-        std::cerr << "Starting config.json add/remove model with unsupported model settings: " << arguments << std::endl;
+        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed:" << arguments << std::endl;
 
         return false;
     }
@@ -240,7 +240,7 @@ bool Config::validate() {
             return false;
         }
 
-        if (!this->validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
             return false;
     }
 

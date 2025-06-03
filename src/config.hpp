@@ -78,7 +78,7 @@ public:
          * 
          * @return bool 
          */
-    bool validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings);
+    static bool validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings);
     /**
          * @brief Validate passed arguments
          * 
