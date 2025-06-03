@@ -221,9 +221,7 @@ Status MediapipeGraphDefinition::createInputsInfo() {
 
 Status MediapipeGraphDefinition::createInputSidePacketsInfo() {
     inputSidePacketNames.clear();
-    SPDLOG_ERROR("NAMES");
     for (auto& name : config.input_side_packet()) {
-        SPDLOG_ERROR("NAME: {}", name);
         std::string streamName = getStreamName(name);
         if (streamName.empty()) {
             SPDLOG_ERROR("Creating Mediapipe graph input side packet name failed for: {}", name);

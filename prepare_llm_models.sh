@@ -22,7 +22,6 @@ fi
 
 CB_MODEL="facebook/opt-125m"
 EMBEDDING_MODEL="thenlper/gte-small"
-EMBEDDING_MODEL_FLAT="thenlper_flat"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
 
