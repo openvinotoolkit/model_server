@@ -20,7 +20,10 @@
 #include <utility>
 
 #include <openvino/openvino.hpp>
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
+#pragma warning(pop)
 
 #include "imagegenpipelineargs.hpp"
 
