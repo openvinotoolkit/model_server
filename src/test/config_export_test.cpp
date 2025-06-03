@@ -58,9 +58,7 @@ const std::string expectedConfigContentsTwoModels = R"({
 )";
 
 const std::string expectedEmptyConfigContents = R"({
-    "model_config_list": [
-        {}
-    ]
+    "model_config_list": []
 }
 )";
 
@@ -72,7 +70,6 @@ const std::string expected2ModelsConfigContents = R"({
                 "base_path": "/model1/Path"
             }
         },
-        {},
         {
             "config": {
                 "name": "model3",
@@ -145,9 +142,7 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToExistingConfig) {
     ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
 
     std::string expectedConfigContents = R"({
-    "model_config_list": [
-        {}
-    ],
+    "model_config_list": [],
     "pipeline_config_list": [],
     "custom_loader_config_list": []
 }

@@ -84,7 +84,7 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
         auto checkItemDelete = config.FindMember("config");
         if (checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) {
             SPDLOG_DEBUG("Erasing model from config: {}", modelSettings.modelName);
-            config.EraseMember(checkItemDelete);
+            modelsItr->value.Erase(&config);
             erased = true;
             break;
         }
