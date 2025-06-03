@@ -105,7 +105,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
         for (const std::string& userSetting : usedButdisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
-        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed:" << arguments << std::endl;
+        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
 
         return false;
     }
