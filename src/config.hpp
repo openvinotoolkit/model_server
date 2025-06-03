@@ -74,9 +74,15 @@ public:
     bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
+         * @brief Validate passed arguments against config add/remove allowed parameters
+         * 
+         * @return bool 
+         */
+    bool validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings);
+    /**
          * @brief Validate passed arguments
          * 
-         * @return void 
+         * @return bool 
          */
     bool validate();
 

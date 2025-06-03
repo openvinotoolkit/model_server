@@ -85,6 +85,33 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
 }
 
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
+    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButdisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            usedButdisallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!usedButdisallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : usedButdisallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        std::cerr << "Starting config.json add/remove model with unsupported model settings: " << arguments << std::endl;
+
+        return false;
+    }
+
+    return true;
+}
+
 bool Config::validate() {
     if (this->serverSettings.serverMode == HF_PULL_MODE) {
         if (!serverSettings.hfSettings.sourceModel.size()) {
@@ -211,6 +238,9 @@ bool Config::validate() {
             std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
             return false;
         }
+
+        if (!this->validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+            return false;
     }
 
     // check rest_workers value
