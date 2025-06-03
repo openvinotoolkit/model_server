@@ -154,6 +154,8 @@ cc_library(
         "@ovms//third_party:openvino",
         ":llm_engine_cmake",
     ],
+    hdrs = glob(["include/openvino/**/*.*"]),
+    strip_include_prefix = "include",
     visibility = ["//visibility:public"],
 )
 """

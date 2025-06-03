@@ -47,7 +47,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
 #       ":genai_lib",
-        ":genai_headers",
+#        ":genai_headers",
     ],
 )
   

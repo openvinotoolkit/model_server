@@ -22,6 +22,15 @@ cc_library(
     name = "openvino_new_headers",
     hdrs = glob([
         "include/openvino/**/*.*"
+    ], exclude = ["**/genai/**/*.*"]),
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "openvino_genai_headers",
+    hdrs = glob([
+        "include/openvino/genai/*.*"
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
