@@ -4,13 +4,13 @@ This demo shows how to deploy Image Generation models (Stable Diffusion/Stable D
 Image generation use case is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
 
-> **Note:** This demo was tested on ?????TODO?????? on Ubuntu22/24, RedHat8/9 and Windows11.
+> **Note:** This demo was tested on ?TODO? on Ubuntu22/24, RedHat8/9 and Windows11.
 
 ## Prerequisites
 
 **Model preparation** (one of the below):
 - models exported in OpenVINO format uploaded on HuggingFace (Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
-- Python 3.9 or higher with pip and HuggingFace account to convert and download manually
+- or Python 3.9+ with pip and HuggingFace account to convert and download manually using optimum-intel
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
@@ -18,14 +18,93 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 
 ## Model preparation
-### Pulling image generation models directly via OVMS `--pull` command
-TODO
+
+### Pulling image generation models directly via OVMS
+
+> NOTE: This feature is described in depth in separate [documentation page](../../docs/pull_hf_models.md).
+
+This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` directly from HuggingFaces and starts the serving. If the model already exists locally, it will simply launch the serving:
+```
+mkdir -p models
+
+docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2 --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
+```
+
+TODO: GPU
+
+```
+...
+Downloading text_encoder/openvino_model.bin (124 MB)
+Downloading text_encoder_2/openvino_model.bin (4.8 GB)
+Possibly malformed smudge on Windows: see `git lfs help smudge` for more info.
+Downloading tokenizer/openvino_detokenizer.bin (617 KB)
+Downloading tokenizer/openvino_tokenizer.bin (1.4 MB)
+Downloading tokenizer_2/openvino_detokenizer.bin (794 KB)
+Downloading tokenizer_2/openvino_tokenizer.bin (794 KB)
+Downloading tokenizer_2/spiece.model (792 KB)
+Downloading transformer/openvino_model.bin (12 GB)
+Possibly malformed smudge on Windows: see `git lfs help smudge` for more info.
+Downloading vae_decoder/openvino_model.bin (50 MB)
+Downloading vae_encoder/openvino_model.bin (34 MB)
+...
+```
+
+Your directory structure should look like this:
+```
+models
+`-- OpenVINO
+    `-- FLUX.1-schnell-int8-ov
+        |-- README.md
+        |-- graph.pbtxt
+        |-- model_index.json
+        |-- scheduler
+        |   `-- scheduler_config.json
+        |-- text_encoder
+        |   |-- config.json
+        |   |-- openvino_model.bin
+        |   `-- openvino_model.xml
+        |-- text_encoder_2
+        |   |-- config.json
+        |   |-- openvino_model.bin
+        |   `-- openvino_model.xml
+        |-- tokenizer
+        |   |-- merges.txt
+        |   |-- openvino_detokenizer.bin
+        |   |-- openvino_detokenizer.xml
+        |   |-- openvino_tokenizer.bin
+        |   |-- openvino_tokenizer.xml
+        |   |-- special_tokens_map.json
+        |   |-- tokenizer_config.json
+        |   `-- vocab.json
+        |-- tokenizer_2
+        |   |-- openvino_detokenizer.bin
+        |   |-- openvino_detokenizer.xml
+        |   |-- openvino_tokenizer.bin
+        |   |-- openvino_tokenizer.xml
+        |   |-- special_tokens_map.json
+        |   |-- spiece.model
+        |   |-- tokenizer.json
+        |   `-- tokenizer_config.json
+        |-- transformer
+        |   |-- config.json
+        |   |-- openvino_model.bin
+        |   `-- openvino_model.xml
+        |-- vae_decoder
+        |   |-- config.json
+        |   |-- openvino_model.bin
+        |   `-- openvino_model.xml
+        `-- vae_encoder
+            |-- config.json
+            |-- openvino_model.bin
+            `-- openvino_model.xml
+```
+
 TODO: tabs
 
-### Using export script to download in Pytorch format, convert to OpenVINO IR format and quantize (optional)
-Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
+### Using export script to download in arbitrary format, convert to OpenVINO IR format and quantize to desired precision
+Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
+Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
@@ -105,7 +184,7 @@ models
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Image Generation calculator documentation](../../docs/image_generation/reference.md) to learn more about configuration options.
 
-## Server Deployment
+### Server Deployment
 
 :::{dropdown} **Deploying with Docker**
 
@@ -125,9 +204,8 @@ It can be applied using the commands below:
 ```bash
 docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:2025.2-gpu --rest_port 8000 --config_path /workspace/config.json
 ```
-:::
 
-:::{dropdown} **Deploying on Bare Metal**
+**Deploying on Bare Metal**
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -141,7 +219,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
-:::
+
 
 ## Readiness Check
 
