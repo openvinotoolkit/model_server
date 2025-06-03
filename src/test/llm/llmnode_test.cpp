@@ -2523,7 +2523,7 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
+TEST_P(LLMHttpParametersValidationTest, contentNotValid) {
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2534,20 +2534,15 @@ TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
             "messages": [
             {
                 "role": "user",
-                "content": 1
+                "content": [1,2,3]
             }
             ]
         }
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    /*
-        This test checks if API handler validation allows messages with content that is not a string or an object.
-        The reason why we expect error here is that for the tested model, such content is not processed correctly and pipeline input is empty.
-        On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-    */
     ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
+    ASSERT_NE(status.string().find("Invalid message structure - content array should contain objects"), std::string::npos);
 }
 
 TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
@@ -2592,13 +2587,23 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    /*
-        This test checks if API handler validation allows messages without content.
-        The reason why we expect error here is that for the tested model, lack of content means that pipeline input is empty.
-        On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-    */
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
+    if (params.modelName.find("vlm") != std::string::npos) {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect generic error here is that for the tested VLM model template expects content in the messages.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Response generation failed"), std::string::npos);
+    } else {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect error here is that for the tested LLM model, lack of content means that pipeline input is empty.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Final prompt after applying chat template is empty"), std::string::npos);
+    }
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
