@@ -19,6 +19,7 @@
 #include <limits>
 #include <regex>
 #include <thread>
+#include <vector>
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"

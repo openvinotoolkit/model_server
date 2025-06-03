@@ -57,7 +57,11 @@ const std::string expectedConfigContentsTwoModels = R"({
 }
 )";
 
-const std::string expectedEmptyConfigContents = R"({}
+const std::string expectedEmptyConfigContents = R"({
+    "model_config_list": [
+        {}
+    ]
+}
 )";
 
 const std::string expected2ModelsConfigContents = R"({
@@ -68,6 +72,7 @@ const std::string expected2ModelsConfigContents = R"({
                 "base_path": "/model1/Path"
             }
         },
+        {},
         {
             "config": {
                 "name": "model3",
@@ -116,6 +121,42 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToEmptyConfig) {
     ASSERT_EQ(expectedEmptyConfigContents, configContents) << configContents;
 }
 
+TEST_F(ConfigCreationTest, positiveRemoveOneModelToExistingConfig) {
+    std::string configContents = R"(
+{
+  "model_config_list": [
+    {
+      "config": {
+        "name": "model1",
+        "base_path": "/models/resnet-50-tf",
+        "batch_size": 1,
+        "target_device": "CPU"
+      }
+    }
+  ],
+  "pipeline_config_list": [],
+  "custom_loader_config_list": []
+})";
+
+    std::string configFile = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
+    createConfigFileWithContent(configContents, configFile);
+
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
+
+    std::string expectedConfigContents = R"({
+    "model_config_list": [
+        {}
+    ],
+    "pipeline_config_list": [],
+    "custom_loader_config_list": []
+}
+)";
+
+    configContents = GetFileContents(configFile);
+    ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+}
+
 TEST_F(ConfigCreationTest, positiveAddTwoModelsToNonEmptyConfig) {
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
@@ -158,7 +199,7 @@ TEST_F(ConfigCreationTest, positiveRemoveOneModelToNonEmptyConfig) {
     ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
 
     configContents = GetFileContents(configFile);
-    ASSERT_EQ(expectedEmptyConfigContents, configContents) << configContents;
+    ASSERT_EQ(expected2ModelsConfigContents, configContents) << configContents;
 }
 
 TEST_F(ConfigCreationTest, negativeWrongPathsEnable) {
