@@ -33,8 +33,22 @@ set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 
-if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist "%~1\%EMBEDDING_MODEL%\ov" if exist "%~1\%RERANK_MODEL%" if exist "%~1\%VLM_MODEL%" (
-  echo Models directory %~1 exists. Skipping downloading models.
+:: Models for tools testing. Only tokenizers are downloaded.
+set "QWEN3_MODEL=Qwen/Qwen3-8B"
+set "LLAMA3_MODEL=meta-llama/Llama-3.1-8B-Instruct"
+set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
+
+set MODELS_LIST=%TEXT_GENERATION_MODEL% %EMBEDDING_MODEL% %EMBEDDING_MODEL%\ov %RERANK_MODEL% %VLM_MODEL% %QWEN3_MODEL% %LLAMA3_MODEL% %HERMES3_MODEL%
+
+set "ALL_EXIST=1"
+for %%M in (%MODELS_LIST%) do (
+  if not exist "%~1\%%M" (
+    set "ALL_EXIST=0"
+  )
+)
+
+if "!ALL_EXIST!"=="1" (
+  echo All required models exist in %~1. Skipping downloading models.
   exit /b 0
 )
 
@@ -90,6 +104,33 @@ if exist "%~1\%VLM_MODEL%" (
 ) else (
   echo Downloading visual language model to %~1\%VLM_MODEL% directory.
   python demos\common\export_models\export_model.py text_generation --pipeline_type VISUAL_LANGUAGE_MODEL --source_model "%VLM_MODEL%" --weight-format int4 --kv_cache_precision u8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist "%~1\%QWEN3_MODEL%" (
+  echo Models directory %~1\%QWEN3_MODEL% exists. Skipping downloading models.
+) else (
+  echo Downloading visual language model to %~1\%QWEN3_MODEL% directory.
+  mkdir "%~1\%QWEN3_MODEL%"
+  convert_tokenizer "%QWEN3_MODEL%" --with_detokenizer -o "%~1\%QWEN3_MODEL%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist "%~1\%LLAMA3_MODEL%" (
+  echo Models directory %~1\%LLAMA3_MODEL% exists. Skipping downloading models.
+) else (
+  echo Downloading visual language model to %~1\%LLAMA3_MODEL% directory.
+  mkdir "%~1\%LLAMA3_MODEL%"
+  convert_tokenizer "%LLAMA3_MODEL%" --with_detokenizer -o "%~1\%LLAMA3_MODEL%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist "%~1\%HERMES3_MODEL%" (
+  echo Models directory %~1\%HERMES3_MODEL% exists. Skipping downloading models.
+) else (
+  echo Downloading visual language model to %~1\%HERMES3_MODEL% directory.
+  mkdir "%~1\%HERMES3_MODEL%"
+  convert_tokenizer "%HERMES3_MODEL%" --with_detokenizer -o "%~1\%HERMES3_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
