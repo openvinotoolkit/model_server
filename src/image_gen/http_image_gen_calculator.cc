@@ -51,8 +51,8 @@ static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
 }
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
-        const std::string& prompt, ov::AnyMap& requestOptions,
-        std::unique_ptr<ov::Tensor>& images) {
+    const std::string& prompt, ov::AnyMap& requestOptions,
+    std::unique_ptr<ov::Tensor>& images) {
     try {
         requestOptions.insert(ov::genai::callback(progress_bar));
         images = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
@@ -132,7 +132,7 @@ public:
             if (numImages != 1) {
                 return absl::InvalidArgumentError(absl::StrCat("Only 1 image in response can be requested. n value:", numImages, " is not supported."));
             }
-        }        
+        }
 
         std::unique_ptr<ov::Tensor> images;
         auto status = generateTensor(request, prompt, requestOptions, images);
