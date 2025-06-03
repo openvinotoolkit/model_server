@@ -2524,7 +2524,7 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
 }
 
 TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
-    // Note that this passes validation, but such content is not visible in non-Python build
+    // Expecting failure because with such request pipeline input would be empty and we don't accept that
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2541,13 +2541,37 @@ TEST_P(LLMHttpParametersValidationTest, contentNotStringOrObject) {
         }
     )";
 
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
+}
+
+TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
+    // Note that this passes validation, but tool calls are not visible in non-Python build
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "content": "Some content",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
+            }
+            ]
+        }
+    )";
+
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
 }
 
-TEST_P(LLMHttpParametersValidationTest, toolCallsInsteadOfContent) {
-    // Note that this passes validation, but tool calls are not visible in non-Python build
+TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
+    // Expecting failure because with such request pipeline input would be empty and we don't accept that
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2564,9 +2588,9 @@ TEST_P(LLMHttpParametersValidationTest, toolCallsInsteadOfContent) {
         }
     )";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK);
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_EQ(status.string(), "Final prompt after applying chat template is empty");
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
