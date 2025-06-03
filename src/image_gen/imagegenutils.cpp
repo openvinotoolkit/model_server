@@ -23,7 +23,10 @@
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 
+#pragma warning(push)
+#pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
+#pragma warning(pop)
 
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
