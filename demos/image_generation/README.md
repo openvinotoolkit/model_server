@@ -19,18 +19,28 @@ That makes it easy to use and efficient especially on on Intel® Xeon® processo
 
 ## Model preparation
 
-### Pulling image generation models directly via OVMS
+:::{dropdown} **Pulling image generation models directly via OVMS**
 
 > NOTE: This feature is described in depth in separate [documentation page](../../docs/pull_hf_models.md).
 
 This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` directly from HuggingFaces and starts the serving. If the model already exists locally, it will simply launch the serving:
+
+**CPU**
 ```
 mkdir -p models
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2 --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
 ```
 
-TODO: GPU
+**GPU**
+
+In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
+It can be applied using the commands below:
+```bash
+mkdir -p models
+
+docker run -d --rm --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2-gpu --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
+```
 
 ```
 ...
@@ -99,9 +109,10 @@ models
             `-- openvino_model.xml
 ```
 
-TODO: tabs
+:::
 
-### Using export script to download in arbitrary format, convert to OpenVINO IR format and quantize to desired precision
+
+:::{dropdown} **Using export script to download in arbitrary format, convert to OpenVINO IR format and quantize to desired precision**
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
@@ -186,7 +197,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 ### Server Deployment
 
-:::{dropdown} **Deploying with Docker**
+**Deploying with Docker**
 
 Select deployment option depending on how you prepared models in the previous step.
 
@@ -220,6 +231,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 ovms --rest_port 8000 --config_path ./models/config.json
 ```
 
+:::
 
 ## Readiness Check
 
@@ -256,9 +268,7 @@ All requests are processed in unary format, with no streaming capabilities.
 
 ### Requesting images/generations API using cURL 
 
-::::{tab-set}
-
-:::{tab-item} Linux
+Linux
 ```bash
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
@@ -269,9 +279,7 @@ curl http://localhost:8000/v3/images/generations \
     "size": "512x512"
   }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
 ```
-:::
 
-:::{tab-item} Windows
 Windows Powershell
 ```powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
@@ -287,11 +295,7 @@ curl -s http://localhost:8000/v3/images/generations -H "Content-Type: applicatio
 ```
 TODO: Save to disk
 
-:::
-
-::::
-
-:::{dropdown} Expected Response
+Expected Response
 ```json
 {
   "data": [
