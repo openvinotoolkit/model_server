@@ -32,6 +32,11 @@
         "name":"embeddings_ov_no_norm",
         "base_path":"/ovms/src/test/embeddings/",
         "graph_path":"/ovms/src/test/embeddings/graph_ov_no_norm.pbtxt"
+    },
+    {
+        "name":"embeddings_ov_relative",
+        "base_path":"/ovms/src/test/embeddings/",
+        "graph_path":"/ovms/src/test/embeddings/graph_ov_relative.pbtxt"
     }
     ]
 }

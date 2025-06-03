@@ -14,29 +14,42 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <memory>
 #include <numeric>
-#include <string>
-#include <vector>
 
 #include "embeddings_servable.hpp"
 #include <spdlog/spdlog.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
 
+#include <vector>
+#include <string>
+#include <memory>
+
 #include "../json_parser.hpp"
 #include "../status.hpp"
+#include "../config.hpp"
 
 #include "../filesystem.hpp"
 
 namespace ovms {
 EmbeddingsModel::EmbeddingsModel(const std::filesystem::path& model_dir,
-    const std::string& device,
+    const std::string& target_device,
     const ov::AnyMap& properties) {
     ov::Core core;
-    std::shared_ptr<ov::Model> m_model = core.read_model(model_dir / "openvino_model.xml", {}, properties);
-    compiledModel = core.compile_model(m_model, device, properties);
+    std::shared_ptr<ov::Model> m_model = core.read_model(model_dir / std::filesystem::path("openvino_model.xml"), {}, properties);
+    compiledModel = core.compile_model(m_model, target_device, properties);
+    auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
+    if (ovmsConfig.nireq() > 0) {
+        // nireq is set globally for all models in ovms startup parameters
+        numberOfParallelInferRequests = ovmsConfig.nireq();
+    }
+    try {
+        numberOfParallelInferRequests = compiledModel.get_property(ov::optimal_number_of_infer_requests);
+    } catch (const ov::Exception& ex) {
+        SPDLOG_WARN("Failed to query OPTIMAL_NUMBER_OF_INFER_REQUESTS with error {}. Using 1 nireq.", ex.what());
+        numberOfParallelInferRequests = 1u;
+    }
     prepareInferenceRequestsQueue(numberOfParallelInferRequests);
 }
 
@@ -44,7 +57,7 @@ void EmbeddingsModel::prepareInferenceRequestsQueue(const uint32_t& numberOfPara
     inferRequestsQueue = std::make_unique<OVInferRequestsQueue>(compiledModel, numberOfParallelInferRequests);
 }
 
-EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
+EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     std::string model_dir = nodeOptions.models_path();
@@ -71,14 +84,21 @@ EmbeddingsServable::EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig:
             }
         }
     }
-    std::string device = nodeOptions.device();
+    std::string target_device = nodeOptions.target_device();
     ov::AnyMap embeddingsPoperties;
     auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), embeddingsPoperties);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during embeddings node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());
     }
-    tokenizer = std::make_shared<ov::genai::Tokenizer>(std::filesystem::path(model_dir));
-    embeddings = std::make_shared<EmbeddingsModel>(std::filesystem::path(model_dir), device, embeddingsPoperties);
+    auto fsModelsPath = std::filesystem::path(model_dir);
+    std::filesystem::path parsedModelsPath;
+    if (fsModelsPath.is_relative()) {
+        parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
+    } else {
+        parsedModelsPath = fsModelsPath.string();
+    }
+    tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath);
+    embeddings = std::make_shared<EmbeddingsModel>(parsedModelsPath.string(), target_device, embeddingsPoperties);
 }
 
 }  // namespace ovms

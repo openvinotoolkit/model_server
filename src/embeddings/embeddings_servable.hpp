@@ -14,15 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <unordered_map>
-#include <string>
 
 #include "openvino/op/constant.hpp"
 #include "openvino/runtime/core.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/op/multiply.hpp"
 #include "../ovinferrequestsqueue.hpp"
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -49,7 +50,7 @@ public:
         return *inferRequestsQueue;
     }
     EmbeddingsModel(const std::filesystem::path& model_dir,
-        const std::string& device,
+        const std::string& target_device,
         const ov::AnyMap& properties);
 };
 
@@ -60,7 +61,7 @@ class EmbeddingsServable {
     std::optional<uint32_t> maxModelLength;
 
 public:
-    EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
+    EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
     OVInferRequestsQueue& getEmbeddingsInferRequestsQueue() {
         return embeddings->getInferRequestsQueue();
     }

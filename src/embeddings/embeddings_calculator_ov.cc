@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -83,14 +83,13 @@ public:
 
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculatorOV  [Node: {}] Open start", cc->NodeName());
         auto servableMap = cc->InputSidePackets()
                                .Tag(EMBEDDINGS_SESSION_SIDE_PACKET_TAG)
                                .Get<ovms::EmbeddingsServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized Embeddings node named: " << cc->NodeName();
         embeddings_session = it->second;
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculatorOV  [Node: {}] Open start", cc->NodeName());
-
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "EmbeddingsCalculatorOV [Node: {}] Open end", cc->NodeName());
 
         return absl::OkStatus();
@@ -98,7 +97,6 @@ public:
 
     absl::Status Process(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
-        // RET_CHECK(tokenizer_session != nullptr);
         RET_CHECK(embeddings_session != nullptr);
         if (cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
             return absl::InvalidArgumentError("Input is empty");
@@ -118,15 +116,15 @@ public:
         ov::Tensor embeddingsTensor;
         size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
+        ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
+        auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), unused);
+        ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
         if (embeddings_session->getMaxModelLength().has_value()) {
             max_context_length = embeddings_session->getMaxModelLength().value();
         } else {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
         }
         try {
-            ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
-            auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), tmp);
-            ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 received_batch_size = strings->size();
@@ -139,6 +137,11 @@ public:
                 }
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
+                if (inferRequest.get_compiled_model().inputs().size() == 3) {
+                    ov::Tensor typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
+                    std::fill_n(typeIds.data<int64_t>(), tokens.input_ids.get_size(), 0);
+                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
+                }
                 size_t attendedTokens = 0;
                 if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i64) {
                     for (int i = 0; i < tokens.attention_mask.get_size(); i++) {

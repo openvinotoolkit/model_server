@@ -20,10 +20,10 @@ node {
     calculator: "EmbeddingsCalculatorOV"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
-    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
       node_options: {
       [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
-        models_path: "/ovms/src/test/llm_testing/thenlper_flat"
+        models_path: "/ovms/src/test/llm_testing/thenlper/gte-small/ov"
       }
     }
 }

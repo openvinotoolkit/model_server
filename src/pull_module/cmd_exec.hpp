@@ -1,5 +1,6 @@
+#pragma once
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,21 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
+#include <string>
 
-syntax = "proto2";
-package mediapipe;
-
-import "mediapipe/framework/calculator.proto";
-
-message EmbeddingsCalculatorOVOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional EmbeddingsCalculatorOVOptions ext = 1134738;
-    }
-    required string models_path = 1;
-    optional bool normalize_embeddings = 2 [default = true];
-    optional bool mean_pooling = 3 [default = false];
-    optional string target_device = 4 [default = "CPU"];
-    optional string plugin_config = 5 [default = ""];
-}
+namespace ovms {
+std::string exec_cmd(const std::string& command);
+}  // namespace ovms

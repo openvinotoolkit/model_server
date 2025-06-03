@@ -23,8 +23,7 @@ node {
     input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
       node_options: {
       [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
-        models_path: "/ovms/src/test/llm_testing/thenlper/gte-small/ov"
-        normalize_embeddings: false
+        models_path: "../llm_testing/thenlper/gte-small/ov"
       }
     }
 }

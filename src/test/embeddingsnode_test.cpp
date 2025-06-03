@@ -353,6 +353,28 @@ TEST_P(EmbeddingsHttpTest, negativeTooLongInputPair) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
 }
 
+TEST_F(EmbeddingsHttpTest, relativePath) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov_relative",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
 TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     std::string requestBody = R"(
         {

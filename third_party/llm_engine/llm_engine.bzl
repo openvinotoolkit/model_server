@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "b7e8993565358a9e2d8f69bc915bfbf8e5ea9ed4", # releases/2025/2 RC1
+        commit = "4600e72b07e1378178be1301dba3028550690459", # releases/2025/2 RC2
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,

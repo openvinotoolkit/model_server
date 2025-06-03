@@ -495,7 +495,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i));
+            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i), mgconfig.getBasePath());
             this->embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(embeddings)));
             embeddingsServablesCleaningGuard.disableCleaning();
         }
