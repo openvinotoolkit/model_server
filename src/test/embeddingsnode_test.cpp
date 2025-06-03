@@ -66,7 +66,7 @@ public:
     }
 };
 
-class EmbeddingsHttpTest : public V3HttpTest {
+class EmbeddingsHttpTest : public V3HttpTest, public ::testing::WithParamInterface<std::string> {
 protected:
     static std::unique_ptr<std::thread> t;
 
@@ -85,10 +85,12 @@ std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
 
 const int EMBEDDING_OUTPUT_SIZE = 384;
 
-TEST_F(EmbeddingsHttpTest, simplePositive) {
+TEST_P(EmbeddingsHttpTest, simplePositive) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": "dummyInput"
         }
     )";
@@ -119,10 +121,12 @@ TEST_F(EmbeddingsHttpTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
+TEST_P(EmbeddingsHttpTest, simplePositiveNoNorm) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings_no_norm",
+            "model": ")" + modelName +
+                              R"(_no_norm",
             "input": "dummyInput"
         }
     )";
@@ -153,10 +157,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveNoNorm) {
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
+TEST_P(EmbeddingsHttpTest, simplePositiveBase64) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": "dummyInput",
             "encoding_format": "base64"
         }
@@ -182,10 +188,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveBase64) {
     ASSERT_TRUE(d["usage"]["total_tokens"].IsInt());
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveInt) {
+TEST_P(EmbeddingsHttpTest, simplePositiveInt) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": [111, 222, 121]
         }
     )";
@@ -204,10 +212,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveInt) {
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveMultipleInts) {
+TEST_P(EmbeddingsHttpTest, simplePositiveMultipleInts) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": [[111, 222, 121], [123, 221, 311]]
         }
     )";
@@ -229,10 +239,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleInts) {
     ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
+TEST_P(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": [[1, 2, 3, 4, 5, 6], [4, 5, 6, 7], [7, 8]]
         }
     )";
@@ -256,10 +268,12 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleIntLengths) {
     ASSERT_EQ(d["data"][2]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
-TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
+TEST_P(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
+    auto modelName = GetParam();
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": ")" + modelName +
+                              R"(",
             "input": ["one", "two"]
         }
     )";
@@ -281,12 +295,13 @@ TEST_F(EmbeddingsHttpTest, simplePositiveMultipleStrings) {
     ASSERT_EQ(d["data"][1]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
-TEST_F(EmbeddingsHttpTest, positiveLongInput) {
+TEST_P(EmbeddingsHttpTest, positiveLongInput) {
+    auto modelName = GetParam();
     std::string words;
     for (int i = 0; i < 500; i++) {
         words += "hello ";
     }
-    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+    std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": \"" + words + " \"}";
 
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
@@ -300,12 +315,13 @@ TEST_F(EmbeddingsHttpTest, positiveLongInput) {
     ASSERT_EQ(d["usage"]["prompt_tokens"], 502);  // 500 words + 2 special tokens
 }
 
-TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
+TEST_P(EmbeddingsHttpTest, negativeTooLongInput) {
+    auto modelName = GetParam();
     std::string words;
     for (int i = 0; i < 511; i++) {
         words += "hello ";
     }
-    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": \"" + words + " \"}";
+    std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": \"" + words + " \"}";
 
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
@@ -318,12 +334,13 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInput) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
 }
 
-TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
+TEST_P(EmbeddingsHttpTest, negativeTooLongInputPair) {
+    auto modelName = GetParam();
     std::string words;
     for (int i = 0; i < 511; i++) {
         words += "hello ";
     }
-    std::string requestBody = "{ \"model\": \"embeddings\", \"input\": [\"" + words + " \", \"short prompt\"]}";
+    std::string requestBody = "{ \"model\": \"" + modelName + "\", \"input\": [\"" + words + " \", \"short prompt\"]}";
 
     Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status,
@@ -334,6 +351,28 @@ TEST_F(EmbeddingsHttpTest, negativeTooLongInputPair) {
     std::cout << response << std::endl;
     ASSERT_EQ(ok.Code(), 1);
     ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}
+
+TEST_F(EmbeddingsHttpTest, relativePath) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov_relative",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
 TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
@@ -352,6 +391,12 @@ TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
         handler->dispatchToProcessor(uriThatMatchesGraphName, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    EmbeddingsHttpTestInstances,
+    EmbeddingsHttpTest,
+    ::testing::Values(
+        "embeddings", "embeddings_ov"));
 
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
