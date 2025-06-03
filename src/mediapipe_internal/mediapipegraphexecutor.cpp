@@ -43,6 +43,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     std::vector<std::string> outputNames,
     const PythonNodeResourcesMap& pythonNodeResourcesMap,
     const GenAiServableMap& llmNodeResourcesMap,
+    const EmbeddingsServableMap& embeddingsResourcesMap,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),
@@ -54,12 +55,14 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputNames(std::move(outputNames)),
     pythonNodeResourcesMap(pythonNodeResourcesMap),
     llmNodeResourcesMap(llmNodeResourcesMap),
+    embeddingsResourcesMap(embeddingsResourcesMap),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
 
 const std::string MediapipeGraphExecutor::PYTHON_SESSION_SIDE_PACKET_TAG = "py";
 const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
+const std::string MediapipeGraphExecutor::EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servable";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms
