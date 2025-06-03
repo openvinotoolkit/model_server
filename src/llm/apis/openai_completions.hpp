@@ -170,6 +170,7 @@ struct OpenAIChatCompletionsRequest {
             ov::genai::GuidedGenerationConfig guided_config;
             guided_config.json_schema = responseSchema.value();
             config.guided_generation_config = guided_config;
+            config.stop_strings.insert("#");
         }
         return config;
     }

@@ -452,6 +452,8 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     // parse response_format
     it = doc.FindMember("response_format");
     if (it != doc.MemberEnd()) {
+        if (it->value.IsNull())
+            return absl::OkStatus();
         if (!it->value.IsObject())
             return absl::InvalidArgumentError("response_format is not an object");
         auto responseFormat = it->value.GetObject();
