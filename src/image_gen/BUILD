@@ -104,9 +104,7 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
-    copts = ["/wd6385", "/wd6386", "/wd6001"] + COPTS_ADJUSTED + ["/wd6385", "/wd6386", "/wd6001"],
-    #copts = COPTS_ADJUSTED,
-
+    copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
 )
 

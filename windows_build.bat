@@ -95,8 +95,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set > %envPath%
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: WA
-set "genai_dir=openvino_genai_windows_2025.2.0.0rc1_x86_64"
-rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai\image_generation
+:: set "genai_dir=openvino_genai_windows_2025.2.0.0rc1_x86_64"
+:: rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai\image_generation
 
 
 :: Set ovms.exe --version parameters
