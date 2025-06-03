@@ -118,7 +118,7 @@ if exist "%~1\%VLM_MODEL%" (
 if exist "%~1\%QWEN3_MODEL%" (
   echo Models directory %~1\%QWEN3_MODEL% exists. Skipping downloading models.
 ) else (
-  echo Downloading visual language model to %~1\%QWEN3_MODEL% directory.
+  echo Downloading tokenizer and detokenizer for Qwen3 model to %~1\%QWEN3_MODEL% directory.
   mkdir "%~1\%QWEN3_MODEL%"
   convert_tokenizer "%QWEN3_MODEL%" --with_detokenizer -o "%~1\%QWEN3_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
@@ -127,7 +127,7 @@ if exist "%~1\%QWEN3_MODEL%" (
 if exist "%~1\%LLAMA3_MODEL%" (
   echo Models directory %~1\%LLAMA3_MODEL% exists. Skipping downloading models.
 ) else (
-  echo Downloading visual language model to %~1\%LLAMA3_MODEL% directory.
+  echo Downloading tokenizer and detokenizer for Llama3.1 model to %~1\%LLAMA3_MODEL% directory.
   mkdir "%~1\%LLAMA3_MODEL%"
   convert_tokenizer "%LLAMA3_MODEL%" --with_detokenizer -o "%~1\%LLAMA3_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
@@ -136,7 +136,7 @@ if exist "%~1\%LLAMA3_MODEL%" (
 if exist "%~1\%HERMES3_MODEL%" (
   echo Models directory %~1\%HERMES3_MODEL% exists. Skipping downloading models.
 ) else (
-  echo Downloading visual language model to %~1\%HERMES3_MODEL% directory.
+  echo Downloading tokenizer and detokenizer for Hermes3 model to %~1\%HERMES3_MODEL% directory.
   mkdir "%~1\%HERMES3_MODEL%"
   convert_tokenizer "%HERMES3_MODEL%" --with_detokenizer -o "%~1\%HERMES3_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
