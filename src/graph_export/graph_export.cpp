@@ -158,8 +158,6 @@ node {
             << graphOkPath << R"(",
             max_allowed_chunks: )"
             << graphSettings.maxAllowedChunks << R"(,
-            max_position_embeddings: )"
-            << graphSettings.maxPositionEmbeddings << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
             plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }

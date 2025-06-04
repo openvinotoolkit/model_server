@@ -152,7 +152,6 @@ node {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: "/some/path",
             max_allowed_chunks: 18,
-            max_position_embeddings: 2,
             target_device: "GPU",
             plugin_config: '{ "NUM_STREAMS": "2"}',
         }
@@ -173,7 +172,6 @@ node {
         [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
             models_path: "./",
             max_allowed_chunks: 10000,
-            max_position_embeddings: 3,
             target_device: "CPU",
             plugin_config: '{ "NUM_STREAMS": "1"}',
         }
@@ -296,7 +294,6 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     rerankGraphSettings.modelPath = "/some/path";
     rerankGraphSettings.numStreams = 2;
     rerankGraphSettings.maxAllowedChunks = 18;
-    rerankGraphSettings.maxPositionEmbeddings = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
@@ -332,7 +329,6 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     rerankGraphSettings.targetDevice = "GPU";
     rerankGraphSettings.modelName = "myModel\"";
     rerankGraphSettings.numStreams = 2;
-    rerankGraphSettings.maxPositionEmbeddings = 18;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";

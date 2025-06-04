@@ -1096,8 +1096,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--max_position_embeddings",
-        (char*)"2",
         (char*)"--task",
         (char*)"rerank",
         (char*)"--target_device",
@@ -1110,7 +1108,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
         (char*)servingName.c_str(),
     };
 
-    int arg_count = 18;
+    int arg_count = 16;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1121,7 +1119,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.maxPositionEmbeddings, 2);
     ASSERT_EQ(rerankGraphSettings.numStreams, 2);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
@@ -1137,8 +1134,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--max_position_embeddings",
-        (char*)"2",
         (char*)"--task",
         (char*)"rerank",
         (char*)"--target_device",
@@ -1153,7 +1148,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
         (char*)"8080",
     };
 
-    int arg_count = 19;
+    int arg_count = 17;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1164,7 +1159,6 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.maxPositionEmbeddings, 2);
     ASSERT_EQ(rerankGraphSettings.numStreams, 2);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
@@ -1197,7 +1191,6 @@ TEST(OvmsGraphConfigTest, positiveDefaultRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 10000);
-    ASSERT_EQ(rerankGraphSettings.maxPositionEmbeddings, 3);
     ASSERT_EQ(rerankGraphSettings.numStreams, 1);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "CPU");
     ASSERT_EQ(rerankGraphSettings.modelName, modelName);
@@ -1236,7 +1229,6 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
     ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 2);
-    ASSERT_EQ(rerankGraphSettings.maxPositionEmbeddings, 3);
     ASSERT_EQ(rerankGraphSettings.numStreams, 1);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);

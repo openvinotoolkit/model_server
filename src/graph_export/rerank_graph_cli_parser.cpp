@@ -47,11 +47,7 @@ void RerankGraphCLIParser::createOptions() {
         ("max_allowed_chunks",
             "Maximum allowed chunks.",
             cxxopts::value<uint64_t>()->default_value("10000"),
-            "MAX_ALLOWED_CHUNKS")
-        ("max_position_embeddings",
-            "Maximum position for embeddings.",
-            cxxopts::value<uint64_t>()->default_value("3"),
-            "MAX_POSITION_EMBEDDINGS");
+            "MAX_ALLOWED_CHUNKS");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -92,7 +88,6 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
     } else {
         rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
         rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
-        rerankGraphSettings.maxPositionEmbeddings = result->operator[]("max_position_embeddings").as<std::uint64_t>();
     }
 
     hfSettings.graphSettings = std::move(rerankGraphSettings);
