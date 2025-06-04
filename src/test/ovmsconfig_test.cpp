@@ -1354,14 +1354,14 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--model_version",
-        (char*)"2",
+        (char*)"--mean_pooling",
+        (char*)"true",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
         (char*)"GPU",
         (char*)"--normalize",
-        (char*)"true",
+        (char*)"false",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
@@ -1378,11 +1378,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
+    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
@@ -1395,14 +1396,14 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--model_version",
-        (char*)"2",
+        (char*)"--mean_pooling",
+        (char*)"true",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
         (char*)"GPU",
         (char*)"--normalize",
-        (char*)"true",
+        (char*)"false",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
@@ -1421,11 +1422,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
+    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
@@ -1452,8 +1454,8 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.version, 1);
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "false");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, modelName);
@@ -1470,14 +1472,14 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--model_version",
-        (char*)"2",
+        (char*)"--mean_pooling",
+        (char*)"true",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
         (char*)"GPU",
         (char*)"--normalize",
-        (char*)"true",
+        (char*)"false",
         (char*)"--model_name",
         (char*)servingName.c_str(),
     };
@@ -1492,11 +1494,12 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.version, 2);
+    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
-    ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
+    ASSERT_EQ(embeddingsGraphSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {

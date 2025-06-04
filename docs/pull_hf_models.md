@@ -121,7 +121,7 @@ To add model to ovms configuration file with specific model use either:
 
 ```
 docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
---models_repository_path /models/<model_path> --add_to_config <config_file_path> --model_name <name>
+--models_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
 
 When model is directly inside `/models`.
@@ -130,7 +130,7 @@ Or
 
 ```
 docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
---add_to_config <config_file_path> --model_name <name> --model_path <model_path>
+--add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
 ```
 when there is no model_repository specified.
 
@@ -140,7 +140,7 @@ If you want to remove model from configuration file you can do it either manuall
 
 ```
 docker run -d --rm -v <models_repository_path>:/models openvino/model_server:latest \
---remove_from_config <config_file_path> --model_name <name>
+--remove_from_config <config_file_directory_path> --model_name <name>
 ```
 
 FIXME TODO TBD
