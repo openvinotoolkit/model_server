@@ -40,7 +40,7 @@
 #include "../model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "embeddings_servable.hpp"
+#include "../sidepacket_servable.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -63,7 +63,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
 
 protected:
-    std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
+    std::shared_ptr<ovms::SidepacketServable> embeddings_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -117,7 +117,7 @@ public:
         size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
         ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
-        auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), unused);
+        auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
         ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
         if (embeddings_session->getMaxModelLength().has_value()) {
             max_context_length = embeddings_session->getMaxModelLength().value();

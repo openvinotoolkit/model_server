@@ -3321,3 +3321,25 @@ filegroup(
     "//src:capi_cpp_example"
   ]
 )
+
+cc_library(
+    name = "sidepacket_servable",
+    hdrs = ["sidepacket_servable.hpp"],
+    srcs = ["sidepacket_servable.cpp"],
+    deps = ["//src:libovmslogging",
+            "//src:libmodelconfigjsonparser",
+            "//src:libovmsstatus",
+            "//src:libovmsfilesystem",
+            "//src:libovmsmodelversioning",
+            "//src:libovms_ovinferrequestsqueue",
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "@com_github_tencent_rapidjson//:rapidjson",] + select({
+            "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
+            "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)

@@ -19,7 +19,7 @@
 #include "openvino/runtime/core.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/op/multiply.hpp"
-#include "../ovinferrequestsqueue.hpp"
+#include "ovinferrequestsqueue.hpp"
 
 #include <memory>
 #include <string>
@@ -33,37 +33,22 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "src/rerank/rerank_calculator_ov.pb.h"
-
 #include <openvino/genai/tokenizer.hpp>
 
 namespace ovms {
 
-class RerankModel {
+class SidepacketServable {
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
-
-public:
-    void prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests);
-    OVInferRequestsQueue& getInferRequestsQueue() {
-        return *inferRequestsQueue;
-    }
-    RerankModel(const std::filesystem::path& model_dir,
-        const std::string& device,
-        const ov::AnyMap& properties);
-};
-
-class RerankServable {
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
-    std::shared_ptr<RerankModel> embeddings;
     int64_t pad_token;
     std::optional<uint32_t> maxModelLength;
 
 public:
-    RerankServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig);
-    OVInferRequestsQueue& getRerankInferRequestsQueue() {
-        return embeddings->getInferRequestsQueue();
+    SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
+    OVInferRequestsQueue& getInferRequestsQueue() {
+        return *inferRequestsQueue;
     }
     ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
@@ -76,5 +61,6 @@ public:
     }
 };
 
-using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 }  // namespace ovms

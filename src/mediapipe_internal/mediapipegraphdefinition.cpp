@@ -48,6 +48,7 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
+#include "src/rerank/rerank_calculator_ov.pb.h"
 
 #include "src/image_gen/pipelines.hpp"
 #include "src/image_gen/imagegen_init.hpp"
@@ -142,7 +143,7 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
-    if (!this->rerankServableMap.empty()) {
+    if (!this->sidePacketMaps.rerankServableMap.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -541,8 +542,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Embeddings node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            std::shared_ptr<EmbeddingsServable> embeddings = std::make_shared<EmbeddingsServable>(config.node(i), mgconfig.getBasePath());
-            embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(embeddings)));
+            mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
+            config.node(i).node_options(0).UnpackTo(&nodeOptions);
+            std::shared_ptr<SidepacketServable> servable = std::make_shared<SidepacketServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<SidepacketServable>>(nodeName, std::move(servable)));
             embeddingsServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
@@ -561,8 +564,10 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node name: {} already used in graph: {}. ", nodeName, this->name);
                 return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            std::shared_ptr<RerankServable> rerank = std::make_shared<RerankServable>(config.node(i));
-            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(rerank)));
+            mediapipe::RerankCalculatorOVOptions nodeOptions;
+            config.node(i).node_options(0).UnpackTo(&nodeOptions);
+            std::shared_ptr<SidepacketServable> servable = std::make_shared<SidepacketServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<SidepacketServable>>(nodeName, std::move(servable)));
             rerankServablesCleaningGuard.disableCleaning();
         }
     }
