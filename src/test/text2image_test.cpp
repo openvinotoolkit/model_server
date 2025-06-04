@@ -33,6 +33,7 @@
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
 
+// clang-format off
 ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     std::string("/ovms/src/test/dummy"),
     std::nullopt,
@@ -467,9 +468,13 @@ using mediapipe::CalculatorContract;
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
 TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
-    // clang-format off
-    const std::string nodePbtxt =
-        R"pb(
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
             name: "ImageGenExecutor"
             calculator: "ImageGenCalculator"
             input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -477,18 +482,21 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
-                        device: "GPU",
-                        plugin_config: "{\"NUM_STREAMS\": 2}",
-                        max_resolution: "512x256",
-                        default_resolution: "256x256",
-                        max_num_images_per_prompt: 4,
-                        default_num_inference_steps: 10,
-                        max_num_inference_steps: 50,
-                      }
-                                                                                                                                                                                                                                                                                        }
-            )pb";
-    // clang-format on
+                    models_path: ")pb"
+    <<  dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            device: "GPU",
+            plugin_config: "{\"NUM_STREAMS\": 2}",
+            max_resolution: "512x256",
+            default_resolution: "256x256",
+            max_num_images_per_prompt: 4,
+            default_num_inference_steps: 10,
+            max_num_inference_steps: 50,
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
     const std::string graphPath = "";
@@ -496,7 +504,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
-    ASSERT_EQ(imageGenArgs.modelsPath, dummy_model_location);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
     ASSERT_TRUE(imageGenArgs.device.has_value());
     ASSERT_EQ(imageGenArgs.device.value(), "GPU");
     ASSERT_EQ(imageGenArgs.pluginConfig.size(), 1);
@@ -509,9 +517,13 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 50);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
-    // clang-format off
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
     const std::string nodePbtxt =
-        R"pb(
+        R"(
             name: "ImageGenExecutor"
             calculator: "ImageGenCalculator"
             input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -519,11 +531,10 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
-                      }
-                                                                                                                                                                                                                                                                                        }
-            )pb";
-    // clang-format on
+                    models_path: ")" + dummyLocation + R"(",
+                  }
+                          }
+            )";
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
     const std::string graphPath = "";
@@ -531,7 +542,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
-    ASSERT_EQ(imageGenArgs.modelsPath, dummy_model_location);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
     ASSERT_FALSE(imageGenArgs.device.has_value());
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(4096, 4096));
@@ -542,9 +553,13 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 100);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
-    // clang-format off
-    const std::string nodePbtxt =
-        R"pb(
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
             name: "ImageGenExecutor"
             calculator: "ImageGenCalculator"
             input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -552,12 +567,15 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
-                        plugin_config: "",
-                      }
-                                                                                                                                                                                                                                                                                        }
-            )pb";
-    // clang-format on
+                    models_path: ")pb"
+    << dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+                plugin_config: "",
+    }
+                        }
+)pb";
+    auto nodePbtxt = oss.str();
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
     const std::string graphPath = "";
@@ -565,7 +583,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
-    ASSERT_EQ(imageGenArgs.modelsPath, dummy_model_location);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
     ASSERT_FALSE(imageGenArgs.device.has_value());
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
 }
@@ -575,9 +593,8 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
 #else
     const std::string cwd = "./";
 #endif
-    // clang-format off
-    const std::string nodePbtxt =
-        R"pb(
+    std::ostringstream oss;
+    oss << R"pb(
             name: "ImageGenExecutor"
             calculator: "ImageGenCalculator"
             input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -585,11 +602,14 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + cwd + R"pb(                                                                                                                                                               ",
-                }
-                                                                                                                                                                                                                    }
+                    models_path: ")pb"
+    << cwd;
+    oss << R"(")";
+    oss << R"pb(
+        }
+        }
     )pb";
-    // clang-format on
+    auto nodePbtxt = oss.str();
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
     const std::string graphPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy/", true);
