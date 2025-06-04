@@ -583,12 +583,13 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
     )pb";
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
     auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
-    const std::string graphPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy", true);
+    const std::string graphPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy/", true);
     auto nodeOptions = node.node_options(0);
     auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
-    ASSERT_EQ(imageGenArgs.modelsPath, getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy\\.\\", false));
+    ASSERT_EQ(getGenericFullPathForSrcTest(imageGenArgs.modelsPath),
+              getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy\\.\\", false)) << imageGenArgs.modelsPath;
 }
 
 class ImageGenCalculatorOptionsNegative : public ::testing::TestWithParam<std::tuple<std::string, ovms::StatusCode>> {
