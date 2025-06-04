@@ -108,8 +108,6 @@ if exist "C:\Program Files\Git\mingw64\bin" (
     if !errorlevel! neq 0 exit /b !errorlevel!
     copy /Y "C:\Program Files\Git\mingw64\bin\libpcre2-8-0.dll" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libssp-0.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
     copy /Y "C:\Program Files\Git\mingw64\bin\zlib1.dll" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
 ) else (
