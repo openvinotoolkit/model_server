@@ -65,6 +65,11 @@ parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='stor
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 
+parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint')
+add_common_arguments(parser_rerank_ov)
+parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
+
 parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
@@ -513,7 +518,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     destination_path = os.path.join(model_repository_path, model_name, "ov")
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         if truncate:
@@ -645,6 +650,9 @@ elif args['task'] == 'embeddings_ov':
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
+
+elif args['task'] == 'rerank_ov':
+    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
