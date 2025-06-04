@@ -441,8 +441,8 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
-    const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
-    std::vector<std::string> usedButdisallowedUserSettings;
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
         for (const std::string& allowedSetting : allowedUserSettings) {
@@ -451,12 +451,12 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
         }
 
         if (!isAllowed)
-            usedButdisallowedUserSettings.push_back(userSetting);
+            usedButDisallowedUserSettings.push_back(userSetting);
     }
 
-    if (!usedButdisallowedUserSettings.empty()) {
+    if (!usedButDisallowedUserSettings.empty()) {
         std::string arguments = "";
-        for (const std::string& userSetting : usedButdisallowedUserSettings) {
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting mediapipe graph with unsupported model settings: {}The settings should be set in subconfig.json file.", arguments);
