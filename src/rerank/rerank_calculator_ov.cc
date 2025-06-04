@@ -42,7 +42,7 @@
 #include "../profiler.hpp"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 #include "src/rerank/rerank_utils.hpp"
-#include "rerank_servable.hpp"
+#include "../sidepacket_servable.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../executingstreamidguard.hpp"
 
@@ -64,17 +64,12 @@ class RerankCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
-    int64_t bos_token{0};
-    int64_t eos_token{0};
-    int64_t sep_token{0};
-    int64_t pad_token{0};
-
     uint64_t max_position_embeddings{512};
 
     size_t max_allowed_chunks{0};  // Read from options in ::Open()
 
 protected:
-    std::shared_ptr<ovms::RerankServable> rerank_session{nullptr};
+    std::shared_ptr<ovms::SidepacketServable> rerank_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -167,7 +162,7 @@ public:
             tokens.attention_mask,
             out_input_ids, out_attention_mask,
             chunk_mapping, max_tokens_per_chunk,
-            this->max_allowed_chunks, this->pad_token);
+            this->max_allowed_chunks, rerank_session->getPadToken());
         if (!status.ok()) {
             throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
         }
@@ -177,7 +172,7 @@ public:
     std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
         ov::InferRequest inferRequest;
         ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
-        auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getRerankInferRequestsQueue(), tmp);
+        auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getInferRequestsQueue(), tmp);
         inferRequest = executingStreamIdGuard->getInferRequest();
         inferRequest.set_tensor("input_ids", input_ids);
         inferRequest.set_tensor("attention_mask", attention_mask);

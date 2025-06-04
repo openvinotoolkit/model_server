@@ -32,7 +32,7 @@ message RerankCalculatorOVOptions {
 
     optional uint64 max_position_embeddings = 3;
 
-    optional string device = 4 [default = "CPU"];
+    optional string target_device = 4 [default = "CPU"];
     
     optional string plugin_config = 5 [default = ""];
 }
