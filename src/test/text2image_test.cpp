@@ -477,7 +477,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                            ",
+                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
                         device: "GPU",
                         plugin_config: "{\"NUM_STREAMS\": 2}",
                         max_resolution: "512x256",
@@ -486,7 +486,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
                         default_num_inference_steps: 10,
                         max_num_inference_steps: 50,
                       }
-                                                                                                                                            }
+                                                                                                                                                                                                                                                                                        }
             )pb";
     // clang-format on
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
@@ -519,9 +519,9 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                            ",
+                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
                       }
-                                                                                                                                            }
+                                                                                                                                                                                                                                                                                        }
             )pb";
     // clang-format on
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
@@ -552,10 +552,10 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                            ",
+                    models_path: ")pb" + dummy_model_location + R"pb(                                                                                                                                                                                                                  ",
                         plugin_config: "",
                       }
-                                                                                                                                            }
+                                                                                                                                                                                                                                                                                        }
             )pb";
     // clang-format on
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
@@ -585,9 +585,9 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
             output_stream: "HTTP_RESPONSE_PAYLOAD:output"
             node_options: {
                   [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
-                    models_path: ")pb" + cwd + R"pb(                                                                                                          ",
+                    models_path: ")pb" + cwd + R"pb(                                                                                                                                                               ",
                 }
-                                                                                                          }
+                                                                                                                                                                                                                    }
     )pb";
     // clang-format on
     SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
