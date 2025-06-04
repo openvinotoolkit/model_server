@@ -44,14 +44,14 @@ void RerankGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS")
-        ("max_doc_length",
-            "Maximum length of input documents in tokens.",
-            cxxopts::value<uint32_t>()->default_value("16000"),
-            "MAX_DOC_LENGTH")
-        ("model_version",
-            "Version of the model.",
-            cxxopts::value<uint32_t>()->default_value("1"),
-            "MODEL_VERSION");
+        ("max_allowed_chunks",
+            "Maximum allowed chunks.",
+            cxxopts::value<uint64_t>()->default_value("10000"),
+            "MAX_ALLOWED_CHUNKS")
+        ("max_position_embeddings",
+            "Maximum position for embeddings.",
+            cxxopts::value<uint64_t>()->default_value("3"),
+            "MAX_POSITION_EMBEDDINGS");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -91,8 +91,8 @@ void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hf
         }
     } else {
         rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-        rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-        rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+        rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
+        rerankGraphSettings.maxPositionEmbeddings = result->operator[]("max_position_embeddings").as<std::uint64_t>();
     }
 
     hfSettings.graphSettings = std::move(rerankGraphSettings);

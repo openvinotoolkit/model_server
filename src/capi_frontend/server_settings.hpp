@@ -64,11 +64,12 @@ struct EmbeddingsGraphSettingsImpl {
 };
 
 struct RerankGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
-    uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint64_t maxAllowedChunks  = 10000;
+    uint64_t maxPositionEmbeddings  = 3;
 };
 
 struct ImageGenerationGraphSettingsImpl {
