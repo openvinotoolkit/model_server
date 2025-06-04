@@ -365,7 +365,11 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+#if (MEDIAPIPE_DISABLE == 0)
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+#else
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+#endif
 }
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
@@ -422,7 +426,11 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+#if (MEDIAPIPE_DISABLE == 0)
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+#else
+    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+#endif
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigAll) {
@@ -505,7 +513,11 @@ TEST_F(GraphCreationTest, negativeCreatedPbtxtInvalid) {
     std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+#if (MEDIAPIPE_DISABLE == 0)
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+#else
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+#endif
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
