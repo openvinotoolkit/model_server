@@ -105,6 +105,7 @@ cc_library(
         "//third_party:openvino",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,

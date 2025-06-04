@@ -229,7 +229,6 @@ absl::Status chunkDocuments(
         return absl::InvalidArgumentError(std::string{"exceeding max_allowed_chunks before chunking limit: "} + std::to_string(max_allowed_chunks) + std::string{"; actual: "} + std::to_string(batch_size));
     }
 
-    SPDLOG_ERROR("tokens_count_of_longest_document {} max_tokens_per_chunk {}", tokens_count_of_longest_document, max_tokens_per_chunk);
     if (tokens_count_of_longest_document <= max_tokens_per_chunk) {
         out_input_ids = in_input_ids;
         out_attention_mask = in_attention_mask;
