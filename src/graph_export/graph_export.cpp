@@ -168,37 +168,6 @@ static Status createRerankSubconfigTemplate(const std::string& directoryPath, co
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                    "base_path": "tokenizer"
-                }
-            },
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_embeddings_model",
-                    "base_path": "embeddings",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                }
-            }
-        ]
-    })";
-    auto status = validateSubconfigSchema(oss.str(), "embeddings");
-    if (!status.ok()){
-        return status;
-    }
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
-}
-
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // clang-format off
