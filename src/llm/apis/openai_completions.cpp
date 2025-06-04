@@ -192,7 +192,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        // Add new message to chat history
+        // Add new message to chat history. Note that chat history contains only messages with "role" and "content" fields
+        // Other values are not stored in chat history, but are still present in the request object
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
@@ -310,8 +311,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
         }
         const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
-            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
+        if (lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have 'role' field");
         }
     }
     if (jsonChanged) {
