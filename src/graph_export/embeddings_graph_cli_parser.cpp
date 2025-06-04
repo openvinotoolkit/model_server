@@ -75,17 +75,13 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
     return  result->unmatched();
 }
 
-void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
     embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
     if (modelName != "") {
         embeddingsGraphSettings.modelName = modelName;
     } else {
         embeddingsGraphSettings.modelName = hfSettings.sourceModel;
-    }
-    // Set model path
-    if (modelPath != "") {
-        embeddingsGraphSettings.modelPath = modelPath;
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user

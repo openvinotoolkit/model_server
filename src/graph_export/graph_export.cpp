@@ -261,7 +261,7 @@ node {
     name: ")"
     << graphSettings.modelName << R"(",
     calculator: "EmbeddingsCalculatorOV"
-    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {

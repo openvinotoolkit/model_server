@@ -217,7 +217,7 @@ output_stream: "RESPONSE_PAYLOAD:output"
 node {
     name: "myModel",
     calculator: "EmbeddingsCalculatorOV"
-    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {
@@ -238,7 +238,7 @@ output_stream: "RESPONSE_PAYLOAD:output"
 node {
     name: "",
     calculator: "EmbeddingsCalculatorOV"
-    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {

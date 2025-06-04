@@ -395,8 +395,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("model_path")) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_name");
-    } else if (result->count("model_repository_path") && result->count("source_model")) {
-        modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), result->operator[]("source_model").as<std::string>()});
     }
 
     if (result->count("max_sequence_number")) {
@@ -496,7 +494,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 }
                 case EMBEDDINGS_GRAPH: {
                     if (std::holds_alternative<EmbeddingsGraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
+                        std::get<EmbeddingsGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }

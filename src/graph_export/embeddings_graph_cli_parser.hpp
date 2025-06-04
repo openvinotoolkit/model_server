@@ -34,7 +34,7 @@ class EmbeddingsGraphCLIParser : public GraphCLIParser {
 public:
     EmbeddingsGraphCLIParser() = default;
     std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
-    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
 
     void printHelp();
     void createOptions();
