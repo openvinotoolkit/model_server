@@ -1122,6 +1122,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     ASSERT_EQ(rerankGraphSettings.numStreams, 2);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
+    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
@@ -1232,6 +1233,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedRerank) {
     ASSERT_EQ(rerankGraphSettings.numStreams, 1);
     ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(rerankGraphSettings.modelName, servingName);
+    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {

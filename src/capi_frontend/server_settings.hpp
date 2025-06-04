@@ -68,7 +68,7 @@ struct RerankGraphSettingsImpl {
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint64_t maxAllowedChunks  = 10000;
+    uint64_t maxAllowedChunks = 10000;
 };
 
 struct ImageGenerationGraphSettingsImpl {
