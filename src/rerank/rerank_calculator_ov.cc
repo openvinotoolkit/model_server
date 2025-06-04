@@ -170,10 +170,9 @@ public:
     }
 
     std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
-        ov::InferRequest inferRequest;
         ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
         auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getInferRequestsQueue(), tmp);
-        inferRequest = executingStreamIdGuard->getInferRequest();
+        ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
         inferRequest.set_tensor("input_ids", input_ids);
         inferRequest.set_tensor("attention_mask", attention_mask);
         inferRequest.start_async();
