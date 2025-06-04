@@ -549,7 +549,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             embeddingsServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {
-            auto& rerankServableMap = this->sidePacketMaps.embeddingsServableMap;
+            auto& rerankServableMap = this->sidePacketMaps.rerankServableMap;
             ResourcesCleaningGuard<RerankServableMap> rerankServablesCleaningGuard(rerankServableMap);
             if (!config.node(i).node_options().size()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Rerank node missing options in graph: {}. ", this->name);
