@@ -2587,10 +2587,20 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+#if (PYTHON_DISABLE == 0)
+    bool genAiTemplateParsing = false;  // With Python enabled, we use native Jinja2 template parsing
+#else
+    bool genAiTemplateParsing = true;  // With Python disabled, we use GenAI template parsing
+#endif
+
     if (params.modelName.find("vlm") != std::string::npos) {
+        genAiTemplateParsing = true;  // VLM models always use GenAI template parsing
+    }
+
+    if (genAiTemplateParsing) {
         /*
             This test checks if API handler validation allows messages without content.
-            The reason why we expect generic error here is that for the tested VLM model template expects content in the messages.
+            The reason why we expect generic error here is that with GenAI template rendering missing content is unexpected.
             On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
         */
         ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
