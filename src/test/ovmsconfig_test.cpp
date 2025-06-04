@@ -459,7 +459,7 @@ TEST_F(OvmsConfigDeathTest, negativeImageGenerationGraph_MaxNumberImagesPerPromp
         "/some/path",
         "--task",
         "image_generation",
-        "--max_number_images_per_prompt",
+        "--max_num_images_per_prompt",
         "0",
     };
     int arg_count = 10;
@@ -1280,7 +1280,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)"3000x4000",
         (char*)"--default_resolution",
         (char*)"300x400",
-        (char*)"--max_number_images_per_prompt",
+        (char*)"--max_num_images_per_prompt",
         (char*)"7",
         (char*)"--default_num_inference_steps",
         (char*)"2",

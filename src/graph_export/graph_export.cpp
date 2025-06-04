@@ -305,7 +305,7 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: ")" << graphSettings.modelPath << R"("
-          target_device: ")" << graphSettings.targetDevice << R"(")";
+          device: ")" << graphSettings.targetDevice << R"(")";
 
     if (graphSettings.pluginConfig.size()) {
         oss << R"(
@@ -324,7 +324,7 @@ node: {
 
     if (graphSettings.maxNumberImagesPerPrompt.has_value()) {
         oss << R"(
-          max_number_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
+          max_num_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
     }
 
     if (graphSettings.defaultNumInferenceSteps.has_value()) {
