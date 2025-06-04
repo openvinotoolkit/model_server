@@ -76,7 +76,7 @@ add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
-parser_image_generation.add_argument('--max_number_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_number_images_per_prompt')
+parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 args = vars(parser.parse_args())
@@ -265,8 +265,8 @@ node: {
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
       default_resolution: '{{default_resolution}}',{% endif %}
-      {%- if max_number_images_per_prompt > 0 %}
-      max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
+      {%- if max_num_images_per_prompt > 0 %}
+      max_num_images_per_prompt: {{max_num_images_per_prompt}},{% endif %}
       {%- if default_num_inference_steps > 0 %}
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
@@ -611,7 +611,7 @@ elif args['task'] == 'image_generation':
         'target_device',
         'max_resolution',
         'default_resolution',
-        'max_number_images_per_prompt',
+        'max_num_images_per_prompt',
         'default_num_inference_steps',
         'max_num_inference_steps',
     ]}
