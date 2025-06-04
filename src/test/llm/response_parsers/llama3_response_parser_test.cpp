@@ -23,7 +23,13 @@
 
 using namespace ovms;
 
+#ifdef _WIN32
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\meta-llama\\Llama-3.1-8B-Instruct";
+#else
+// Hardcoded for usage in docker container
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
+#endif
+
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
 constexpr int64_t botTokenId = 128010;
 

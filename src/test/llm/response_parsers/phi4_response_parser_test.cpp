@@ -23,7 +23,12 @@
 
 using namespace ovms;
 
+#ifdef _WIN32
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
+#else
+// Hardcoded for usage in docker container
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
+#endif
 
 class Phi4ResponseParserTest : public ::testing::Test {
 protected:
