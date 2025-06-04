@@ -151,7 +151,7 @@ public:
         // TODO: Add for streaming?
         inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
 
-        inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankServableMap).At(STARTING_TIMESTAMP);
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;

@@ -222,13 +222,13 @@ absl::Status chunkDocuments(
     if (in_input_ids.get_element_type() != in_attention_mask.get_element_type()) {
         return absl::InvalidArgumentError("input_ids and attention_mask should have the same element type");
     }
-    SPDLOG_ERROR("1");
+
     size_t tokens_count_of_longest_document = in_input_ids.get_shape()[1];
     size_t batch_size = in_input_ids.get_shape()[0];
     if (batch_size > max_allowed_chunks) {
         return absl::InvalidArgumentError(std::string{"exceeding max_allowed_chunks before chunking limit: "} + std::to_string(max_allowed_chunks) + std::string{"; actual: "} + std::to_string(batch_size));
     }
-    SPDLOG_ERROR("1");
+
     SPDLOG_ERROR("tokens_count_of_longest_document {} max_tokens_per_chunk {}", tokens_count_of_longest_document, max_tokens_per_chunk);
     if (tokens_count_of_longest_document <= max_tokens_per_chunk) {
         out_input_ids = in_input_ids;
@@ -237,7 +237,7 @@ absl::Status chunkDocuments(
         std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
         return absl::OkStatus();
     }
-    SPDLOG_ERROR("1");
+
     size_t new_tokens_count_of_longest_document = 0;
     for (size_t i = 0; i < batch_size; i++) {
         int64_t* in_attention_mask_data = reinterpret_cast<int64_t*>(in_attention_mask.data()) + i * tokens_count_of_longest_document;
