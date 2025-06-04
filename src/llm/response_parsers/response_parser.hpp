@@ -24,6 +24,7 @@
 #include "llama3_response_parser.hpp"
 #include "qwen3_response_parser.hpp"
 #include "hermes3_response_parser.hpp"
+#include "phi4_response_parser.hpp"
 
 namespace ovms {
 class ResponseParser {
@@ -39,6 +40,8 @@ public:
             parser_impl = std::make_unique<Qwen3ResponseParser>(tokenizer);
         } else if (parserName == "hermes3") {
             parser_impl = std::make_unique<Hermes3ResponseParser>(tokenizer);
+        } else if (parserName == "phi4") {
+            parser_impl = std::make_unique<Phi4ResponseParser>(tokenizer);
         } else {
             throw std::invalid_argument("Unsupported response parser: " + parserName);
         }
