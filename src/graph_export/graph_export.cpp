@@ -272,7 +272,7 @@ node {
             << graphSettings.normalize << R"(,
             mean_pooling: )"
             << graphSettings.meanPooling << R"(,
-            device: ")" << graphSettings.targetDevice << R"(",
+            target_device: ")" << graphSettings.targetDevice << R"(",
             plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
     }

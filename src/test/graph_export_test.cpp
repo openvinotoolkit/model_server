@@ -225,7 +225,7 @@ node {
             models_path: "/model1/path",
             normalize_embeddings: false,
             mean_pooling: true,
-            device: "GPU",
+            target_device: "GPU",
             plugin_config: '{ "NUM_STREAMS": "2"}',
         }
     }
@@ -246,7 +246,7 @@ node {
             models_path: "./",
             normalize_embeddings: true,
             mean_pooling: false,
-            device: "CPU",
+            target_device: "CPU",
             plugin_config: '{ "NUM_STREAMS": "1"}',
         }
     }
