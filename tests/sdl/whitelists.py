@@ -144,7 +144,7 @@ libraries = {
         'libiconv-2.dll',
         'libintl-8.dll',
         'libpcre2-8-0.dll',
-        'libssp-0.dll',
+        'libwinpthread-1.dll',
         'opencv_world4100.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
