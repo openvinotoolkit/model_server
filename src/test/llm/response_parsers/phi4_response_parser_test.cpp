@@ -20,6 +20,7 @@
 
 #include "../../../llm/response_parsers/base_response_parser.hpp"
 #include "../../../llm/response_parsers/response_parser.hpp"
+#include "../../test_utils.hpp"
 
 using namespace ovms;
 
