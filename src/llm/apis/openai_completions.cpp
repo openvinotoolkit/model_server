@@ -18,6 +18,7 @@
 #include "../response_parsers/response_parser.hpp"
 
 #include <cmath>
+#include <memory>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
@@ -103,6 +104,12 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
 
 static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
+    if (!curl_handle) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
+        return absl::InternalError("Image downloading failed");
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
+
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
@@ -122,7 +129,6 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
     }
-    curl_easy_cleanup(curl_handle);
     return absl::OkStatus();
 }
 
