@@ -1,4 +1,5 @@
 boolean windows_success = false
+def agent_name_windows = ""
 
 pipeline {
     options {
@@ -11,6 +12,7 @@ pipeline {
         stage ("Build and test windows") {
             steps {
                 script {
+                    agent_name_windows = env.NODE_NAME
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
