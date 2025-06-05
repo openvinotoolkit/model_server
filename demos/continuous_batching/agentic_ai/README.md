@@ -16,6 +16,7 @@ Currently supported models:
 - meta-llama/Llama-3.1-8B-Instruct
 - NousResearch/Hermes-3-Llama-3.1-8B
 - Qwen/Qwen3-8B
+
 The model chat template defines how the conversation with tools and tools schema should be embedded in the prompt. 
 The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parset should be applied.
 
@@ -59,6 +60,7 @@ You can use similar commands for different models. Change the source_model and t
 ## Start OVMS
 
 Starting the model server is identical like with other demos with generative endpoints:
+
 **Deploying with Docker**
 
 Select deployment option depending on how you prepared models in the previous step.
@@ -97,7 +99,7 @@ docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/rende
 
 **Deploying on Bare Metal**
 
-Assuming you have unpacked model server package, make sure to:
+Assuming you have unpacked model server package with python enabled version, make sure to:
 
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
