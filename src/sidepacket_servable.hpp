@@ -42,33 +42,33 @@ class SidepacketServable {
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
-    int64_t pad_token;
-    int64_t eos_token;
-    int64_t bos_token;
-    int64_t sep_token;
+    int64_t pad_token = 0;
+    int64_t eos_token = 0;
+    int64_t bos_token = 0;
+    int64_t sep_token = 0;
     std::optional<uint32_t> maxModelLength;
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
-    OVInferRequestsQueue& getInferRequestsQueue() {
+    const OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
-    ov::genai::Tokenizer& getTokenizer() {
+    const ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
     }
-    int64_t& getPadToken() {
+    const int64_t& getPadToken() {
         return pad_token;
     }
-    int64_t& getEosToken() {
+    const int64_t& getEosToken() {
         return eos_token;
     }
-    int64_t& getBosToken() {
+    const int64_t& getBosToken() {
         return bos_token;
     }
-    int64_t& getSepToken() {
+    const int64_t& getSepToken() {
         return sep_token;
     }
-    std::optional<uint32_t>& getMaxModelLength() {
+    const std::optional<uint32_t>& getMaxModelLength() {
         return maxModelLength;
     }
 };
