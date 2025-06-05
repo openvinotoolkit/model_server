@@ -33,9 +33,9 @@
 
 namespace ovms {
 
-#define SET_TOKEN(token, token_id_name)            \
+#define SET_TOKEN(token, token_id_name)                                                 \
     if (modelConfig.HasMember(token_id_name) && modelConfig[token_id_name].IsInt64()) { \
-        token = modelConfig[token_id_name].GetInt64(); \
+        token = modelConfig[token_id_name].GetInt64();                                  \
     }
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {

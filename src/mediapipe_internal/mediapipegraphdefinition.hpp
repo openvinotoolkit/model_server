@@ -77,10 +77,10 @@ struct GraphSidePackets {
         rerankServableMap.clear();
     }
     bool empty() {
-        return (pythonNodeResourcesMap.empty() && \
-                genAiServableMap.empty() && \
-                imageGenPipelinesMap.empty() && \
-                embeddingsServableMap.empty() && \
+        return (pythonNodeResourcesMap.empty() &&
+                genAiServableMap.empty() &&
+                imageGenPipelinesMap.empty() &&
+                embeddingsServableMap.empty() &&
                 rerankServableMap.empty());
     }
 };
