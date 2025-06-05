@@ -73,6 +73,9 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
 
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath();
+#endif
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
 std::string adjustConfigForTargetPlatformCStr(const char* input);
