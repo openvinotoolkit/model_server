@@ -64,6 +64,11 @@ class RerankCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
 
+    int64_t bos_token{0};
+    int64_t eos_token{0};
+    int64_t sep_token{0};
+    int64_t pad_token{0};
+
     uint64_t max_position_embeddings{512};
 
     size_t max_allowed_chunks{0};  // Read from options in ::Open()
@@ -100,6 +105,11 @@ public:
         const auto& options = cc->Options<RerankCalculatorOVOptions>();
         this->max_allowed_chunks = options.max_allowed_chunks();
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Max allowed chunks: {}", this->max_allowed_chunks);
+
+        bos_token = rerank_session->getBosToken();
+        eos_token = rerank_session->getEosToken();
+        sep_token = rerank_session->getSepToken();
+        pad_token = rerank_session->getPadToken();
 
         // max_position_embeddings
         if (options.has_max_position_embeddings()) {
@@ -162,11 +172,61 @@ public:
             tokens.attention_mask,
             out_input_ids, out_attention_mask,
             chunk_mapping, max_tokens_per_chunk,
-            this->max_allowed_chunks, rerank_session->getPadToken());
+            this->max_allowed_chunks, this->pad_token);
         if (!status.ok()) {
             throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
         }
-        return std::make_pair(out_input_ids, out_attention_mask);
+        SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of chunks: {}; with max token count: {} after chunking", tokens.input_ids.get_shape()[0], tokens.input_ids.get_shape()[1]);
+        
+        size_t tokens_count_of_longest_document = out_input_ids.get_shape()[1];
+        if (tokens_count_of_longest_document > max_tokens_per_chunk)
+            throw std::runtime_error("tokens_count_of_longest_document exceeds max_tokens_per_chunk");  // should never happen
+        size_t total_tokens_count_per_batch = tokens_count_of_longest_document + NUMBER_OF_SPECIAL_TOKENS + query_tokens.size();
+        size_t batch_size = out_input_ids.get_shape()[0];
+        if (batch_size != chunk_mapping.size())
+            throw std::runtime_error("error");  // should never happen
+
+        if (total_tokens_count_per_batch > this->max_position_embeddings)
+            throw std::runtime_error("Query tokens count + special tokens + tokens count of longest document exceeds max_position_embeddings");
+
+        auto input_ids = ov::Tensor(ov::element::i64, ov::Shape{batch_size, total_tokens_count_per_batch});
+        auto attention_mask = ov::Tensor(ov::element::i64, ov::Shape{batch_size, total_tokens_count_per_batch});
+
+        // Combine query and document tokens
+        // Schema (tokenizer must be exported without --add_special_tokens flag, we will add it manually)
+        /*
+            BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_1 TOKENS>  EOS_TOKEN
+            BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_2 TOKENS>  EOS_TOKEN
+            BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_3 TOKENS>  EOS_TOKEN
+            BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_N TOKENS>  EOS_TOKEN
+        */
+
+        for (size_t i = 0; i < batch_size; i++) {
+            int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data()) + i * total_tokens_count_per_batch;
+            int64_t* attention_mask_data = reinterpret_cast<int64_t*>(attention_mask.data()) + i * total_tokens_count_per_batch;
+
+            int64_t* out_input_ids_data = reinterpret_cast<int64_t*>(out_input_ids.data()) + i * tokens_count_of_longest_document;
+
+            // Fill input_ids
+            input_ids_data[0] = this->bos_token;
+            std::memcpy(input_ids_data + 1, query_tokens.data(), query_tokens.size() * sizeof(int64_t));
+            input_ids_data[query_tokens.size() + 1] = this->eos_token;
+            input_ids_data[query_tokens.size() + 2] = this->sep_token;
+            std::memcpy(input_ids_data + 1 + query_tokens.size() + 2, out_input_ids_data, tokens_count_of_longest_document * sizeof(int64_t));
+
+            input_ids_data[total_tokens_count_per_batch - 1] = this->pad_token;
+
+            auto it = std::find(out_input_ids_data, out_input_ids_data + tokens_count_of_longest_document, this->pad_token);
+            size_t pad_token_index = (it != out_input_ids_data + tokens_count_of_longest_document) ? std::distance(out_input_ids_data, it) : tokens_count_of_longest_document;
+
+            input_ids_data[1 + query_tokens.size() + 2 + pad_token_index] = this->eos_token;
+
+            // Fill attention_mask
+            std::fill(attention_mask_data, attention_mask_data + total_tokens_count_per_batch, int64_t(0));
+            std::fill(attention_mask_data, attention_mask_data + 1 + query_tokens.size() + 2 + pad_token_index + 1, int64_t(1));
+        }
+        
+        return std::make_pair(input_ids, attention_mask);
     }
 
     std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
@@ -218,7 +278,7 @@ public:
             // Prepare inputs for rerank model
             std::vector<size_t> chunk_mapping;
             auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
-
+            
             // Compute scores using rerank model
             size_t batch_size = handler.getDocumentsList().size();
             auto scores = ComputeScoresUsingRerankModel(

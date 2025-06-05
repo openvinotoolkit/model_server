@@ -513,7 +513,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
     add_servable_to_config(config_file_path, model_name + "_ov", os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
 
-def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
+def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
     set_max_context_length = ""
     destination_path = os.path.join(model_repository_path, model_name, "ov")
     print("Exporting embeddings model to ",destination_path)
@@ -521,15 +521,8 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
-        if truncate:
-            max_context_length = get_models_max_context(destination_path, 'config.json')
-            if max_context_length is not None:
-                set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
-        from openvino_tokenizers import convert_tokenizer
-        convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
-        if (os.system(convert_tokenizer_command)):
-            raise ValueError("Failed to export tokenizer model", source_model)
+        export_rerank_tokenizer(source_model, destination_path, max_doc_length)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
     with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
