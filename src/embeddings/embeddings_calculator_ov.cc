@@ -189,7 +189,6 @@ public:
                 } catch (std::exception& e) {
                     SPDLOG_DEBUG("Caught generic exception from preparing embeddings inputs: {}", e.what());
                 }
-                ov::Tensor typeIds;
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
                     int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
