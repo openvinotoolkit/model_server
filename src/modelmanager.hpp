@@ -148,6 +148,7 @@ private:
      */
 protected:
     std::string configFilename;
+
 private:
     /**
      * @brief A thread object used for monitoring changes in config
