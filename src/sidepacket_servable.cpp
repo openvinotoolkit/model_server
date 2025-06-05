@@ -40,7 +40,7 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     } else {
         parsedModelsPath = fsModelsPath.string();
     }
-    std::filesystem::path configPath =(std::filesystem::path(graphPath) / fsModelsPath / "config.json");
+    std::filesystem::path configPath = (std::filesystem::path(graphPath) / fsModelsPath / "config.json");
     if (std::filesystem::exists(configPath)) {
         SPDLOG_ERROR("CONFIG {}", configPath.string());
         std::ifstream ifs(configPath.string());
@@ -69,8 +69,7 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 }
                 if (modelConfig.HasMember("sep_token_id") && modelConfig["sep_token_id"].IsInt64()) {
                     sep_token = modelConfig["sep_token_id"].GetInt64();
-                }
-                else{
+                } else {
                     sep_token = eos_token;
                 }
             }

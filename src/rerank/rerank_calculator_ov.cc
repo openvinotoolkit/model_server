@@ -177,7 +177,7 @@ public:
             throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
         }
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of chunks: {}; with max token count: {} after chunking", tokens.input_ids.get_shape()[0], tokens.input_ids.get_shape()[1]);
-        
+
         size_t tokens_count_of_longest_document = out_input_ids.get_shape()[1];
         if (tokens_count_of_longest_document > max_tokens_per_chunk)
             throw std::runtime_error("tokens_count_of_longest_document exceeds max_tokens_per_chunk");  // should never happen
@@ -225,7 +225,7 @@ public:
             std::fill(attention_mask_data, attention_mask_data + total_tokens_count_per_batch, int64_t(0));
             std::fill(attention_mask_data, attention_mask_data + 1 + query_tokens.size() + 2 + pad_token_index + 1, int64_t(1));
         }
-        
+
         return std::make_pair(input_ids, attention_mask);
     }
 
@@ -278,7 +278,7 @@ public:
             // Prepare inputs for rerank model
             std::vector<size_t> chunk_mapping;
             auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
-            
+
             // Compute scores using rerank model
             size_t batch_size = handler.getDocumentsList().size();
             auto scores = ComputeScoresUsingRerankModel(
