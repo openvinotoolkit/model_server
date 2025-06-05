@@ -37,7 +37,7 @@
 
 namespace ovms {
 
-class SidepacketServable {
+struct SidepacketServable {
     std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;

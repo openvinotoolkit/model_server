@@ -3748,6 +3748,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EmbeddingsCalculator",
         "EmbeddingsCalculatorOV",
         "RerankCalculator",
+        "RerankCalculatorOV",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
