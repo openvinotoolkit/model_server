@@ -171,6 +171,8 @@ node: {
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
+          {%- if tools_model_type %}
+          response_parser: "{{tools_model_type}}",{% endif %}
       }
   }
   input_stream_handler {
@@ -248,8 +250,6 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
-      {% if tools_model_type %}
-      response_parser: {{tools_model_type}},{% endif %}
     }
   }
 }"""
@@ -383,22 +383,20 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
             raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
-    ### 
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
     
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
+    print("task_parameters", task_parameters)
     graph_content = gtemplate.render(model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
 
     if template_parameters.get("tools_model_type") is not None:
-        # add tunned chat template
-        print("Adding tools model type to the graph")
-        # download template from http://template.com/plik.jinja to os.path.join(model_repository_path, model_name)
+        print("Adding tunned chat template")
         template_mapping = {
             "phi4": "tool_chat_template_phi4_mini.jinja",
             "llama3": "tool_chat_template_llama3.1_json.jinja",
@@ -408,6 +406,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         template_url = "https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_mapping[task_parameters.get("tools_model_type")]
         if template_url is not None:
             template_path = os.path.join(model_repository_path, model_name, "template.jinja")
+            import requests
             response = requests.get(template_url)
             print(response.raise_for_status())
             with open(template_path, "wb") as f:

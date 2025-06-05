@@ -1,6 +1,6 @@
 # Agentic AI with OVMS
 
-OpenVINO Model Server can be used to serve as a language model for AI Agents. It supports the usage of tools in the context of content generation.
+OpenVINO Model Server can be used to serve language modela for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
 You can learn more about [tools calling based on OpenAI API](https://platform.openai.com/docs/guides/function-calling?api-mode=responses)
 
