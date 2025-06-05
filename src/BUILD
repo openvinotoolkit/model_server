@@ -151,9 +151,10 @@ mediapipe_proto_library(
 cc_library(
     name = "libovms_queue",
     hdrs = ["queue.hpp"],
-    copts = [],
     visibility = ["//visibility:public",],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "libovms_ovinferrequestsqueue",
@@ -164,15 +165,17 @@ cc_library(
         "libovmslogging",
         "//third_party:openvino",
     ],
-    copts = [],
     visibility = ["//visibility:public",],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "servable",
     hdrs = ["servable.hpp"],
-    copts = [],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "ovms_header",
@@ -3304,8 +3307,9 @@ cc_library(
         "//src:libovmslogging",
         "//src:libovmsstatus",
     ],
-    copts = COPTS_TESTS,
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 filegroup(
   name = "static_analysis",
