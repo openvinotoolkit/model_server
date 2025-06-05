@@ -51,6 +51,7 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
+parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes","qwen3"], help='set the type of model chat template and output parset', dest='tools_model_type')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
@@ -247,6 +248,8 @@ node: {
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
       max_num_inference_steps: {{max_num_inference_steps}},{% endif %}
+      {% if tools_model_type %}
+      response_parser: {{tools_model_type}},{% endif %}
     }
   }
 }"""
@@ -387,11 +390,30 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
-    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
-                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
+    graph_content = gtemplate.render(model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+
+    if template_parameters.get("tools_model_type") is not None:
+        # add tunned chat template
+        print("Adding tools model type to the graph")
+        # download template from http://template.com/plik.jinja to os.path.join(model_repository_path, model_name)
+        template_mapping = {
+            "phi4": "tool_chat_template_phi4_mini.jinja",
+            "llama3": "tool_chat_template_llama3.1_json.jinja",
+            "hermes": "tool_chat_template_hermes.jinja",
+            "qwen3": None
+            }
+        template_url = "https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_mapping[task_parameters.get("tools_model_type")]
+        if template_url is not None:
+            template_path = os.path.join(model_repository_path, model_name, "template.jinja")
+            response = requests.get(template_url)
+            print(response.raise_for_status())
+            with open(template_path, "wb") as f:
+                f.write(response.content)
+            print(f"Downloaded tuned chat template to {template_path}")
+
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
