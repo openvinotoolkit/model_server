@@ -137,9 +137,27 @@ pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/ag
 Run the agentic application
 ```console
 python openai_agent.py --query "What is the weather now in Tokyo?"
+```
+```
+Using SSE weather MCP  server
+Secure MCP Filesystem Server running on stdio
+Allowed directories: [ '/tmp' ]
 
-python openai_agent.py --query "What is the content of my local folder?"
+Running: What is the weather now in New York?
+The current weather in New York, based on the latest available data from the response, is **Clear sky** with a temperature of **22°C** on **Wednesday, June 11th, 2025**. 
 
+Note: The provided data includes a forecast from May 29th to June 11th, 2025. If you need real-time updates, ensure the data source is current.
+```
+```console
+python openai_agent.py --query "List the files in folder /root."
+```
+```
+Using SSE weather MCP  server
+Secure MCP Filesystem Server running on stdio
+Allowed directories: [ '/tmp' ]
+
+Running: List the files in folder /root.
+The directory `/root` is not accessible as it's outside the allowed directories. The only permitted path is `/tmp`. Would you like me to help you with files or directories within `/tmp` instead?
 ```
 
 > **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 

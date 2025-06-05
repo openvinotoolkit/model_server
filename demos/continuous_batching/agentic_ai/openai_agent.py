@@ -57,7 +57,7 @@ if platform.system() == "Windows":
         params={"command": "python", "args": ["-m", "mcp_weather_server"],"env":env_proxy},
     )
 else:
-    print("Using SSE server")
+    print("Using SSE weather MCP server")
     weather_server = MCPServerSse(
         name="SSE Python Server",
         params={
