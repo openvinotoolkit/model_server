@@ -1353,7 +1353,7 @@ public:
         std::set<StatusCode> requiredLoadResults,
         std::set<StatusCode> allowedLoadResults) {
         createConfigFileWithContent(ovmsConfig, configFilePath);
-        auto status = manager->loadConfig(configFilePath);
+        auto status = manager->startFromFile(configFilePath);
         ASSERT_TRUE(status.ok());
 
         // setup helper variables for managing threads
@@ -1398,7 +1398,7 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(beforeConfigChangeLoadTimeMs));
         ((*this).*configChangeOperation)();
         if (reloadWholeConfig) {
-            manager->loadConfig(configFilePath);
+            manager->startFromFile(configFilePath);
         } else {
             manager->updateConfigurationWithoutConfigFile();
         }

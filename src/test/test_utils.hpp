@@ -731,8 +731,12 @@ public:
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
     }
+    /*
+     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
+     */
     ovms::Status loadConfig(const std::string& jsonFilename) {
-        return ModelManager::loadConfig(jsonFilename);
+        this->configFilename = jsonFilename;
+        return ModelManager::loadConfig();
     }
 
     /**
