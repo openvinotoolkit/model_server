@@ -212,6 +212,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 ARG ov_tokenizers_branch=master
