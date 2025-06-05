@@ -50,10 +50,10 @@ class SidepacketServable {
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
-    const OVInferRequestsQueue& getInferRequestsQueue() {
+    OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
-    const ov::genai::Tokenizer& getTokenizer() {
+    ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
     }
     const int64_t& getPadToken() {
