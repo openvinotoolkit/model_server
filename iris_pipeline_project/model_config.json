@@ -1,0 +1,10 @@
+{
+  "custom_node_library_config_list": [],
+  "graph_config_list": [
+    {
+      "name": "iris_pipeline",
+      "base_path": "/models/iris_pipeline",
+      "graph_path": "graph.pbtxt"
+    }
+  ]
+}
