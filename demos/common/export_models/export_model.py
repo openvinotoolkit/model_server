@@ -403,11 +403,11 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             "hermes3": "tool_chat_template_hermes.jinja",
             "qwen3": None
             }
-        template_url = "https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_mapping[task_parameters.get("tools_model_type")]
-        if template_url is not None:
+        template_name = template_mapping[task_parameters.get("tools_model_type")]
+        if template_name is not None:
             template_path = os.path.join(model_repository_path, model_name, "template.jinja")
             import requests
-            response = requests.get(template_url)
+            response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
             print(response.raise_for_status())
             with open(template_path, "wb") as f:
                 f.write(response.content)

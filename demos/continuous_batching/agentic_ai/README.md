@@ -34,13 +34,13 @@ Run `export_model.py` script to download and quantize the model:
 
 :::{tab-item} CPU
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --enable_prefix_caching
 ```
 :::
 
 :::{tab-item} GPU
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --target_device GPU
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --target_device GPU --enable_prefix_caching
 ```
 ```
 :::
@@ -90,7 +90,7 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 Running this command starts the container with NPU enabled:
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
+-p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:2025.2-gpu --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
 
