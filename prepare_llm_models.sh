@@ -96,7 +96,7 @@ fi
 if [ -d "$1/$RERANK_MODEL/ov" ]; then
   echo "Models directory $1/$RERANK_MODEL/ov exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --overwrite_models
 fi
 
 if [ -d "$1/$QWEN3_MODEL" ]; then
