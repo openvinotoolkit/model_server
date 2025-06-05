@@ -107,7 +107,7 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU, GPU or NPU (it's defined in `graph.pbtxt`). If you run on GPU or NPU, make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
-ovms --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
+ovms --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 
 
