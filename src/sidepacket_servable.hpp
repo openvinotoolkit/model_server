@@ -37,12 +37,15 @@
 
 namespace ovms {
 
-class SidepacketServable {
+struct SidepacketServable {
     std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
-    int64_t pad_token;
+    int64_t pad_token = 0;
+    int64_t eos_token = 0;
+    int64_t bos_token = 0;
+    int64_t sep_token = 0;
     std::optional<uint32_t> maxModelLength;
 
 public:
@@ -53,10 +56,19 @@ public:
     ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
     }
-    int64_t& getPadToken() {
+    const int64_t& getPadToken() {
         return pad_token;
     }
-    std::optional<uint32_t>& getMaxModelLength() {
+    const int64_t& getEosToken() {
+        return eos_token;
+    }
+    const int64_t& getBosToken() {
+        return bos_token;
+    }
+    const int64_t& getSepToken() {
+        return sep_token;
+    }
+    const std::optional<uint32_t>& getMaxModelLength() {
         return maxModelLength;
     }
 };

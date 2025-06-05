@@ -33,7 +33,7 @@ set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 
-if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist "%~1\%EMBEDDING_MODEL%\ov" if exist "%~1\%RERANK_MODEL%" if exist "%~1\%VLM_MODEL%" (
+if exist "%~1\%TEXT_GENERATION_MODEL%" if exist "%~1\%EMBEDDING_MODEL%" if exist "%~1\%EMBEDDING_MODEL%\ov" if exist "%~1\%RERANK_MODEL%" if exist "%~1\%RERANK_MODEL%\tmp" if exist "%~1\%VLM_MODEL%" (
   echo Models directory %~1 exists. Skipping downloading models.
   exit /b 0
 )
@@ -85,7 +85,7 @@ if exist "%~1\%RERANK_MODEL%" (
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-if exist "%~1\%RERANK_MODEL%\ov" (
+if exist "%~1\%RERANK_MODEL%\tmp" (
   echo Models directory %~1\%RERANK_MODEL%\ov exists. Skipping downloading models.
 ) else (
   echo Downloading rerank model to %~1\%RERANK_MODEL%\ov directory.

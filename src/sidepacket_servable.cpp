@@ -33,9 +33,16 @@
 
 namespace ovms {
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
-    std::string configPath = FileSystem::appendSlash(modelDir) + "config.json";
-    if (std::filesystem::exists(configPath.c_str())) {
-        std::ifstream ifs(configPath);
+    auto fsModelsPath = std::filesystem::path(modelDir);
+    std::filesystem::path parsedModelsPath;
+    if (fsModelsPath.is_relative()) {
+        parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
+    } else {
+        parsedModelsPath = fsModelsPath.string();
+    }
+    std::filesystem::path configPath = (std::filesystem::path(graphPath) / fsModelsPath / "config.json");
+    if (std::filesystem::exists(configPath)) {
+        std::ifstream ifs(configPath.string());
         if (ifs.is_open()) {
             rapidjson::Document modelConfig;
             rapidjson::IStreamWrapper isw(ifs);
@@ -53,6 +60,17 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 if (modelConfig.HasMember("pad_token_id") && modelConfig["pad_token_id"].IsInt64()) {
                     pad_token = modelConfig["pad_token_id"].GetInt64();
                 }
+                if (modelConfig.HasMember("eos_token_id") && modelConfig["eos_token_id"].IsInt64()) {
+                    eos_token = modelConfig["eos_token_id"].GetInt64();
+                }
+                if (modelConfig.HasMember("bos_token_id") && modelConfig["bos_token_id"].IsInt64()) {
+                    bos_token = modelConfig["bos_token_id"].GetInt64();
+                }
+                if (modelConfig.HasMember("sep_token_id") && modelConfig["sep_token_id"].IsInt64()) {
+                    sep_token = modelConfig["sep_token_id"].GetInt64();
+                } else {
+                    sep_token = eos_token;
+                }
             }
         }
     }
@@ -61,13 +79,6 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     auto status = JsonParser::parsePluginConfig(pluginConfig, properties);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during embeddings node plugin_config option parsing to JSON: {}", pluginConfig);
-    }
-    auto fsModelsPath = std::filesystem::path(modelDir);
-    std::filesystem::path parsedModelsPath;
-    if (fsModelsPath.is_relative()) {
-        parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
-    } else {
-        parsedModelsPath = fsModelsPath.string();
     }
     tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath);
 
