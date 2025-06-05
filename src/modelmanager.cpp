@@ -339,7 +339,8 @@ Status ModelManager::startFromConfig() {
 }
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
-    Status status = loadConfig(jsonFilename);
+    this->configFilename = jsonFilename;
+    Status status = loadConfig();
     if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
@@ -1015,11 +1016,10 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
-Status ModelManager::loadConfig(const std::string& jsonFilename) {
+Status ModelManager::loadConfig() {
     rapidjson::Document configJson;
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    configFilename = jsonFilename;
-    Status status = parseConfig(jsonFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
+    Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
     if (!status.ok()) {
         this->lastLoadConfigStatus = status;
         return this->lastLoadConfigStatus;
@@ -1044,7 +1044,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     Status firstErrorStatus = StatusCode::OK;
 
-    this->setRootDirectoryPath(jsonFilename);
+    this->setRootDirectoryPath(this->configFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -1186,7 +1186,7 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
             if (isNeeded) {
-                loadConfig(configFilename);
+                loadConfig();
             }
         }
         updateConfigurationWithoutConfigFile();
