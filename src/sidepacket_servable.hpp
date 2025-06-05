@@ -43,6 +43,9 @@ class SidepacketServable {
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
     int64_t pad_token;
+    int64_t eos_token;
+    int64_t bos_token;
+    int64_t sep_token;
     std::optional<uint32_t> maxModelLength;
 
 public:
@@ -55,6 +58,15 @@ public:
     }
     int64_t& getPadToken() {
         return pad_token;
+    }
+    int64_t& getEosToken() {
+        return eos_token;
+    }
+    int64_t& getBosToken() {
+        return bos_token;
+    }
+    int64_t& getSepToken() {
+        return sep_token;
     }
     std::optional<uint32_t>& getMaxModelLength() {
         return maxModelLength;
