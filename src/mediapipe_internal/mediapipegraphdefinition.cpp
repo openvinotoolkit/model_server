@@ -127,19 +127,7 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 }
 Status MediapipeGraphDefinition::validate(ModelManager& manager) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
-    if (!this->sidePacketMaps.pythonNodeResourcesMap.empty()) {
-        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
-        return StatusCode::INTERNAL_ERROR;
-    }
-    if (!this->sidePacketMaps.genAiServableMap.empty()) {
-        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
-        return StatusCode::INTERNAL_ERROR;
-    }
-    if (!this->sidePacketMaps.imageGenPipelinesMap.empty()) {
-        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
-        return StatusCode::INTERNAL_ERROR;
-    }
-    if (!this->sidePacketMaps.embeddingsServableMap.empty()) {
+    if (!this->sidePacketMaps.empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }

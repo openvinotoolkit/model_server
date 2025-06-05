@@ -31,7 +31,7 @@ LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 
-MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$PHI4_MODEL" "$EMBEDDING_MODEL/ov" "$RERANK_MODEL/tmp")
+MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$PHI4_MODEL" "$EMBEDDING_MODEL/ov" "$RERANK_MODEL/ov")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -93,10 +93,10 @@ else
   python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
-if [ -d "$1/$RERANK_MODEL/tmp" ]; then
+if [ -d "$1/$RERANK_MODEL/ov" ]; then
   echo "Models directory $1/$RERANK_MODEL/ov exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --overwrite_models
+  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
 
 if [ -d "$1/$QWEN3_MODEL" ]; then

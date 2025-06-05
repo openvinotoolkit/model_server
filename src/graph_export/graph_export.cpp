@@ -40,9 +40,16 @@
 #include "../schema.hpp"
 #include "graph_export_types.hpp"
 
+#if (MEDIAPIPE_DISABLE == 0)
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/calculator_graph.h"
-
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+#endif
 namespace ovms {
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
@@ -109,12 +116,14 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -132,6 +141,37 @@ static Status validateSubconfigSchema(const std::string& subconfig, const std::s
         return StatusCode::JSON_INVALID;
     }
     return StatusCode::OK;
+}
+
+static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << R"(
+    {
+        "model_config_list": [
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
+                    "base_path": "tokenizer"
+                }
+            },
+            { "config":
+                {
+                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
+                    "base_path": "rerank",
+                    "target_device": ")" << graphSettings.targetDevice << R"(",
+                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
+                }
+            }
+        ]
+    })";
+    auto status = validateSubconfigSchema(oss.str(), "rerank");
+    if (!status.ok()){
+        return status;
+    }
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
@@ -164,12 +204,14 @@ node {
     }
 })";
 
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created rerank graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -208,12 +250,14 @@ node {
     }
 })";
 
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
@@ -334,6 +378,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }
+    return StatusCode::INTERNAL_ERROR;
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {

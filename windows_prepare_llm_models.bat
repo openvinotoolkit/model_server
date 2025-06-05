@@ -85,7 +85,7 @@ if exist "%~1\%RERANK_MODEL%" (
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-if exist "%~1\%RERANK_MODEL%\tmp" (
+if exist "%~1\%RERANK_MODEL%\ov" (
   echo Models directory %~1\%RERANK_MODEL%\ov exists. Skipping downloading models.
 ) else (
   echo Downloading rerank model to %~1\%RERANK_MODEL%\ov directory.

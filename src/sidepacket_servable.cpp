@@ -32,6 +32,12 @@
 #include "filesystem.hpp"
 
 namespace ovms {
+
+#define SET_TOKEN(token, token_id_name)                                                 \
+    if (modelConfig.HasMember(token_id_name) && modelConfig[token_id_name].IsInt64()) { \
+        token = modelConfig[token_id_name].GetInt64();                                  \
+    }
+
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
     std::filesystem::path parsedModelsPath;
@@ -57,8 +63,13 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                         break;
                     }
                 }
-                if (modelConfig.HasMember("pad_token_id") && modelConfig["pad_token_id"].IsInt64()) {
-                    pad_token = modelConfig["pad_token_id"].GetInt64();
+                SET_TOKEN(pad_token, "pad_token_id");
+                SET_TOKEN(eos_token, "eos_token_id");
+                SET_TOKEN(bos_token, "bos_token_id");
+                if (modelConfig.HasMember("sep_token_id") && modelConfig["sep_token_id"].IsInt64()) {
+                    sep_token = modelConfig["sep_token_id"].GetInt64();
+                } else {
+                    sep_token = eos_token;
                 }
                 if (modelConfig.HasMember("eos_token_id") && modelConfig["eos_token_id"].IsInt64()) {
                     eos_token = modelConfig["eos_token_id"].GetInt64();
