@@ -25,25 +25,25 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
 #endif
 
-class Qwen3ResponseParserTest : public ::testing::Test {
+class Phi4ResponseParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<ov::genai::Tokenizer> tokenizer;
     std::unique_ptr<ResponseParser> responseParser;
 
     void SetUp() override {
         tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
-        responseParser = std::make_unique<ResponseParser>(*tokenizer, "qwen3");
+        responseParser = std::make_unique<ResponseParser>(*tokenizer, "phi4");
     }
 };
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
-    std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithSingleToolCall) {
+    std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
@@ -57,26 +57,10 @@ TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithSingleToolCallNoThinking)
     EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithSingleToolCallAndThinking) {
-    std::string input = "<think>Thinking about the tool call</think>"
-                        "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "Thinking about the tool call");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool call"
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
-}
-
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking) {
-    std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                        "<tool_call>{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                        "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithThreeToolCalls) {
+    std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
+                        "{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
+                        "{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
@@ -107,42 +91,7 @@ TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking)
     EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithThreeToolCallsAndThinking) {
-    std::string input = "<think>Thinking about the tool calls</think>"
-                        "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
-                        "<tool_call>{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
-                        "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "Thinking about the tool calls");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool calls"
-
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 3);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
-    auto firstToolCallId = parsedResponse.toolCalls[0].id;
-
-    EXPECT_EQ(parsedResponse.toolCalls[1].name, "another_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-    EXPECT_EQ(parsedResponse.toolCalls[1].id.empty(), false);  // ID should be generated
-    auto secondToolCallId = parsedResponse.toolCalls[1].id;
-    EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-
-    EXPECT_EQ(parsedResponse.toolCalls[2].name, "third_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[2].arguments, "{\"key\":\"value\"}");
-    EXPECT_EQ(parsedResponse.toolCalls[2].id.empty(), false);  // ID should be generated
-    auto thirdToolCallId = parsedResponse.toolCalls[2].id;
-    EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
-    EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
-}
-
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -153,11 +102,10 @@ TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
-    std::string input = "This is a content part and next will be a tool call.\n\n<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
+    std::string input = "This is a content part and next will be a tool call.\n\nfunctools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    // generatedTokens should now contain content followed by bot token ID and then tool call
     ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
     EXPECT_EQ(parsedResponse.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedResponse.reasoning, "");
@@ -167,4 +115,13 @@ TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
     // Parser removes whitespaces, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
+}
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctoolsThrows) {
+    std::string input = "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]";
+    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    EXPECT_THROW({
+        responseParser->parse(generatedTokens);
+    },
+        std::runtime_error);
 }
