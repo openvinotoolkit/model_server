@@ -101,6 +101,7 @@ struct OpenAIChatCompletionsRequest {
     std::optional<int> maxNgramSize{std::nullopt};
 
     std::optional<uint32_t> maxModelLength;
+    std::optional<std::string> responseSchema{std::nullopt};
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
@@ -165,7 +166,12 @@ struct OpenAIChatCompletionsRequest {
             config.assistant_confidence_threshold = assistantConfidenceThreshold.value();
         if (maxNgramSize.has_value())
             config.max_ngram_size = maxNgramSize.value();
-
+        if (responseSchema.has_value()) {
+            ov::genai::StructuredOutputConfig guided_config;
+            guided_config.json_schema = responseSchema.value();
+            config.structured_output_config = guided_config;
+            config.stop_strings.insert("#");
+        }
         return config;
     }
 };
@@ -201,6 +207,7 @@ public:
     const ImageHistory& getImageHistory() const;
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
+    std::optional<std::string> getResponseSchema() const;
 
     bool isStream() const;
     std::string getModel() const;

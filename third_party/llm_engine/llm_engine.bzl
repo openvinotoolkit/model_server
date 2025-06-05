@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "4600e72b07e1378178be1301dba3028550690459", # releases/2025/2 RC2
+        remote = "https://github.com/pavel-esir/openvino.genai",
+        commit = "6646e2add83435d4978dc6803a377a8e6598ccba", # guided_generation
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
@@ -66,6 +66,7 @@ def _impl(repository_ctx):
         "WIN32": "True",
         "X86_64": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
     else:
@@ -81,6 +82,7 @@ def _impl(repository_ctx):
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_XGRAMMAR":"ON",
         """
         jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1
 
