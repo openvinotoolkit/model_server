@@ -8,15 +8,15 @@ Here are presented required steps to deploy language models trained for tools su
 ![picture](./agent.png)
 
 The application employing OpenAI agent SDK is using MCP server. It is equiped with a set of tools to providing context for the content generation.
-The tools can be also executed to automation purposes based on input in text format.  
+The tools can also be used for automation purposes based on input in text format.  
 
 ## Export LLM model
-Currently are supported models compatible with model template or tool_calls response format compatible with:
+Currently supported models:
 - microsoft/Phi-4-mini-instruct
 - meta-llama/Llama-3.1-8B-Instruct
 - NousResearch/Hermes-3-Llama-3.1-8B
 - Qwen/Qwen3-8B
-The model chat template defines how the conversation with tools and tools schema should be changed to the model prompt. 
+The model chat template defines how the conversation with tools and tools schema should be embedded in the prompt. 
 The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parset should be applied.
 
 Download export script, install it's dependencies and create directory for the models:
@@ -52,8 +52,8 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --config_fil
 
 ::::
 
-You can use similar commands for different models. Change the source_model and the tools_model_type out of phi4, llama2, quen3 and hermes3.
-> **Note:** The tuned chat template will be copied to the model folder as chat_template.jinja and the output parset will be set in the graph.pbtxt
+You can use similar commands for different models. Change the source_model and the tools_model_type (note that as of today the following types as available: `[phi4, llama3, qwen3, hermes3]`).
+> **Note:** The tuned chat template will be copied to the model folder as template.jinja and the response parser will be set in the graph.pbtxt
 
 
 ## Start OVMS
@@ -140,4 +140,4 @@ python openai_agent.py --query "What is the content of my local folder?"
 
 ```
 
-> **Note:** The tool checking the weather forcast in the demo is make a remote call to a REST API server. Make sure you have internate connection and proxy configured while running the agent. 
+> **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 

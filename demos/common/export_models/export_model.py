@@ -51,7 +51,7 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes","qwen3"], help='set the type of model chat template and output parset', dest='tools_model_type')
+parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes3","qwen3"], help='Set the type of model chat template and output parser', dest='tools_model_type')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
 add_common_arguments(parser_embeddings)
@@ -402,7 +402,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         template_mapping = {
             "phi4": "tool_chat_template_phi4_mini.jinja",
             "llama3": "tool_chat_template_llama3.1_json.jinja",
-            "hermes": "tool_chat_template_hermes.jinja",
+            "hermes3": "tool_chat_template_hermes.jinja",
             "qwen3": None
             }
         template_url = "https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_mapping[task_parameters.get("tools_model_type")]
