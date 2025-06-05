@@ -18,20 +18,17 @@
 #include "../response_parsers/response_parser.hpp"
 
 #include <cmath>
+#include <memory>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #include "../../filesystem.hpp"
 #pragma warning(push)
-#pragma warning(disable : 6262)
-#include "stb_image.h"  // NOLINT
-#pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -39,6 +36,7 @@
 
 #include <curl/curl.h>
 #include <regex>
+#include "../../image_conversion.hpp"  // TODO: Rename to stbi_conversions?
 
 using namespace rapidjson;
 
@@ -92,38 +90,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels) {
-    if (!image) {
-        std::stringstream errorMessage;
-        errorMessage << stbi_failure_reason();
-        throw std::runtime_error{errorMessage.str()};
-    }
-    struct SharedImageAllocator {
-        unsigned char* image;
-        int channels, height, width;
-        void* allocate(size_t bytes, size_t) const {
-            if (image && channels * height * width == bytes) {
-                return image;
-            }
-            throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
-        }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
-            if (image != nullptr) {
-                stbi_image_free(image);
-                image = nullptr;
-            }
-        }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
-    };
-    return ov::Tensor(
-        ov::element::u8,
-        ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
-}
-
 static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
     void* image) {
     size_t realsize = size * nmemb;
@@ -138,6 +104,12 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
 
 static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
+    if (!curl_handle) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
+        return absl::InternalError("Image downloading failed");
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
+
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
@@ -157,26 +129,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
     }
-    curl_easy_cleanup(curl_handle);
     return absl::OkStatus();
-}
-
-ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
-}
-
-ov::Tensor loadImageStbiFromFile(char const* filename) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load(
-        filename,
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
@@ -192,7 +145,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        // Add new message to chat history
+        // Add new message to chat history. Note that chat history contains only messages with "role" and "content" fields
+        // Other values are not stored in chat history, but are still present in the request object
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
@@ -310,8 +264,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
         }
         const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
-            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
+        if (lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have 'role' field");
         }
     }
     if (jsonChanged) {

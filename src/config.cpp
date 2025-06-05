@@ -19,6 +19,7 @@
 #include <limits>
 #include <regex>
 #include <thread>
+#include <vector>
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
@@ -83,6 +84,33 @@ bool Config::check_hostname_or_ip(const std::string& input) {
         std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
         return std::regex_match(input, valid_hostname_regex);
     }
+}
+
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            usedButDisallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!usedButDisallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
+
+        return false;
+    }
+
+    return true;
 }
 
 bool Config::validate() {
@@ -211,6 +239,9 @@ bool Config::validate() {
             std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
             return false;
         }
+
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+            return false;
     }
 
     // check rest_workers value

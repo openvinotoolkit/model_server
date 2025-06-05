@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "servablesconfigmanagermodule.hpp"
 
+#include <filesystem>
 #include <string>
 #include <sstream>
 
@@ -47,7 +48,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
         if (status.ok()) {
             std::cout << "Config updated: " << config.getModelSettings().configPath << "config.json" << std::endl;
         } else {
-            std::cout << config.getModelSettings().configPath << "config.json"
+            std::cout << config.getModelSettings().configPath << std::string(1, std::filesystem::path::preferred_separator) << "config.json"
                       << " error on config update : " << status.string() << std::endl;
         }
         return status;

@@ -20,10 +20,16 @@
 
 #include "../../../llm/response_parsers/base_response_parser.hpp"
 #include "../../../llm/response_parsers/response_parser.hpp"
+#include "../../test_utils.hpp"
 
 using namespace ovms;
 
+#ifdef _WIN32
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+#else
+// Hardcoded for usage in docker container
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+#endif
 
 class Qwen3ResponseParserTest : public ::testing::Test {
 protected:

@@ -73,6 +73,9 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
 
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath();
+#endif
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
 std::string adjustConfigForTargetPlatformCStr(const char* input);
@@ -1078,8 +1081,8 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
-        auto it = this->pythonNodeResourcesMap.find(nodeName);
-        if (it == std::end(pythonNodeResourcesMap)) {
+        auto it = this->sidePacketMaps.pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1088,8 +1091,8 @@ public:
 #endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
-        auto it = this->genAiServableMap.find(nodeName);
-        if (it == std::end(genAiServableMap)) {
+        auto it = this->sidePacketMaps.genAiServableMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1100,7 +1103,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps.genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,
