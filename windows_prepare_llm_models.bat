@@ -89,7 +89,7 @@ if exist "%~1\%RERANK_MODEL%\ov" (
   echo Models directory %~1\%RERANK_MODEL%\ov exists. Skipping downloading models.
 ) else (
   echo Downloading rerank model to %~1\%RERANK_MODEL%\ov directory.
-  python demos\common\export_models\export_model.py embeddings_ov --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
+  python demos\common\export_models\export_model.py rerank_ov --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
