@@ -42,7 +42,6 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     }
     std::filesystem::path configPath = (std::filesystem::path(graphPath) / fsModelsPath / "config.json");
     if (std::filesystem::exists(configPath)) {
-        SPDLOG_ERROR("CONFIG {}", configPath.string());
         std::ifstream ifs(configPath.string());
         if (ifs.is_open()) {
             rapidjson::Document modelConfig;
