@@ -1143,7 +1143,7 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     auto& config = ovms::Config::instance();
 
     bool reloadNeeded = false;
-    if (manager.getConfigFilename() != "") {
+    if (manager.isStartedWithConfigFile()) {
         status = manager.configFileReloadNeeded(reloadNeeded);
         if (!reloadNeeded) {
             if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {

@@ -178,8 +178,8 @@ Status ModelManager::start(const Config& config) {
         resourcesCleanupIntervalMillisec = 1000;
     }
     Status status;
-    bool startFromConfigFile = (config.configPath() != "");
-    if (startFromConfigFile) {
+    this->startedWithConfigFile = (config.configPath() != "");
+    if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
@@ -188,7 +188,7 @@ Status ModelManager::start(const Config& config) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-    startWatcher(startFromConfigFile);
+    startWatcher(isStartedWithConfigFile());
     startCleaner();
     return status;
 }

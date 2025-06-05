@@ -235,7 +235,7 @@ private:
      *
      */
     std::string rootDirectoryPath;
-
+    bool startedWithConfigFile = false;
     /**
      * @brief Set json config directory path
      *
@@ -298,8 +298,8 @@ public:
      * 
      * @return config filename
      */
-    const std::string& getConfigFilename() {
-        return configFilename;
+    bool isStartedWithConfigFile() {
+        return startedWithConfigFile;
     }
 
     /**
