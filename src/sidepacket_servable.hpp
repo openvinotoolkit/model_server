@@ -56,20 +56,23 @@ public:
     ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
     }
-    const int64_t& getPadToken() {
+    const int64_t getPadToken() {
         return pad_token;
     }
-    const int64_t& getEosToken() {
+    const int64_t getEosToken() {
         return eos_token;
     }
-    const int64_t& getBosToken() {
+    const int64_t getBosToken() {
         return bos_token;
     }
-    const int64_t& getSepToken() {
+    const int64_t getSepToken() {
         return sep_token;
     }
-    const std::optional<uint32_t>& getMaxModelLength() {
+    const std::optional<uint32_t> getMaxModelLength() {
         return maxModelLength;
+    }
+    const size_t getNumberOfModelInputs() {
+        return compiledModel.inputs().size();
     }
 };
 

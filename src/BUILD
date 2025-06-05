@@ -3339,6 +3339,7 @@ cc_library(
             "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
     }),
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
     linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
