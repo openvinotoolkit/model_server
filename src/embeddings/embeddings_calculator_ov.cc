@@ -194,6 +194,9 @@ public:
                     int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
                     std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
                 }
+            } else {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings input is of not supported type");
+                return absl::InvalidArgumentError("Input should be string, array of strings or array of integers");
             }
             auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
             ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
