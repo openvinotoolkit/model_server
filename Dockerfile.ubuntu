@@ -432,6 +432,7 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ENV LD_LIBRARY_PATH=/ovms/lib
+ENV PATH="$PATH:/ovms/bin"
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms
