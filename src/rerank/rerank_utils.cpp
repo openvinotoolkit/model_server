@@ -255,7 +255,6 @@ absl::Status chunkDocuments(
     }
 
     size_t new_batch_size = chunk_mapping.size();
-    SPDLOG_ERROR("new_batch_size {} max_allowed_chunks {}", new_batch_size, max_allowed_chunks);
     if (new_batch_size > max_allowed_chunks) {
         return absl::InvalidArgumentError(std::string{"exceeding max_allowed_chunks after chunking limit: "} + std::to_string(max_allowed_chunks) + std::string{"; actual: "} + std::to_string(new_batch_size));
     }
