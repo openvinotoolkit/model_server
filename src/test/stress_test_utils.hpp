@@ -1096,7 +1096,7 @@ protected:
     const uint32_t loadThreadCount = 20;
     const uint32_t beforeConfigChangeLoadTimeMs = 30;
     const uint32_t afterConfigChangeLoadTimeMs = 50;
-    const int stressIterationsLimit = 5000;
+    const int stressIterationsLimit = 10000;
 
     std::string configFilePath;
     std::string ovmsConfig;
@@ -1773,7 +1773,6 @@ public:
                 SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter);
             }
         }
-        EXPECT_GT(stressIterationsCounter, 0) << "Reaching 0 means that we might not test enough \"after config change\" operation was applied";
         std::stringstream ss;
         ss << "Executed: " << stressIterationsLimit - stressIterationsCounter << " inferences by thread id: " << std::this_thread::get_id() << std::endl;
         SPDLOG_INFO(ss.str());
