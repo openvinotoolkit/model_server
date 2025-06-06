@@ -143,37 +143,6 @@ static Status validateSubconfigSchema(const std::string& subconfig, const std::s
     return StatusCode::OK;
 }
 
-static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                    "base_path": "tokenizer"
-                }
-            },
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
-                    "base_path": "rerank",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                }
-            }
-        ]
-    })";
-    auto status = validateSubconfigSchema(oss.str(), "rerank");
-    if (!status.ok()){
-        return status;
-    }
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
-}
-
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // Windows path creation - graph parser needs forward slashes in paths
