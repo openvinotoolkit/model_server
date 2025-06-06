@@ -63,7 +63,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
-            if (it->value.GetArray() .Size() == 0) {
+            if (it->value.GetArray().Size() == 0) {
                 return "input array should not be empty";
             }
             InputType input_type = InputType::NONE;
@@ -125,8 +125,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     // TODO: user (optional)
     if (input_strings.size() > 0) {
         request.input = input_strings;
-    }
-    else if (input_tokens.size() > 0) {
+    } else if (input_tokens.size() > 0) {
         request.input = input_tokens;
     } else {
         return "input field is required";
