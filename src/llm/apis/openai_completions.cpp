@@ -15,21 +15,20 @@
 //*****************************************************************************
 
 #include "openai_completions.hpp"
+#include "../response_parsers/response_parser.hpp"
 
 #include <cmath>
+#include <memory>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "../../filesystem.hpp"
 #pragma warning(push)
-#pragma warning(disable : 6262)
-#include "stb_image.h"  // NOLINT
-#pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -37,6 +36,7 @@
 
 #include <curl/curl.h>
 #include <regex>
+#include "../../image_conversion.hpp"  // TODO: Rename to stbi_conversions?
 
 using namespace rapidjson;
 
@@ -90,38 +90,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels) {
-    if (!image) {
-        std::stringstream errorMessage;
-        errorMessage << stbi_failure_reason();
-        throw std::runtime_error{errorMessage.str()};
-    }
-    struct SharedImageAllocator {
-        unsigned char* image;
-        int channels, height, width;
-        void* allocate(size_t bytes, size_t) const {
-            if (image && channels * height * width == bytes) {
-                return image;
-            }
-            throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
-        }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
-            if (image != nullptr) {
-                stbi_image_free(image);
-                image = nullptr;
-            }
-        }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
-    };
-    return ov::Tensor(
-        ov::element::u8,
-        ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
-}
-
 static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
     void* image) {
     size_t realsize = size * nmemb;
@@ -136,6 +104,12 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
 
 static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
+    if (!curl_handle) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
+        return absl::InternalError("Image downloading failed");
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
+
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
@@ -155,26 +129,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
     }
-    curl_easy_cleanup(curl_handle);
     return absl::OkStatus();
-}
-
-ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
-}
-
-ov::Tensor loadImageStbiFromFile(char const* filename) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load(
-        filename,
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
@@ -190,7 +145,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        // Add new message to chat history
+        // Add new message to chat history. Note that chat history contains only messages with "role" and "content" fields
+        // Other values are not stored in chat history, but are still present in the request object
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
@@ -248,7 +204,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
@@ -264,13 +220,19 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
                             } else {
                                 if (!allowedLocalMediaPath.has_value()) {
                                     return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                                }
+                                if (FileSystem::isPathEscaped(url)) {
+                                    std::stringstream ss;
+                                    ss << "Path " << url.c_str() << " escape with .. is forbidden.";
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
                                 }
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
@@ -282,7 +244,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             }
@@ -302,8 +264,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
         }
         const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
-            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
+        if (lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have 'role' field");
         }
     }
     if (jsonChanged) {
@@ -318,7 +280,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 absl::Status OpenAIChatCompletionsHandler::parseTools() {
     auto tool_choice_it = doc.FindMember("tool_choice");
     std::string tool_choice{"auto"};
-    if (tool_choice_it != doc.MemberEnd()) {
+    if (tool_choice_it != doc.MemberEnd() && !tool_choice_it->value.IsNull()) {
         if (tool_choice_it->value.IsString()) {
             tool_choice = tool_choice_it->value.GetString();
             if (tool_choice != "none" && tool_choice != "auto")
@@ -349,7 +311,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
         for (size_t i = 0; i < it->value.GetArray().Size();) {
@@ -709,8 +671,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
         usage.completionTokens += numTokens;
 }
 
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {
-    return request.createGenerationConfig();
+ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(const ov::genai::GenerationConfig& base) const {
+    return request.createGenerationConfig(base);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
@@ -727,7 +689,7 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
     return status;
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string& responseParserName) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -744,8 +706,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         usage.completionTokens += generationOutput.generated_ids.size();
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
+
+        ParsedResponse parsedResponse;
+        if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParserName.empty()) {
+            parsedResponse.content = tokenizer.decode(generationOutput.generated_ids);
+        } else {
+            ResponseParser responseParser(tokenizer, responseParserName);
+            parsedResponse = responseParser.parse(generationOutput.generated_ids);
+        }
+
         writer.StartObject();  // {
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
@@ -869,17 +838,41 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
             writer.String("content");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
+
+            if (!parsedResponse.reasoning.empty()) {
+                writer.String("reasoning_content");
+                writer.String(parsedResponse.reasoning.c_str());
+            }
             // role: string; Role of the text producer
             // Will make sense once we have chat templates? TODO(atobisze)
             writer.String("role");
             writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
+
+            writer.String("tool_calls");
+            writer.StartArray();  // [
+            for (const ToolCall& toolCall : parsedResponse.toolCalls) {
+                writer.StartObject();  // {
+                writer.String("id");
+                writer.String(toolCall.id.c_str());  // Generate a random ID for the tool call
+
+                writer.String("type");
+                writer.String("function");
+
+                writer.String("function");
+                writer.StartObject();  // {
+                writer.String("name");
+                writer.String(toolCall.name.c_str());
+                writer.String("arguments");
+                writer.String(toolCall.arguments.c_str());  // Assuming toolsResponse is a valid JSON string
+                writer.EndObject();                         // }
+                writer.EndObject();                         // }
+            }
+            writer.EndArray();   // ]
             writer.EndObject();  // }
         } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
         }
 
         writer.EndObject();  // }
@@ -924,7 +917,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     return buffer.GetString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string& responseParserName) {  // TODO separate common part with function implemented above
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -942,8 +935,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         usage.completionTokens += tokens.size();
         if (request.echo)
             usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(tokens);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
+
+        ParsedResponse parsedResponse;
+        if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParserName.empty()) {
+            parsedResponse.content = tokenizer.decode(tokens);
+        } else {
+            ResponseParser responseParser(tokenizer, responseParserName);
+            parsedResponse = responseParser.parse(tokens);
+        }
+
         writer.StartObject();  // {
         writer.String("finish_reason");
         writer.String("stop");
@@ -957,17 +957,36 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
             writer.StartObject();  // {
             // content: string; Actual content of the text produced
             writer.String("content");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
             // role: string; Role of the text producer
             // Will make sense once we have chat templates? TODO(atobisze)
             writer.String("role");
             writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
+
+            writer.String("tool_calls");
+            writer.StartArray();  // [
+            for (const ToolCall& toolCall : parsedResponse.toolCalls) {
+                writer.StartObject();  // {
+                writer.String("id");
+                writer.String(toolCall.id.c_str());  // Generate a random ID for the tool call
+
+                writer.String("type");
+                writer.String("function");
+
+                writer.String("function");
+                writer.StartObject();  // {
+                writer.String("name");
+                writer.String(toolCall.name.c_str());
+                writer.String("arguments");
+                writer.String(toolCall.arguments.c_str());  // Assuming toolsResponse is a valid JSON string
+                writer.EndObject();                         // }
+                writer.EndObject();                         // }
+            }
+            writer.EndArray();   // ]
             writer.EndObject();  // }
         } else if (endpoint == Endpoint::COMPLETIONS) {
             writer.String("text");
-            writer.String(completeResponse.c_str());
+            writer.String(parsedResponse.content.c_str());
         }
 
         writer.EndObject();  // }

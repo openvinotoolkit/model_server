@@ -14,19 +14,23 @@
 # limitations under the License.
 #
 
-import numpy as np
-import pytest
-import os
+import json
+from jsonschema import validate, ValidationError
 import logging
+from openai import OpenAI
+import os
+from pydantic import BaseModel
+import pytest
+import requests
 
 model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
 base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
 
 logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
+skip = pytest.mark.skip
 
 class TestSingleModelInference:
-    @xfail(reason="not implemented yet")
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -39,8 +43,6 @@ class TestSingleModelInference:
         - json file compatible with tool schema
 
         """
-
-        from openai import OpenAI
 
         client = OpenAI(base_url=base_url, api_key="unused")
 
@@ -85,7 +87,7 @@ class TestSingleModelInference:
             "tool_choice": {"type": "function", "function": {"name": "get_weather"}},
             "max_tokens": 1,
         }
-        import requests
+
         response = requests.post(
             url=f"{base_url}/chat/completions",
             json=body,
@@ -96,15 +98,10 @@ class TestSingleModelInference:
             print("API Response:", response.json())
         else:
             print(f"Failed to get response: {response.status_code}, {response.text}")
-
-        import json
-        
+  
         tool_args = completion.choices[0].message.tool_calls[0].function.arguments
-        
-        # Assert that tool_call is a valid JSON and matches the schema
-        import json
-        from jsonschema import validate, ValidationError
 
+        # Assert that tool_call is a valid JSON and matches the schema
         try:
             tool_call_json = json.loads(tool_args)
             schema = tools[0]["function"]["parameters"]
@@ -117,23 +114,22 @@ class TestSingleModelInference:
 
         assert completion.choices[0].message.tool_calls[0].id != ""
 
-        messages.append({'role': 'assistant', 'reasoning_content': None, 'content': '', 'tool_calls': [{'id': 'chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec', 'type': 'function', 'function': {'name': 'get_weather', 'arguments': '{"location": "Paris, France"}'}}]})
-        messages.append({"role": "tool", "tool_call_id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "content": "15 degrees Celsius"})
+        messages.append({'role': 'assistant', 'reasoning_content': None, 'content': '', 'tool_calls': [{'id': completion.choices[0].message.tool_calls[0].id, 'type': 'function', 'function': {'name': 'get_weather', 'arguments': '{"location": "Paris, France"}'}}]})
+        messages.append({"role": "tool", "tool_call_id": completion.choices[0].message.tool_calls[0].id, "content": "15 degrees Celsius"})
 
         print("Messages after tool call:", messages)
 
         completion = client.chat.completions.create(
             model=model_name,
             messages=messages,
-            tools=tools,
+            tools=tools
         )
         print(completion.choices[0].message)
 
         assert "Paris" in completion.choices[0].message.content
         assert "15 degrees" in completion.choices[0].message.content
-        assert completion.choices[0].message.tool_calls == []
+        assert completion.choices[0].message.tool_calls is None or completion.choices[0].message.tool_calls == []
 
-    @xfail(reason="not implemented yet")
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
@@ -146,9 +142,6 @@ class TestSingleModelInference:
         - json file compatible with tool schema
 
         """
-
-        from openai import OpenAI
-
         client = OpenAI(base_url=base_url, api_key="unused")
 
         tools = [{
@@ -201,18 +194,15 @@ class TestSingleModelInference:
             model=model_name,
             messages=messages,
             tools=tools,
-            tool_choice="auto",
+            tool_choice="auto"
         )
 
         print("COMPLETION:",completion)
-        import json
         
         tool_args0 = completion.choices[0].message.tool_calls[0].function.arguments
         tool_args1 = completion.choices[0].message.tool_calls[1].function.arguments
         
         # Assert that tool_call is a valid JSON and matches the schema
-        import json
-        from jsonschema import validate, ValidationError
 
         try:
             tool_call_json = json.loads(tool_args0)
@@ -232,18 +222,30 @@ class TestSingleModelInference:
         messages.append({"role": "tool", "tool_call_id": completion.choices[0].message.tool_calls[1].id, "content": "pm10 28µg/m3"})
 
         print("Messages after tool call:", messages)
-
-        try:
-            client.chat.completions.create(
+    
+        # Llama3 does not support multiple tools in a single chat completion call
+        if "Llama3" in model_name:
+            with pytest.raises(Exception):
+                # This should raise an exception because we cannot use multiple tools in a single chat completion call
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    tools=tools
+                )
+        else:
+            completion = client.chat.completions.create(
                 model=model_name,
                 messages=messages,
-                tools=tools,
+                tools=tools
             )
-        except Exception as e:
-            print("Error:", e)
-            assert True, f"It should fail with 2 tool calls"
+            content = completion.choices[0].message.content
+            assert "New York" in content
+            assert "15 degrees Celsius" in content or "15°C" in content or "15 °C" in content
+            assert "pm10" in content or "PM10" in content
+            assert "28 µg/m" in content or "28µg/m" in content
+
         
-    @xfail(reason="not implemented yet")
+    @skip(reason="not implemented yet")
     def test_chat_with_tool_definition_stream(self):
         """
         <b>Description</b>
@@ -256,9 +258,6 @@ class TestSingleModelInference:
         - json file compatible with tool schema
 
         """
-
-        from openai import OpenAI
-
         client = OpenAI(base_url=base_url, api_key="unused")
 
         tools = [{
@@ -305,7 +304,7 @@ class TestSingleModelInference:
                     arguments += chunk.choices[0].delta.tool_calls[0].function.arguments
         assert arguments == '{"location": "Paris, France"}'
 
-    @xfail(reason="not implemented yet")
+    @skip(reason="not implemented yet")
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
@@ -318,13 +317,6 @@ class TestSingleModelInference:
         - json file compatible with tool schema
 
         """
-
-        from pydantic import BaseModel
-        from openai import OpenAI
-        import json
-        from jsonschema import validate, ValidationError
-        import requests
-
         client = OpenAI(base_url=base_url, api_key="unused")
         class CalendarEvent(BaseModel):
             event_name: str

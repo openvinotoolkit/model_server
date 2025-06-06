@@ -56,13 +56,13 @@ if /i "%with_python%"=="true" (
     :: Prepare self-contained python
     set "python_version=3.12.9"
 
-    call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
+    call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
     if !errorlevel! neq 0 (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
     :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-    xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
+    xcopy %dest_dir%\python-!python_version!-embed-amd64 dist\windows\ovms\python /E /I /H
     if !errorlevel! neq 0 (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
@@ -108,7 +108,7 @@ if exist "C:\Program Files\Git\mingw64\bin" (
     if !errorlevel! neq 0 exit /b !errorlevel!
     copy /Y "C:\Program Files\Git\mingw64\bin\libpcre2-8-0.dll" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libssp-0.dll" dist\windows\ovms
+    copy /Y "C:\Program Files\Git\mingw64\bin\libwinpthread-1.dll" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
     copy /Y "C:\Program Files\Git\mingw64\bin\zlib1.dll" dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!

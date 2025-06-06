@@ -640,13 +640,13 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
 
 std::string GetFileContents(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
-        std::cout << "File does not exist:" << filePath << std::endl;
+        std::cout << "File does not exist: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
     std::ifstream file(filePath, std::ios::in | std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "File could not be opened:" << filePath << std::endl;
+        std::cout << "File could not be opened: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
@@ -774,7 +774,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 
     int argc = 8;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        ASSERT_EQ(expected_code, server.start(argc, argv));
+        EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
@@ -796,7 +796,7 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
 
     int argc = 9;
     t.reset(new std::thread([&argc, &argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
