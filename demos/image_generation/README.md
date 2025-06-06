@@ -27,6 +27,8 @@ That makes it easy to use and efficient especially on on Intel® Xeon®, Intel®
 
 This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and just start the serving.
 
+> NOTE: Optionally, to only download the model and omit the serving part, use `--pull` parameter.
+
 **CPU**
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
