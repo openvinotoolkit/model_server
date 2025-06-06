@@ -396,7 +396,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
 
     if template_parameters.get("tools_model_type") is not None:
-        print("Adding tunned chat template")
+        print("Adding tuned chat template")
         template_mapping = {
             "phi4": "tool_chat_template_phi4_mini.jinja",
             "llama3": "tool_chat_template_llama3.1_json.jinja",

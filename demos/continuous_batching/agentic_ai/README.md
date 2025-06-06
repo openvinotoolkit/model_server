@@ -7,7 +7,7 @@ You can learn more about [tools calling based on OpenAI API](https://platform.op
 Here are presented required steps to deploy language models trained for tools support. The diagram depicting the demo setup is below:
 ![picture](./agent.png)
 
-The application employing OpenAI agent SDK is using MCP server. It is equiped with a set of tools to providing context for the content generation.
+The application employing OpenAI agent SDK is using MCP server. It is equipped with a set of tools to providing context for the content generation.
 The tools can also be used for automation purposes based on input in text format.  
 
 ## Export LLM model
