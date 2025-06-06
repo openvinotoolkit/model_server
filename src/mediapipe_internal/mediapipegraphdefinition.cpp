@@ -131,10 +131,6 @@ Status MediapipeGraphDefinition::validate(ModelManager& manager) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;
     }
-    if (!this->sidePacketMaps.rerankServableMap.empty()) {
-        SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
-        return StatusCode::INTERNAL_ERROR;
-    }
     ValidationResultNotifier notifier(this->status, this->loadedNotify);
     if (manager.modelExists(this->getName()) || manager.pipelineDefinitionExists(this->getName())) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph name: {} is already occupied by model or pipeline.", this->getName());

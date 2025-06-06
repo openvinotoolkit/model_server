@@ -71,17 +71,6 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 } else {
                     sep_token = eos_token;
                 }
-                if (modelConfig.HasMember("eos_token_id") && modelConfig["eos_token_id"].IsInt64()) {
-                    eos_token = modelConfig["eos_token_id"].GetInt64();
-                }
-                if (modelConfig.HasMember("bos_token_id") && modelConfig["bos_token_id"].IsInt64()) {
-                    bos_token = modelConfig["bos_token_id"].GetInt64();
-                }
-                if (modelConfig.HasMember("sep_token_id") && modelConfig["sep_token_id"].IsInt64()) {
-                    sep_token = modelConfig["sep_token_id"].GetInt64();
-                } else {
-                    sep_token = eos_token;
-                }
             }
         }
     }
