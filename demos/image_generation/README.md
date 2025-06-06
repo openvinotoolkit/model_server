@@ -19,9 +19,7 @@ That makes it easy to use and efficient especially on on Intel® Xeon®, Intel®
 **Client**:  Python for using OpenAI client package and Pillow to save image or simply cURL
 
 
-## Server deployment
-
-:::{dropdown} **Downloading the models directly via OVMS**
+# Downloading the models directly via OVMS
 
 > NOTE: Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
@@ -159,7 +157,7 @@ models
 :::
 
 
-:::{dropdown} **Using export script to download, convert and quantize then start the serving**
+# Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
 Quantization ensures faster initialization time, better performance and lower memory consumption.
 Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
@@ -305,9 +303,6 @@ ovms.exe --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_
 :::
 
 ::::
-
-
-:::
 
 ## Readiness Check
 
