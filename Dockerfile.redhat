@@ -350,9 +350,7 @@ ARG FUZZER_BUILD=0
 ARG debug_bazel_flags="--strip=always  --config=mp_on_py_on --//:distro=redhat"
 COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
 COPY create_package.sh /
-RUN ./create_package.sh ; if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
-   echo $'#!/bin/bash\npython3 -m openvino_tokenizers.cli "$@"' > /ovms_release/bin/convert_tokenizer ; \
-   chmod +x /ovms_release/bin/convert_tokenizer ; fi
+RUN ./create_package.sh
 
 # hadolint ignore=DL3059
 RUN chown -R ovms:ovms /ovms_release
