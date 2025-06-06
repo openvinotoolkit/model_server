@@ -129,20 +129,6 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status validateSubconfigSchema(const std::string& subconfig, const std::string& type) {
-    rapidjson::Document subconfigJson;
-    rapidjson::ParseResult parseResult = subconfigJson.Parse(subconfig.c_str());
-    if (parseResult.Code()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Created {} subconfig file is not a valid JSON file. Error: {}", type, rapidjson::GetParseError_En(parseResult.Code()));
-        return StatusCode::JSON_INVALID;
-    }
-    if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
-        SPDLOG_ERROR("Created {} subconfig file is not in valid configuration format", type);
-        return StatusCode::JSON_INVALID;
-    }
-    return StatusCode::OK;
-}
-
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // Windows path creation - graph parser needs forward slashes in paths
