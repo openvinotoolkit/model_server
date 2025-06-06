@@ -36,51 +36,44 @@ from agents import (
     Runner,
 )
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000/v3")  # Example OVMS server BASE URL
 API_KEY = "not_used"
-MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-8B") # Example model name, replace with your model
-
-if not BASE_URL or not API_KEY or not MODEL_NAME:
-    raise ValueError(
-        "Please set EXAMPLE_BASE_URL, EXAMPLE_API_KEY, EXAMPLE_MODEL_NAME via env var or code."
-    )
 env_proxy = {"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy")}
-
-client = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 RunConfig.tracing_disabled = True  # Disable tracing for this example
 
-weather_server = None
-if platform.system() == "Windows":
-    weather_server = MCPServerStdio(
-        name="Weather MCP Server",
-        client_session_timeout_seconds=3000,
-        params={"command": "python", "args": ["-m", "mcp_weather_server"],"env":env_proxy},
+
+
+async def main(query, model_name: str, base_url: str, mcp_server_url: str):
+    weather_server = None
+    if platform.system() == "Windows":
+        weather_server = MCPServerStdio(
+            name="Weather MCP Server",
+            client_session_timeout_seconds=300,
+            params={"command": "python", "args": ["-m", "mcp_weather_server"],"env":env_proxy},
+        )
+    else:
+        print("Using SSE weather MCP server")
+        weather_server = MCPServerSse(
+            name="SSE Python Server",
+            params={ "url": mcp_server_url}  # URL of the MCP SSE server
+        )
+    fs_server = MCPServerStdio(
+            client_session_timeout_seconds=30,
+            name="FS MCP Server",
+            params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy,}
     )
-else:
-    print("Using SSE weather MCP server")
-    weather_server = MCPServerSse(
-        name="SSE Python Server",
-        params={
-            "url": "http://localhost:8080/sse",  # URL of the MCP SSE server
-        }
-    )
-fs_server = MCPServerStdio(
-        client_session_timeout_seconds=30,
-        name="FS MCP Server",
-        params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy,}
-)
-
-class OVMSModelProvider(ModelProvider):
-    def get_model(self, model_name: str | None) -> Model:
-        return OpenAIChatCompletionsModel(model=model_name or MODEL_NAME, openai_client=client)
-
-OVMS_MODEL_PROVIDER = OVMSModelProvider()
-
-async def main(query):
     async with weather_server, fs_server:
-        await run([weather_server, fs_server], query)
+        await run([weather_server, fs_server], query, model_name, base_url)
 
-async def run(mcp_servers: List[MCPServer], message: str):
+async def run(mcp_servers: List[MCPServer], message: str, model_name: str, base_url: str):
+
+    client = AsyncOpenAI(base_url=base_url, api_key=API_KEY)
+
+    class OVMSModelProvider(ModelProvider):
+        def get_model(self, _) -> Model:
+            return OpenAIChatCompletionsModel(model=model_name, openai_client=client)
+
+    OVMS_MODEL_PROVIDER = OVMSModelProvider()
+
     agent = Agent(
         name="Assistant",
         mcp_servers=mcp_servers,
@@ -93,5 +86,8 @@ async def run(mcp_servers: List[MCPServer], message: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
     parser.add_argument("--query", type=str, default="List files in `/tmp/model_server` directory", help="Query to pass to the agent")
+    parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
+    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v1", help="Base URL for the OpenAI API")
+    parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
     args = parser.parse_args()
-    asyncio.run(main(args.query))
+    asyncio.run(main(args.query, args.model, args.base_url, args.mcp_server_url))

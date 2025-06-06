@@ -398,6 +398,10 @@ Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
 Check the demo [text generation with visual model](./vlm/README.md)
 
+## Check how to use AI agents with MCP servers and language models
+
+Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
+
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)

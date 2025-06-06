@@ -1,4 +1,4 @@
-# Agentic AI with OVMS
+# Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
 OpenVINO Model Server can be used to serve language modela for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
@@ -12,10 +12,10 @@ The tools can also be used for automation purposes based on input in text format
 
 ## Export LLM model
 Currently supported models:
-- microsoft/Phi-4-mini-instruct
+- Qwen/Qwen3-8B
 - meta-llama/Llama-3.1-8B-Instruct
 - NousResearch/Hermes-3-Llama-3.1-8B
-- Qwen/Qwen3-8B
+- microsoft/Phi-4-mini-instruct
 
 The model chat template defines how the conversation with tools and tools schema should be embedded in the prompt. 
 The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parset should be applied.
@@ -96,7 +96,6 @@ docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/rende
 
 ::::
 
-
 **Deploying on Bare Metal**
 
 Assuming you have unpacked model server package with python enabled version, make sure to:
@@ -111,7 +110,6 @@ Depending on how you prepared models in the first step of this demo, they are de
 ```bat
 ovms --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
-
 
 ## Start MCP server with SSE interface
 
@@ -136,7 +134,7 @@ pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/ag
 
 Run the agentic application
 ```console
-python openai_agent.py --query "What is the weather now in Tokyo?"
+python openai_agent.py --query "What is the weather now in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse
 ```
 ```
 Using SSE weather MCP  server
@@ -149,7 +147,7 @@ The current weather in New York, based on the latest available data from the res
 Note: The provided data includes a forecast from May 29th to June 11th, 2025. If you need real-time updates, ensure the data source is current.
 ```
 ```console
-python openai_agent.py --query "List the files in folder /root."
+python openai_agent.py --query "List the files in folder /root." --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse
 ```
 ```
 Using SSE weather MCP  server
