@@ -1501,37 +1501,6 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "normalize: INVALID is not allowed. Supported values: true, false");
 }
 
-TEST(OvmsGraphConfigTest, ensureModelNameAndPathSetForHfSettings) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string servingName = "FastDraft";
-    std::string downloadPath = "test/repository";
-    std::string somePath = "/some/Path";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--model_name",
-        (char*)servingName.c_str(),
-        (char*)"--model_path",
-        (char*)somePath.c_str(),
-    };
-
-    int arg_count = 10;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-    auto& hfSettings = config.getServerSettings().hfSettings;
-    ASSERT_EQ(hfSettings.sourceModel, modelName);
-    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
-    ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(graphSettings.modelPath, somePath);
-    ASSERT_EQ(graphSettings.modelName, servingName);
-}
-
 class OvmsParamsTest : public ::testing::Test {
 };
 

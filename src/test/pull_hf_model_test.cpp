@@ -146,6 +146,7 @@ const std::string expectedGraphContents = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
+    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -168,6 +169,17 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
     this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
 }
 
 class TestHfDownloader : public ovms::HfDownloader {

@@ -101,7 +101,7 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
     return  result->unmatched();
 }
 
-void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
     graphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
@@ -109,10 +109,6 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         graphSettings.modelName = modelName;
     } else {
         graphSettings.modelName = hfSettings.sourceModel;
-    }
-    // Set model path
-    if (modelPath != "") {
-        graphSettings.modelPath = modelPath;
     }
 
     if (nullptr == result) {
