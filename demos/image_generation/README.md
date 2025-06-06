@@ -2,17 +2,17 @@
 
 This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) in the OpenVINO Model Server using optimized pipelines.
 Image generation use case is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
-That makes it easy to use and efficient especially on on Intel® Xeon®, Intel® Core® processors (including iGPU*), Intel® NPUs* and Intel® discrete GPUs*.
+That makes it easy to use and efficient especially on on Intel® Xeon®, Intel® Core® processors (including iGPU*), Intel® NPUs* and Intel® discrete GPUs.
 
 > * Untested
 
-> **Note:** This demo was tested on Intel® Xeon®, Intel® Core® on Ubuntu22/24, RedHat9 and Windows11.
+> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
 ## Prerequisites
 
 **Model preparation** (one of the below):
 - preconfigured models from HuggingFaces directly in OpenVINO IR format, list of Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
-- or Python 3.9+ with pip and HuggingFace account to download, convert and quantize manually using our [Export Models Tool](../common/export_models/README.md)
+- or Python 3.9+ with pip and HuggingFace account to download, convert and quantize manually using [Export Models Tool](../common/export_models/README.md)
 
 **Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
 
@@ -25,17 +25,34 @@ That makes it easy to use and efficient especially on on Intel® Xeon®, Intel®
 
 > NOTE: Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
-This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will ignore downloading and just start the serving.
+This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and just start the serving.
 
 **CPU**
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
 ```
 mkdir -p models
 
 docker run -d --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2 --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
 ```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```
+mkdir -p models
+
+ovms.exe --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
+```
+:::
+::::
 
 **GPU**
 
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
 In case you want to use Intel GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
@@ -43,7 +60,21 @@ mkdir -p models
 
 docker run -d --rm --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2-gpu --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
 ```
+:::
 
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+```bash
+mkdir -p models
+
+ovms.exe --rest_port 11338 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
+```
+
+:::
+::::
+
+:::{dropdown} Logs
 ```
 ...
 Downloading text_encoder/openvino_model.bin (124 MB)
@@ -110,6 +141,7 @@ models
             |-- openvino_model.bin
             `-- openvino_model.xml
 ```
+:::
 
 :::
 
