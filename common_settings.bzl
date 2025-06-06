@@ -21,6 +21,37 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("//:distro.bzl", "distro_flag")
+
+# cc_library rule wrapper that will accept the same arguments but if user will not provide
+# copts, linkopts, local_defines it will set them to the defaults
+# COMMON_STATIC_LIBS_COPTS & COMMON_STATIC_LIBS_LINKOPTS
+def ovms_cc_library(**kwargs):
+    """
+    Wrapper for cc_library that sets default copts and linkopts if not provided.
+    """
+    coptsProvided = kwargs.get("copts", [])
+    linkoptsProvided = kwargs.get("linkopts", [])
+    if "copts" not in kwargs:
+        kwargs["copts"] = COMMON_STATIC_LIBS_COPTS + select({
+            "//conditions:default": [],
+            "//:fuzzer_build": COMMON_FUZZER_COPTS,
+        })
+    if "linkopts" not in kwargs:
+        kwargs["linkopts"] = COMMON_STATIC_LIBS_LINKOPTS + select({
+            "//conditions:default": [],
+            "//:fuzzer_build": COMMON_FUZZER_LINKOPTS,
+        })
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "additional_copts" in kwargs:
+        kwargs["copts"] += kwargs.pop("additional_copts")
+    if "additional_linkopts" in kwargs:
+        kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+
+    native.cc_library(
+        **kwargs
+    )
+
 def create_config_settings():
     distro_flag()
     native.config_setting(
