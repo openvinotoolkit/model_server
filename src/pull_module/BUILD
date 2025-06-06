@@ -15,49 +15,33 @@
 #
 
 load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+     "ovms_cc_library")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
-
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
-cc_library(
+ovms_cc_library(
     name = "cmd_exec",
     srcs = ["cmd_exec.cpp"],
     hdrs = ["cmd_exec.hpp"],
     deps =  [],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
 )
 
-cc_library(
+ovms_cc_library(
     name = "libgit2",
     srcs = ["libgit2.cpp"],
     hdrs = ["libgit2.hpp"],
     deps =  [
-        ":cmd_exec",
         "@libgit2_engine//:libgit2_engine",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
+        ":cmd_exec",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
 )
 
-cc_library(
+ovms_cc_library(
     name = "hf_pull_model_module",
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
@@ -71,7 +55,4 @@ cc_library(
         "@ovms//src:libovms_module",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
 )
