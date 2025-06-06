@@ -29,8 +29,6 @@ def ovms_cc_library(**kwargs):
     """
     Wrapper for cc_library that sets default copts and linkopts if not provided.
     """
-    coptsProvided = kwargs.get("copts", [])
-    linkoptsProvided = kwargs.get("linkopts", [])
     if "copts" not in kwargs:
         kwargs["copts"] = COMMON_STATIC_LIBS_COPTS + select({
             "//conditions:default": [],
