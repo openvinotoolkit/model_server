@@ -44,13 +44,19 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("request_body"_a = requestBody, "chat_template"_a = templateProcessor.chatTemplate->getObject(),
+            "tool_chat_template"_a = templateProcessor.toolTemplate->getObject(), "models_path"_a = modelsPath,
             "bos_token"_a = templateProcessor.bosToken, "eos_token"_a = templateProcessor.eosToken);
         py::exec(R"(
             output = ""
             error = ""
             try:
-                messages = json.loads(request_body)["messages"]
-                output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+                request_json = json.loads(request_body)
+                messages = request_json["messages"]
+                tools = request_json["tools"] if "tools" in request_json else None
+                if tools is None:
+                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+                else:
+                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
             except Exception as e:
                 error = str(e)            
         )",

@@ -23,27 +23,26 @@
 
 namespace ovms {
 
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
-struct GraphSettingsImpl;
+struct HFSettingsImpl;
+struct TextGenGraphSettingsImpl;
 class Status;
+enum OvmsServerMode : int;
 
 class GraphCLIParser {
-    std::unique_ptr<cxxopts::Options> options;
-    std::unique_ptr<cxxopts::ParseResult> result;
-
 public:
     GraphCLIParser() = default;
-    void parse(const std::vector<std::string>& unmatchedOptions);
+    std::vector<std::string> parse(const std::vector<std::string>& unmatchedOptions);
+    void prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName);
 
-    void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
-
-    Status validate(ServerSettingsImpl*);
     void printHelp();
     void createOptions();
 
+protected:
+    std::unique_ptr<cxxopts::Options> options;
+    std::unique_ptr<cxxopts::ParseResult> result;
+
 private:
-    static GraphSettingsImpl& defaultGraphSettings();
+    static TextGenGraphSettingsImpl& defaultGraphSettings();
 };
 
 }  // namespace ovms

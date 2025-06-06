@@ -151,6 +151,8 @@ public:
     }
 
     static void TearDownTestSuite() {
+        llmExecutorWrapper.reset();
+        cbPipe.reset();
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -2521,7 +2523,7 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
+TEST_P(LLMHttpParametersValidationTest, contentNotValid) {
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2532,7 +2534,31 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
             "messages": [
             {
                 "role": "user",
-                "content": 1
+                "content": [1,2,3]
+            }
+            ]
+        }
+    )";
+
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_NE(status.string().find("Invalid message structure - content array should contain objects"), std::string::npos);
+}
+
+TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
+    // Note that tool calls are not visible in non-Python build
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "content": "Some content",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
             }
             ]
         }
@@ -2540,7 +2566,54 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
+            }
+            ]
+        }
+    )";
+
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+#if (PYTHON_DISABLE == 0)
+    bool genAiTemplateParsing = false;  // With Python enabled, we use native Jinja2 template parsing
+#else
+    bool genAiTemplateParsing = true;  // With Python disabled, we use GenAI template parsing
+#endif
+
+    if (params.modelName.find("vlm") != std::string::npos) {
+        genAiTemplateParsing = true;  // VLM models always use GenAI template parsing
+    }
+
+    if (genAiTemplateParsing) {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect generic error here is that with GenAI template rendering missing content is unexpected.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Response generation failed"), std::string::npos);
+    } else {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect error here is that for the tested LLM model, lack of content means that pipeline input is empty.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Final prompt after applying chat template is empty"), std::string::npos);
+    }
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
@@ -3713,6 +3786,7 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
                 enable_prefix_caching: true
                 max_tokens_limit: 700
                 best_of_limit: 3
+                cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672, aggregation_mode: NORM_SUM, apply_rotation: true}
             }
         }
         input_stream_handler {
@@ -3741,6 +3815,11 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, true);
     ASSERT_EQ(properties->maxTokensLimit, 700);
     ASSERT_EQ(properties->bestOfLimit, 3);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_start_size(), 32);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_recent_size(), 128);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_max_cache_size(), 672);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::NORM_SUM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);

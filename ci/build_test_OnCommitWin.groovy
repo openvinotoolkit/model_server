@@ -1,3 +1,6 @@
+boolean windows_success = false
+def agent_name_windows = ""
+
 pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
@@ -9,6 +12,7 @@ pipeline {
         stage ("Build and test windows") {
             steps {
                 script {
+                    agent_name_windows = env.NODE_NAME
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
@@ -21,9 +25,21 @@ pipeline {
                         } finally {
                           windows.archive_build_artifacts()
                           windows.archive_test_artifacts()
+                          windows_success = true
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            node("${agent_name_windows}") {
+                script {
+                    if (windows_success) {
+                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_ovms-windows_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-with_python-main-latest.zip")
                     }
                 }
             }

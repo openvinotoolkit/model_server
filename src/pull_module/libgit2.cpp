@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "libgit2.hpp"
 
+#include <iostream>
 #include <string>
 #include <memory>
 
@@ -27,8 +28,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../stringutils.hpp"
+#include "cmd_exec.hpp"
+#include "../filesystem.hpp"
+#include "../localfilesystem.hpp"
 #include "../logging.hpp"
+#include "../stringutils.hpp"
 #include "../status.hpp"
 
 #ifndef PRIuZ
@@ -200,17 +204,100 @@ HfDownloader::HfDownloader() {
     this->hfEndpoint = "";
     this->hfToken = "";
     this->httpProxy = "";
+    this->overwriteModels = false;
 }
 
-HfDownloader::HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) {
-    this->sourceModel = sourceModel;
-    this->downloadPath = downloadPath;
-    this->hfEndpoint = hfEndpoint;
-    this->hfToken = hfToken;
-    this->httpProxy = httpProxy;
+std::string HfDownloader::getGraphDirectory() {
+    return this->downloadPath;
+}
+
+std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
+    return fullPath;
+}
+
+HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) {
+    this->sourceModel = inSourceModel;
+    this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
+    this->hfEndpoint = inHfEndpoint;
+    this->hfToken = inHfToken;
+    this->httpProxy = inHttpProxy;
+    this->overwriteModels = inOverwrite;
+}
+
+Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        try {
+            std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write, std::filesystem::perm_options::add);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to set permission for: {} .Exception caught: {}", dir_entry.path().string(), e.what());
+            return StatusCode::PATH_INVALID;
+        }
+    }
+
+    return StatusCode::OK;
+}
+
+Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
+    auto lfstatus = StatusCode::OK;
+    if (this->overwriteModels && std::filesystem::is_directory(path)) {
+        LocalFileSystem lfs;
+        lfstatus = lfs.deleteFileFolder(path);
+        if (lfstatus != StatusCode::OK) {
+            SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
+                path,
+                lfstatus);
+        } else {
+            SPDLOG_DEBUG("Path deleted: {}", path);
+        }
+    }
+
+    return lfstatus;
+}
+
+Status HfDownloader::checkRequiredToolsArePresent() {
+    std::string cmd = "git --version";
+    std::string output = exec_cmd(cmd);
+    if (output.find("git version ") == std::string::npos) {
+        SPDLOG_DEBUG(output);
+        SPDLOG_ERROR("Required git executable is not present. Please add git from ovms package to PATH.");
+        return StatusCode::HF_FAILED_TO_INIT_GIT;
+    }
+
+    cmd = "git-lfs --version";
+    output = exec_cmd(cmd);
+    if (output.find("git-lfs/") == std::string::npos) {
+        SPDLOG_DEBUG(output);
+        SPDLOG_ERROR("Required git-lfs executable is not present. Please add git-lfs from ovms package to PATH.");
+        return StatusCode::HF_FAILED_TO_INIT_GIT_LFS;
+    }
+
+    return StatusCode::OK;
 }
 
 Status HfDownloader::cloneRepository() {
+    if (FileSystem::isPathEscaped(this->downloadPath)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    // Repository exists and we do not want to overwrite
+    if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
+        std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
+        return StatusCode::OK;
+    }
+
+    auto status = checkRequiredToolsArePresent();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = checkIfOverwriteAndRemove(this->downloadPath);
+    if (!status.ok()) {
+        return status;
+    }
+
+    SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
     progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -253,6 +340,12 @@ Status HfDownloader::cloneRepository() {
         return StatusCode::HF_GIT_CLONE_FAILED;
     } else if (cloned_repo) {
         git_repository_free(cloned_repo);
+    }
+
+    // libgit2 clone sets readonly attributes
+    status = RemoveReadonlyFileAttributeFromDir(this->downloadPath);
+    if (!status.ok()) {
+        return status;
     }
 
     return StatusCode::OK;

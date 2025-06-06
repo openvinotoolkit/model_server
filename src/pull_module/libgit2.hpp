@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <string>
 #include <memory>
 
@@ -46,8 +47,10 @@ struct Libgt2InitGuard {
 
 class HfDownloader {
 public:
-    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy);
+    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
     Status cloneRepository();
+    std::string getGraphDirectory();
+    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
 
 protected:
     std::string sourceModel;
@@ -55,10 +58,14 @@ protected:
     std::string hfEndpoint;
     std::string hfToken;
     std::string httpProxy;
+    bool overwriteModels;
 
     HfDownloader();
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
+    Status checkIfOverwriteAndRemove(const std::string& path);
+    Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
+    Status checkRequiredToolsArePresent();
 };
 }  // namespace ovms

@@ -1,0 +1,33 @@
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+
+syntax = "proto2";
+package mediapipe;
+
+import "mediapipe/framework/calculator.proto";
+
+message EmbeddingsCalculatorOVOptions {
+  extend mediapipe.CalculatorOptions {
+    // https://github.com/google/mediapipe/issues/634 have to be unique in app
+    // no rule to obtain this
+    optional EmbeddingsCalculatorOVOptions ext = 1134738;
+    }
+    required string models_path = 1;
+    optional bool normalize_embeddings = 2 [default = true];
+    optional bool mean_pooling = 3 [default = false];
+    optional string target_device = 4 [default = "CPU"];
+    optional string plugin_config = 5 [default = ""];
+}

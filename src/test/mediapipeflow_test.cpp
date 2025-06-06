@@ -2632,7 +2632,7 @@ class MediapipeSerialization : public ::testing::Test {
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
             MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, nullptr, mediapipeServableMetricReporter) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, {}, {}, nullptr, mediapipeServableMetricReporter) {}
     };
 
 protected:
@@ -3746,7 +3746,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
         "EmbeddingsCalculator",
+        "EmbeddingsCalculatorOV",
         "RerankCalculator",
+        "RerankCalculatorOV",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
@@ -3800,6 +3802,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ImageToTensorCalculator",
         "ImageTransformationCalculator",
         "ImmediateMuxCalculator",
+        "ImageGenCalculator",
         "InferenceCalculatorCpu",
         "InputSidePacketUserTestCalc",
         "InstanceSegmentationCalculator",

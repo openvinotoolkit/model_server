@@ -151,9 +151,10 @@ mediapipe_proto_library(
 cc_library(
     name = "libovms_queue",
     hdrs = ["queue.hpp"],
-    copts = [],
     visibility = ["//visibility:public",],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "libovms_ovinferrequestsqueue",
@@ -164,15 +165,17 @@ cc_library(
         "libovmslogging",
         "//third_party:openvino",
     ],
-    copts = [],
     visibility = ["//visibility:public",],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "servable",
     hdrs = ["servable.hpp"],
-    copts = [],
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 cc_library(
     name = "ovms_header",
@@ -186,7 +189,8 @@ cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
     srcs = [],
-    deps = [],
+    deps = ["//src/config_export_module:config_export_types",
+            "//src/graph_export:graph_export_types",],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -341,7 +345,11 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "libovms_server_settings",
         "libovms_version",
+        "libovmsfilesystem",
         "//src/graph_export:graph_cli_parser",
+        "//src/graph_export:rerank_graph_cli_parser",
+        "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -618,9 +626,13 @@ cc_library(
         }) + select({
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
+                "//src/image_gen:image_gen_calculator",
+                "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator",
+                "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
+                "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",],
         }) + select({
             "//:enable_drogon": [
@@ -1214,6 +1226,7 @@ cc_library(
     srcs = ["schema.cpp",],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "libovmsfilesystem",
         "libovmsstatus",
         "libovmslogging",
     ],
@@ -2622,6 +2635,27 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+cc_library(
+    name = "image_conversion",
+    hdrs = [
+        "image_conversion.hpp",
+    ],
+    srcs = [
+        "image_conversion.cpp",
+    ],
+    deps = [
+        "@stb//:image",
+        "@com_google_absl//absl/strings",
+        "//third_party:openvino",
+        "//src:libovmslogging",
+        "//src:libovmsprofiler",
+    ],
+    visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
 # HTTP Server implementation using net_http of tensorflow
 # To use other library simply create new target and implementation of libhttp_async_writer_interface
 cc_library(
@@ -2656,7 +2690,10 @@ cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [],
+    deps = [
+        "//src/graph_export:graph_export_types",
+        "//src/config_export_module:config_export_types",
+    ],
     visibility = ["//visibility:public"],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_ADJUSTED,
@@ -2806,12 +2843,13 @@ cc_test(
                 "test/reranknode_test.cpp",
                 "test/rerank_handler_test.cpp",
                 "test/rerank_chunking_test.cpp",
-                "test/streaming_test.cpp", # Mediapipe enabled
+                "test/streaming_test.cpp",
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
                 "test/http_openai_handler_test.cpp",
                 "test/multipart_calculator_test.cpp",
+                "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
@@ -2828,6 +2866,11 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
+                # Tools support is limited to configuration with Python enabled
+                "test/llm/response_parsers/llama3_response_parser_test.cpp",
+                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
+                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
+                "test/llm/response_parsers/phi4_response_parser_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2979,6 +3022,7 @@ cc_test(
             ":pull_hf_model_test",
             ":listmodels_test",
             ":graph_export_test",
+            ":config_export_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2990,10 +3034,12 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
+                "//src/llm:response_parsers",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
+                ":text2image_test",
             ],
             "//:disable_mediapipe" :
             [
@@ -3129,6 +3175,21 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "config_export_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/config_export_test.cpp"],
+    linkopts = [],
+    deps = [
+        ":test_utils",
+        "//src/config_export_module:config_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
     name = "openvino_remote_tensors_tests",
     linkstatic = 1,
     alwayslink = True,
@@ -3175,6 +3236,20 @@ cc_library(
         ":test_utils",
         "//src:network_utils",
         "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+
+cc_library(
+    name = "text2image_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/text2image_test.cpp"],
+    deps = [
+        "//src:test_utils",
+        "//src/image_gen:imagegenutils",
+        "//src/image_gen:imagegen_init",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
@@ -3233,8 +3308,9 @@ cc_library(
         "//src:libovmslogging",
         "//src:libovmsstatus",
     ],
-    copts = COPTS_TESTS,
-    linkopts = [],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )
 filegroup(
   name = "static_analysis",
@@ -3244,4 +3320,27 @@ filegroup(
     "//src:capi_benchmark",
     "//src:capi_cpp_example"
   ]
+)
+
+cc_library(
+    name = "sidepacket_servable",
+    hdrs = ["sidepacket_servable.hpp"],
+    srcs = ["sidepacket_servable.cpp"],
+    deps = ["//src:libovmslogging",
+            "//src:libmodelconfigjsonparser",
+            "//src:libovmsstatus",
+            "//src:libovmsfilesystem",
+            "//src:libovmsmodelversioning",
+            "//src:libovms_ovinferrequestsqueue",
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "//third_party:openvino",
+            "@com_github_tencent_rapidjson//:rapidjson",] + select({
+            "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
+            "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
 )

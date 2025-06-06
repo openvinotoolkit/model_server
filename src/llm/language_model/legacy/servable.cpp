@@ -66,6 +66,8 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+
+    legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),
@@ -130,7 +132,7 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, getProperties()->responseParserName);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

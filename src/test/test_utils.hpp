@@ -73,6 +73,9 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
 
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath();
+#endif
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
 std::string adjustConfigForTargetPlatformCStr(const char* input);
@@ -728,8 +731,12 @@ public:
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
     }
+    /*
+     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
+     */
     ovms::Status loadConfig(const std::string& jsonFilename) {
-        return ModelManager::loadConfig(jsonFilename);
+        this->configFilename = jsonFilename;
+        return ModelManager::loadConfig();
     }
 
     /**
@@ -786,6 +793,7 @@ public:
 };
 
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
+void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
 
 class TestWithTempDir : public ::testing::Test {
 protected:
@@ -1043,9 +1051,15 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
- * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path c:\download
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
  */
-void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code = EXIT_SUCCESS, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
+ *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ */
+void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
@@ -1071,8 +1085,8 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
-        auto it = this->pythonNodeResourcesMap.find(nodeName);
-        if (it == std::end(pythonNodeResourcesMap)) {
+        auto it = this->sidePacketMaps.pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1081,8 +1095,8 @@ public:
 #endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
-        auto it = this->genAiServableMap.find(nodeName);
-        if (it == std::end(genAiServableMap)) {
+        auto it = this->sidePacketMaps.genAiServableMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1093,7 +1107,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps.genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

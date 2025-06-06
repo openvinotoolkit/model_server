@@ -66,7 +66,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     bool isHttpsProxyUsed = !getEnvReturnOrDefaultIfNotSet("https_proxy").empty();
     if (isHttpsProxyUsed) {
         if (timeoutOpt.value() != 0)
-            SPDLOG_WARN("We are not able to set connection timeout when proxy is used");
+            SPDLOG_DEBUG("We are not able to set connection timeout when proxy is used");
     } else {
         opts.serverConnectTimeoutMs = timeoutOpt.value();
     }
@@ -93,12 +93,12 @@ std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
 
 Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
     auto guardOrError = createGuard();
     RETURN_IF_ERROR(guardOrError);
     this->hfSettings = config.getServerSettings().hfSettings;
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} started", HF_MODEL_PULL_MODULE_NAME);
     return StatusCode::OK;
 }
 
@@ -107,16 +107,19 @@ Status HfPullModelModule::clone() const {
     if (std::holds_alternative<Status>(guardOrError)) {
         return std::get<Status>(guardOrError);
     }
-    HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy());
+    HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
     auto status = hfDownloader.cloneRepository();
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << hfDownloader.getGraphDirectory() << std::endl;
     GraphExport graphExporter;
-    status = graphExporter.createGraphFile(this->hfSettings.downloadPath, this->hfSettings.graphSettings);
+    status = graphExporter.createServableConfig(hfDownloader.getGraphDirectory(), this->hfSettings);
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Graph: graph.pbtxt created in: " << hfDownloader.getGraphDirectory() << std::endl;
+
     return StatusCode::OK;
 }
 
@@ -140,9 +143,9 @@ void HfPullModelModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
 }
 
 HfPullModelModule::~HfPullModelModule() {

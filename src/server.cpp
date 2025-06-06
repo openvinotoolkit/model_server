@@ -52,8 +52,6 @@
 #include "cli_parser.hpp"
 #include "config.hpp"
 #include "grpcservermodule.hpp"
-#include "pull_module/hf_pull_model_module.hpp"
-#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -65,7 +63,9 @@
 #include "prediction_service.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
+#include "pull_module/hf_pull_model_module.hpp"
 #include "servablemanagermodule.hpp"
+#include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -91,7 +91,7 @@ static void logConfig(const Config& config) {
     SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", OPENVINO_NAME);
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
-    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+    if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
         SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
         return;
@@ -125,7 +125,6 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
-    SPDLOG_DEBUG("list_models: {}", config.getServerSettings().listServables);
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
@@ -306,12 +305,12 @@ Status Server::startModules(ovms::Config& config) {
     bool inserted = false;
     auto it = modules.end();
 
-    if (config.getServerSettings().listServables) {
+    if (config.getServerSettings().serverMode == LIST_MODELS_MODE || config.getServerSettings().serverMode == MODIFY_CONFIG_MODE) {
         INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
         START_MODULE(it);
         return status;
     }
-    if (config.getServerSettings().hfSettings.pullHfModelMode) {
+    if (config.getServerSettings().serverMode == HF_PULL_MODE || config.getServerSettings().serverMode == HF_PULL_AND_START_MODE) {
         INSERT_MODULE(HF_MODEL_PULL_MODULE_NAME, it);
         START_MODULE(it);
         if (!status.ok()) {
@@ -319,7 +318,9 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        return status;
+        // Return from modules only in --pull mode, otherwise start the rest of modules
+        if (config.getServerSettings().serverMode == HF_PULL_MODE)
+            return status;
     }
 
 #if (PYTHON_DISABLE == 0)
@@ -393,6 +394,7 @@ void Server::shutdownModules() {
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
+    std::shared_lock lock(modulesMtx);
     modules.clear();
 }
 
@@ -423,8 +425,7 @@ int Server::start(int argc, char** argv) {
             return statusToExitCode(ret);
         }
         while (!shutdown_request &&
-               !serverSettings.hfSettings.pullHfModelMode &&
-               !serverSettings.listServables) {
+               (serverSettings.serverMode == HF_PULL_AND_START_MODE || serverSettings.serverMode == SERVING_MODELS_MODE)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
         if (shutdown_request == 2) {
@@ -458,7 +459,8 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
-        logConfig(config);
+        if (serverSettings->serverMode == HF_PULL_AND_START_MODE || serverSettings->serverMode == SERVING_MODELS_MODE)
+            logConfig(config);
         return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());

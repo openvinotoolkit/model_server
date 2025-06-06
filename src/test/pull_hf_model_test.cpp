@@ -28,6 +28,7 @@
 #include "src/modelextensions.hpp"
 
 #include "../server.hpp"
+#include "../status.hpp"
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
 
@@ -87,12 +88,18 @@ protected:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
 
-    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath) {
-        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath);
+    void ServerPullHfModel(std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 15) {
+        ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
+
+    void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
+        ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
+    }
+
     void TearDown() {
         server.setShutdownRequest(1);
-        t->join();
+        if (t)
+            t->join();
         server.setShutdownRequest(0);
         // Clone sets readonly - need to remove it before we can delete on windows
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
@@ -118,7 +125,7 @@ const std::string expectedGraphContents = R"(
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
             max_num_seqs:256,
-            device: CPU,
+            device: "CPU",
             models_path: "./",
             plugin_config: '{ }',
             enable_prefix_caching: true,
@@ -139,24 +146,46 @@ const std::string expectedGraphContents = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
+    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::appendSlash(this->directoryPath) + "repository";
-    this->ServerPullHfModel(modelName, downloadPath);
-    std::string modelPath = ovms::FileSystem::appendSlash(downloadPath) + "openvino_model.bin";
-    std::string graphPath = ovms::FileSystem::appendSlash(downloadPath) + "graph.pbtxt";
-    ASSERT_EQ(std::filesystem::exists(modelPath), true);
-    ASSERT_EQ(std::filesystem::exists(graphPath), true);
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
-    std::cout << graphContents << std::endl;
 
-    ASSERT_EQ(expectedGraphContents, graphContents);
+    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
+}
+
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
 }
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
-    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy) :
-        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy) {}
+    TestHfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool overwrite) :
+        HfDownloader(sourceModel, downloadPath, hfEndpoint, hfToken, httpProxy, overwrite) {}
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
     std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
@@ -164,6 +193,8 @@ public:
     void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
+    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getGraphDirectory(downloadPath, sourceModel); }
+    std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
 };
 
 TEST(HfDownloaderClassTest, Methods) {
@@ -172,14 +203,28 @@ TEST(HfDownloaderClassTest, Methods) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy);
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
     ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "").CheckIfProxySet(), false);
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+
+    std::string expectedPath = downloadPath + "/" + modelName;
+#ifdef _WIN32
+    std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
+#endif
+    ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
+    ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
+}
+
+TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
+    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
+    // Library not initialized
+
+    EXPECT_EQ(TestHfDownloader("name/test", this->directoryPath, "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {
@@ -221,120 +266,6 @@ TEST_F(HfDownloaderHfEnvTest, Methods) {
 
     std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();
     ASSERT_EQ(hfEndpoint, "www.new_hf.com/");
-}
-
-TEST(OvmsGraphConfigTest, positiveAllChanged) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--pipeline_type",
-        (char*)"VLM",
-        (char*)"--max_num_seqs",
-        (char*)"128",
-        (char*)"--graph_target_device",
-        (char*)"GPU",
-        (char*)"--enable_prefix_caching",
-        (char*)"false",
-        (char*)"--cache_size",
-        (char*)"20",
-        (char*)"--max_num_batched_tokens",
-        (char*)"16",
-        (char*)"--dynamic_split_fuse",
-        (char*)"true",
-        (char*)"--draft_source_model",
-        (char*)"/draft/model/source",
-    };
-
-    int arg_count = 22;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-
-    ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
-    ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "false");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 20);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.value(), 16);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.value(), "/draft/model/source");
-}
-
-TEST(OvmsGraphConfigTest, positiveSomeChanged) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--pipeline_type",
-        (char*)"VLM",
-        (char*)"--max_num_seqs",
-        (char*)"128",
-        (char*)"--graph_target_device",
-        (char*)"NPU",
-    };
-
-    int arg_count = 12;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-
-    ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
-    ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.value(), "VLM");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 128);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "NPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
-}
-
-TEST(OvmsGraphConfigTest, positiveDefault) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-    };
-
-    int arg_count = 6;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-    ASSERT_EQ(config.getServerSettings().hfSettings.sourceModel, modelName);
-    ASSERT_EQ(config.getServerSettings().hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(config.getServerSettings().hfSettings.pullHfModelMode, true);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pipelineType.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.modelPath, "./");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumSeqs, 256);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.targetDevice, "CPU");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.enablePrefixCaching, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.cacheSize, 10);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.maxNumBatchedTokens.has_value(), false);
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.dynamicSplitFuse, "true");
-    ASSERT_EQ(config.getServerSettings().hfSettings.graphSettings.draftModelDirName.has_value(), false);
 }
 
 class HfDownloadModelModule : public TestWithTempDir {};
