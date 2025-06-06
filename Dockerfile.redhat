@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.5
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -228,8 +228,8 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.1.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.1\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.1.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.1.dist-info/METADATA ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.2\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.2.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 # Build OpenVINO Model Server
