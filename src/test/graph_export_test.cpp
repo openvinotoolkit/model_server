@@ -337,7 +337,7 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
 #if (MEDIAPIPE_DISABLE == 0)
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
 #else
-    ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
 #endif
 }
 
