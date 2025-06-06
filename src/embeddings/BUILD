@@ -15,20 +15,9 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+load("//:common_settings.bzl", "ovms_cc_library")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
-
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
-cc_library(
+ovms_cc_library(
     name = "embeddings_api",
     hdrs = ["embeddings_api.hpp"],
     srcs = ["embeddings_api.cpp"],
@@ -37,9 +26,6 @@ cc_library(
             "//third_party:openvino",
             "@com_github_tencent_rapidjson//:rapidjson",],
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
@@ -53,7 +39,7 @@ mediapipe_proto_library(
     ],
 )
 
-cc_library(
+ovms_cc_library(
     name = "embeddingscalculator",
     hdrs = [],
     srcs = ["embeddings_calculator.cc"],
@@ -69,9 +55,6 @@ cc_library(
         ":embeddings_api",
     ],
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
@@ -85,7 +68,7 @@ mediapipe_proto_library(
     ],
 )
 
-cc_library(
+ovms_cc_library(
     name = "embeddingscalculator_ov",
     hdrs = [],
     srcs = ["embeddings_calculator_ov.cc"],
@@ -105,8 +88,5 @@ cc_library(
         "//src:libovms_execution_context",
     ],
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
