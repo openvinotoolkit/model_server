@@ -74,7 +74,7 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 649eec15cfeb1e1dc92164b8886d96637260e487 # releases/2025/2 RC2
+OV_SOURCE_BRANCH ?= c01cd93e24d1cd78bfbb401eed51c08fb93e0816 # releases/2025/2 RC4
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
 OV_TOKENIZERS_BRANCH ?= 85be884a69f10270703f81f970a5ee596a4c8df7 # releases/2025/2 RC2
 
