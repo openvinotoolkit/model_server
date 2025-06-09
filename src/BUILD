@@ -676,9 +676,8 @@ ovms_cc_library(
             "//:disable_mediapipe" : [],
         }),
     visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED + COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
-    linkopts = LINKOPTS_ADJUSTED + select({
+    additional_copts = COPTS_PYTHON + COPTS_MEDIAPIPE + COPTS_DROGON + COPTS_OV_TRACE,
+    additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
