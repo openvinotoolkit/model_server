@@ -65,8 +65,8 @@ RUN apt-get update ; \
 
 WORKDIR /tmp
 RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then git_lfs_url=bullseye; else git_lfs_url=bookworm; fi; \
-    wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/debian/$git_lfs_url/git-lfs_3.6.1_amd64.deb/download"
-RUN dpkg -i  git-lfs_3.6.1_amd64.deb
+    wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/debian/$git_lfs_url/git-lfs_3.6.1_amd64.deb/download" && \
+    dpkg -i  git-lfs_3.6.1_amd64.deb
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
