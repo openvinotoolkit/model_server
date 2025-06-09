@@ -723,7 +723,7 @@ ovms_cc_library(
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
     ],
     visibility = ["//visibility:public",],
-    copts = COPTS_ADJUSTED + COPTS_OV_TRACE,
+    additional_copts = COPTS_OV_TRACE,
 )
 ovms_cc_library(
     name = "notifyreceiver",
