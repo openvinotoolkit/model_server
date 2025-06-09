@@ -318,8 +318,8 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE)
+        // Return from modules only in --pull mode or error, otherwise start the rest of modules
+        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
             return status;
     }
 
