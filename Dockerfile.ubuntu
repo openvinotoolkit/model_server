@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
+# hadolint ignore=DL3003
 RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
 tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
 git clone https://github.com/git-lfs/git-lfs && \
