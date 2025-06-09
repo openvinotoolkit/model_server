@@ -2174,7 +2174,6 @@ ovms_cc_library(
     hdrs = ["filesystemfactory.hpp",],
     deps = [],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_CLOUD,
 )
 
 ovms_cc_library(
@@ -2194,6 +2193,7 @@ ovms_cc_library(
                 ],
             "//:disable_cloud": []
             }),
+    additional_copts = COPTS_CLOUD,
     visibility = ["//visibility:public"],
 )
 
