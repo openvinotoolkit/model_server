@@ -16,7 +16,7 @@
 
 :: %1 First parameter is the --output_user_root value on c:\ drive - bazel uses this, we want to install dependencies per build there
 :: %2 Second parameter is the --expunge flag - when set to 1 we will force reinstall c:\opt dependencies - default 0
-@echo off
+@echo on
 setlocal EnableExtensions EnableDelayedExpansion
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-XXXX" number passed here from jenkins so that a tmp directory will be created
@@ -248,55 +248,41 @@ IF /I EXIST %bazel_path% (
 )
 echo [INFO] Bazel installed: %bazel_file%
 
-
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
-set "gitlfs_dir=git-lfs-3.6.1"
-set "gitlfs_short_dir="
-set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
-set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
+set "gitlfs_dir=git-lfs-main_9_6_2025"
+set "gitlfs_http=https://github.com/git-lfs/git-lfs"
 
-set "gitlfs_zip=%opt_install_dir%\%gitlfs_ver%"
+set "gitlfs_repo=%opt_install_dir%\git-lfs-repo"
 
 echo [INFO] Installing git-lfs: %gitlfs_dir% ...
 :: Download git-lfs
-IF /I EXIST %gitlfs_zip% (
+IF /I EXIST %gitlfs_repo% (
     if %expunge% EQU 1 (
-        del /S /Q %gitlfs_zip%
+        rmdir /S /Q %gitlfs_repo%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+        git clone %gitlfs_http% %gitlfs_repo%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %gitlfs_zip% )
+        
+    ) else ( echo [INFO] directory exists %gitlfs_repo% )
     
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+    git clone %gitlfs_http% %gitlfs_repo%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-:: Extract git-lfs
-IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%gitlfs_dir% )
-    
+:: Build git-lfs
+IF /I EXIST %gitlfs_repo%\git-lfs.exe (
+    echo [INFO] git-lfs exists %gitlfs_repo%\git-lfs.exe
 ) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    for /f %%i in ('cd') do set IN_PWD=%%i
     if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:: Check git-lfs.exe
-IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %opt_install_dir%\%gitlfs_dir%\git-lfs.exe )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    cd %gitlfs_repo%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    "C:\Program Files\Go\bin\go.exe" build .
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    cd !IN_PWD!
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
@@ -304,7 +290,7 @@ IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
 IF /I EXIST %opt_install_dir%\git-lfs.exe (
     del /Q %opt_install_dir%\git-lfs.exe
 )
-mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
+mklink %opt_install_dir%\git-lfs.exe %gitlfs_repo%\git-lfs.exe
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
