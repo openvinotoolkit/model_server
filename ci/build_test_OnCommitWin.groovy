@@ -22,7 +22,6 @@ pipeline {
                           windows.build()
                           windows.unit_test()
                           windows.check_tests()
-                          windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                           def python_presence = ""
                           if (env.OVMS_PYTHON_ENABLED) {
