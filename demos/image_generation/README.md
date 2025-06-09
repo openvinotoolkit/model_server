@@ -85,7 +85,6 @@ ovms.exe --rest_port 8000 --model_repository_path /models/ --task image_generati
 :::
 ::::
 
-:::{dropdown} Logs
 ```
 ...
 Downloading text_encoder/openvino_model.bin (124 MB)
@@ -152,10 +151,6 @@ models
             |-- openvino_model.bin
             `-- openvino_model.xml
 ```
-:::
-
-:::
-
 
 # Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
@@ -188,7 +183,6 @@ python export_model.py image_generation --source_model black-forest-labs/FLUX.1-
 
 > **Note:** You can change the model used in the demo, please verify [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) list.
 
-:::{dropdown} Logs
 You should have a model folder like below:
 ```
 models
@@ -238,7 +232,6 @@ models
 │           └── openvino_model.xml
 └── config.json
 ```
-:::
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Image Generation calculator documentation](../../docs/image_generation/reference.md) to learn more about configuration options.
 
