@@ -419,9 +419,9 @@ exit /b 0
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.13.0_1-win64-mingw"
-set "curl_ver=curl-8.13.0_1-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.13.0_1/"
+set "curl_dir=curl-8.14.1_1-win64-mingw"
+set "curl_ver=curl-8.14.1_1-win64-mingw.zip"
+set "curl_http=https://curl.se/windows/dl-8.14.1_1/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
 
