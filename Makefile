@@ -385,6 +385,8 @@ ovms_release_images:
 ifeq ($(USE_BUILDX),true)
 	$(eval BUILDX:=buildx)
 	$(eval NO_CACHE_OPTION:=--no-cache-filter release)
+else
+	$(eval NO_CACHE_OPTION:=--no-cache)
 endif
 ifeq ($(BASE_OS),redhat)
 	$(eval NPU:=0)
