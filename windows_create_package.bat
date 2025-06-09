@@ -157,7 +157,7 @@ copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICE
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\curl-8.14.1_1-win64-mingw\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIB.md
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
 
