@@ -118,7 +118,7 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             libicu-devel && \
             dnf clean all
 
-WORKDIR /lfs
+WORKDIR /tmp
 RUN wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/el/9/git-lfs-3.6.1-1.el9.x86_64.rpm/download.rpm?distro_version_id=240"
 RUN dnf install -y git-lfs-3.6.1-1.el9.x86_64.rpm && dnf clean all
 

@@ -44,12 +44,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             patch \
             pkg-config \
             wget \
-            zlib1g-dev \
-            git-lfs && \
+            zlib1g-dev &&\
             update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9 && \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then git_lfs_url=bullseye; else git_lfs_url=bookworm; fi; \
+    wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/debian/$git_lfs_url/git-lfs_3.6.1_amd64.deb/download"
+RUN dpkg -i  git-lfs_3.6.1_amd64.deb
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
