@@ -151,7 +151,14 @@ Setting `max_num_seqs` might also be useful in providing certain level of genera
 
 ### Response parsing settings
 
-When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `response_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports 4 parsers: [`hermes3`, `llama3`, `phi4`, `qwen3`]. Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
+When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `response_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
+
+- `hermes3`
+- `llama3`
+- `phi4`
+- `qwen3`
+
+Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
 
 Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
