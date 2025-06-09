@@ -44,7 +44,7 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-cc_library( # FIXME
+cc_library(
     name = "custom_nodes_common_buffersqueue",
     linkstatic = 1,
     hdrs = ["custom_nodes/common/buffersqueue.hpp"],
