@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             patch \
             pkg-config \
             wget \
-            zlib1g-dev &&\
+            zlib1g-dev && \
             update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9 && \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
@@ -63,10 +63,14 @@ RUN apt-get update ; \
         rm -rf /var/lib/apt/lists/* ; \
     fi ;
 
-WORKDIR /tmp
-RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then git_lfs_url=bullseye; else git_lfs_url=bookworm; fi; \
-    wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/debian/$git_lfs_url/git-lfs_3.6.1_amd64.deb/download" && \
-    dpkg -i  git-lfs_3.6.1_amd64.deb
+WORKDIR /
+RUN wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+git clone https://github.com/git-lfs/git-lfs && \
+    cd git-lfs && \
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
+    /usr/local/go/bin/go build . && \
+    cp git-lfs /usr/bin/git-lfs
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
