@@ -59,6 +59,8 @@ Possible model locations (`--model_path`):
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
+In case of LLM's startup may require additional parameters. For details refer [here](TODO).
+
 ## Serving Multiple Models 
 
 To serve multiple models and pipelines from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.

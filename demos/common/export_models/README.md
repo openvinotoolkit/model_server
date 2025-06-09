@@ -1,7 +1,71 @@
-# Exporting GEN AI Models {#ovms_demos_common_export}
+# Using GEN AI Models {#ovms_demos_common_export}
+
+Generative AI models require additional configuration steps before deployment with OpenVINO Model Server (OVMS). There are two primary methods for preparing generative AI models:
+
+1. **Integrated OVMS Download**: OVMS can automatically download models from the Hugging Face (HF) repository and configure them for serving. This approach leverages built-in OVMS functionality to streamline model preparation.
+
+2. **Preprocessing with Python Script**: Alternatively, users can utilize the provided Python script to export and configure models prior to server deployment. This method is suitable for scenarios where additional customization or preprocessing is required before serving the models.
+
+Choose the method that best fits your deployment workflow and requirements.
+
+# Using GEN AI models with OVMS binary only
+
+## Starting the mediapipe graph or LLM models
+Since 2025.2 you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
+
+```
+docker run -d --rm -v <model_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
+```
+
+Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
+
+*Note*: There is no online model modification nor versioning capability as of now for graphs, LLM like models.
+
+## Starting the LLM model from HF directly
+
+There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
+
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+```
+
+| option                    | description                                                                                   |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `--pull`                  | Instructs the server to run in pulling mode to get the model from the Hugging Face repository |
+| `--source_model`          | Specifies the model name in the Hugging Face model repository (optional - if empty model_name is used) |
+| `--model_repository_path` | Directory where all required model files will be saved                                        |
+| `--model_name`            | Name of the model as exposed externally by the server                                         |
+| `--task`                  | Defines the task the model will support (e.g., text_generation/embedding, rerank, image_generation)                       |
+
+It will prepare all needed configuration files to support LLMS with OVMS in model repository
+
+In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
+
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> --task_params <task_params>
+```
+
+It will download required model files, prepare configuration for OVMS and start serving the model. Available tasks are:
+
+- `text_generation`: Generates text based on input prompts, useful for applications like chatbots or creative writing. Example: Provide a prompt and receive a coherent paragraph as output.
+- `rerank`: Reorders search results or predictions based on relevance or specific criteria. Example: Improve search engine results by reranking based on user preferences.
+- `embeddings`: Converts input data (e.g., text or images) into numerical representations for machine learning tasks. Example: Generate embeddings for text to use in similarity searches.
+- `image_generation`: Creates images based on textual descriptions or other inputs. Example: Generate an image of a "sunset over mountains" from a text prompt.
+
+Each task has its own specific additional parameters that can be used. Refer to the `--help` command for details.
+
+## Starting the LLM model from local storage
+
+In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+```
+This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
+
+# Preparing models using python script
 
 This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the `models` repository for deployment with OpenVINO Model Server. In one step it prepares a complete set of resources in the `models` repository for a supported GenAI use case.
-
 
 ## Quick Start
 ```console
