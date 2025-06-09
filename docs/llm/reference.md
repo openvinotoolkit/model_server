@@ -153,7 +153,7 @@ Setting `max_num_seqs` might also be useful in providing certain level of genera
 
 When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `response_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports 4 parsers: [`hermes3`, `llama3`, `phi4`, `qwen3`]. Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
 
-Note that using `tools` might require a chat template other that the original. 
+Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
 
 ### OpenVINO runtime settings
@@ -240,7 +240,7 @@ Errors during configuration files processing (access issue, corrupted file, inco
 
 ## Output processing
 
-Support for more diverse response structure requiers processing model output for the purpose of extracting specific parts of the output and placing them in specific fields in the final response.
+Support for more diverse response structure requires processing model output for the purpose of extracting specific parts of the output and placing them in specific fields in the final response.
 
 When using `tools`, we need to distil `tool_calls` from model output and for reasoning - `reasoning_content`. In order to receive such response, you need to specify `response_parser` as stated in [response parsing settings](#response-parsing-settings).
 
