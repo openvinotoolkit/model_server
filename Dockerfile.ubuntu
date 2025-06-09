@@ -408,7 +408,6 @@ RUN apt-get update ; \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.21.9/level-zero_1.21.9+u24.04_amd64.deb ; \ 
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
-        apt-get list --installed | grep npu ; \
     fi ; \
     apt-get clean ; \
     rm -rf /tmp/install_gpu_drivers.sh && \
