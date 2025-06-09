@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
-            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
@@ -49,6 +48,20 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+            
+# Need to upgrade git for ubuntu22 git vulnerability fix
+RUN apt-get update ; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
+        apt-get install -y --no-install-recommends software-properties-common gpg-agent ; \
+        add-apt-repository ppa:git-core/ppa -y ; \
+        apt-get update && apt-get install --no-install-recommends -y git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ; \
+    else \
+        apt-get install -y --no-install-recommends software-properties-common git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ; \
+    fi ;
 
 WORKDIR /tmp
 RUN if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then git_lfs_url=bullseye; else git_lfs_url=bookworm; fi; \
