@@ -57,7 +57,7 @@ curl http://localhost/v3/chat/completions \
 ```
 
 In case of VLM models, the request can include the images in three different formats:
-1) base64 encoding:
+1) Base64 encoding:
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -85,7 +85,7 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 
-2) image url:
+2) Image url:
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -113,7 +113,7 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 
-3) image from local filesystem:
+3) Image from local filesystem:
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
