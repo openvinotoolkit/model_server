@@ -119,7 +119,8 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             dnf clean all
 
 WORKDIR /
-RUN wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+# hadolint ignore=DL3003
+RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
 tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
 git clone https://github.com/git-lfs/git-lfs && \
     cd git-lfs && \

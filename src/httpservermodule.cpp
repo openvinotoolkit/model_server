@@ -80,6 +80,7 @@ void HTTPServerModule::shutdown() {
     drogonServer->terminate();
     drogonServer.reset();
 #endif
+    curl_global_cleanup();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;
 }

@@ -124,9 +124,16 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.2.0.0rc3_x86_64"
-set "genai_ver=openvino_genai_windows_2025.2.0.0rc3_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc3/"
+:: Set default GENAI_PACKAGE_URL if not set
+if "%GENAI_PACKAGE_URL%"=="" (
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc3/openvino_genai_windows_2025.2.0.0rc3_x86_64.zip"
+)
+
+:: Extract genai_ver from GENAI_PACKAGE_URL (filename)
+for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
+
+:: Extract genai_dir from genai_ver (filename without extension)
+for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -138,12 +145,12 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
