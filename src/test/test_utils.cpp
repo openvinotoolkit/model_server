@@ -774,7 +774,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 
     int argc = 8;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        ASSERT_EQ(expected_code, server.start(argc, argv));
+        EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
@@ -796,7 +796,7 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
 
     int argc = 9;
     t.reset(new std::thread([&argc, &argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);

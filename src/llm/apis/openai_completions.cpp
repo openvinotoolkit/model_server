@@ -280,7 +280,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 absl::Status OpenAIChatCompletionsHandler::parseTools() {
     auto tool_choice_it = doc.FindMember("tool_choice");
     std::string tool_choice{"auto"};
-    if (tool_choice_it != doc.MemberEnd()) {
+    if (tool_choice_it != doc.MemberEnd() && !tool_choice_it->value.IsNull()) {
         if (tool_choice_it->value.IsString()) {
             tool_choice = tool_choice_it->value.GetString();
             if (tool_choice != "none" && tool_choice != "auto")
@@ -311,7 +311,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
         for (size_t i = 0; i < it->value.GetArray().Size();) {
@@ -839,6 +839,11 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             // content: string; Actual content of the text produced
             writer.String("content");
             writer.String(parsedResponse.content.c_str());
+
+            if (!parsedResponse.reasoning.empty()) {
+                writer.String("reasoning_content");
+                writer.String(parsedResponse.reasoning.c_str());
+            }
             // role: string; Role of the text producer
             // Will make sense once we have chat templates? TODO(atobisze)
             writer.String("role");

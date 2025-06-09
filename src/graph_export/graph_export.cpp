@@ -129,84 +129,35 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status validateSubconfigSchema(const std::string& subconfig, const std::string& type) {
-    rapidjson::Document subconfigJson;
-    rapidjson::ParseResult parseResult = subconfigJson.Parse(subconfig.c_str());
-    if (parseResult.Code()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Created {} subconfig file is not a valid JSON file. Error: {}", type, rapidjson::GetParseError_En(parseResult.Code()));
-        return StatusCode::JSON_INVALID;
-    }
-    if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
-        SPDLOG_ERROR("Created {} subconfig file is not in valid configuration format", type);
-        return StatusCode::JSON_INVALID;
-    }
-    return StatusCode::OK;
-}
-
-static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                    "base_path": "tokenizer"
-                }
-            },
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
-                    "base_path": "rerank",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                }
-            }
-        ]
-    })";
-    auto status = validateSubconfigSchema(oss.str(), "rerank");
-    if (!status.ok()){
-        return status;
-    }
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
-}
-
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
     // clang-format off
     oss << R"(
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "RerankCalculatorOV"
+    input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:tokenizer"
     node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_tokenizer_model"
+        [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+            models_path: ")"
+            << graphOkPath << R"(",
+            max_allowed_chunks: )"
+            << graphSettings.maxAllowedChunks << R"(,
+            target_device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
     }
-    }
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:rerank"
-    node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_rerank_model"
-        }
-    }
-    }
-    node {
-        input_side_packet: "TOKENIZER_SESSION:tokenizer"
-        input_side_packet: "RERANK_SESSION:rerank"
-        calculator: "RerankCalculator"
-        input_stream: "REQUEST_PAYLOAD:input"
-        output_stream: "RESPONSE_PAYLOAD:output"
-    })";
+})";
 
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
@@ -218,11 +169,7 @@ static Status createRerankGraphTemplate(const std::string& directoryPath, const 
 #endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
-    if (!status.ok())
-        return status;
-
-    return createRerankSubconfigTemplate(directoryPath, graphSettings);
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {

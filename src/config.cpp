@@ -159,13 +159,6 @@ bool Config::validate() {
                 std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
-
-            if (settings.targetDevice != "NPU") {
-                if (settings.pluginConfig.maxPromptLength.has_value()) {
-                    std::cerr << "max_prompt_len is only supported for NPU target device";
-                    return false;
-                }
-            }
         }
 
         if (this->serverSettings.hfSettings.task == EMBEDDINGS_GRAPH) {

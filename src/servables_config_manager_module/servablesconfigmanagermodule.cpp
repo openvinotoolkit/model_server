@@ -46,7 +46,7 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     } else {
         auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
         if (status.ok()) {
-            std::cout << "Config updated: " << config.getModelSettings().configPath << "config.json" << std::endl;
+            std::cout << "Config updated: " << config.getModelSettings().configPath << std::string(1, std::filesystem::path::preferred_separator) << "config.json" << std::endl;
         } else {
             std::cout << config.getModelSettings().configPath << std::string(1, std::filesystem::path::preferred_separator) << "config.json"
                       << " error on config update : " << status.string() << std::endl;

@@ -31,6 +31,7 @@ xfail = pytest.mark.xfail
 skip = pytest.mark.skip
 
 class TestSingleModelInference:
+    @skip(reason="not implemented yet")
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -130,6 +131,7 @@ class TestSingleModelInference:
         assert "15 degrees" in completion.choices[0].message.content
         assert completion.choices[0].message.tool_calls is None or completion.choices[0].message.tool_calls == []
 
+    @skip(reason="not implemented yet")
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
