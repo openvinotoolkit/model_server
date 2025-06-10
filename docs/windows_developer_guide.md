@@ -72,7 +72,7 @@ Optionally you can build ovms.exe with python dependency that allows to use pyth
 windows_build.bat opt --with_python
 ```
 # Running unit tests - optional
-The script compiles ovms_test binary with C++ only version, downloads and converts test LLM models (src\tests\llm_testing).
+The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
 ```bat
 windows_test.bat
 ```
