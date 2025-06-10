@@ -29,7 +29,7 @@
 #include "../image_conversion.hpp"
 
 #include "pipelines.hpp"
-#include "imagegenutils.hpp"  // FIXME split
+#include "imagegenutils.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
