@@ -53,7 +53,7 @@ cd model_server
 ## Install dependencies
 Run windows_install_build_dependencies.bat
 This will install around 6 GB dependencies in the c:\opt directory:
-- wet.exe, msys2 tools, Openvinotoolkit for Genai, OpenCL headers, BoringSSL, bazel, Python 3.12.9, OpenCV, Go, Git-lfs, Curl
+- wet.exe, msys2 tools, Openvinotoolkit for GenAI, OpenCL headers, BoringSSL, bazel, Python 3.12.9, OpenCV, Go, Git-lfs, Curl
 
 If error occurs during the script execution, please fix the error and rerun the script.
 ```bat
