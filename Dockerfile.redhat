@@ -101,7 +101,7 @@ ARG JOBS=40
 ARG VERBOSE_LOGS=OFF
 
 # hadolint ignore=DL3041
-RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
+RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
             dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
