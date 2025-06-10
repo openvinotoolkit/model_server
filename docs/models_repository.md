@@ -26,7 +26,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 ```
 
 For following directory structure:
-```
+```{code}
 /models
 ├── meta
 │   ├── llama4
@@ -41,7 +41,7 @@ For following directory structure:
 ```
 
 The output would be:
-```
+```{code}
 meta/llama4
 meta/llama3.1
 LLama3.2
@@ -52,7 +52,7 @@ resnet
 
 To add model to ovms configuration file with specific model use either:
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
@@ -61,7 +61,7 @@ When model is directly inside `/models`.
 
 Or
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
 ```
@@ -69,7 +69,7 @@ when there is no model_repository specified.
 
 ## TIP: Use relative paths to make the config.json transferable in model_repository across ovms instances.
 For example:
-```
+```{code}
 cd model_repository_path
 ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
 ```
@@ -78,7 +78,7 @@ ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-
 
 If you want to remove model from configuration file you can do it either manually or use command:
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```

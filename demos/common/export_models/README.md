@@ -8,12 +8,12 @@ Generative AI models require additional configuration steps before deployment wi
 
 Choose the method that best fits your deployment workflow and requirements.
 
-# Using GEN AI models with OVMS binary only
+## 1. Using GEN AI models with OVMS binary
 
-## Starting the mediapipe graph or LLM models
+### Starting the mediapipe graph or LLM models
 Since 2025.2 you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
 ```
@@ -22,11 +22,11 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 
 *Note*: There is no online model modification nor versioning capability as of now for graphs, LLM like models.
 
-## Starting the LLM model from HF directly
+### Starting the LLM model from HF directly
 
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 
@@ -42,7 +42,7 @@ It will prepare all needed configuration files to support LLMS with OVMS in mode
 
 In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
 
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> --task_params <task_params>
 ```
 
@@ -55,19 +55,19 @@ It will download required model files, prepare configuration for OVMS and start 
 
 Each task has its own specific additional parameters that can be used. Refer to the `--help` command for details.
 
-## Starting the LLM model from local storage
+### Starting the LLM model from local storage
 
 In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
-```
+```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
 
-# Preparing models using python script
+## 2. Preparing models using python script
 
 This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the `models` repository for deployment with OpenVINO Model Server. In one step it prepares a complete set of resources in the `models` repository for a supported GenAI use case.
 
-## Quick Start
+### Quick Start
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
@@ -141,44 +141,44 @@ options:
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
 ```
 
-## Model Export Examples
+### Model Export Examples
 
-### Text Generation Models
+#### Text Generation Models
 
-#### Text Generation CPU Deployment
+##### Text Generation CPU Deployment
 ```console
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
 ```
 
-#### GPU Deployment (Low Concurrency, Limited Memory)
+##### GPU Deployment (Low Concurrency, Limited Memory)
 Text generation for GPU target device with limited memory without dynamic split fuse algorithm (recommended for usage in low concurrency):
 ```console
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --disable_dynamic_split_fuse --max_num_batched_tokens 8192 --cache_size 1
 ```
-#### GPU Deployment (High Concurrency, Dynamic Split Fuse Enabled)
+##### GPU Deployment (High Concurrency, Dynamic Split Fuse Enabled)
 Text generation for GPU target device with limited memory with enabled dynamic split fuse algorithm (recommended for usage in high concurrency):
 ```console
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 3
 ```
-#### NPU Deployment
+##### NPU Deployment
 Text generation for NPU target device. Command below sets max allowed prompt size and configures model compilation directory to speedup initialization time:
 ```console
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --config_file_path models/config_all.json --model_repository_path models --target_device NPU --max_prompt_len 2048 --ov_cache_dir ./models/.ov_cache
 ```
 
-### Embedding Models
+#### Embedding Models
 
-#### Embeddings with deployment on a single CPU host:
+##### Embeddings with deployment on a single CPU host:
 ```console
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
 ```
 
-#### Embeddings with deployment on a dual CPU host:
+##### Embeddings with deployment on a dual CPU host:
 ```console
 python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
 ```
 
-#### With Input Truncation
+##### With Input Truncation
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
 ```console
@@ -190,7 +190,7 @@ python export_model.py embeddings \
 ```
 > **Note:** When using `--truncate`, inputs exceeding the model's context length will be automatically shortened rather than producing an error. While this prevents failures, it may impact accuracy as only a portion of the input is analyzed.
 
-### Reranking Models
+#### Reranking Models
 ```console
 python export_model.py rerank \
     --source_model BAAI/bge-reranker-large \
@@ -199,7 +199,7 @@ python export_model.py rerank \
     --num_streams 2
 ```
 
-### Image Generation Models
+#### Image Generation Models
 ```console
 python export_model.py image_generation \
     --source_model dreamlike-art/dreamlike-anime-1.0 \
@@ -208,11 +208,11 @@ python export_model.py image_generation \
     --max_resolution 2048x2048
 ```
 
-## Deployment example
+### Deployment example
 
 After exporting models using the commands above (which use `--model_repository_path models` and `--config_file_path models/config_all.json`), you can deploy them with either with Docker or on Baremetal.
 
-### CPU Deployment with Docker
+#### CPU Deployment with Docker
 ```bash
 docker run -d --rm -p 8000:8000 \
     -v $(pwd)/models:/workspace:ro \
@@ -221,7 +221,7 @@ docker run -d --rm -p 8000:8000 \
     --config_path /workspace/config_all.json
 ```
 
-### GPU Deployment with Docker
+#### GPU Deployment with Docker
 ```bash
 docker run -d --rm -p 8000:8000 \
     --device /dev/dri \
@@ -232,12 +232,12 @@ docker run -d --rm -p 8000:8000 \
     --config_path /workspace/config_all.json
 ```
 
-### Baremetal Deployment
+#### Baremetal Deployment
 ```bat
 ovms --port 9000 --rest_port 8000 --config_path models/config_all.json
 ```
 
-## Memory Requirements
+### Memory Requirements
 
 Exporting large models requires substantial host memory, especially during quantization. For systems with limited RAM, consider configuring additional swap space or virtual memory.
 
