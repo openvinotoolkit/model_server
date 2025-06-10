@@ -11,6 +11,8 @@ ovms_demos_common_export
 
 ```
 
+Depending on what kind of models are to be served, you should follow steps below for:
+
 [Classical models](./models_repository_classic.md)
 
 [Graphs](./models_repository_graph.md)
@@ -19,7 +21,7 @@ ovms_demos_common_export
 
 # List models
 
-To check what models/graphs are servable from specified model repository:
+Assuming you have models repository already prepared, to check what models/graphs are servable from specified repository:
 ```
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models --list_models
