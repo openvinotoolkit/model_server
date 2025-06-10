@@ -64,11 +64,13 @@ add_common_arguments(parser_embeddings_ov)
 parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_embeddings_ov.add_argument('--name_in_config', default="", help='Name of the model that will be used in config.json', dest='name_in_config')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank_ov)
 parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
+parser_rerank_ov.add_argument('--name_in_config', default="", help='Name of the model that will be used in config.json', dest='name_in_config')
 
 parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank)
@@ -489,7 +491,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
+def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True, name_in_config=""):
     set_max_context_length = ""
     destination_path = os.path.join(model_repository_path, model_name, "ov")
     print("Exporting embeddings model to ",destination_path)
@@ -511,9 +513,11 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name + "_ov", os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
+    if name_in_config == "":
+        name_in_config = model_name
+    add_servable_to_config(config_file_path, name_in_config, os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
 
-def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
+def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length, name_in_config=""):
     set_max_context_length = ""
     destination_path = os.path.join(model_repository_path, model_name, "ov")
     print("Exporting embeddings model to ",destination_path)
@@ -528,7 +532,9 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name + "_ov", os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
+    if name_in_config == "":
+        name_in_config = model_name
+    add_servable_to_config(config_file_path, name_in_config, os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
@@ -639,13 +645,13 @@ elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'embeddings_ov':
-    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'], args['name_in_config'])
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'rerank_ov':
-    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
+    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'], args['name_in_config'])
 
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
