@@ -17,7 +17,7 @@ from invoke import task
 
 supported_clients = {"ovmsclient":["3.9","3.10","3.11","3.12","3.13"],
                      "kserve-api":["3.9","3.10","3.11","3.12","3.13"],
-                     "tensorflow-serving-api":["3.9","3.10","3.11","3.12","3.13"]}
+                     "tensorflow-serving-api":["3.9","3.10","3.11","3.12"]}
 
 @task
 def deps(c, verbose=False, fastFail=False):
