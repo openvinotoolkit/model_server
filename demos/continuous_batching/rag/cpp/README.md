@@ -11,8 +11,15 @@
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name llm_text --model_path OpenVINO/Qwen3-8B-int4-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name embeddings --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name rerank --model_path OpenVINO/bge-reranker-base-fp16-ov
+
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 
@@ -29,23 +36,10 @@ ovms.exe --add_to_config models --model_name llm_text --model_path OpenVINO/Qwen
 ovms.exe --add_to_config models --model_name embeddings --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
 ovms.exe --add_to_config models --model_name rerank --model_path OpenVINO/bge-reranker-base-fp16-ov
 
-ovms.exe --rest_port 8000 --config_path models\config.json
+ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
 ```
 :::
 ::::
-
-## Deploying the model server
-
-
-### With Docker
-```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config_all.json
-```
-
-### On Baremetal
-```bat
-ovms --rest_port 8000 --config_path ./models/config_all.json
-```
 
 ## Using RAG
 

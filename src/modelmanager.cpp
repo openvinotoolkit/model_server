@@ -438,7 +438,13 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
 
     std::ifstream ifs(mpConfig.getGraphPath());
-    return ifs.is_open();
+    if (ifs.is_open()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        return true;
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        return false;
+    }
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
