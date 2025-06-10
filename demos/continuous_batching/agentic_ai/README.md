@@ -18,7 +18,7 @@ Currently supported models:
 - microsoft/Phi-4-mini-instruct
 
 The model chat template defines how the conversation with tools and tools schema should be embedded in the prompt. 
-The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parset should be applied.
+The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and response parser should be applied.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
