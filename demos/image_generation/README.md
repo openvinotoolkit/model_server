@@ -348,7 +348,6 @@ client = OpenAI(
 response = client.images.generate(
             model="black-forest-labs/FLUX.1-schnell",
             prompt="three cats",
-            n=1,
             extra_body={
                 "rng_seed": 42,
                 "num_inference_steps": 3
