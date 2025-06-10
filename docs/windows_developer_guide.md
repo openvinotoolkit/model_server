@@ -62,7 +62,7 @@ windows_install_build_dependencies.bat
 
 ## COMPILE
 [WARNING] This step consumes 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-This default command compiles ovms.exe without python dependencies, just C++ binary with C++ chat templates GENAI LLM support.
+This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
 ```bat
 windows_build.bat
 ```
