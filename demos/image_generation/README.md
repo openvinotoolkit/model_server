@@ -4,7 +4,7 @@ This demo shows how to deploy image generation models (Stable Diffusion/Stable D
 Image generation use case is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
 That makes it easy to use and efficient especially on on Intel® Xeon®, Intel® Core® processors (including iGPU*), Intel® NPUs* and Intel® discrete GPUs.
 
-> * Untested
+> \* Untested
 
 > **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
@@ -19,7 +19,7 @@ That makes it easy to use and efficient especially on on Intel® Xeon®, Intel®
 **Client**:  Python for using OpenAI client package and Pillow to save image or simply cURL
 
 
-# Option 1. Downloading the models directly via OVMS
+## Option 1. Downloading the models directly via OVMS
 
 > **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
@@ -27,16 +27,22 @@ This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directl
 
 > **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
 
-**CPU**
+### CPU
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
 Start docker container:
-```
+```bash
 mkdir -p models
 
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2 --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:2025.2 \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/FLUX.1-schnell-int8-ov
 ```
 :::
 
@@ -51,16 +57,19 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 
-```
+```console
 mkdir -p models
 
-ovms.exe --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
+ovms.exe --rest_port 8000 ^
+  --model_repository_path /models/ ^
+  --task image_generation ^
+  --source_model OpenVINO/FLUX.1-schnell-int8-ov
 ```
 :::
 
 ::::
 
-**GPU**
+### GPU
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -70,7 +79,15 @@ It can be applied using the commands below:
 ```bash
 mkdir -p models
 
-docker run -d --rm --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -p 8000:8000 -v $(pwd)/models:/models/:rw -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy openvino/model_server:2025.2-gpu --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:2025.2-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/FLUX.1-schnell-int8-ov \
+    --target_device GPU
 ```
 :::
 
@@ -79,43 +96,59 @@ docker run -d --rm --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```bash
+```console
 mkdir -p models
 
-ovms.exe --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
+ovms.exe --rest_port 8000 ^
+  --model_repository_path /models/ ^
+  --task image_generation ^
+  --source_model OpenVINO/FLUX.1-schnell-int8-ov ^
+  --target_device GPU
 ```
 :::
 
 ::::
 
-**NPU**
+### NPU
 TBD
 
-# Option 2. Using export script to download, convert and quantize then start the serving
+## Option 2. Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
 Quantization ensures faster initialization time, better performance and lower memory consumption.
 Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script (2025.2 and later), install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/main/demos/common/export_models/requirements.txt
-mkdir models  # TODO: Change main to 2025.2 release branch
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+mkdir models
 ```
 
 Run `export_model.py` script to download and quantize the model:
 
 > **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](black-forest-labs/FLUX.1-schnell) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
+
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
-**CPU**
+### Export model for CPU
 ```console
-python export_model.py image_generation --source_model black-forest-labs/FLUX.1-schnell --weight-format int8 --config_file_path models/config.json --model_repository_path models --overwrite_models
+python export_model.py image_generation \
+  --source_model black-forest-labs/FLUX.1-schnell \
+  --weight-format int8 \
+  --config_file_path models/config.json \
+  --model_repository_path models \
+  --overwrite_models
 ```
 
-**GPU**
+### Export model for GPU
 ```console
-python export_model.py image_generation --source_model black-forest-labs/FLUX.1-schnell --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models --overwrite_models
+python export_model.py image_generation \
+  --source_model black-forest-labs/FLUX.1-schnell \
+  --weight-format int8 \
+  --target_device GPU \
+  --config_file_path models/config.json \
+  --model_repository_path models \
+  --overwrite_models
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `int8` or `fp16` precision to reduce memory consumption and improve performance, or omit this parameter to keep the original precision.
@@ -131,7 +164,7 @@ The default configuration should work in most cases but the parameters can be tu
 
 Select deployment option depending on how you prepared models in the previous step.
 
-**CPU**
+**CPU**  
 
 Running this command starts the container with CPU only target device:
 
@@ -141,7 +174,11 @@ Running this command starts the container with CPU only target device:
 
 Start docker container:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:2025.2 --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path /models/black-forest-labs/FLUX.1-schnell
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
+  openvino/model_server:2025.2 \
+    --rest_port 8000 \
+    --model_name black-forest-labs/FLUX.1-schnell \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
@@ -156,14 +193,16 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-```bash
-ovms.exe --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path ./models/black-forest-labs/FLUX.1-schnell
+```console
+ovms.exe --rest_port 8000 ^
+  --model_name black-forest-labs/FLUX.1-schnell ^
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
 ::::
 
-**GPU**
+**GPU**  
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -173,7 +212,12 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/workspace:ro openvino/model_server:2025.2-gpu --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path /models/black-forest-labs/FLUX.1-schnell
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
+  --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  openvino/model_server:2025.2-gpu \
+    --rest_port 8000 \
+    --model_name black-forest-labs/FLUX.1-schnell \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
 ```
 
 :::
@@ -183,12 +227,17 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```bash
-ovms.exe --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path ./models/black-forest-labs/FLUX.1-schnell
+```console
+ovms.exe --rest_port 8000 ^
+  --model_name black-forest-labs/FLUX.1-schnell \
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
 ::::
+
+**NPU**  
+TBD
 
 ## Readiness Check
 
@@ -251,7 +300,9 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\": \"black-forest-labs/FLUX.1-schnell\", \"prompt\": \"three cats\", \"num_inference_steps\": 50, \"size\": \"512x512\"}"
+curl http://localhost:8000/v3/images/generations ^
+  -H "Content-Type: application/json" ^
+  -d "{\"model\": \"black-forest-labs/FLUX.1-schnell\", \"prompt\": \"three cats\", \"num_inference_steps\": 50, \"size\": \"512x512\"}"
 ```
 
 
