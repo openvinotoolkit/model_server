@@ -84,7 +84,7 @@ windows_test.bat opt --with_python
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-The default version creates c++ only version without python dependency.
+The default version creates C++ only version without Python dependency.
 ```bat
 windows_create_package.bat
 ```
