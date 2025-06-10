@@ -256,10 +256,46 @@ IF /I EXIST %bazel_path% (
 echo [INFO] Bazel installed: %bazel_file%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install go ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+echo [INFO] Installing go ...
+
+set "go_dir=go"
+set "go_ver=go1.24.4.windows-amd64.zip"
+set "go_http=https://go.dev/dl/"
+
+set "go_zip=%opt_install_dir%\%go_ver%"
+
+:: Download curl
+IF /I EXIST %go_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %go_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %go_zip% )
+    
+) ELSE (
+    %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract go
+IF /I EXIST %opt_install_dir%\%go_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%go_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %opt_install_dir%\%go_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
 set "gitlfs_dir=git-lfs-main_9_6_2025"
 set "gitlfs_http=https://github.com/git-lfs/git-lfs"
-
 set "gitlfs_repo=%opt_install_dir%\git-lfs-repo"
 
 echo [INFO] Installing git-lfs: %gitlfs_dir% ...
@@ -287,7 +323,7 @@ IF /I EXIST %gitlfs_repo%\git-lfs.exe (
     if !errorlevel! neq 0 exit /b !errorlevel!
     git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8
     if !errorlevel! neq 0 exit /b !errorlevel!
-    "C:\Program Files\Go\bin\go.exe" build .
+    "C:\opt\go\bin\go.exe" build .
     if !errorlevel! neq 0 exit /b !errorlevel!
     cd !IN_PWD!
     if !errorlevel! neq 0 exit /b !errorlevel!
@@ -415,7 +451,7 @@ exit /b 0
 :::::::::::::::::::::: Uninstall function end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install curl
+::::::::::::::::::::::: Install curl ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :install_curl
 echo [INFO] Installing curl ...
 
