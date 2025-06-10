@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
     parser.add_argument("--query", type=str, default="List files in `/tmp/model_server` directory", help="Query to pass to the agent")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
-    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v1", help="Base URL for the OpenAI API")
+    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
     parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
     args = parser.parse_args()
     asyncio.run(main(args.query, args.model, args.base_url, args.mcp_server_url))
