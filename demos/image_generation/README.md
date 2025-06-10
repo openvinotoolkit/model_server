@@ -19,18 +19,20 @@ That makes it easy to use and efficient especially on on Intel® Xeon®, Intel®
 **Client**:  Python for using OpenAI client package and Pillow to save image or simply cURL
 
 
-# Downloading the models directly via OVMS
+# Option 1. Downloading the models directly via OVMS
 
-> NOTE: Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
+> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
-This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and just start the serving.
+This command pulls the `OpenVINO/FLUX.1-schnell-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and just simply start the serving.
 
-> NOTE: Optionally, to only download the model and omit the serving part, use `--pull` parameter.
+> **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
 
 **CPU**
+
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
+Start docker container:
 ```
 mkdir -p models
 
@@ -40,7 +42,6 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
 
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
-**Deploying on Bare Metal**
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -49,7 +50,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```
 mkdir -p models
@@ -57,6 +57,7 @@ mkdir -p models
 ovms.exe --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov
 ```
 :::
+
 ::::
 
 **GPU**
@@ -76,83 +77,21 @@ docker run -d --rm --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
 ```bash
 mkdir -p models
 
 ovms.exe --rest_port 8000 --model_repository_path /models/ --task image_generation --source_model OpenVINO/FLUX.1-schnell-int8-ov --target_device GPU
 ```
-
 :::
+
 ::::
 
-```
-...
-Downloading text_encoder/openvino_model.bin (124 MB)
-Downloading text_encoder_2/openvino_model.bin (4.8 GB)
-Possibly malformed smudge on Windows: see `git lfs help smudge` for more info.
-Downloading tokenizer/openvino_detokenizer.bin (617 KB)
-Downloading tokenizer/openvino_tokenizer.bin (1.4 MB)
-Downloading tokenizer_2/openvino_detokenizer.bin (794 KB)
-Downloading tokenizer_2/openvino_tokenizer.bin (794 KB)
-Downloading tokenizer_2/spiece.model (792 KB)
-Downloading transformer/openvino_model.bin (12 GB)
-Possibly malformed smudge on Windows: see `git lfs help smudge` for more info.
-Downloading vae_decoder/openvino_model.bin (50 MB)
-Downloading vae_encoder/openvino_model.bin (34 MB)
-...
-```
+**NPU**
+TBD
 
-Your directory structure should look like this:
-```
-models
-`-- OpenVINO
-    `-- FLUX.1-schnell-int8-ov
-        |-- README.md
-        |-- graph.pbtxt
-        |-- model_index.json
-        |-- scheduler
-        |   `-- scheduler_config.json
-        |-- text_encoder
-        |   |-- config.json
-        |   |-- openvino_model.bin
-        |   `-- openvino_model.xml
-        |-- text_encoder_2
-        |   |-- config.json
-        |   |-- openvino_model.bin
-        |   `-- openvino_model.xml
-        |-- tokenizer
-        |   |-- merges.txt
-        |   |-- openvino_detokenizer.bin
-        |   |-- openvino_detokenizer.xml
-        |   |-- openvino_tokenizer.bin
-        |   |-- openvino_tokenizer.xml
-        |   |-- special_tokens_map.json
-        |   |-- tokenizer_config.json
-        |   `-- vocab.json
-        |-- tokenizer_2
-        |   |-- openvino_detokenizer.bin
-        |   |-- openvino_detokenizer.xml
-        |   |-- openvino_tokenizer.bin
-        |   |-- openvino_tokenizer.xml
-        |   |-- special_tokens_map.json
-        |   |-- spiece.model
-        |   |-- tokenizer.json
-        |   `-- tokenizer_config.json
-        |-- transformer
-        |   |-- config.json
-        |   |-- openvino_model.bin
-        |   `-- openvino_model.xml
-        |-- vae_decoder
-        |   |-- config.json
-        |   |-- openvino_model.bin
-        |   `-- openvino_model.xml
-        `-- vae_encoder
-            |-- config.json
-            |-- openvino_model.bin
-            `-- openvino_model.xml
-```
-
-# Using export script to download, convert and quantize then start the serving
+# Option 2. Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
 Quantization ensures faster initialization time, better performance and lower memory consumption.
 Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
@@ -183,55 +122,6 @@ python export_model.py image_generation --source_model black-forest-labs/FLUX.1-
 
 > **Note:** You can change the model used in the demo, please verify [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models) list.
 
-You should have a model folder like below:
-```
-models
-├── black-forest-labs
-│   └── FLUX.1-schnell
-│       ├── graph.pbtxt
-│       ├── model_index.json
-│       ├── scheduler
-│       │   └── scheduler_config.json
-│       ├── text_encoder
-│       │   ├── config.json
-│       │   ├── openvino_model.bin
-│       │   └── openvino_model.xml
-│       ├── text_encoder_2
-│       │   ├── config.json
-│       │   ├── openvino_model.bin
-│       │   └── openvino_model.xml
-│       ├── tokenizer
-│       │   ├── merges.txt
-│       │   ├── openvino_detokenizer.bin
-│       │   ├── openvino_detokenizer.xml
-│       │   ├── openvino_tokenizer.bin
-│       │   ├── openvino_tokenizer.xml
-│       │   ├── special_tokens_map.json
-│       │   ├── tokenizer_config.json
-│       │   └── vocab.json
-│       ├── tokenizer_2
-│       │   ├── openvino_detokenizer.bin
-│       │   ├── openvino_detokenizer.xml
-│       │   ├── openvino_tokenizer.bin
-│       │   ├── openvino_tokenizer.xml
-│       │   ├── special_tokens_map.json
-│       │   ├── spiece.model
-│       │   ├── tokenizer_config.json
-│       │   └── tokenizer.json
-│       ├── transformer
-│       │   ├── config.json
-│       │   ├── openvino_model.bin
-│       │   └── openvino_model.xml
-│       ├── vae_decoder
-│       │   ├── config.json
-│       │   ├── openvino_model.bin
-│       │   └── openvino_model.xml
-│       └── vae_encoder
-│           ├── config.json
-│           ├── openvino_model.bin
-│           └── openvino_model.xml
-└── config.json
-```
 
 The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [Image Generation calculator documentation](../../docs/image_generation/reference.md) to learn more about configuration options.
 
@@ -248,12 +138,16 @@ Running this command starts the container with CPU only target device:
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
+
+Start docker container:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:2025.2 --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path /models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
-**Deploying on Bare Metal**
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
 
 Assuming you have unpacked model server package, make sure to:
 
@@ -262,10 +156,6 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
 ```bash
 ovms.exe --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
@@ -290,6 +180,9 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
 ```bash
 ovms.exe --rest_port 8000 --model_name black-forest-labs/FLUX.1-schnell --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
@@ -346,18 +239,21 @@ curl http://localhost:8000/v3/images/generations \
 
 Windows Powershell
 ```powershell
-(Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
- -Method POST `
- -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "black-forest-labs/FLUX.1-schnell", "prompt": "three cats", "num_inference_steps": 50, "size": "512x512"}').Content
+$response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
+    -Method POST `
+    -Headers @{ "Content-Type" = "application/json" } `
+    -Body '{"model": "black-forest-labs/FLUX.1-schnell", "prompt": "three cats", "num_inference_steps": 50}'
+
+$base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
+
+[IO.File]::WriteAllBytes('output.png', [Convert]::FromBase64String($base64))
 ```
-TODO: Save to disk
 
 Windows Command Prompt
 ```bat
 curl -s http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\": \"black-forest-labs/FLUX.1-schnell\", \"prompt\": \"three cats\", \"num_inference_steps\": 50, \"size\": \"512x512\"}"
 ```
-TODO: Save to disk
+
 
 Expected Response
 ```json
@@ -421,11 +317,11 @@ Output file (`out.png`):
 
 ## Benchmarking text generation with high concurrency
 
-TODO
+TBD
 
 ## Testing the model accuracy over serving API
 
-TODO
+TBD
 
 
 ## References
