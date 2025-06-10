@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
-            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
@@ -44,12 +43,35 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             patch \
             pkg-config \
             wget \
-            zlib1g-dev \
-            git-lfs && \
+            zlib1g-dev && \
             update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9 && \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+            
+# Need to upgrade git for ubuntu22 git vulnerability fix
+RUN apt-get update ; \
+    if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
+        apt-get install -y --no-install-recommends software-properties-common gpg-agent ; \
+        add-apt-repository ppa:git-core/ppa -y ; \
+        apt-get update && apt-get install --no-install-recommends -y git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ; \
+    else \
+        apt-get install -y --no-install-recommends software-properties-common git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ; \
+    fi ;
+
+WORKDIR /
+# hadolint ignore=DL3003
+RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+git clone https://github.com/git-lfs/git-lfs && \
+    cd git-lfs && \
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
+    /usr/local/go/bin/go build . && \
+    cp git-lfs /usr/bin/git-lfs
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
