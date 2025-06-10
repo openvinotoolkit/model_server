@@ -4,7 +4,7 @@ Generative AI models require additional configuration steps before deployment wi
 
 1. **Integrated OVMS Download**: OVMS can automatically download models from the Hugging Face (HF) repository and configure them for serving. This approach leverages built-in OVMS functionality to streamline model preparation.
 
-2. **Preprocessing with Python Script**: Alternatively, users can utilize the provided Python script to export and configure models prior to server deployment. This method is suitable for scenarios where additional customization or preprocessing is required before serving the models.
+2. **Preprocessing with Python Script**: Alternatively, users can utilize the provided Python script to export and configure models prior to server deployment.
 
 Choose the method that best fits your deployment workflow and requirements.
 
