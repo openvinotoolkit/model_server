@@ -38,7 +38,14 @@ Like the rest of the endpoints, rerank can run on CPU and GPU.
 Check the [demo](../demos/rerank/README.md) how this endpoint can be used.
 
 
+## Image generation
 
+The implementation is compatible with the OpenAI API for [images/generations](./model_server_rest_api_image_generation.md).
+It supports a wide range of image generation models from Hugging Face Hub.
+
+Learn more about the [Image generation calculator](./image_generation/reference.md) and [exporting the models from Hugging Face for serving](../demos/common/export_models/README.md).
+
+Check also the demo of [image generation](../demos/image_generation/README.md)
 
 
 
