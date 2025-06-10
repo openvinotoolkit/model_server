@@ -1,6 +1,6 @@
 # Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
-OpenVINO Model Server can be used to serve language modela for AI Agents. It supports the usage of tools in the context of content generation.
+OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
 You can learn more about [tools calling based on OpenAI API](https://platform.openai.com/docs/guides/function-calling?api-mode=responses)
 
@@ -18,12 +18,12 @@ Currently supported models:
 - microsoft/Phi-4-mini-instruct
 
 The model chat template defines how the conversation with tools and tools schema should be embedded in the prompt. 
-The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parset should be applied.
+The model response with tool call follow a specific syntax which is process by a response parser. The export tool allows choosing which template and output parser should be applied.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:

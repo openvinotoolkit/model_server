@@ -45,6 +45,7 @@ async def run(query, agent, OVMS_MODEL_PROVIDER):
     await weather_server.connect()
     print(f"\n\nRunning: {query}")
     result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
+    print(result.raw_responses, dir(result))
     print(result.final_output)
 
 
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
     parser.add_argument("--query", type=str, default="List files in `/tmp/model_server` directory", help="Query to pass to the agent")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
-    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v1", help="Base URL for the OpenAI API")
+    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
     parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
     args = parser.parse_args()
     weather_server = None
