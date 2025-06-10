@@ -23,7 +23,7 @@ from typing import List
 
 from openai import AsyncOpenAI
 from agents import Agent, Runner, RunConfig
-from agents.mcp import MCPServer, MCPServerSse, MCPServerStdio
+from agents.mcp import MCPServerSse, MCPServerStdio
 from agents.model_settings import ModelSettings
 import argparse
 
@@ -40,9 +40,21 @@ API_KEY = "not_used"
 env_proxy = {"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy")}
 RunConfig.tracing_disabled = True  # Disable tracing for this example
 
+async def run(query, agent, OVMS_MODEL_PROVIDER):
+    await fs_server.connect()
+    await weather_server.connect()
+    print(f"\n\nRunning: {query}")
+    result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
+    print(result.final_output)
 
 
-async def main(query, model_name: str, base_url: str, mcp_server_url: str):
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
+    parser.add_argument("--query", type=str, default="List files in `/tmp/model_server` directory", help="Query to pass to the agent")
+    parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
+    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v1", help="Base URL for the OpenAI API")
+    parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
+    args = parser.parse_args()
     weather_server = None
     if platform.system() == "Windows":
         weather_server = MCPServerStdio(
@@ -54,40 +66,29 @@ async def main(query, model_name: str, base_url: str, mcp_server_url: str):
         print("Using SSE weather MCP server")
         weather_server = MCPServerSse(
             name="SSE Python Server",
-            params={ "url": mcp_server_url}  # URL of the MCP SSE server
+            params={ "url": args.mcp_server_url}
         )
     fs_server = MCPServerStdio(
             client_session_timeout_seconds=30,
             name="FS MCP Server",
             params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy,}
     )
-    async with weather_server, fs_server:
-        await run([weather_server, fs_server], query, model_name, base_url)
-
-async def run(mcp_servers: List[MCPServer], message: str, model_name: str, base_url: str):
-
-    client = AsyncOpenAI(base_url=base_url, api_key=API_KEY)
+    client = AsyncOpenAI(base_url=args.base_url, api_key=API_KEY)
 
     class OVMSModelProvider(ModelProvider):
         def get_model(self, _) -> Model:
-            return OpenAIChatCompletionsModel(model=model_name, openai_client=client)
+            return OpenAIChatCompletionsModel(model=args.model, openai_client=client)
 
     OVMS_MODEL_PROVIDER = OVMSModelProvider()
 
     agent = Agent(
         name="Assistant",
-        mcp_servers=mcp_servers,
+        mcp_servers=[fs_server, weather_server],
         model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
     )
-    print(f"\n\nRunning: {message}")
-    result = await Runner.run(starting_agent=agent, input=message, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
-    print(result.final_output)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
-    parser.add_argument("--query", type=str, default="List files in `/tmp/model_server` directory", help="Query to pass to the agent")
-    parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
-    parser.add_argument("--base-url", type=str, default="http://localhost:8000/v1", help="Base URL for the OpenAI API")
-    parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
-    args = parser.parse_args()
-    asyncio.run(main(args.query, args.model, args.base_url, args.mcp_server_url))
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER))
