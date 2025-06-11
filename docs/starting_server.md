@@ -62,12 +62,26 @@ Possible model locations (`--model_path`):
 ## Serving GenAI models and mediapipes
 
 ### Starting the mediapipe graph or LLM models
-Now you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
+You can start server with single mediapipe graph, or LLM model that is already configured in local filesystem with:
 
-```
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
 docker run -d --rm -v <model_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
 ```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
+```
+:::
+::::
 
 Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
 
@@ -169,7 +183,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 ```
 
 For following directory structure:
-```{code}
+```text
 /models
 ├── meta
 │   ├── llama4
@@ -184,7 +198,7 @@ For following directory structure:
 ```
 
 The output would be:
-```{code}
+```text
 meta/llama4
 meta/llama3.1
 LLama3.2
@@ -195,7 +209,7 @@ resnet
 
 To add model to ovms configuration file you can either do it manually or use:
 
-```{code}
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
@@ -204,14 +218,14 @@ When model is directly inside models repository.
 
 *Note*:
 If you want to add model with specific path you can use:
-```{code}
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
 ```
 
 *Note:* Use relative paths to make the config.json transferable in model_repository across ovms instances.
 For example:
-```{code}
+```text
 cd model_repository_path
 ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
 ```
@@ -220,7 +234,7 @@ ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-
 
 If you want to remove model from configuration file you can do it either manually or use command:
 
-```{code}
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```

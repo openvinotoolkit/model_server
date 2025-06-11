@@ -1,4 +1,4 @@
-# GEN AI Models {#ovms_docs_pull}
+# Generative AI Models {#ovms_docs_pull}
 
 ```{toctree}
 ---
@@ -20,9 +20,24 @@ OVMS can automatically download models from the Hugging Face (HF) repository and
 
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
-```{code}
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_PARAMETERS]
+```
+:::
+::::
+
 
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
