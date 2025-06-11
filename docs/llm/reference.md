@@ -207,7 +207,8 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json` which specifies recommended generation parameters.
+If such file exists, model server will use it to load default generation configuration for processing request to that model.
 
 Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
 
@@ -267,16 +268,16 @@ Some servable types introduce additional limitations:
 ### Stateful servable limitations
 - `finish_reason` not supported (always set to `stop`),
 - `logprobs` not supported,
-- sequential request processing (only one request is handled at a time)
+- sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
+- prompt lookup decoding is not supported
 - **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- `image_url` input supports only base64 encoded image, not an actual URL
-- does not work with `tools`
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected
+- does not work with `tools`,
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)

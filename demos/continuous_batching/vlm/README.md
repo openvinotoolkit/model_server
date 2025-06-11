@@ -147,6 +147,37 @@ curl http://localhost:8000/v1/config
 Let's send a request with text an image in the messages context.
 ![zebra](../../../demos/common/static/images/zebra.jpeg) 
 
+:::{dropdown} **Unary call with curl using image url**
+
+
+```bash
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"microsoft/Phi-3.5-vision-instruct\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "The picture features a zebra standing in a grassy plain. Zebras are known for their distinctive black and white striped patterns, which help them blend in for camouflage purposes. The zebra pictured is standing on a green field with patches of grass, indicating it may be in its natural habitat. Zebras are typically social animals and are often found in savannahs and grasslands.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1741731554,
+  "model": "microsoft/Phi-3.5-vision-instruct",
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 19,
+    "completion_tokens": 83,
+    "total_tokens": 102
+  }
+}
+```
+:::
+
 :::{dropdown} **Unary call with python requests library**
 
 ```console

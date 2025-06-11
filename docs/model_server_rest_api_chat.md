@@ -56,7 +56,8 @@ curl http://localhost/v3/chat/completions \
 }
 ```
 
-In case of VLM models, the request can include the images in base64 encoding. For example:
+In case of VLM models, the request can include the images in three different formats:
+1) Base64 encoding:
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -84,8 +85,70 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 
+2) Image url:
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llava",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "What is on the picture?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "http:// ... /images/zebra.jpeg"
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
+3) Image from local filesystem:
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llava",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "What is on the picture?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "/images/zebra.jpeg"
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+**Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
 ### Request
+
+Below we listed request parameters specified in the body as defined in OpenAI API specification. 
+
+Some parameters, especially related to sampling (like `temperature`, `top_p` etc.), have default values that are applied if they are not specified by the user. 
+
+**Note that below defaults can be overridden by configuration specified in `generation_config.json` file in model directory.** It means that if model specifies some default configuration, it will be applied instead of defaults specified by OVMS and mentioned below.
 
 #### Generic
 
