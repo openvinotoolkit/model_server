@@ -1,13 +1,13 @@
 # Starting the Server  {#ovms_docs_serving_model}
 
 There are two method for passing to the model server information about the models and their configuration:
-- via CLI parameters - for a single model 
+- via CLI parameters - for a single model or pipeline
 - via config file in json format - for any number of models and pipelines
 
 Note that changing configuration in runtime while serving is possible only with the config file.
 When deploying model(s) with a configuration file, you can add or delete models, as well as update their configurations in runtime, without needing to restart the server.
 
-## Serving a Single Model
+## Serving a Classic Model
 
 Before starting the container, make sure you have [prepared the model for serving](models_repository.md).
 
@@ -83,15 +83,10 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
 
-### Starting the LLM model from local storage
-
-In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
-```
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
-```
-This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
-
 In case of GenAI models, startup may require additional parameters specific to task. For details refer [here](./parameters.md).
+
+*Note:*
+When using ```--task``` you need both read and write access rights to models repository.
 
 ## Serving Multiple Models 
 
@@ -165,7 +160,7 @@ or for binary package:
 ovms --config_path <path_to_config_file> --port 9000 --rest_port 8000
 ```
 
-# List models
+### List models
 
 Assuming you have models repository already prepared, to check what models/graphs are servable from specified repository:
 ```
@@ -196,33 +191,32 @@ LLama3.2
 resnet
 ```
 
-# Enable model
+### Enable model
 
-To add model to ovms configuration file with specific model use either:
+To add model to ovms configuration file you can either do it manually or use:
 
 ```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
 
-When model is directly inside `/models`.
+When model is directly inside models repository.
 
-Or
-
+*Note*:
+If you want to add model with specific path you can use:
 ```{code}
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
 ```
-when there is no model_repository specified.
 
-[!TIP] Use relative paths to make the config.json transferable in model_repository across ovms instances.
+*Note:* Use relative paths to make the config.json transferable in model_repository across ovms instances.
 For example:
 ```{code}
 cd model_repository_path
 ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
 ```
 
-# Disable model
+### Disable model
 
 If you want to remove model from configuration file you can do it either manually or use command:
 
@@ -230,15 +224,3 @@ If you want to remove model from configuration file you can do it either manuall
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```
-
-## Next Steps
-
-- Explore all model serving [features](features.md)
-- Try model serving [demos](../demos/README.md)
-
-## Additional Resources
-
-- [Preparing a Model Repository](models_repository.md)
-- [Using Cloud Storage](using_cloud_storage.md)
-- [Troubleshooting](troubleshooting.md)
-- [Model Server Parameters](parameters.md)
