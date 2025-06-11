@@ -1,3 +1,0 @@
-requests
-pypdf2
-transformers
