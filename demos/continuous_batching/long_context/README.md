@@ -115,7 +115,7 @@ Enable prefix caching feature with `--enable_prefix_caching` parameter when you 
 
 Use KV cache compression as INT8 which is the default setting.
 
-Set the KV cache sie via `--cache` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
+Set the KV cache size via `--cache` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
 
 **Note** You can force reducing the concurrency on the server using a parameter --rest_workers which by default allows number of connections the same like number of CPU cores.
 
