@@ -144,6 +144,12 @@ curl http://localhost/v3/chat/completions \
 
 ### Request
 
+Below we listed request parameters specified in the body as defined in OpenAI API specification. 
+
+Some parameters, especially related to sampling (like `temperature`, `top_p` etc.), have default values that are applied if they are not specified by the user. 
+
+**Note that below defaults can be overridden by configuration specified in `generation_config.json` file in model directory.** It means that if model specifies some default configuration, it will be applied instead of defaults specified by OVMS and mentioned below.
+
 #### Generic
 
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
