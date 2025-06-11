@@ -268,7 +268,7 @@ Some servable types introduce additional limitations:
 ### Stateful servable limitations
 - `finish_reason` not supported (always set to `stop`),
 - `logprobs` not supported,
-- sequential request processing (only one request is handled at a time)
+- sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
 - prompt lookup decoding is not supported
 - **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
@@ -276,9 +276,8 @@ Some servable types introduce additional limitations:
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- `image_url` input supports only base64 encoded image, not an actual URL
-- does not work with `tools`
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected
+- does not work with `tools`,
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
