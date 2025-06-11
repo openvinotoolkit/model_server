@@ -33,7 +33,7 @@ python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1
 
 Start OVMS:
 ```
-docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main_main_OVMSCOps-7024 --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU --rest_port 8000
+docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU --rest_port 8000
 ```
 
 ## Dataset for experiments
@@ -41,9 +41,9 @@ docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw registry.toolbox.io
 To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
 
 ```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_bataching/long_context/create_dataset.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_bataching/long_context/custom_dataset.py
 pip install requests transformers
-python make_dataset.py --limit_context_tokens 50000
+python custom_dataset.py --limit_context_tokens 50000
 ```
 
 It will create a file called `dataset.jsonl` with 10 requests of shared context body limited to 50000 tokens. 
@@ -116,7 +116,7 @@ Enable prefix caching feature with `--enable_prefix_caching` parameter when you 
 
 Use KV cache compression as INT8 which is the default setting.
 
-Set the KV cache size via `--cache` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
+Set the KV cache size via `--cache_size` parameter based on the available memory, expected concurrency and context length. It will improve the performance. 
 
-**Note** You can force reducing the concurrency on the server using a parameter --rest_workers which by default allows number of connections the same like number of CPU cores.
+**Note** You can force reducing the concurrency on the server using a parameter `--rest_workers` which by default allows number of connections the same like number of CPU cores. Alternatively the limit can be set on the model level in `--max_num_seqs`.
 

@@ -58,12 +58,9 @@ file_url = args.file_url
 model_name = args.model_name
 limit_context_tokens = args.limit_context_tokens    
 
-file_url = "https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/handle/20.500.12024/2011/donquix-2011.txt"
-
 text = download_file(file_url)
 
 # Initialize the tokenizer
-model_name = "Qwen/Qwen2.5-7B-Instruct-1M"  # Replace with your desired model name
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # Tokenize the text
@@ -92,7 +89,7 @@ dataset = ""
 for question in list_of_questions:
     prompt = f"For the given CONTEXT answer the QUESTION. \n CONTEXT: {text}\n QUESTION {question}\n"
     item = {"prompt": prompt }
-    dataset += dataset + json.dumps(item, ensure_ascii=False) + "\n"
+    dataset += json.dumps(item, ensure_ascii=False) + "\n"
 
 
 # Save the dataset to a JSON file
