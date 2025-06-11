@@ -267,16 +267,15 @@ Some servable types introduce additional limitations:
 ### Stateful servable limitations
 - `finish_reason` not supported (always set to `stop`),
 - `logprobs` not supported,
-- sequential request processing (only one request is handled at a time)
+- sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
 - **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- `image_url` input supports only base64 encoded image, not an actual URL
-- does not work with `tools`
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected
+- does not work with `tools`,
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
