@@ -1,4 +1,4 @@
-# RAG demo with all execution steps delegated to the OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
+# CPP RAG demo with all execution steps delegated to the OpenVINO Model Server {#ovms_demos_continuous_batching_rag_cpp}
 
 
 ## Creating models repository for all the endpoints
@@ -43,4 +43,4 @@ ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
 
 ## Using RAG
 
-When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
+When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/client/rag_demo.ipynb) to use RAG chain with a fully remote execution.

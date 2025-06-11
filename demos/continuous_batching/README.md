@@ -6,7 +6,8 @@ maxdepth: 1
 hidden:
 ---
 ovms_demos_continuous_batching_accuracy
-ovms_demos_continuous_batching_rag
+ovms_demos_continuous_batching_rag_cpp
+ovms_demos_continuous_batching_rag_python
 ovms_demos_continuous_batching_scaling
 ovms_demos_continuous_batching_speculative_decoding
 ```
@@ -379,7 +380,7 @@ P99 TPOT (ms):                           246.48
 
 The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
 
-Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/client/rag_demo.ipynb)
 
 ## Scaling the Model Server
 
