@@ -56,21 +56,25 @@ Configuration options for the server are defined only via command-line options a
 
 Shared configuration options for the pull, and pull & start mode.
 
-| option                    | Value format | Description                                                                                   |
-|---------------------------|-----------------------------------------------------------------------------------------------|
-| `--pull`                  | `NA` | Instructs the server to run in pulling mode to get the model from the Hugging Face repository |
-| `--source_model`          | | Specifies the model name in the Hugging Face model repository (optional - if empty model_name is used) |
-| `--model_repository_path` | | Directory where all required model files will be saved                                                 |
-| `--model_name`            | | Name of the model as exposed externally by the server                                                  |
-| `--task`                  | | Defines the task the model will support (e.g., text_generation/embedding, rerank, etc.)                |
+### Pull Mode Options
+
+| Option                      | Value format | Description                                                                                                   |
+|-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
+| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
+| `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
+| `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).              |
 
 There are also additional environment variables that may change the behavior of pulling:
 
-| option                    | Value format | Description                                                                    |
-|---------------------------|-----------------------------------------------------------------------------------------------|
-| `HF_ENDPOINT` | `string` | default value: `huggingface.co`. For uses in China it may be required to change this to `https://hf-mirror.com` |
-| `HF_TOKEN` | `string` | For pulling some of models form HF it may require to have authentication token set up |
-| `https_proxy` | `string` | If this variable is defined then pulling will download models using this proxy |
+### Environment Variables for Pull Mode
+
+| Variable        | Value format | Description                                                                                                              |
+|-----------------|--------------|--------------------------------------------------------------------------------------------------------------------------|
+| `HF_ENDPOINT`   | `string`     | Default: `huggingface.co`. For users in China, set to `https://hf-mirror.com` if needed.                                 |
+| `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
+| `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
@@ -88,14 +92,14 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
 
 ### Image generation
-| option                    | Value format | Description                                                                    |
-|---------------------------|-----------------------------------------------------------------------------------------------|
-| `--max_resolution` | `string` | Max allowed resolution in a format of WxH; W=width H=height. If not specified, inherited from model. |
-| `--default_resolution` | `string` | Default resolution when not specified by client in a format of WxH; W=width H=height. If not specified, inherited from model. |
-| `--max_num_images_per_prompt` | `integer` | Maximum allowed number of images client is allowed to request for a given model in one request. |
-| `--default_num_inference_steps` | `integer` | Default number of inference steps when not specified by client. |
-| `--max_num_inference_steps`  | `integer` | Maximum allowed number of inference steps client is allowed to request for a given model. |
-| `--num_streams`| `integer` | The number of parallel execution streams to use for the image generation models. Use at least 2 on 2 socket CPU systems. |
+| option                            | Value format | Description                                                                                                         |
+|-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------|
+| `--max_resolution`                | `string`     | Maximum allowed resolution in the format `WxH` (W = width, H = height). If not specified, inherited from the model. |
+| `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. If not specified, inherited from the model.|
+| `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request.                                       |
+| `--default_num_inference_steps`   | `integer`    | Default number of inference steps when not specified by the client.                                                 |
+| `--max_num_inference_steps`       | `integer`    | Maximum number of inference steps a client can request for a given model.                                           |
+| `--num_streams`                   | `integer`    | Number of parallel execution streams for image generation models. Use at least 2 on 2-socket CPU systems.           |
 
 *Note:*
 In 2025.2 release only 1 image generation per request is supported.

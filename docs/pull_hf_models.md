@@ -1,12 +1,22 @@
-# Preparing GEN AI Models {#ovms_docs_pull}
+# GEN AI Models {#ovms_docs_pull}
+
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_demos_common_export
+```
 
 Generative AI models require additional configuration steps before deployment with OpenVINO Model Server (OVMS). There are two primary methods for preparing generative AI models:
 
-## 1. **Integrated OVMS Download**: OVMS can automatically download models from the Hugging Face (HF) repository and configure them for serving. This approach leverages built-in OVMS functionality to streamline model preparation.
+## 1. Model preparation with OVMS:
+
+OVMS can automatically download models from the Hugging Face (HF) repository and configure them for serving. This approach leverages built-in OVMS functionality to streamline model preparation.
 
 *Note:* This approach will work assuming you are pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF. If the model is not from this organization, additional configuration steps may be required to ensure compatibility with OVMS.
 
-# Pulling the models {#ovms_pul}
+### Pulling the models
 
 There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
 
@@ -22,7 +32,7 @@ docker run -d --rm -v /models:/models openvino/model_server:latest --source_mode
 
 It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
-## 2. **Preprocessing with Python Script**:
+## 2. Preprocessing with Python Script:
 Alternatively, users can utilize the provided Python script to export and configure models prior to server deployment. This approach is more flexible as it allows for using models that were not optimized beforehand, but requires having Python set up to work. You can find the script [here](./../demos/common/export_models/export_models.py) and its README [here](./../demos/common/export_models/README.md).
 
 *Note*
