@@ -35,6 +35,6 @@ It will prepare all needed configuration files to support LLMS with OVMS in the 
 ## 2. Preprocessing with Python Script:
 Alternatively, users can utilize the provided Python script to export, optimize and configure models prior to server deployment. This approach is more flexible as it allows for using models that were not optimized beforehand, but requires having Python set up to work. You can find the script [here](./../demos/common/export_models/export_models.py) and its README [here](./../demos/common/export_models/README.md).
 
-*Note*
+*Note:*
 Use the integrated OVMS download for streamlined setups or the Python script for more flexibility in handling non-optimized models.
 
