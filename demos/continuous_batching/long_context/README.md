@@ -1,6 +1,6 @@
-# Long context optimizations {#ovms_demo_long_context}
+# Long context optimizations for LLM models {#ovms_demo_long_context}
 
-Using models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
+Using LLM models with very long context and prompts might be particularly challenging. The key goals are to get maximum throughput, minimal latency and reasonable memory consumption.
 It is very common for applications using RAG chain, documents summarization, question answering and many more. 
 Below optimizations can significantly boost performance :
 
@@ -23,16 +23,16 @@ Compression reduces this memory usage, enabling longer prompts or more parallel 
 Let's demonstrate all the optimizations combined and test it with the real life scenario of sending multiple various questions in the same context. It will illustrate the gain from the prefix caching on the first token latency, improved second token latency thanks to prompt lookup and moderate memory consumption despite very long prompts and parallel execution.
 
 Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of 1 million tokens! 
-```
-```console
+
+```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
-python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M weight-format fp16 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
 
 Start OVMS:
-```
+```bash
 docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU --rest_port 8000
 ```
 
@@ -40,8 +40,8 @@ docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw openvino/model_serv
 
 To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
 
-```
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_bataching/long_context/custom_dataset.py
+```bash
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_bataching/long_context/custom_dataset.py -o custom_dataset.py
 pip install requests transformers
 python custom_dataset.py --limit_context_tokens 50000
 ```
@@ -51,7 +51,7 @@ It will create a file called `dataset.jsonl` with 10 requests of shared context 
 ## Testing performance
 
 Let's check the performance 
-```console
+```bash
 git clone --branch v0.9.1 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements/cpu.txt . --extra-index-url https://download.pytorch.org/whl/cpu
@@ -76,10 +76,10 @@ The results shown above, despite very long context, have much lower TTFT latency
 
 | Context Length (tokens) | TTFT No Caching (ms) | TTFT Prefix Caching (ms) | KV Cache Usage (GB) |
 |------------------------|----------------------|--------------------------|---------------------|
-| 1,000                  | 785               | 124                    | 0.1                 |
-| 5,000                  | 4160              | 156                    | 0.2                 |
-| 10,000                 | 9570              | 181                    | 0.4                 |
-| 50,000                 | 152,589           | 1551                   | 1.5                 |
+| 1,000                  | 785               | 141                    | 0.1                 |
+| 5,000                  | 4160              | 172                    | 0.2                 |
+| 10,000                 | 9570              | 217                    | 0.4                 |
+| 50,000                 | 152,589           | 795                    | 1.5                 |
 | 100,000                | 624,713           | 1097                   | 3.1                 |
 | 200,000                |                   | 5406                   | 6.2                 |
 
@@ -94,7 +94,7 @@ The only difference is that the configured testing task should include a relevan
 
 For example:
 ```
-lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=Qwen/Qwen2.5-7B-Instruct-1M ,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,max_retries=3,tokenized_requests=False,timeout=300  --verbosity DEBUG  --log_samples --seed 1 --apply_chat_template --limit 100
+lm-eval --model local-chat-completions --tasks longbench_gov_report  --model_args model=Qwen/Qwen2.5-7B-Instruct-1M,base_url=http://localhost:8000/v3/chat/completions,num_concurrent=10,tokenized_requests=False,timeout=3000  --verbosity DEBUG --seed 1 --apply_chat_template
 ```
 
 Such experiment can confirm the impact on accuracy from the model quantization and KV cache compression.
