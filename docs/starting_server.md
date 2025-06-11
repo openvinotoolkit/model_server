@@ -59,7 +59,7 @@ Possible model locations (`--model_path`):
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
-## Servin GenAI models and mediapipes
+## Serving GenAI models and mediapipes
 
 ### Starting the mediapipe graph or LLM models
 Now you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
