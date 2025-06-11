@@ -91,7 +91,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 ```
 This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
 
-In case of LLM's startup may require additional parameters specific to task. For details refer [here](./parameters.md).
+In case of GenAI models, startup may require additional parameters specific to task. For details refer [here](./parameters.md).
 
 ## Serving Multiple Models 
 
