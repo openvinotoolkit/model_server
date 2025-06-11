@@ -20,6 +20,7 @@
 | `"low_latency_transformation"` | `bool` | If set to true, model server will apply [low latency transformation](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-request/stateful-models/obtaining-stateful-openvino-model.html#lowlatency2-transformation) on model load. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
+| `"allowed_local_media_path"` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 
 
 
