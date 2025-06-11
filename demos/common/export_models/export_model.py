@@ -64,13 +64,11 @@ add_common_arguments(parser_embeddings_ov)
 parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-parser_embeddings_ov.add_argument('--name_in_config', default="", help='Name of the model that will be used in config.json', dest='name_in_config')
 
 parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank_ov)
 parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
-parser_rerank_ov.add_argument('--name_in_config', default="", help='Name of the model that will be used in config.json', dest='name_in_config')
 
 parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
 add_common_arguments(parser_rerank)
@@ -443,14 +441,14 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
     else: # assume HF model 
         set_max_context_length = ""
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -491,9 +489,9 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True, name_in_config=""):
+def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
     set_max_context_length = ""
-    destination_path = os.path.join(model_repository_path, model_name, "ov")
+    destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
@@ -504,23 +502,19 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
             if max_context_length is not None:
                 set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
-        from openvino_tokenizers import convert_tokenizer
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    if name_in_config == "":
-        name_in_config = model_name
-    add_servable_to_config(config_file_path, name_in_config, os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length, name_in_config=""):
-    set_max_context_length = ""
-    destination_path = os.path.join(model_repository_path, model_name, "ov")
-    print("Exporting embeddings model to ",destination_path)
+def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
@@ -529,25 +523,23 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
         export_rerank_tokenizer(source_model, destination_path, max_doc_length)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    if name_in_config == "":
-        name_in_config = model_name
-    add_servable_to_config(config_file_path, name_in_config, os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
     else: # assume HF model name
         with tempfile.TemporaryDirectory() as tmpdirname:
-            embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
+            embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
                 optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
@@ -645,13 +637,13 @@ elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'embeddings_ov':
-    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'], args['name_in_config'])
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'rerank_ov':
-    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'], args['name_in_config'])
+    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
