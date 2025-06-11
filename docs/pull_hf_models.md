@@ -33,7 +33,7 @@ docker run -d --rm -v /models:/models openvino/model_server:latest --source_mode
 It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
 ## 2. Preprocessing with Python Script:
-Alternatively, users can utilize the provided Python script to export and configure models prior to server deployment. This approach is more flexible as it allows for using models that were not optimized beforehand, but requires having Python set up to work. You can find the script [here](./../demos/common/export_models/export_models.py) and its README [here](./../demos/common/export_models/README.md).
+Alternatively, users can utilize the provided Python script to export, optimize and configure models prior to server deployment. This approach is more flexible as it allows for using models that were not optimized beforehand, but requires having Python set up to work. You can find the script [here](./../demos/common/export_models/export_models.py) and its README [here](./../demos/common/export_models/README.md).
 
 *Note*
 Use the integrated OVMS download for streamlined setups or the Python script for more flexibility in handling non-optimized models.
