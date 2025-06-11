@@ -49,15 +49,14 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
-
-void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+#if (PYTHON_DISABLE == 0)
+void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
-
             global json
             import json
             from pathlib import Path
@@ -69,7 +68,6 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
 
-
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
             default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
@@ -77,16 +75,18 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
             bos_token = ""
             eos_token = ""
             chat_template = default_chat_template
+            tool_chat_template = None
 
             template = None
+            tool_template = None
 
             # Try to read template from template.jinja file
             jinja_file = Path(templates_directory + "/template.jinja")
+            template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
+            jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
+            jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
+            jinja_env.globals["raise_exception"] = raise_exception     
             if jinja_file.is_file():
-                template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
-                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
-                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-                jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json
@@ -98,19 +98,28 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
                 bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.
                 eos_token = data.get("eos_token", "")
                 eos_token = "" if eos_token is None else eos_token  # Null token conversion to empty string.
-                chat_template = data.get("chat_template", default_chat_template)
 
+                chat_template = data.get("chat_template", default_chat_template)
+                if isinstance(chat_template, list):
+                    for template_entry in chat_template:
+                        if isinstance(template_entry, dict):
+                            if template_entry.get("name") == "default":
+                                chat_template = template_entry.get("template")
+                            elif template_entry.get("name") == "tool_use":
+                                tool_chat_template = template_entry.get("template")
             if template is None:
-                jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
-                jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-                jinja_env.globals["raise_exception"] = raise_exception
                 template = jinja_env.from_string(chat_template)
+            if tool_chat_template is not None:
+                tool_template = jinja_env.from_string(tool_chat_template)
+            else:
+                tool_template = template
         )",
             py::globals(), locals);
 
-        properties->textProcessor.bosToken = locals["bos_token"].cast<std::string>();
-        properties->textProcessor.eosToken = locals["eos_token"].cast<std::string>();
-        properties->textProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
+        properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
+        properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
+        properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
+        properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
@@ -125,6 +134,15 @@ void GenAiServableInitializer::loadTextProcessor(std::shared_ptr<GenAiServablePr
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
+#else
+void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
+    const std::string modelChatTemplate = properties->tokenizer.get_chat_template();
+    if (modelChatTemplate.empty()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Could not load model chat template. Using default template.");
+        properties->tokenizer.set_chat_template("{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}");
+    }
+}
+#endif
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);
@@ -148,6 +166,31 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
     }
 
     return StatusCode::OK;
+}
+
+std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
+    std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
+    std::optional<uint32_t> maxModelLength;
+    if (std::filesystem::exists(configPath.c_str())) {
+        std::ifstream ifs(configPath);
+        if (!ifs.is_open()) {
+            return maxModelLength;
+        }
+        rapidjson::Document modelConfig;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+        if (parseResult.Code()) {
+            return maxModelLength;
+        }
+        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
+        for (auto field : maxLengthFields) {
+            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
+                maxModelLength = modelConfig[field.c_str()].GetUint();
+                break;
+            }
+        }
+    }
+    return maxModelLength;
 }
 
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
@@ -266,30 +309,5 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     return StatusCode::OK;
-}
-
-std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
-    std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
-    std::optional<uint32_t> maxModelLength;
-    if (std::filesystem::exists(configPath.c_str())) {
-        std::ifstream ifs(configPath);
-        if (!ifs.is_open()) {
-            return maxModelLength;
-        }
-        rapidjson::Document modelConfig;
-        rapidjson::IStreamWrapper isw(ifs);
-        rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
-        if (parseResult.Code()) {
-            return maxModelLength;
-        }
-        std::vector<std::string> maxLengthFields = {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window"};
-        for (auto field : maxLengthFields) {
-            if (modelConfig.HasMember(field.c_str()) && modelConfig[field.c_str()].IsUint()) {
-                maxModelLength = modelConfig[field.c_str()].GetUint();
-                break;
-            }
-        }
-    }
-    return maxModelLength;
 }
 }  // namespace ovms

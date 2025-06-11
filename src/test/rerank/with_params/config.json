@@ -21,6 +21,10 @@
         {
             "name": "rerank",
             "graph_path": "/ovms/src/test/rerank/with_params/graph.pbtxt"
+        },
+        {
+            "name": "rerank_ov",
+            "graph_path": "/ovms/src/test/rerank/with_params/graph_ov.pbtxt"
         }
     ]
 }

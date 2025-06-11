@@ -247,9 +247,41 @@ class HttpOpenAIHandlerParsingTest : public ::testing::Test {
 protected:
     rapidjson::Document doc;
     std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
+
+    void assertRequestWithTools(std::string providedTools, std::string toolsChoice, absl::StatusCode status = absl::StatusCode::kOk) {
+        assertRequestWithTools(providedTools, toolsChoice, "", status);
+    }
+
+    void assertRequestWithTools(std::string providedTools, std::string toolsChoice, std::string expectedJson, absl::StatusCode status = absl::StatusCode::kOk) {
+        std::string json = R"({
+    "messages": [
+      {"role": "user", "content": "What is the weather like in Paris today?"},
+      {"role": "assistant", "reasoning_content": null, "content": "", "tool_calls": [{"id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "type": "function", "function": {"name": "get_weather2", "arguments": "{\"location\": \"Paris, France\"}"}}]},
+      {"role": "tool", "tool_call_id": "chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec", "content": "15 degrees Celsius"}],
+    "model": "llama",
+    "tools": [)";
+        json += providedTools;
+        json += R"(],
+)";
+        if (toolsChoice != "") {
+            json += R"("tool_choice": )";
+            json += toolsChoice;
+        }
+        json += R"(})";
+
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError()) << json;
+        uint32_t maxTokensLimit = 100;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength).code(), status) << json;
+        json = apiHandler->getProcessedJson();
+        EXPECT_EQ(json, expectedJson);
+    }
 };
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsBase64) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -284,6 +316,76 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceeds) {
     for (size_t i = 0; i < image.get_size(); i++) {
         EXPECT_EQ(expectedBytes[i], ((uint8_t*)image.data())[i]);
     }
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttp) {
+    std::string json = R"({
+  "model": "llama",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+          }
+        }
+      ]
+    }
+  ]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesSucceedsUrlHttps) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  "https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 225792);
     json = apiHandler->getProcessedJson();
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
 }
@@ -323,7 +425,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingImageJpegWithNoTextSucceeds) {
     EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"\"}]}"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucceeds) {
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixFails) {
     std::string json = R"({
     "model": "llama",
     "messages": [
@@ -347,7 +449,162 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageStringWithNoPrefixSucce
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystem) {
+    std::string json = R"({
+  "model": "llama",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  ")" +
+                       getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") + R"("
+          }
+        }
+      ]
+    }
+  ]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test")), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemWithinAllowedPath) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages(getGenericFullPathForSrcTest("/ovms/src/test/binaryutils")), absl::OkStatus());
+    const ovms::ImageHistory& imageHistory = apiHandler->getImageHistory();
+    ASSERT_EQ(imageHistory.size(), 1);
+    auto [index, image] = imageHistory[0];
+    EXPECT_EQ(index, 0);
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_size(), 3);
+    json = apiHandler->getProcessedJson();
+    EXPECT_EQ(json, std::string("{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"What is in this image?\"}]}"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemNotWithinAllowedPath) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  "/ovms/src/test/binaryutils/rgb.jpg"
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseMessages("src/test"), absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidPath) {
+    std::string json = R"({
+  "model": "llama",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  "/ovms/not_exisiting.jpeg"
+          }
+        }
+      ]
+    }
+  ]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError("Image file /ovms/not_exisiting.jpeg parsing failed: can't fopen"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    std::string expectedMessage = "Path " + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") + " escape with .. is forbidden.";
+    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError(expectedMessage.c_str()));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
@@ -477,7 +734,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyImageUrlFails) {
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
-    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Url should contain base64 encoded string followed by \"base64,\" prefix"));
+    EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Loading images from local filesystem is disabled."));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageUrlNotBase64Fails) {
@@ -548,7 +805,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
-        "logprobs", "max_completion_tokens"};
+        "logprobs", "max_completion_tokens", "tools", "tool_choice"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
@@ -593,6 +850,163 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersCompletions
         std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
         EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     }
+}
+
+// Provide get_weather2 but take none
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided1_ChoiceNone) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"("none")";
+    std::string expectedJson = std::string("{\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tool_choice\":\"none\"}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but take only first one - get_weather1
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceFirst) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather1"}})";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\"}}}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but take only second one - get_weather2
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceMiddle) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather2"}})";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather2\"}}}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but take only second one - get_weather2
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceLast) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather3"}})";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\"}}}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but take one - get_weather4 which does not exist
+// Expect OK and no tool selected
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceNotInProvidedList) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather4"}})";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[],"
+                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather4\"}}}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but tool_choice is not of type function
+// Expect that tool is picked anyway
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceIsNotOfTypeFunction) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "INVALID_TYPE", "function": {"name": "get_weather3"}})";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather3\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+                                           "\"tool_choice\":{\"type\":\"INVALID_TYPE\",\"function\":{\"name\":\"get_weather3\"}}}");
+
+    assertRequestWithTools(providedTools, toolsChoice, expectedJson);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but tool_choice is not an object, string but a number
+// Expect error
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceIsANumber) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = "2";
+    assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but tool_choice is not an object, but a string selecting first tool
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceIsAString) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = "\"get_weather1\"";
+    std::string expectedJson = std::string("{\"messages\":["
+                                           "{\"role\":\"user\",\"content\":\"What is the weather like in Paris today?\"},"
+                                           "{\"role\":\"assistant\",\"reasoning_content\":null,\"content\":\"\",\"tool_calls\":[{\"id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"type\":\"function\",\"function\":{\"name\":\"get_weather2\",\"arguments\":\"{\\\"location\\\": \\\"Paris, France\\\"}\"}}]},"
+                                           "{\"role\":\"tool\",\"tool_call_id\":\"chatcmpl-tool-d39b13c90f9b4d48b08c16455553dbec\",\"content\":\"15 degrees Celsius\"}],\"model\":\"llama\","
+                                           "\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\",\"description\":\"Get current temperature for a given location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"City and country e.g. Bogot\xC3\xA1, Colombia\"}},\"required\":[\"location\"],\"additionalProperties\":false},\"strict\":true}}],"
+                                           "\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather1\"}}}");
+    assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but tool_choice object has name which is not string
+// Expect error
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceObjectNameIsNotString) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function", "function": {"name": 4}})";
+    assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
+}
+
+// Provide get_weather1, get_weather2, get_weather3 but tool_choice object has no function field
+// Expect error
+TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceObjectMissingFunctionField) {
+    std::string providedTools = R"(
+       {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather2", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
+       {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
+)";
+    std::string toolsChoice = R"({"type": "function"})";
+    assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
 }
 
 TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {

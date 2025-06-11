@@ -721,7 +721,7 @@ TEST_P(ModelManagerWatcher2Models, loadConfigManyThreads) {
     int numberOfThreads = 10;
     std::vector<std::thread> threads;
     std::function<void()> func = [&manager, configFile]() {
-        EXPECT_EQ(manager.loadConfig(configFile), ovms::StatusCode::OK);
+        EXPECT_EQ(manager.startFromFile(configFile), ovms::StatusCode::OK);
     };
 
     for (int i = 0; i < numberOfThreads; i++) {
@@ -753,7 +753,7 @@ TEST_P(ModelManagerWatcher2Models, configReloadNeededBeforeConfigLoad) {
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, true);
 
-    manager.loadConfig(configFile);
+    manager.startFromFile(configFile);
     manager.configFileReloadNeeded(isNeeded);
     EXPECT_EQ(isNeeded, false);
 

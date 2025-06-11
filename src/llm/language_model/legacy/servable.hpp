@@ -31,6 +31,8 @@ struct LegacyServableExecutionContext : public GenAiServableExecutionContext {
     std::future<void> finished = readySignal.get_future();
     std::mutex mutex;
     std::condition_variable executionInProgress;
+    // Workaround needed to pass generation config to the executor that requires it
+    ov::genai::GenerationConfig baseGenerationConfig;
     bool success = true;
 };
 

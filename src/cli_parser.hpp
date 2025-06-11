@@ -16,8 +16,15 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <variant>
 
 #include <cxxopts.hpp>
+
+#include "graph_export/graph_cli_parser.hpp"
+#include "graph_export/rerank_graph_cli_parser.hpp"
+#include "graph_export/embeddings_graph_cli_parser.hpp"
+#include "graph_export/image_generation_graph_cli_parser.hpp"
 
 namespace ovms {
 
@@ -27,12 +34,20 @@ struct ModelsSettingsImpl;
 class CLIParser {
     std::unique_ptr<cxxopts::Options> options;
     std::unique_ptr<cxxopts::ParseResult> result;
+    std::variant<GraphCLIParser, RerankGraphCLIParser, EmbeddingsGraphCLIParser, ImageGenerationGraphCLIParser> graphOptionsParser;
 
 public:
     CLIParser() = default;
     void parse(int argc, char** argv);
-
     void prepare(ServerSettingsImpl*, ModelsSettingsImpl*);
+
+protected:
+    void prepareServer(ServerSettingsImpl& serverSettings);
+    void prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings);
+    void prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName);
+    void prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl& modelsSettings);
+    void prepareConfigExport(ModelsSettingsImpl& modelsSettings);
+    bool isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResult>& result);
 };
 
 }  // namespace ovms

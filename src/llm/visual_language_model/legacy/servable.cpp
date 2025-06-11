@@ -31,10 +31,14 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
-#include "../../text_processor.hpp"
+#include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 #include "servable.hpp"
 
 namespace ovms {
@@ -69,12 +73,15 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
+
+    legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
+    auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

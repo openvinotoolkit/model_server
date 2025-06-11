@@ -13,11 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
+#include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -40,6 +41,20 @@
 
 namespace ovms {
 
+ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    ov::genai::AggregationMode aggregationMode;
+    if (nodeOptions.cache_eviction_config().aggregation_mode() == mediapipe::LLMCalculatorOptions::CacheEvictionConfig::SUM) {
+        aggregationMode = ov::genai::AggregationMode::SUM;
+    } else {
+        aggregationMode = ov::genai::AggregationMode::NORM_SUM;
+    }
+    size_t startSize = nodeOptions.cache_eviction_config().start_size();
+    size_t recentSize = nodeOptions.cache_eviction_config().recent_size();
+    size_t maxCacheSize = nodeOptions.cache_eviction_config().max_cache_size();
+    bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
+    return ov::genai::CacheEvictionConfig(startSize, recentSize, maxCacheSize, aggregationMode, applyRotation);
+}
+
 ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions) {
     ov::genai::SchedulerConfig config;
     config.max_num_batched_tokens = nodeOptions.has_draft_max_num_batched_tokens() ? nodeOptions.draft_max_num_batched_tokens() : nodeOptions.max_num_batched_tokens();
@@ -57,14 +72,28 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
-
     properties->modelsPath = parsedModelsPath;
+    std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
+    if (std::filesystem::exists(modelGenerationConfigPath)) {
+        properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
+    }
+
+    if (nodeOptions.has_response_parser()) {
+        properties->responseParserName = nodeOptions.response_parser();
+    }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
     properties->schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
+
+    if (nodeOptions.has_cache_eviction_config()) {
+        properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);
+        properties->schedulerConfig.use_cache_eviction = true;
+    } else {
+        properties->schedulerConfig.use_cache_eviction = false;
+    }
 
     properties->device = nodeOptions.device();
 
@@ -91,7 +120,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         }
 
     } else if (nodeOptions.has_draft_max_num_batched_tokens() || nodeOptions.has_draft_cache_size() || nodeOptions.has_draft_dynamic_split_fuse() || nodeOptions.has_draft_max_num_seqs() || nodeOptions.has_draft_block_size() || nodeOptions.has_draft_device()) {
-        // Consider moving draft parameters to separate structure in node options, so it's validated on the proto level
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
@@ -116,14 +144,18 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(properties, parsedModelsPath);
+#if (PYTHON_DISABLE == 0)
+    loadPyTemplateProcessor(properties, parsedModelsPath);
+#else
+    loadDefaultTemplateProcessorIfNeeded(properties);
+#endif
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
-
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
+
     return StatusCode::OK;
 }
 

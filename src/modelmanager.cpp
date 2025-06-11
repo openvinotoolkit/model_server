@@ -21,22 +21,16 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #ifdef __linux__
 #include <dlfcn.h>
+#include <unistd.h>
 #include <sysexits.h>
 #elif _WIN32
 #include <io.h>
-#endif
-
-#ifdef _WIN32
-#include <iomanip>
-
-#include <windows.h>
 #endif
 
 #include <errno.h>
@@ -48,9 +42,6 @@
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 #include <sys/stat.h>
-#ifdef __linux__
-#include <unistd.h>
-#endif
 
 #include "cleaner_utils.hpp"
 #include "config.hpp"
@@ -187,8 +178,8 @@ Status ModelManager::start(const Config& config) {
         resourcesCleanupIntervalMillisec = 1000;
     }
     Status status;
-    bool startFromConfigFile = (config.configPath() != "");
-    if (startFromConfigFile) {
+    this->startedWithConfigFile = (config.configPath() != "");
+    if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
@@ -197,7 +188,7 @@ Status ModelManager::start(const Config& config) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-    startWatcher(startFromConfigFile);
+    startWatcher(isStartedWithConfigFile());
     startCleaner();
     return status;
 }
@@ -238,7 +229,7 @@ Status ModelManager::startFromConfig() {
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
-        status = validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
         if (!status.ok())
             return status;
 
@@ -348,7 +339,8 @@ Status ModelManager::startFromConfig() {
 }
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
-    Status status = loadConfig(jsonFilename);
+    this->configFilename = jsonFilename;
+    Status status = loadConfig();
     if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
@@ -449,9 +441,9 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     return ifs.is_open();
 }
 
-Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings) {
-    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
-    std::vector<std::string> usedButdisallowedUserSettings;
+Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
         for (const std::string& allowedSetting : allowedUserSettings) {
@@ -460,12 +452,12 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(ModelsSettin
         }
 
         if (!isAllowed)
-            usedButdisallowedUserSettings.push_back(userSetting);
+            usedButDisallowedUserSettings.push_back(userSetting);
     }
 
-    if (!usedButdisallowedUserSettings.empty()) {
+    if (!usedButDisallowedUserSettings.empty()) {
         std::string arguments = "";
-        for (const std::string& userSetting : usedButdisallowedUserSettings) {
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting mediapipe graph with unsupported model settings: {}The settings should be set in subconfig.json file.", arguments);
@@ -1024,138 +1016,14 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
-#ifdef _WIN32
-class FileHandle {
-public:
-    FileHandle(const std::string& filename) :
-        filename_(filename) {
-        hFile_ = CreateFileA(
-            filename.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-    }
-    ~FileHandle() {
-        if (hFile_ != INVALID_HANDLE_VALUE) {
-            if (!CloseHandle(hFile_)) {
-                SPDLOG_ERROR("Failed to close file: ", filename_);
-            }
-        }
-    }
-
-    HANDLE getHandle() const { return hFile_; }
-
-private:
-    HANDLE hFile_;
-    std::string filename_;
-};
-#endif
-
-class LoudFileInfoReporter {
-    std::stringstream ss;
-
-public:
-    LoudFileInfoReporter(const std::string& filename, std::ifstream& file) {
-#ifdef __linux__
-        struct stat statTime;
-
-        if (stat(filename.c_str(), &statTime) != 0) {
-            SPDLOG_ERROR("Failed to debug-read fileconfig");
-            return;
-        }
-        ss << "FileInfoReporter: " << filename
-           << " time modification [s]: " << statTime.st_ctim.tv_sec
-           << " [ns]: " << statTime.st_ctim.tv_nsec << std::endl;
-#elif _WIN32
-        // Windows implementation
-        FileHandle fileHandle(filename);
-        if (fileHandle.getHandle() == INVALID_HANDLE_VALUE) {
-            SPDLOG_ERROR("Failed to open file for debug-read on Windows");
-            return;
-        }
-
-        FILETIME creationTime, lastAccessTime, lastWriteTime;
-        if (!GetFileTime(fileHandle.getHandle(), &creationTime, &lastAccessTime, &lastWriteTime)) {
-            SPDLOG_ERROR("Failed to get file time on Windows");
-            return;
-        }
-
-        SYSTEMTIME stUTC;
-        FileTimeToSystemTime(&lastWriteTime, &stUTC);
-
-        ULARGE_INTEGER fileTimeAsUint;  // FILETIME units are 100 nanoseconds
-        fileTimeAsUint.LowPart = lastAccessTime.dwLowDateTime;
-        fileTimeAsUint.HighPart = lastAccessTime.dwHighDateTime;
-        uint64_t timeInNanoseconds = fileTimeAsUint.QuadPart * 100;
-
-        ss << "FileInfoReporter: " << filename
-           << " time modification [s]: " << std::setfill('0') << std::setw(2) << stUTC.wSecond
-           << " [ns]: " << timeInNanoseconds << std::endl;
-#endif
-        std::string some;
-        file.clear();
-        file.seekg(0);
-        while (file) {
-            file >> some;
-            ss << some << std::endl;
-        }
-        file.clear();
-        file.seekg(0);
-    }
-    void log() {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, ss.str());
-    }
-};
-
-Status ModelManager::parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
-    configFilename = jsonFilename;
-    std::string md5;
-    uint16_t counter = 0;
-    Status intermediateStatus;
-    do {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading configuration from {} for: {} time", jsonFilename, counter + 1);
-        std::ifstream ifs(jsonFilename.c_str());
-        LoudFileInfoReporter loud(jsonFilename, ifs);
-        if (!ifs.good()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is invalid {}", jsonFilename);
-            intermediateStatus = StatusCode::CONFIG_FILE_INVALID;
-            loud.log();
-            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
-            continue;
-        }
-        std::stringstream config;
-        config << ifs.rdbuf();
-        auto configContent = config.str();
-        md5 = FileSystem::getStringMD5(configContent);
-        rapidjson::ParseResult parseResult = configJson.Parse(configContent.c_str());
-        if (parseResult.Code()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not a valid JSON file. Error: {}",
-                rapidjson::GetParseError_En(parseResult.Code()));
-            intermediateStatus = StatusCode::JSON_INVALID;
-            loud.log();
-            std::this_thread::sleep_for(std::chrono::milliseconds(WRONG_CONFIG_FILE_RETRY_DELAY_MS));
-            continue;
-        }
-        intermediateStatus = StatusCode::OK;
-        break;
-    } while (++counter < MAX_CONFIG_JSON_READ_RETRY_COUNT && !intermediateStatus.ok());
-    lastConfigFileMD5 = md5;
-    if (!intermediateStatus.ok()) {
-        this->lastLoadConfigStatus = intermediateStatus;
-        return this->lastLoadConfigStatus;
-    }
-    return StatusCode::OK;
-}
-
-Status ModelManager::loadConfig(const std::string& jsonFilename) {
+Status ModelManager::loadConfig() {
     rapidjson::Document configJson;
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    Status status = parseConfig(jsonFilename, configJson);
-    if (!status.ok())
-        return status;
+    Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
+    if (!status.ok()) {
+        this->lastLoadConfigStatus = status;
+        return this->lastLoadConfigStatus;
+    }
     if (validateJsonAgainstSchema(configJson, MODELS_CONFIG_SCHEMA.c_str()) != StatusCode::OK) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file is not in valid configuration format");
         this->lastLoadConfigStatus = StatusCode::JSON_INVALID;
@@ -1176,7 +1044,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     Status firstErrorStatus = StatusCode::OK;
 
-    this->setRootDirectoryPath(jsonFilename);
+    this->setRootDirectoryPath(this->configFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -1318,7 +1186,7 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
             if (isNeeded) {
-                loadConfig(configFilename);
+                loadConfig();
             }
         }
         updateConfigurationWithoutConfigFile();

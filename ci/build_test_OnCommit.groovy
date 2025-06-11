@@ -47,9 +47,9 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
+        stage('Style, SDL') {
           options {
-            timeout(time: 20, unit: 'MINUTES')
+                timeout(time: 20, unit: 'MINUTES')
           }
           parallel {
             stage('Style check') {
@@ -79,6 +79,25 @@ pipeline {
             }
           }
         }
+        stage('Cleanup node') {
+          options {
+              timeout(time: 30, unit: 'MINUTES')
+          }
+          agent {
+            label 'win_ovms'
+          }
+          steps {
+            script {
+                agent_name_windows = env.NODE_NAME
+                def windows = load 'ci/loadWin.groovy'
+                if (windows != null) {
+                    windows.cleanup_directories()
+                } else {
+                    error "Cannot load ci/loadWin.groovy file."
+                }
+            }
+          }
+        }
         stage('Build') {
           options {
             timeout(time: 4, unit: 'HOURS')
@@ -92,6 +111,7 @@ pipeline {
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
+                      sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
@@ -198,7 +218,7 @@ pipeline {
             node("${agent_name_windows}") {
                 script {
                     if (env.BRANCH_NAME == "main" && windows_success == "True") {
-                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-main-latest.zip")
+                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-without_python-main-latest.zip")
                     } else {
                         echo "Not a main branch, skipping copying artifacts."
                     }

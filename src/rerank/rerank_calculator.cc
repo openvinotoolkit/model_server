@@ -239,7 +239,6 @@ public:
 
         // Compute Document Tokens
         auto [doc_input_ids, doc_attention_mask] = ComputeTokensForBatchedString(handler.getDocumentsList());
-
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "\nMax position embeddings: {}\nQuery tokens: {}\nSpecial tokens: {}\nRemaining space for chunk: {}",
             this->max_position_embeddings, query_tokens.size(), NUMBER_OF_SPECIAL_TOKENS, this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS);
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of documents: {}; with max token count: {} before chunking", doc_input_ids.get_shape()[0], doc_input_ids.get_shape()[1]);
@@ -257,7 +256,6 @@ public:
         if (!status.ok()) {
             throw std::runtime_error(std::string{"Chunking failed: "} + std::string(status.message()));
         }
-
         doc_input_ids = out_input_ids;
         doc_attention_mask = out_attention_mask;
 

@@ -36,6 +36,24 @@ public:
      * 
      * @param path 
      * @param exists 
+     * @return Status
+     */
+    static Status exists(const std::string& path, bool* exists);
+
+    /**
+     * @brief Check if given path is a directory
+     * 
+     * @param path 
+     * @param is_dir 
+     * @return Status 
+     */
+    static Status isDir(const std::string& path, bool* is_dir);
+
+    /**
+     * @brief Check if given path or file exists
+     * 
+     * @param path 
+     * @param exists 
      * @return StatusCode 
      */
     StatusCode fileExists(const std::string& path, bool* exists) override;
