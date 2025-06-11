@@ -59,8 +59,6 @@ Possible model locations (`--model_path`):
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
-In case of LLM's startup may require additional parameters. For details refer [here](TODO).
-
 ## Servin GenAI models and mediapipes
 
 ### Starting the mediapipe graph or LLM models
@@ -77,10 +75,10 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 
 ### Starting the LLM model from HF directly
 
-In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
+In case you do not want to prepare model repository before starting the server, you can just run OVMS with:
 
 ```
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
@@ -89,9 +87,11 @@ It will download required model files, prepare configuration for OVMS and start 
 
 In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
 ```
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
+
+In case of LLM's startup may require additional parameters specific to task. For details refer [here](./parameters.md).
 
 ## Serving Multiple Models 
 
