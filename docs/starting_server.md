@@ -61,10 +61,41 @@ Possible model locations (`--model_path`):
 
 In case of LLM's startup may require additional parameters. For details refer [here](TODO).
 
+## Servin GenAI models and mediapipes
+
+### Starting the mediapipe graph or LLM models
+Now you can start server with single mediapipe graph, or LLM model that is already present in local filesystem with:
+
+```
+docker run -d --rm -v <model_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+--model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
+```
+
+Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
+
+*Note*: There is no online model modification nor versioning capability as of now for graphs, LLM like models.
+
+### Starting the LLM model from HF directly
+
+In case you do not want to prepare model repository before starting the server in one command you can run OVMS with:
+
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> --task_params <task_params>
+```
+
+It will download required model files, prepare configuration for OVMS and start serving the model.
+
+### Starting the LLM model from local storage
+
+In case you have predownloaded the model files from HF but you lack OVMS configuration files you can start OVMS with
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path <path_where_to_store_ovms_config_files> --model_name <external_model_name> --task <task> --task_params <task_params>
+```
+This command will create graph.pbtxt in the ```model_repository_path/source_model``` path.
+
 ## Serving Multiple Models 
 
 To serve multiple models and pipelines from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
-
 
 ```json
 {
@@ -132,6 +163,72 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 or for binary package:
 ```
 ovms --config_path <path_to_config_file> --port 9000 --rest_port 8000
+```
+
+# List models
+
+Assuming you have models repository already prepared, to check what models/graphs are servable from specified repository:
+```
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--model_repository_path /models --list_models
+```
+
+For following directory structure:
+```{code}
+/models
+├── meta
+│   ├── llama4
+│   │   └── graph.pbtxt
+│   ├── llama3.1
+│   │   └── graph.pbtxt
+├── LLama3.2
+│   └── graph.pbtxt
+└── resnet
+    └── 1
+        └── saved_model.pb
+```
+
+The output would be:
+```{code}
+meta/llama4
+meta/llama3.1
+LLama3.2
+resnet
+```
+
+# Enable model
+
+To add model to ovms configuration file with specific model use either:
+
+```{code}
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
+```
+
+When model is directly inside `/models`.
+
+Or
+
+```{code}
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
+```
+when there is no model_repository specified.
+
+[!TIP] Use relative paths to make the config.json transferable in model_repository across ovms instances.
+For example:
+```{code}
+cd model_repository_path
+ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
+```
+
+# Disable model
+
+If you want to remove model from configuration file you can do it either manually or use command:
+
+```{code}
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--remove_from_config <config_file_directory_path> --model_name <name>
 ```
 
 ## Next Steps

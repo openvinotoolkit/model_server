@@ -21,8 +21,6 @@
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
 
-
-
 > **Note** : Specifying config_path is mutually exclusive with putting model parameters in the CLI ([serving multiple models](./starting_server.md)).
 
 | Option  | Value format  | Description  |
@@ -54,4 +52,63 @@ Configuration options for the server are defined only via command-line options a
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 
+## Pull mode configuration options
 
+Shared configuration options for the pull, and pull & start mode.
+
+| option                    | Value format | Description                                                                                   |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `--pull`                  | `NA` | Instructs the server to run in pulling mode to get the model from the Hugging Face repository |
+| `--source_model`          | | Specifies the model name in the Hugging Face model repository (optional - if empty model_name is used) |
+| `--model_repository_path` | | Directory where all required model files will be saved                                                 |
+| `--model_name`            | | Name of the model as exposed externally by the server                                                  |
+| `--task`                  | | Defines the task the model will support (e.g., text_generation/embedding, rerank, etc.)                |
+
+There are also additional environment variables that may change the behavior of pulling:
+
+| option                    | Value format | Description                                                                    |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `HF_ENDPOINT` | `string` | default value: `huggingface.co`. For uses in China it may be required to change this to `https://hf-mirror.com` |
+| `HF_TOKEN` | `string` | For pulling some of models form HF it may require to have authentication token set up |
+| `https_proxy` | `string` | If this variable is defined then pulling will download models using this proxy |
+
+Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
+
+### Text generation
+| option                        | Value format | Description                                                                                                    |
+|-------------------------------|--------------|----------------------------------------------------------------------------------------------------------------|
+| `--max_num_seqs`              | `integer`    | The maximum number of sequences that can be processed together. Default: 256.                                  |
+| `--pipeline_type`             | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.             |
+| `--enable_prefix_caching`     | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                   |
+| `--max_num_batched_tokens`    | `integer`    | The maximum number of tokens that can be batched together.                                                     |
+| `--cache_size`                | `integer`    | Cache size in GB. Default: 10.                                                                                 |
+| `--draft_source_model`        | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                |
+| `--dynamic_split_fuse`        | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                           |
+| `--max_prompt_len`            | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                         |
+| `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
+
+### Image generation
+| option                    | Value format | Description                                                                    |
+|---------------------------|-----------------------------------------------------------------------------------------------|
+| `--max_resolution` | `string` | Max allowed resolution in a format of WxH; W=width H=height. If not specified, inherited from model. |
+| `--default_resolution` | `string` | Default resolution when not specified by client in a format of WxH; W=width H=height. If not specified, inherited from model. |
+| `--max_num_images_per_prompt` | `integer` | Maximum allowed number of images client is allowed to request for a given model in one request. |
+| `--default_num_inference_steps` | `integer` | Default number of inference steps when not specified by client. |
+| `--max_num_inference_steps`  | `integer` | Maximum allowed number of inference steps client is allowed to request for a given model. |
+| `--num_streams`| `integer` | The number of parallel execution streams to use for the image generation models. Use at least 2 on 2 socket CPU systems. |
+
+*Note:*
+In 2025.2 release only 1 image generation per request is supported.
+
+### Embeddings
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+| `--normalize`             | `bool`       | Normalize the embeddings. Default: true.                                       |
+| `--mean_pooling`          | `bool`       | Mean pooling option. Default: false.                                           |
+
+### Rerank
+| option                    | Value format | Description                                                                    |
+|---------------------------|--------------|--------------------------------------------------------------------------------|
+| `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
+| `--max_allowed_chunks`    | `integer`    | Maximum allowed chunks. Default: 10000.                                        |
