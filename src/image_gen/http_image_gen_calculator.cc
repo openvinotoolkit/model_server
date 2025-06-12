@@ -29,7 +29,7 @@
 #include "../image_conversion.hpp"
 
 #include "pipelines.hpp"
-#include "imagegenutils.hpp"  // FIXME split
+#include "imagegenutils.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -121,8 +121,6 @@ public:
         // TODO: Support more pipeline types
         // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
 
-        // curl -X POST localhost:11338/v3/images/generations -H "Content-Type: application/json" -d '{ "model": "endpoint", "prompt": "A cute baby sea otter", "n": 1, "size": "1024x1024" }'
-        // FIXME routing request to different pipelines (enum?)
         ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
         SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
         // preview limitation put here to not mess up tests underneath
