@@ -136,7 +136,7 @@ docker run --rm -d --cpuset-cpus 0,1,2,3 -v ${PWD}/models/public/resnet-50-tf:/o
 
 ```
 
-> **NOTE:** Deployment of the OpenVINO Model Server including the autoscaling capability can be automated in Kubernetes and OpenShift using the operator. [Read more about](https://github.com/openvinotoolkit/operator/blob/main/docs/autoscaling.md)
+> **NOTE:** Deployment of the OpenVINO Model Server including the autoscaling capability can be automated in Kubernetes and OpenShift using the operator. [Read more about](https://github.com/openvinotoolkit/operator/blob/releases/2025/2/docs/autoscaling.md)
 
 ## CPU Power Management Settings
 To save power, the OS can decrease the CPU frequency and increase a volatility of the latency values. Similarly the Intel® Turbo Boost Technology may also affect the stability of results. For best reproducibility, consider locking the frequency to the processor base frequency (refer to the https://ark.intel.com/ for your specific CPU). For example, in Linux setting the relevant values for the /sys/devices/system/cpu/cpu* entries does the trick. High-level commands like cpupower also exists:
