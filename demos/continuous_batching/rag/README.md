@@ -57,9 +57,9 @@ python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-fo
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
-### On Baremetal
+### On Baremetal Unix
 ```bash
-ovms --rest_port 8000 --config_path ./models/config.json
+ovms --rest_port 8000 --config_path $(pwd)/models/config.json
 ```
 ### Windows
 ```bat
