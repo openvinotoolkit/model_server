@@ -52,29 +52,29 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 
-parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
+parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
-parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint')
+parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
 parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 
-parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint')
-add_common_arguments(parser_rerank_ov)
-parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
-parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
-
-parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
+parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
+
+parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
+add_common_arguments(parser_rerank_ov)
+parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
@@ -518,7 +518,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     if not os.path.isdir(destination_path) or args['overwrite_models']:
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
-            raise ValueError("Failed to export embeddings model", source_model)
+            raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
         export_rerank_tokenizer(source_model, destination_path, max_doc_length)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
