@@ -173,7 +173,7 @@ The LLM calculator config can also restrict the range of sampling parameters in 
 
 As mentioned above, in LLM pipelines, `plugin_config` map holds not only OpenVINO device plugin options, but also additional pipeline configuration. Those additional options are:
 
-- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`
+- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`. With prompt lookup enabled it is recommended to set `dynamic_split_fuse` to `false` and `max_num_batched_tokens` so no prompt length exceeds it (it could be model context length for example).
 - `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"MAX_PROMPT_LEN": 2048}'`
 
 
@@ -277,7 +277,7 @@ Some servable types introduce additional limitations:
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
 - does not work with `tools`,
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
+- VLM models are not supported on NPU
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)
