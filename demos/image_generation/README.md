@@ -362,10 +362,10 @@ image.save('output2.png')
 
 ```
 
-Output file (`output2.png`):
+Output file (`output2.png`):  
 ![output2](./output2.png)
 
-Client side logs confirm that generating single image take less than 10 seconds on Intel® Xeon®:
+Client side logs confirm image generation latency on Intel® Xeon®:
 
 ```
 Time elapsed:  18.89774751663208 seconds
