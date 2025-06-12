@@ -485,14 +485,14 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             if (config.node(i).name().empty()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name is missing in graph: {}. ", this->name);
-                return StatusCode::LLM_NODE_MISSING_NAME;  // TODO: create new error code
+                return StatusCode::LLM_NODE_MISSING_NAME;
             }
             std::string nodeName = config.node(i).name();
             if (imageGenPipelinesMap.find(nodeName) != imageGenPipelinesMap.end()) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Image Gen node name: {} already used in graph: {}. ", nodeName, this->name);
-                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;  // TODO: create new error code
+                return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
             }
-            auto statusOrArgs = prepareImageGenPipelineArgs(config.node(i).node_options(0), mgconfig.getBasePath());  // TODO: Use mgconfig.getBasePath()
+            auto statusOrArgs = prepareImageGenPipelineArgs(config.node(i).node_options(0), mgconfig.getBasePath());
             if (std::holds_alternative<Status>(statusOrArgs)) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to prepare Image Gen pipeline args for node: {}. Error: {}", this->name, std::get<Status>(statusOrArgs).string());
                 return std::get<Status>(statusOrArgs);
