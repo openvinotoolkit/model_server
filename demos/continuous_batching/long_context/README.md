@@ -33,7 +33,7 @@ python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1
 
 Start OVMS:
 ```bash
-docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU --rest_port 8000
+docker run -it --rm -u $(id -u) -p 8000:8000 -v $(pwd)/models/:/models:rw openvino/model_server:latest --rest_port 8000 --source_model Qwen/Qwen2.5-7B-Instruct-1M --model_repository_path /models --task text_generation --enable_prefix_caching true --kv_cache_precision u8 --target_device CPU
 ```
 
 ## Dataset for experiments
