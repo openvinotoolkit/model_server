@@ -179,12 +179,12 @@ Check more info about [MediaPipe graphs](./mediapipe.md)
 `base_path` in the config.json can be absolute or relative to the configuration file. This is helpful when models are distributed together with the config file, the paths do not need to be adjusted.
 
 Examples:
-```
+```text
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --config_path /models/config.json --port 9000 --rest_port 8000
 ```
 or for binary package:
-```
+```text
 ovms --config_path <path_to_config_file> --port 9000 --rest_port 8000
 ```
 
