@@ -1,5 +1,5 @@
 tensorflow-serving-api==2.16.1; python_version >= "3.12"
 tensorflow-serving-api<=2.13.1,>=2.10.1; python_version < "3.12"
-tensorflow==2.16.1; python_version == "3.12"
+tensorflow==2.16.1; python_version >= "3.12"
 tensorflow<=2.13.1,>=2.10.1; python_version < "3.12"
 protobuf<=3.20.3
