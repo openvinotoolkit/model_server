@@ -302,9 +302,11 @@ void CLIParser::parse(int argc, char** argv) {
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
+            ImageGenerationGraphCLIParser imageGenParser;
             parser1.printHelp();
             parser2.printHelp();
             parser3.printHelp();
+            imageGenParser.printHelp();
             exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {

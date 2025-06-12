@@ -17,10 +17,10 @@ from ubuntu:22.04
 
 env DEBIAN_FRONTEND=noninteractive
 run apt-get update && apt-get install -y git software-properties-common && add-apt-repository ppa:deadsnakes/ppa && apt-get update && apt-get install -y \
-python3.7 python3.8 python3.9 python3.10 python3.11 python3.12 \
-python3.7-distutils python3.8-distutils python3.9-distutils python3.10-distutils python3.11-distutils python3.12-distutils  \
-python3.7-dev python3.12-dev \
-python3.7-venv python3.8-venv python3.9-venv python3.10-venv python3.11-venv python3.12-venv \
+python3.9 python3.10 python3.11 python3.12 python3.13 \
+python3.9-distutils python3.10-distutils python3.11-distutils \
+python3.12-dev python3.13-dev \
+python3.9-venv python3.10-venv python3.11-venv python3.12-venv python3.13-venv \
 python3-pip
 run pip install invoke
 copy client /model_server/client

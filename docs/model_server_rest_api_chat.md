@@ -56,7 +56,8 @@ curl http://localhost/v3/chat/completions \
 }
 ```
 
-In case of VLM models, the request can include the images in base64 encoding. For example:
+In case of VLM models, the request can include the images in three different formats:
+1) Base64 encoding:
 ```
 curl http://localhost/v3/chat/completions \
   -H "Content-Type: application/json" \
@@ -84,8 +85,70 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 
+2) Image url:
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llava",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "What is on the picture?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "http:// ... /images/zebra.jpeg"
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
+3) Image from local filesystem:
+```
+curl http://localhost/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llava",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "What is on the picture?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "/images/zebra.jpeg"
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+**Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
 ### Request
+
+Below we listed request parameters specified in the body as defined in OpenAI API specification. 
+
+Some parameters, especially related to sampling (like `temperature`, `top_p` etc.), have default values that are applied if they are not specified by the user. 
+
+**Note that below defaults can be overridden by configuration specified in `generation_config.json` file in model directory.** It means that if model specifies some default configuration, it will be applied instead of defaults specified by OVMS and mentioned below.
 
 #### Generic
 
@@ -96,11 +159,13 @@ curl http://localhost/v3/chat/completions \
 | stream | ✅ | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client. The generation chunks will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. [Example Python code](clients_genai.md) |
 | stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
 | stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
-| messages | ✅ | ✅ | ✅ | array (required) | A list of messages comprising the conversation so far. Each object in the list should contain `role` and `content` - both of string type. [Example Python code](clients_genai.md) |
+| messages | ✅ | ✅ | ✅ | array (required) | A list of messages comprising the conversation so far. Each object in the list should contain `role` and either `content` or `tool_call` when using tools. [Example Python code](clients_genai.md) |
 | max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. If max_tokens_limit is set in graph.pbtxt it will be default value of max_tokens. |
 | ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. |
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | bool (default: `false`) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only info about selected tokens is returned _** |
+| tools | ✅ | ✅ | ✅ | array | A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tools) for more details. |
+| tool_choice | ✅ | ✅ | ✅ | string or object | Controls which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tool_choice) for more details. Note that value `required` is not supported. |
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |

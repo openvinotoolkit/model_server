@@ -214,7 +214,6 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 if (status != absl::OkStatus()) {
                                     return status;
                                 }
-                                curl_global_cleanup();
                                 try {
                                     tensor = loadImageStbiFromMemory(decoded);
                                 } catch (std::runtime_error& e) {
