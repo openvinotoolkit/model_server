@@ -41,7 +41,7 @@ docker run -it --rm -u $(id -u) -v $(pwd)/models/:/models:rw openvino/model_serv
 To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
 
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_bataching/long_context/custom_dataset.py -o custom_dataset.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
 pip install requests transformers
 python custom_dataset.py --limit_context_tokens 50000
 ```
