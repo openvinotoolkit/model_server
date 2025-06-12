@@ -2,7 +2,7 @@
 
 ## Creating models repository for all the endpoints
 
-### 1. Deploy the Models using ovms --pull option with OpenVINO preconfigured mmodels form https://huggingface.co/
+### 1. Download the preconfigured models using ovms --pull option with form [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO)
 ::::{tab-set}
 
 :::{tab-item} With Docker
