@@ -69,7 +69,7 @@ You can start server with single mediapipe graph, or LLM model that is already c
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --rm -v <model_repository_path>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run -d --rm -v <model_repository_path>:/models:ro -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
 ```
 :::
@@ -96,7 +96,9 @@ In case you do not want to prepare model repository before starting the server, 
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+# Note: You must have both read and write permissions to the mounted model repository directory.
+docker run --user $(id -u):$(id -g) --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
 
@@ -180,7 +182,7 @@ Check more info about [MediaPipe graphs](./mediapipe.md)
 
 Examples:
 ```text
-docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
+docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --config_path /models/config.json --port 9000 --rest_port 8000
 ```
 or for binary package:
