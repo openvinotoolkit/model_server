@@ -3,6 +3,12 @@
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
+For some systems we distribute two types of packages. One with Python support (containing Python environment for Python code execution in OVMS) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in serving from C++ only package:
+
+- Deploying [Python nodes](./python_support/reference.md) is not available
+- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) does not provide the same level of support for different types of templates as version with Python
+- Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible
+
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
