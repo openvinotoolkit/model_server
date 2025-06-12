@@ -44,7 +44,9 @@ ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
 
 When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
 
-## Alternate way of creating models repository for all the endpoints using export_model.py with models conversion
+### Export models from HuggingFace Hub including conversion to OpenVINO format
+
+Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
