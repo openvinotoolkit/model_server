@@ -22,7 +22,7 @@ Image generation pipeline is exposed via [OpenAI API](https://platform.openai.co
 
 > **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
-This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and immediately start the serving.
+This command pulls the `OpenVINO/FLUX.1-schnell-int4-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and immediately start the serving.
 
 > **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
 
@@ -41,7 +41,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
+    --source_model OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
 
@@ -62,7 +62,7 @@ mkdir -p models
 ovms.exe --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model OpenVINO/OpenVINO/stable-diffusion-v1-5-int8-ov
+  --source_model OpenVINO/FLUX.1-schnell-int4-ov
 ```
 :::
 
@@ -85,7 +85,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
+    --source_model OpenVINO/FLUX.1-schnell-int4-ov \
     --target_device GPU
 ```
 :::
@@ -101,15 +101,13 @@ mkdir -p models
 ovms.exe --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
+  --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
   --target_device GPU
 ```
 :::
 
 ::::
 
-### NPU
-TBD
 
 ## Option 2. Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
@@ -125,14 +123,14 @@ mkdir models
 
 Run `export_model.py` script to download and quantize the model:
 
-> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
+> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/black-forest-labs/FLUX.1-schnell) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 ### Export model for CPU
 ```console
 python export_model.py image_generation \
-  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
+  --source_model black-forest-labs/FLUX.1-schnell \
   --weight-format int8 \
   --config_file_path models/config.json \
   --model_repository_path models \
@@ -142,7 +140,7 @@ python export_model.py image_generation \
 ### Export model for GPU
 ```console
 python export_model.py image_generation \
-  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
+  --source_model black-forest-labs/FLUX.1-schnell \
   --weight-format int8 \
   --target_device GPU \
   --config_file_path models/config.json \
@@ -176,8 +174,8 @@ Start docker container:
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   openvino/model_server:2025.2 \
     --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
+    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
@@ -194,8 +192,8 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 ```console
 ovms.exe --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
@@ -215,8 +213,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:2025.2-gpu \
     --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
+    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
 ```
 
 :::
@@ -228,15 +226,13 @@ Depending on how you prepared models in the first step of this demo, they are de
 
 ```console
 ovms.exe --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
 
 ::::
 
-**NPU**  
-TBD
 
 ## Readiness Check
 
@@ -246,7 +242,7 @@ curl http://localhost:8000/v1/config
 ```
 ```json
 {
- "OpenVINO/stable-diffusion-v1-5-int8-ov" :
+ "OpenVINO/FLUX.1-schnell-int4-ov" :
  {
   "model_version_status": [
    {
@@ -264,10 +260,12 @@ curl http://localhost:8000/v1/config
 
 ## Request Generation
 
-A single servable exposes all 3 endpoints:
-- text to image: `images/generations` DONE
-- image to image: `images/edits` TODO
-- inpainting: `images/edits` with `mask` field TODO
+A single servable exposes following endpoints:
+- text to image: `images/generations`
+
+Endpoints unsupported for now:
+- image to image: `images/edits` 
+- inpainting: `images/edits` with `mask` field
 
 All requests are processed in unary format, with no streaming capabilities.
 
@@ -278,9 +276,9 @@ Linux
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "OpenVINO/stable-diffusion-v1-5-int8-ov",
+    "model": "OpenVINO/FLUX.1-schnell-int4-ov",
     "prompt": "three happy cats",
-    "num_inference_steps": 50,
+    "num_inference_steps": 3,
     "size": "512x512"
   }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
 ```
@@ -290,7 +288,7 @@ Windows Powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body '{"model": "OpenVINO/stable-diffusion-v1-5-int8-ov", "prompt": "three happy cats", "num_inference_steps": 50}'
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three happy cats", "num_inference_steps": 3}'
 
 $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
@@ -301,7 +299,7 @@ Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/generations ^
   -H "Content-Type: application/json" ^
-  -d "{\"model\": \"OpenVINO/stable-diffusion-v1-5-int8-ov\", \"prompt\": \"three happy cats\", \"num_inference_steps\": 50, \"size\": \"512x512\"}"
+  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three happy cats\", \"num_inference_steps\": 3, \"size\": \"512x512\"}"
 ```
 
 
@@ -348,11 +346,11 @@ client = OpenAI(
 
 now = time.time()
 response = client.images.generate(
-            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            model="OpenVINO/FLUX.1-schnell-int4-ov",
             prompt="three happy cats",
             extra_body={
                 "rng_seed": 43,
-                "num_inference_steps": 50
+                "num_inference_steps": 3
             }
         )
 print("Time elapsed: ", time.time()-now, "seconds")
@@ -370,17 +368,8 @@ Output file (`output2.png`):
 Client side logs confirm that generating single image take less than 10 seconds on Intel® Xeon®:
 
 ```
-Time elapsed:  9.080497741699219 seconds
+Time elapsed:  18.89774751663208 seconds
 ```
-
-
-## Benchmarking text generation with high concurrency
-
-TBD
-
-## Testing the model accuracy over serving API
-
-TBD
 
 
 ## References
