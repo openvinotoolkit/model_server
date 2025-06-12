@@ -205,6 +205,6 @@ BAAI/bge-reranker-base
 
 ## Integration with Langchain
 
-Check [RAG demo](../continuous_batching/rag/cpp/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
+Check [RAG demo](../continuous_batching/rag/README.md) which employs `rerank` endpoint together with `chat/completions` and `embeddings`. 
 
 
