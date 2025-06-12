@@ -59,7 +59,7 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 ```console
 mkdir -p models
 
-ovms.exe --rest_port 8000 ^
+ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
   --source_model OpenVINO/FLUX.1-schnell-int4-ov
