@@ -1,0 +1,14 @@
+{#ovms_docs_prepare_genai}
+
+```{toctree}
+---
+maxdepth: 1
+hidden:
+---
+ovms_docs_pull
+ovms_demos_common_export
+
+```
+
+[Prepare models using OVMS](./pull_hf_models.py)
+[Prepare models using python script](./../demos/common/export_models/export_models.py)

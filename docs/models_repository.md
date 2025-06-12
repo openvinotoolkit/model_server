@@ -7,7 +7,7 @@ hidden:
 ---
 ovms_docs_models_repository_classic
 ovms_docs_models_repository_graph
-ovms_docs_pull
+ovms_docs_prepare_genai
 
 ```
 

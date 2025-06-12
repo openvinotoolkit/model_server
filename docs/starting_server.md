@@ -91,9 +91,23 @@ Server will detect the type of requested servable (model or mediapipe graph) and
 
 In case you do not want to prepare model repository before starting the server, you can just run OVMS with:
 
-```
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+```
+:::
+::::
 
 It will download required model files, prepare configuration for OVMS and start serving the model.
 
@@ -209,10 +223,24 @@ resnet
 
 To add model to ovms configuration file you can either do it manually or use:
 
-```text
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
+```
+:::
+::::
 
 When model is directly inside models repository.
 
@@ -238,3 +266,22 @@ If you want to remove model from configuration file you can do it either manuall
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```
+
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
+docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
+--remove_from_config <config_file_directory_path> --model_name <name>
+```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --remove_from_config <config_file_directory_path> --model_name <name>
+```
+:::
+::::
