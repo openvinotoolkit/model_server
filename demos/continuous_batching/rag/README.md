@@ -2,7 +2,7 @@
 
 ## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
 
-### 1. Download the preconfigured models using ovms --pull option with form [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO)
+### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO)
 ::::{tab-set}
 
 :::{tab-item} With Docker
