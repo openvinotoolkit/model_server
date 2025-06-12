@@ -360,7 +360,6 @@ public:
     }
 };
 
-
 class ServerShutdownGuard {
     ovms::Server& ovmsServer;
 
