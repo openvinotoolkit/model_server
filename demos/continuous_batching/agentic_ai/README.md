@@ -42,7 +42,6 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-for
 ```console
 python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --target_device GPU --enable_prefix_caching
 ```
-```
 :::
 
 :::{tab-item} NPU
