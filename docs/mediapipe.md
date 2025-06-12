@@ -204,37 +204,6 @@ Graphs can also be configured in the `mediapipe_config_list` section.
 ```
 Nodes in the MediaPipe graphs can reference both the models configured in model_config_list section and in subconfigs.
 
-#### Simplified mediapipe graphs and LLM models loading
-
-Now there is an easier way to specify LLM configurations in `config.json`. In the `model_config` section, it is sufficient to specify `model_name` and `base_path`, and the server will detect if there is a graph configuration file (`.pbtxt`) present and load the servable accordingly. 
-
-For example, the `model_config` section in `config.json` could look like this:
-
-```json
-{
-    "model_config_list": [
-        {
-            "config": {
-                "name": "text_generation_model",
-                "base_path": "/models/text_generation_model"
-            }
-        },
-        {
-            "config": {
-                "name": "embedding_model",
-                "base_path": "/models/embedding_model"
-            }
-        },
-        {
-            "config": {
-                "name": "mediapipe_graph",
-                "base_path": "/models/mediapipe_graph"
-            }
-        }
-    ]
-}
-```
-
 ### MediaPipe configuration options explained
 
 |Option|Type|Description|Required|
