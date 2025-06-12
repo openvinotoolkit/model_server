@@ -47,7 +47,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-for
 
 :::{tab-item} NPU
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --target_device GPU
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --target_device NPU
 ```
 :::
 
