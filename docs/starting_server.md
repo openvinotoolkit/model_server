@@ -13,12 +13,12 @@ Before starting the container, make sure you have [prepared the model for servin
 
 Start the model server by running the following command with your parameters: 
 
-```
+```text
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 or for binary package:
-```
+```text
 ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 
