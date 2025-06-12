@@ -77,6 +77,8 @@ options:
                         Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
+  --tools_model_type {llama3,phi4,hermes3,qwen3}
+                        Set the type of model chat template and output parser
 ```
 
 ## Model Export Examples
