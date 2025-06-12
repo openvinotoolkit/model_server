@@ -7,20 +7,33 @@ There are two method for passing to the model server information about the model
 Note that changing configuration in runtime while serving is possible only with the config file.
 When deploying model(s) with a configuration file, you can add or delete models, as well as update their configurations in runtime, without needing to restart the server.
 
-## Serving a Classic Model
+## Serving a Classic Model, Mediapipe, GenAI Model
 
 Before starting the container, make sure you have [prepared the model for serving](models_repository.md).
 
 Start the model server by running the following command with your parameters: 
 
-```text
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
-or for binary package:
-```text
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bash
 ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
+:::
+::::
+
+
+Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
 
 Example using a ResNet model:
 
@@ -35,57 +48,11 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 
 The required Model Server parameters are listed below. For additional configuration options, see the [Model Server Parameters](parameters.md) section.
 
-| option                         | description                                                            |
-|--------------------------------|------------------------------------------------------------------------|
-| `--rm`                         | remove the container when exiting the Docker container                 |
-| `-d`                           | runs the container in the background                                   |
-| `-v`                           | defines how to mount the model folder in the Docker container          |
-| `-p`                           | exposes the model serving port outside the Docker container            |
-| `openvino/model_server:latest` | represents the image name; the ovms binary is the Docker entry point   |
-| `--model_path`                 | model location                                                         |
-| `--model_name`                 | the name of the model in the model_path                                |
-| `--port`                       | the gRPC server port                                                   |
-| `--rest_port`                  | the REST server port                                                   |
-
-Possible model locations (`--model_path`):
-* Docker container path that is mounted during start-up
-* Google Cloud Storage path `gs://<bucket>/<model_path>`
-* AWS S3 path `s3://<bucket>/<model_path>`   
-* Azure blob path `az://<container>/<model_path>`
-
 `openvino/model_server:latest` varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
 
 - Expose the container ports to **open ports** on your host or virtual machine. 
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
-
-## Serving GenAI models and mediapipes
-
-### Starting the mediapipe graph or LLM models
-You can start server with single mediapipe graph, or LLM model that is already configured in local filesystem with:
-
-::::{tab-set}
-:::{tab-item} With Docker
-**Required:** Docker Engine installed
-
-```bash
-docker run -d --rm -v <model_repository_path>:/models:ro -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
---model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
-```
-:::
-
-:::{tab-item} On Baremetal Host
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
-
-```bat
-ovms.exe --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000
-```
-:::
-::::
-
-Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `.pbtxt` file, which defines the Mediapipe graph structure.
-
-*Note*: There is no online model modification nor versioning capability as of now for graphs, LLM like models.
 
 ### Starting the LLM model from HF directly
 
