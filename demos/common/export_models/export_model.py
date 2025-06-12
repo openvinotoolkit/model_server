@@ -518,7 +518,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     destination_path = os.path.join(model_repository_path, model_name, "ov")
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task sentence-similarity --library sentence_transformers --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -544,7 +544,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task sentence-similarity --library sentence_transformers --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export rerank model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
