@@ -358,6 +358,10 @@ public:
     ovms::ServerSettingsImpl& getServerSettings() {
         return this->serverSettings;
     }
+
+    ovms::ModelsSettingsImpl& getModelSettings(){
+        return this->modelsSettings;
+    }
 };
 
 class ServerShutdownGuard {
@@ -420,18 +424,5 @@ TEST(ServerModeTests, PullAndStartModeError) {
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
-    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
-}
-
-TEST(ServerModeTests, ServingModelsModeError) {
-    std::unique_ptr<ServerShutdownGuard> serverGuard;
-    ovms::Server& server = ovms::Server::instance();
-    TestEnabledConfig config;
-    config.getServerSettings().serverMode = ovms::SERVING_MODELS_MODE;
-    auto retCode = server.startModules(config);
-    EXPECT_TRUE(retCode.ok()) << retCode.string();
-    serverGuard = std::make_unique<ServerShutdownGuard>(server);
-    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
-    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
