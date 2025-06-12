@@ -14,3 +14,4 @@ einops
 torchvision
 timm==1.0.15
 diffusers==0.33.1  # for image generation
+sentencepiece  # for image generation (flux schnell model)
