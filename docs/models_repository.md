@@ -17,4 +17,4 @@ Depending on what kind of models are to be served, you should follow steps below
 
 [Graphs](./models_repository_graph.md)
 
-[Generative use cases](./pull_hf_models.md)
+[Generative AI use cases](./prepare_generative_use_cases.md)

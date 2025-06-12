@@ -11,4 +11,4 @@ ovms_demos_common_export
 ```
 
 [Prepare models using OVMS](./pull_hf_models.py)
-[Prepare models using python script](./../demos/common/export_models/export_models.py)
+[Prepare models using python script](./export_model_script.md)
