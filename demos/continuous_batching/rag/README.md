@@ -1,6 +1,6 @@
-# RAG demo with all execution steps delegated to the OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
+# RAG demo with OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
-## Creating models repository for all the endpoints
+## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
 
 ### 1. Download the preconfigured models using ovms --pull option with form [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO)
 ::::{tab-set}
@@ -17,8 +17,6 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
-
-docker run -d --rm -p 8023:8023 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8023 --config_path /workspace/config.json
 ```
 :::
 
@@ -34,33 +32,12 @@ ovms.exe --pull --model_repository_path models --source_model OpenVINO/bge-reran
 ovms.exe --add_to_config models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ovms.exe --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
 ovms.exe --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
-
-ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
 ```
 :::
 ::::
 
-### 2. Deploying the model server
-::::{tab-set}
 
-:::{tab-item} With Docker
-**Required:** Docker Engine installed
-
-```bash
-docker run -d --rm -p 8023:8023 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8023 --config_path /workspace/config.json
-```
-:::
-
-:::{tab-item} On Baremetal Host
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
-
-```bat
-ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
-```
-:::
-::::
-
-### Export models from HuggingFace Hub including conversion to OpenVINO format
+### 2.  Export models from HuggingFace Hub including conversion to OpenVINO format
 
 Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
@@ -69,21 +46,24 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/r
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 
 mkdir models
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
-python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config_all.json
+python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json
+python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8  --config_file_path models/config.json
 ```
 
 ## Deploying the model server
 
 ### With Docker
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config_all.json
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
-
 ### On Baremetal
+```bash
+ovms --rest_port 8000 --config_path ./models/config.json
+```
+### Windows
 ```bat
-ovms --rest_port 8000 --config_path ./models/config_all.json
+ovms --rest_port 8000 --config_path %cd%\models\config.json
 ```
 
 ## Using RAG
