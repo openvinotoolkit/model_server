@@ -191,7 +191,7 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ```console
-ovms.exe --rest_port 8000 ^
+ovms --rest_port 8000 ^
   --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
   --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
