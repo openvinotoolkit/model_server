@@ -40,17 +40,33 @@ ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
 :::
 ::::
 
-## Using RAG
+### 2. Deploying the model server
+::::{tab-set}
 
-When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+
+```bash
+docker run -d --rm -p 8023:8023 -v $(pwd)/models:/workspace:ro openvino/model_server:latest --rest_port 8023 --config_path /workspace/config.json
+```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```bat
+ovms.exe --rest_port 8000 --config_path %cd%\models\config.json
+```
+:::
+::::
 
 ### Export models from HuggingFace Hub including conversion to OpenVINO format
 
 Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 
 mkdir models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
@@ -69,3 +85,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 ```bat
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
+
+## Using RAG
+
+When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
