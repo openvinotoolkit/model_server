@@ -11,6 +11,6 @@ ovms_demos_common_export
 
 ```
 
-[Prepare models using OVMS](./pull_hf_models.py) when model is available in [OpenVINO organization](https://huggingface.co/OpenVINO)
+Prepare models using OVMS [pull mode](./pull_hf_models.py) when model is available in [OpenVINO organization](https://huggingface.co/OpenVINO).
 
-[Prepare models using python script](./export_model_script.md) otherwise.
+Prepare models using [python script](./export_model_script.md) otherwise.
