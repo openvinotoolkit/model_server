@@ -1,4 +1,4 @@
-{#ovms_docs_prepare_genai}
+# Exporting GEN AI Models {#ovms_docs_prepare_genai}
 
 ```{toctree}
 ---
@@ -11,5 +11,6 @@ ovms_demos_common_export
 
 ```
 
-[Prepare models using OVMS](./pull_hf_models.py)
-[Prepare models using python script](./export_model_script.md)
+[Prepare models using OVMS](./pull_hf_models.py) when model is available in [OpenVINO organization](https://huggingface.co/OpenVINO)
+
+[Prepare models using python script](./export_model_script.md) otherwise.
