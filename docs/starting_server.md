@@ -54,6 +54,8 @@ wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_mo
 docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
+
+- Expose the container ports to **open ports** on your host or virtual machine. 
 :::
 
 :::{tab-item} On Baremetal Host
@@ -68,7 +70,6 @@ The required Model Server parameters are listed below. For additional configurat
 
 `openvino/model_server:latest` varies by tag and build process - see tags: https://hub.docker.com/r/openvino/model_server/tags/ for a full tag list.
 
-- Expose the container ports to **open ports** on your host or virtual machine. 
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
