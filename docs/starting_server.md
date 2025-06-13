@@ -27,7 +27,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bash
 ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
@@ -37,7 +37,7 @@ ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_p
 
 Server will detect the type of requested servable (classic model, generative model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
 
-Example using a ResNet model:
+**Example using a ResNet model:**
 
 ```bash
 mkdir -p models/resnet/1
@@ -170,7 +170,7 @@ To serve multiple models and pipelines from the same container you will need an 
 }
 ```
 
-How to run with ```config.json```:
+**How to run with ```config.json```:**
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -192,9 +192,9 @@ ovms --config_path /models/config.json --port 9000 --rest_port 8000
 :::
 ::::
 
-## Config management
+### Config management
 
-### List models
+#### List models
 
 Assuming you have models repository already prepared, to check what models/graphs are servable from specified repository:
 
@@ -211,7 +211,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bat
 docker run -d --rm -v <model_repository_path>:/models:ro openvino/model_server:latest \
@@ -243,7 +243,7 @@ LLama3.2
 resnet
 ```
 
-### Enable model
+#### Enable model
 
 To add model to ovms configuration file you can either do it manually or use:
 
@@ -284,7 +284,7 @@ cd model_repository_path
 ovms --add_to_config . --model_name OpenVINO/DeepSeek-R1-Distill-Qwen-1.5B-int4-ov --model_repository_path .
 ```
 
-### Disable model
+#### Disable model
 
 If you want to remove model from configuration file you can do it either manually or use command:
 
@@ -300,7 +300,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bat
 ovms --remove_from_config <config_file_directory_path> --model_name <name>

@@ -1,6 +1,6 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This documents describes how leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models from OpenVINO organization in HuggingFace (HF). This approach assumes that you are pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF. If the model is not from that organization, follow steps described in [this document](./export_model_script.md).
+This documents describes how leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models from OpenVINO organization in HuggingFace (HF). This approach assumes that you are pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF. If the model is not from that organization, follow steps described in [this document](../demos/common/export_models/README.md).
 
 ### Pulling the models
 
