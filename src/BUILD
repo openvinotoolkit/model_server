@@ -680,7 +680,7 @@ cc_library(
             "executingstreamidguard",
             "libovmsfilesystem",
             "libovmsfilesystemfactory_h",
-            "libovmsfilesystemfactory", # TODO FIXME missing symbols @atobisze when not in ovms_lib
+            "libovmsfilesystemfactory", # TODO missing symbols @atobisze when not in ovms_lib
             "grpc_utils",
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
