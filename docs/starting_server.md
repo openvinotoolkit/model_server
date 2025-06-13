@@ -104,6 +104,10 @@ When using pull during startup you need both read and write access rights to mod
 
 Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 
+
+::::{tab-set}
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
 ```bash
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
