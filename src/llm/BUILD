@@ -79,6 +79,7 @@ cc_library(
         "@mediapipe//mediapipe/framework:calculator_framework", # required for absl status
         "//src:libovmsprofiler",
         "//third_party:curl",
+        "//src:image_conversion",
         "//src:libovmsfilesystem",
         "@stb//:image",
         ":response_parsers",
@@ -97,10 +98,19 @@ cc_library(
     hdrs = ["response_parsers/base_response_parser.hpp", 
             "response_parsers/hermes3_response_parser.hpp",
             "response_parsers/llama3_response_parser.hpp",
+            "response_parsers/phi4_response_parser.hpp",
             "response_parsers/qwen3_response_parser.hpp",
             "response_parsers/response_parser.hpp",
             "response_parsers/utils.hpp"],
-    deps = select({
+    srcs = ["response_parsers/hermes3_response_parser.cpp",
+            "response_parsers/llama3_response_parser.cpp",
+            "response_parsers/phi4_response_parser.cpp",
+            "response_parsers/qwen3_response_parser.cpp",
+            "response_parsers/utils.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+    ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),

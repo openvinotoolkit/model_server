@@ -33,7 +33,6 @@
 namespace ovms {
 
 Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& configJson) {
-    // FIXME:std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
     std::string md5;
     Status status = parseConfig(jsonFilename, configJson, md5);
     if (!status.ok()) {
@@ -73,18 +72,18 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
         return status;
     }
 
-    const auto modelsItr = configJson.FindMember("model_config_list");
+    auto modelsItr = configJson.FindMember("model_config_list");
     if (modelsItr == configJson.MemberEnd() || !modelsItr->value.IsArray()) {
         SPDLOG_ERROR("Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
 
     bool erased = false;
-    for (const auto& config : modelsItr->value.GetArray()) {
+    for (auto& config : modelsItr->value.GetArray()) {
         auto checkItemDelete = config.FindMember("config");
         if (checkItemDelete != config.MemberEnd() && config["config"].HasMember("name") && config["config"]["name"].GetString() == modelSettings.modelName) {
             SPDLOG_DEBUG("Erasing model from config: {}", modelSettings.modelName);
-            configJson.Erase(&config["config"]);
+            modelsItr->value.Erase(&config);
             erased = true;
             break;
         }
@@ -96,14 +95,13 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
     }
 
     SPDLOG_DEBUG("Model to be removed found in configuration file: {}", fullPath);
-    std::string configString = "{ }";
     // Serialize the document to a JSON string
     rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     configJson.Accept(writer);
 
     // Output the JSON string
-    configString = buffer.GetString();
+    std::string configString = buffer.GetString();
 
     return FileSystem::createFileOverwrite(fullPath, configString);
 }

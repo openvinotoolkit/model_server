@@ -81,7 +81,7 @@ public:
     }
 
     void LoadConfig(ovms::ModelManager& manager) {
-        manager.loadConfig(configFilePath);
+        manager.startFromFile(configFilePath);
     }
 
     void UnloadConfig(ovms::ModelManager& manager) {
@@ -89,7 +89,7 @@ public:
             "model_config_list": []
         })";
         createConfigFileWithContent(configContent, configFilePath);
-        manager.loadConfig(configFilePath);
+        manager.startFromFile(configFilePath);
     }
 
     void RemoveConfig() {

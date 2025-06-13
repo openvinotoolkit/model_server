@@ -53,4 +53,7 @@ cc_library(
     hdrs = ["config_export_types.hpp"],
     deps =  [],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COPTS_ADJUSTED,
 )

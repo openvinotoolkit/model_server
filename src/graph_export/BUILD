@@ -14,6 +14,20 @@
 # limitations under the License.
 #
 
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("//:common_settings.bzl",
+     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COPTS_MEDIAPIPE", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+
+COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + COPTS_MEDIAPIPE + select({
+        "//conditions:default": [],
+        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
+})
+
+LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
+    "//conditions:default": [],
+    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
+})
+
 cc_library(
     name = "graph_export",
     srcs = ["graph_export.cpp"],
@@ -29,11 +43,18 @@ cc_library(
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@mediapipe//mediapipe/framework/port:parse_text_proto",
-        "@mediapipe//mediapipe/framework:calculator_graph",
         "@ovms//src:libovmsschema",
-    ],
+    ] + select({
+            "//:not_disable_mediapipe": [
+                "@mediapipe//mediapipe/framework/port:parse_text_proto",
+                "@mediapipe//mediapipe/framework:calculator_graph",
+                ],
+            "//:disable_mediapipe": []
+            }),
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -49,6 +70,9 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -64,6 +88,9 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -80,6 +107,9 @@ cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -95,6 +125,9 @@ cc_library(
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 cc_library(
@@ -103,4 +136,7 @@ cc_library(
     hdrs = ["graph_export_types.hpp"],
     deps =  [],
     visibility = ["//visibility:public"],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )

@@ -318,8 +318,8 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE)
+        // Return from modules only in --pull mode or error, otherwise start the rest of modules
+        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
             return status;
     }
 
@@ -394,6 +394,7 @@ void Server::shutdownModules() {
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
+    std::shared_lock lock(modulesMtx);
     modules.clear();
 }
 

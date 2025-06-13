@@ -52,25 +52,36 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 
-parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
+parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
-parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
+parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
+add_common_arguments(parser_embeddings_ov)
+parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
+parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
+parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+
+parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
+
+parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
+add_common_arguments(parser_rerank_ov)
+parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
-parser_image_generation.add_argument('--max_number_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_number_images_per_prompt')
+parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 args = vars(parser.parse_args())
@@ -104,6 +115,41 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+    }
+  }
+}
+"""
+
+embedding_graph_ov_template = """
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+  name: "EmbeddingsExecutor"
+  input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
+  calculator: "EmbeddingsCalculatorOV"
+  input_stream: "REQUEST_PAYLOAD:input"
+  output_stream: "RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
+      models_path: "{{model_path}}",
+      normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+    }
+  }
+}
+"""
+
+rerank_graph_ov_template = """
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+  name: "RerankExecutor"
+  input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
+  calculator: "RerankCalculatorOV"
+  input_stream: "REQUEST_PAYLOAD:input"
+  output_stream: "RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+      models_path: "{{model_path}}",
     }
   }
 }
@@ -241,8 +287,8 @@ node: {
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
       default_resolution: '{{default_resolution}}',{% endif %}
-      {%- if max_number_images_per_prompt > 0 %}
-      max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
+      {%- if max_num_images_per_prompt > 0 %}
+      max_num_images_per_prompt: {{max_num_images_per_prompt}},{% endif %}
       {%- if default_num_inference_steps > 0 %}
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
@@ -395,14 +441,14 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
     else: # assume HF model 
         set_max_context_length = ""
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -443,19 +489,57 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
+def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
+    set_max_context_length = ""
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting embeddings model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export embeddings model", source_model)
+        if truncate:
+            max_context_length = get_models_max_context(destination_path, 'config.json')
+            if max_context_length is not None:
+                set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
+        print("Exporting tokenizer to ", destination_path)
+        convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
+        if (os.system(convert_tokenizer_command)):
+            raise ValueError("Failed to export tokenizer model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting rerank model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export rerank model", source_model)
+        print("Exporting tokenizer to ", destination_path)
+        export_rerank_tokenizer(source_model, destination_path, max_doc_length)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
     else: # assume HF model name
         with tempfile.TemporaryDirectory() as tmpdirname:
-            embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
+            embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
                 optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
@@ -552,8 +636,14 @@ if args['task'] == 'text_generation':
 elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
 
+elif args['task'] == 'embeddings_ov':
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
+
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
+
+elif args['task'] == 'rerank_ov':
+    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
@@ -561,7 +651,7 @@ elif args['task'] == 'image_generation':
         'target_device',
         'max_resolution',
         'default_resolution',
-        'max_number_images_per_prompt',
+        'max_num_images_per_prompt',
         'default_num_inference_steps',
         'max_num_inference_steps',
     ]}

@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.5
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -118,9 +118,15 @@ RUN dnf install -y https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os
             libicu-devel && \
             dnf clean all
 
-WORKDIR /lfs
-RUN wget -q --content-disposition "https://packagecloud.io/github/git-lfs/packages/el/9/git-lfs-3.6.1-1.el9.x86_64.rpm/download.rpm?distro_version_id=240"
-RUN dnf install -y git-lfs-3.6.1-1.el9.x86_64.rpm && dnf clean all
+WORKDIR /
+# hadolint ignore=DL3003
+RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+git clone https://github.com/git-lfs/git-lfs && \
+    cd git-lfs && \
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
+    /usr/local/go/bin/go build . && \
+    cp git-lfs /usr/bin/git-lfs
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
@@ -212,6 +218,7 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
 ARG ov_tokenizers_branch=master
@@ -219,6 +226,17 @@ ARG ov_tokenizers_branch=master
 RUN git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}"  && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+
+WORKDIR /openvino_tokenizers/
+# Install the openvino_tokenizers python bindings and use a symlink to point
+# to the shared object in it's final location.
+RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
+    cp -r python/* /opt/intel/openvino/python/ ; \
+    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.2\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.2.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info/METADATA ; \
+    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
@@ -387,6 +405,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 ENV LD_LIBRARY_PATH=/ovms/lib
+ENV PATH="$PATH:/ovms/bin"
 
 COPY --from=pkg /ovms_release /ovms
 # hadolint ignore=SC2114

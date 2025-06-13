@@ -302,9 +302,11 @@ void CLIParser::parse(int argc, char** argv) {
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
+            ImageGenerationGraphCLIParser imageGenParser;
             parser1.printHelp();
             parser2.printHelp();
             parser3.printHelp();
+            imageGenParser.printHelp();
             exit(OVMS_EX_OK);
         }
     } catch (const std::exception& e) {
@@ -466,7 +468,7 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
     return (result->count("pull") || result->count("source_model") || result->count("task"));
 }
 
-void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
     // Ovms Pull models mode || pull and start models mode
     if (isHFPullOrPullAndStart(this->result)) {
         if (result->count("pull")) {
@@ -486,7 +488,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             switch (hfSettings.task) {
                 case TEXT_GENERATION_GRAPH: {
                     if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
-                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
+                        std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
                     } else {
                         throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
                     }
@@ -519,7 +521,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             }
         } else {
             if (std::holds_alternative<GraphCLIParser>(this->graphOptionsParser)) {
-                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName, modelPath);
+                std::get<GraphCLIParser>(this->graphOptionsParser).prepare(serverSettings.serverMode, hfSettings, modelName);
             } else {
                 throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
             }
@@ -564,7 +566,7 @@ void CLIParser::prepare(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* 
 
     this->prepareModel(*modelsSettings, serverSettings->hfSettings);
 
-    this->prepareGraph(*serverSettings, serverSettings->hfSettings, modelsSettings->modelName, modelsSettings->modelPath);
+    this->prepareGraph(*serverSettings, serverSettings->hfSettings, modelsSettings->modelName);
 
     if (serverSettings->serverMode == HF_PULL_AND_START_MODE)
         this->prepareGraphStart(serverSettings->hfSettings, *modelsSettings);
