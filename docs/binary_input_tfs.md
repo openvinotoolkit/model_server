@@ -28,8 +28,8 @@ On the server side, the Base64 encoded data is decoded to raw binary and loaded 
 
 ## Usage examples
 
-Sample clients that use binary inputs via TFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/http_predict_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/grpc_predict_binary_resnet.py))
-Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/README.md))
+Sample clients that use binary inputs via TFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/ovmsclient/samples/http_predict_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/ovmsclient/samples/grpc_predict_binary_resnet.py))
+Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/ovmsclient/samples/README.md))
 
 
 ## Recommendations:

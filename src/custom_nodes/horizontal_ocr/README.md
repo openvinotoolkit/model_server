@@ -8,7 +8,7 @@ Additionally to the detected text boxes, in the two additional outputs are retur
 
 This custom node can be used to process video frames via [camera example](../../../demos/horizontal_text_detection/python/README.md).
 
-**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/main/demos/horizontal_text_detection/python/).
+**NOTE** Exemplary [configuration file](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/demos/horizontal_text_detection/python/config.json) is available in [demo with camera](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/demos/horizontal_text_detection/python/).
 
 # Building custom node library
 

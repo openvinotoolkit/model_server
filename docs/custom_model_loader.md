@@ -37,7 +37,7 @@ To enable a particular model to load using custom loader, add extra parameter in
 
 
 ### C++ API Interface for custom loader:
-A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](https://github.com/openvinotoolkit/model_server/blob/main/src/customloaderinterface.hpp)
+A base class **CustomLoaderInterface** along with interface API is defined in [src/customloaderinterface.hpp](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/src/customloaderinterface.hpp)
 
 Refer to this file  for API details. 
 

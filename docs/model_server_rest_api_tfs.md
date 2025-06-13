@@ -65,7 +65,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1
   ]
 }
 ```
-Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
+Read more about [Get Model Status API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/tensorflow-serving-api/samples/README.md#model-status-api-1)
 
 ## Model Metadata API
 **Description**
@@ -148,7 +148,7 @@ $ curl http://localhost:8001/v1/models/person-detection/versions/1/metadata
 }
 ```
 
-Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
+Read more about [Get Model Metadata API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/tensorflow-serving-api/samples/README.md#model-metadata-api-1)
 
 ## Predict API
 **Description**
@@ -212,7 +212,7 @@ On the server side, the binary encoded data is loaded using OpenCV which then co
 
 Check [how binary data is handled in OpenVINO Model Server](./binary_input.md) for more information.
 
-Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
+Read more about [Predict API usage](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/tensorflow-serving-api/samples/README.md#predict-api-1)
 
 ## Config Reload API
 **Description**
