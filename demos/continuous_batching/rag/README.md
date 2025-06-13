@@ -21,7 +21,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::
 
 :::{tab-item} On Baremetal Host
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 mkdir models
@@ -68,4 +68,4 @@ ovms --rest_port 8000 --config_path %cd%\models\config.json
 
 ## Using RAG
 
-When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
+When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
