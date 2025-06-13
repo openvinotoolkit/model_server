@@ -359,7 +359,7 @@ public:
         return this->serverSettings;
     }
 
-    ovms::ModelsSettingsImpl& getModelSettings(){
+    ovms::ModelsSettingsImpl& getModelSettings() {
         return this->modelsSettings;
     }
 };
