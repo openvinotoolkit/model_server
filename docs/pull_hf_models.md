@@ -24,9 +24,6 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 :::
 ::::
 
-
-Add note for modle path
-
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
 ```text
