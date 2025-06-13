@@ -12,7 +12,7 @@ There is a special mode to make OVMS pull the model from Hugging Face before sta
 **Required:** Docker Engine installed
 
 ```text
-docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --task <task> [TASK_SPECIFIC_PARAMETERS]
+docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 
@@ -21,7 +21,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```text
-ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --task <task> [TASK_SPECIFIC_PARAMETERS]
+ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
 :::
 ::::
@@ -29,7 +29,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
 ```text
-ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
+ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation 
 ```
 ::::{tab-set}
 :::{tab-item} With Docker

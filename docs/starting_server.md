@@ -84,7 +84,7 @@ In case you do not want to prepare model repository before starting the server a
 
 ```bash
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
---port 8000 --rest_port 9000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+--port 8000 --rest_port 9000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
 
@@ -93,7 +93,7 @@ docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_rep
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --task <task> [TASK_SPECIFIC_OPTIONS]
+ovms --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
 ::::
@@ -113,7 +113,7 @@ Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 **Required:** Docker Engine installed
 ```bash
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
---port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
+--port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation
 ```
 :::
 
@@ -122,7 +122,7 @@ docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_rep
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```bash
-ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation --port 8000 --rest_port 9000
+ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device GPU --task text_generation --port 8000 --rest_port 9000
 ```
 :::
 ::::
