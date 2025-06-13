@@ -10,3 +10,4 @@ langchain-openai
 langchain
 langchainhub
 ipywidgets
+numpy<2.0

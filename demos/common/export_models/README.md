@@ -21,11 +21,13 @@ usage: export_model.py [-h] {text_generation,embeddings,rerank,image_generation}
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,rerank,image_generation}
+  {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
-    embeddings          export model for embeddings endpoint
-    rerank              export model for rerank endpoint
+    embeddings          [deprecated] export model for embeddings endpoint with models split into separate, versioned directories
+    embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
+    rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
+    rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
     image_generation    export model for image generation endpoint
 ```
 For every use case subcommand there is adjusted list of parameters:
@@ -78,6 +80,8 @@ options:
                         Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
+  --tools_model_type {llama3,phi4,hermes3,qwen3}
+                        Set the type of model chat template and output parser
 ```
 
 ## Model Export Examples
