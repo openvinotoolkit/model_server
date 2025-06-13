@@ -55,17 +55,17 @@ Configuration options for the server are defined only via command-line options a
 
 ## Pull mode configuration options
 
-Shared configuration options for the pull, and pull & start mode.
+Shared configuration options for the pull, and pull & start mode. In the presence of ```--pull``` parameter OVMS will only pull model without serving.
 
 ### Pull Mode Options
 
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
-| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
+| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.  |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).              |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).  Default: `text_generation` |
 
 There are also additional environment variables that may change the behavior of pulling:
 
@@ -97,13 +97,10 @@ Task specific parameters for different tasks (text generation/image generation/e
 |-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------|
 | `--max_resolution`                | `string`     | Maximum allowed resolution in the format `WxH` (W = width, H = height). If not specified, inherited from the model. |
 | `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. If not specified, inherited from the model.|
-| `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request.                                       |
+| `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request. In 2025.2 release only 1 image generation per request is supported. |
 | `--default_num_inference_steps`   | `integer`    | Default number of inference steps when not specified by the client.                                                 |
 | `--max_num_inference_steps`       | `integer`    | Maximum number of inference steps a client can request for a given model.                                           |
 | `--num_streams`                   | `integer`    | Number of parallel execution streams for image generation models. Use at least 2 on 2-socket CPU systems.           |
-
-*Note:*
-In 2025.2 release only 1 image generation per request is supported.
 
 ### Embeddings
 | option                    | Value format | Description                                                                    |
