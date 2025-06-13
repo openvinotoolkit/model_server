@@ -8,6 +8,7 @@ There is a special mode to make OVMS pull the model from Hugging Face before sta
 
 ::::{tab-set}
 :::{tab-item} With Docker
+:sync: docker
 **Required:** Docker Engine installed
 
 ```text
@@ -16,6 +17,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 :::
 
 :::{tab-item} On Baremetal Host
+:sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```text
@@ -29,6 +31,26 @@ Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 ```text
 ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
 ```
+::::{tab-set}
+:::{tab-item} With Docker
+:sync: docker
+**Required:** Docker Engine installed
+
+```text
+docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation
+```
+:::
+
+:::{tab-item} On Baremetal Host
+:sync: baremetal
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+
+```text
+ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
+```
+:::
+::::
+
 
 It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
