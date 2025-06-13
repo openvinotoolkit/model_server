@@ -46,7 +46,7 @@ def download_file(url):
                 text += page.extract_text()
         return text
     else:
-        print("Unsupported file type. Only .txt and .pdf files are supported.")
+        raise ValueError("Unsupported file type. Only .txt and .pdf files are supported.")
 
 parser = argparse.ArgumentParser(description="Generate a dataset of long context examples.")
 parser.add_argument("--file_url", type=str, default="https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/handle/20.500.12024/2011/donquix-2011.txt", help="URL of the file to download")
