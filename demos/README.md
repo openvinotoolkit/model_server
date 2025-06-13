@@ -5,6 +5,7 @@
 maxdepth: 1
 hidden:
 ---
+ovms_demos_continuous_batching_agent
 ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
@@ -12,6 +13,7 @@ ovms_demos_continuous_batching_vlm
 ovms_demos_llm_npu
 ovms_demos_vlm_npu
 ovms_demos_code_completion_vsc
+ovms_demos_image_generation
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -45,6 +47,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ### Check Out New Generative AI Demos
 | Demo | Description |
 |---|---|
+|[AI Agents with MCP servers and serving language models](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MPC servers and serving LLM models|
 |[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
 |[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
 |[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
@@ -53,7 +56,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
 |[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
-
+|[Image Generation](image_generation/README.md)|Generate images|
 
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
