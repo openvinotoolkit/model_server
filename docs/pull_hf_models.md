@@ -1,4 +1,4 @@
-# Pull mode {#ovms_docs_pull}
+# OVMS Pull mode {#ovms_docs_pull}
 
 This documents describes how leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models from OpenVINO organization in HuggingFace (HF). This approach assumes that you are pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF. If the model is not from that organization, follow steps described in [this document](./export_model_script.md).
 
@@ -30,7 +30,7 @@ Add note for modle path
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
 ```text
-docker run $(id -u):$(id -g) --rm -v /models:/models:rw openvino/model_server:latest --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
+ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
 ```
 
 It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.

@@ -33,11 +33,10 @@ ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_p
 :::
 ::::
 
-Server will detect the type of requested servable (model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
+Server will detect the type of requested servable (classic model, generative model or mediapipe graph) and load it accordingly. This detection is based on the presence of a `graph.pbtxt` file, which defines the Mediapipe graph structure, presence of versions directory for classic models.
 
 Example using a ResNet model:
 
-docker run w tabach
 ```bash
 mkdir -p models/resnet/1
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
@@ -74,7 +73,7 @@ The required Model Server parameters are listed below. For additional configurat
 
 Notka ze z OV organization
 
-In case you do not want to prepare model repository before starting the server, you can just run OVMS with:
+In case you do not want to prepare model repository before starting the server and you want to serve model from HuggingFace OpenVINO organization you can just run OVMS with:
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -103,7 +102,6 @@ In case of GenAI models, startup can use additional parameters specific to task.
 When using pull during startup you need both read and write access rights to models repository.
 
 Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
-
 
 ::::{tab-set}
 :::{tab-item} With Docker
@@ -158,8 +156,8 @@ To serve multiple models and pipelines from the same container you will need an 
       },
       {
          "config":{
-            "name":"model_name3",
-            "base_path":"gs://bucket/models/model3",
+            "name":"Phi-3-mini-FastDraft-50M-int8-ov",
+            "base_path":"/models/OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov/",
          }
       }
    ]
