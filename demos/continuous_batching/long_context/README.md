@@ -112,7 +112,7 @@ Slower execution with FP32 precision is a result of disabled AMX acceleration.
 
 ## Recommendations
 
-Enable prefix caching feature with `--enable_prefix_caching` parameter when you expect reusing parts of the context. That it typically the case for RAG, chat and agentic application.
+Enable prefix caching feature with `--enable_prefix_caching` parameter when you expect reusing parts of the context. That is typically the case for RAG, chat and agentic application.
 
 Use KV cache compression as INT8 which is the default setting.
 
