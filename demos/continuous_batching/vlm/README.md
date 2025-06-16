@@ -339,7 +339,7 @@ git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
-python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2-2B --endpoint /v3/chat/completions --max_concurrency 1--num-prompts 100 --trust-remote-code
+python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenGVLab/InternVL2-2B --endpoint /v3/chat/completions --max_concurrency 1 --num-prompts 100 --trust-remote-code
 
 Burstiness factor: 1.0 (Poisson process)
 Maximum request concurrency: None
