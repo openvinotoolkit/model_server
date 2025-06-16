@@ -8,7 +8,7 @@ hidden:
 
 gRPC API <ovms_docs_grpc_api_tfs>
 RESTful API <ovms_docs_rest_api_tfs>
-Examples <https://github.com/openvinotoolkit/model_server/blob/main/client/python/tensorflow-serving-api/samples/README.md>
+Examples <https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/client/python/tensorflow-serving-api/samples/README.md>
 ```
 
 ## Python Client
@@ -329,7 +329,7 @@ curl -X POST http://localhost:8000/v1/models/my_model:predict
 ::::
 
 
-For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/ovmsclient/samples).
+For complete usage examples see [ovmsclient samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/2/client/python/ovmsclient/samples).
 
 ## C++ and Go Clients
 
