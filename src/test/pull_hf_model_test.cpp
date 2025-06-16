@@ -390,7 +390,7 @@ TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModules
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherodulesStarted) {
+TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     TestEnabledConfig config;
