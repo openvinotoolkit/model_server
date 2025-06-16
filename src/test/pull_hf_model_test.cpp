@@ -375,53 +375,61 @@ public:
     }
 };
 
-TEST(ServerModeTests, ListModelError) {
+TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     TestEnabledConfig config;
     config.getServerSettings().serverMode = ovms::LIST_MODELS_MODE;
     auto retCode = server.startModules(config);
+    // [error][listmodels.cpp:121] Path is not a directory:
     EXPECT_TRUE(retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::GRPC_SERVER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModeTests, ModifyConfigError) {
+TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherodulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     TestEnabledConfig config;
     config.getServerSettings().serverMode = ovms::MODIFY_CONFIG_MODE;
     auto retCode = server.startModules(config);
+    // [error][config_export.cpp:197] Directory path empty:
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModeTests, PullModeError) {
+TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     TestEnabledConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_MODE;
     auto retCode = server.startModules(config);
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }
 
-TEST(ServerModeTests, PullAndStartModeError) {
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
     TestEnabledConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
     auto retCode = server.startModules(config);
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
     ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
     ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
     ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
