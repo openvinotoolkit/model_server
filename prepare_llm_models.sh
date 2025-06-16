@@ -84,7 +84,7 @@ fi
 if [ -d "$1/$EMBEDDING_MODEL/ov" ]; then
   echo "Models directory "$1/$EMBEDDING_MODEL/ov" exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
 fi
 
 if [ -d "$1/$RERANK_MODEL" ]; then
@@ -96,7 +96,7 @@ fi
 if [ -d "$1/$RERANK_MODEL/ov" ]; then
   echo "Models directory $1/$RERANK_MODEL/ov exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --model_name $RERANK_MODEL/ov
 fi
 
 if [ -d "$1/$QWEN3_MODEL" ]; then

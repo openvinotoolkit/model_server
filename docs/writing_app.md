@@ -34,6 +34,7 @@ Check the following articles to learn more about the supported APIs:
 - [OpenAI completions API](./model_server_rest_api_completions.md)
 - [OpenAI embeddings API](./model_server_rest_api_embeddings.md)
 - [Cohere rerank API](./model_server_rest_api_rerank.md)
+- [OpenAI images generations API](./model_server_rest_api_image_generation.md)
 
 In this section you can find short code samples to interact with OpenVINO Model Server endpoints via:
 - [TensorFlow Serving API](./clients_tfs.md)
