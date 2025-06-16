@@ -176,7 +176,7 @@ Below you can see the list of fully functional custom nodes embedded in the mode
 
 
 **Example:** 
-Including built-in [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2025/2/ses/2025/2/src/custom_nodes/horizontal_ocr) in the `config.json` would look like:
+Including built-in [horizontal OCR custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2025/2/src/custom_nodes/horizontal_ocr) in the `config.json` would look like:
 ```json
 ...
     "custom_node_library_config_list": [
