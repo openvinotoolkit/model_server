@@ -1,7 +1,10 @@
-# Exporting GEN AI Models {#ovms_demos_common_export}
+# Exporting models using script {#ovms_demos_common_export}
+
+This documents describes how to export, optimize and configure models prior to server deployment with provided python script. This approach is more flexible than using [pull feature](../../../docs/pull_hf_models.md) from OVMS as it allows for using models that were not optimized beforehand and provided in OpenVINO organization in HuggingFace, but requires having Python set up to work. You can find the script [here](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/export_model.py). If your model is available in [OpenVINO organization](https://huggingface.co/OpenVINO), then you can follow steps described [here](../../../docs/pull_hf_models.md).
+
+## What it does
 
 This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the `models` repository for deployment with OpenVINO Model Server. In one step it prepares a complete set of resources in the `models` repository for a supported GenAI use case.
-
 
 ## Quick Start
 ```console
@@ -18,11 +21,13 @@ usage: export_model.py [-h] {text_generation,embeddings,rerank,image_generation}
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,rerank,image_generation}
+  {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
-    embeddings          export model for embeddings endpoint
-    rerank              export model for rerank endpoint
+    embeddings          [deprecated] export model for embeddings endpoint with models split into separate, versioned directories
+    embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
+    rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
+    rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
     image_generation    export model for image generation endpoint
 ```
 For every use case subcommand there is adjusted list of parameters:
@@ -75,6 +80,8 @@ options:
                         Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
+  --tools_model_type {llama3,phi4,hermes3,qwen3}
+                        Set the type of model chat template and output parser
 ```
 
 ## Model Export Examples
