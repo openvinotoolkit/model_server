@@ -112,7 +112,7 @@ private:
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
         std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
-    Status validateUserSettingsInSingleModelCliGraphStart(ModelsSettingsImpl& modelsSettings);
+    static Status validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings);
     bool CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath);
 #else
     Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
@@ -146,8 +146,10 @@ private:
     /**
      * @brief A JSON configuration filename
      */
+protected:
     std::string configFilename;
 
+private:
     /**
      * @brief A thread object used for monitoring changes in config
      */
@@ -201,7 +203,7 @@ protected:
      * Time interval between each config file check
      */
     uint32_t watcherIntervalMillisec = 1000;
-    const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
+    static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
     /**
@@ -235,7 +237,7 @@ private:
      *
      */
     std::string rootDirectoryPath;
-
+    bool startedWithConfigFile = false;
     /**
      * @brief Set json config directory path
      *
@@ -298,8 +300,8 @@ public:
      * 
      * @return config filename
      */
-    const std::string& getConfigFilename() {
-        return configFilename;
+    bool isStartedWithConfigFile() {
+        return startedWithConfigFile;
     }
 
     /**
@@ -481,15 +483,13 @@ public:
      */
     Status configFileReloadNeeded(bool& isNeeded);
 
-    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
-
     /**
      * @brief Reads models from configuration file
      * 
      * @param jsonFilename configuration file
      * @return Status 
      */
-    Status loadConfig(const std::string& jsonFilename);
+    Status loadConfig();
 
     /**
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions

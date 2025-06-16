@@ -12,6 +12,7 @@ ovms_demos_continuous_batching_vlm
 ovms_demos_llm_npu
 ovms_demos_vlm_npu
 ovms_demos_code_completion_vsc
+ovms_demos_image_generation
 ovms_demo_clip_image_classification
 ovms_demo_age_gender_guide
 ovms_demo_horizontal_text_detection
@@ -37,7 +38,6 @@ ovms_demo_using_paddlepaddle_model
 ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
-ovms_demo_python_stable_diffusion
 ovms_string_output_model_demo
 
 ```
@@ -54,7 +54,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[LLM on NPU](./llm_npu/README.md)| Generate text with LLM models and NPU acceleration|
 |[VLM on NPU](./vlm_npu/README.md)| Generate text with VLM models and NPU acceleration|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
-
+|[Image Generation](image_generation/README.md)|Generate images|
 
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:
@@ -76,7 +76,6 @@ Check out the list below to see complete step-by-step examples of using OpenVINO
 ## With Python Nodes
 | Demo | Description |
 |---|---|
-|[Stable Diffusion](python_demos/stable_diffusion/README.md) | Generate image using Stable Diffusion model sending prompts via gRPC API unary or interactive streaming endpoint.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md) | Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
 
 ## With MediaPipe Graphs

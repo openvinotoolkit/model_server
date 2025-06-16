@@ -578,6 +578,35 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidP
     EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError("Image file /ovms/not_exisiting.jpeg parsing failed: can't fopen"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesImageLocalFilesystemInvalidEscaped) {
+    std::string json = R"({
+"model": "llama",
+"messages": [
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "What is in this image?"
+      },
+      {
+        "type": "image_url",
+        "image_url": {
+          "url":  ")" + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") +
+                       R"("
+        }
+      }
+    ]
+  }
+]
+})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    std::string expectedMessage = "Path " + getGenericFullPathForSrcTest("/ovms/src/test/../test/binaryutils/rgb.jpg") + " escape with .. is forbidden.";
+    EXPECT_EQ(apiHandler->parseMessages("/ovms/"), absl::InvalidArgumentError(expectedMessage.c_str()));
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingMultipleMessagesSucceeds) {
     std::string json = R"({
     "model": "llama",
@@ -776,7 +805,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingRequestWithNullParametersChat) {
     std::vector<std::string> chatParamsThatAcceptNull = {"stream", "stream_options", "ignore_eos", "frequency_penalty", "presence_penalty", "repetition_penalty",
         "length_penalty", "temperature", "top_p", "top_k", "seed", "stop", "include_stop_str_in_output", "best_of", "n", "num_assistant_tokens", "assistant_confidence_threshold",
-        "logprobs", "max_completion_tokens"};
+        "logprobs", "max_completion_tokens", "tools", "tool_choice"};
     std::optional<uint32_t> maxTokensLimit;
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;

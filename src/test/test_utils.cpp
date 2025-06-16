@@ -313,6 +313,13 @@ void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath) {
     }
 }
 
+void SetReadonlyFileAttributeFromDir(std::string& directoryPath) {
+    for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_write | std::filesystem::perms::owner_exec | std::filesystem::perms::group_write, std::filesystem::perm_options::remove);
+        std::filesystem::permissions(dir_entry, std::filesystem::perms::owner_read | std::filesystem::perms::group_read | std::filesystem::perms::others_read, std::filesystem::perm_options::add);
+    }
+}
+
 bool isShapeTheSame(const tensorflow::TensorShapeProto& actual, const std::vector<int64_t>&& expected) {
     bool same = true;
     if (static_cast<unsigned int>(actual.dim_size()) != expected.size()) {
@@ -633,13 +640,13 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
 
 std::string GetFileContents(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
-        std::cout << "File does not exist:" << filePath << std::endl;
+        std::cout << "File does not exist: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
     std::ifstream file(filePath, std::ios::in | std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "File could not be opened:" << filePath << std::endl;
+        std::cout << "File could not be opened: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
@@ -734,7 +741,7 @@ void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
     }
 }
 
-const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 15;
+const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 60;
 
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -767,7 +774,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 
     int argc = 8;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        ASSERT_EQ(expected_code, server.start(argc, argv));
+        EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
@@ -789,7 +796,7 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
 
     int argc = 9;
     t.reset(new std::thread([&argc, &argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);

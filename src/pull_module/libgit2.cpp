@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "libgit2.hpp"
 
+#include <iostream>
 #include <string>
 #include <memory>
 
@@ -27,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "cmd_exec.hpp"
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -253,6 +255,26 @@ Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
     return lfstatus;
 }
 
+Status HfDownloader::checkRequiredToolsArePresent() {
+    std::string cmd = "git --version";
+    std::string output = exec_cmd(cmd);
+    if (output.find("git version ") == std::string::npos) {
+        SPDLOG_DEBUG(output);
+        SPDLOG_ERROR("Required git executable is not present. Please add git from ovms package to PATH.");
+        return StatusCode::HF_FAILED_TO_INIT_GIT;
+    }
+
+    cmd = "git-lfs --version";
+    output = exec_cmd(cmd);
+    if (output.find("git-lfs/") == std::string::npos) {
+        SPDLOG_DEBUG(output);
+        SPDLOG_ERROR("Required git-lfs executable is not present. Please add git-lfs from ovms package to PATH.");
+        return StatusCode::HF_FAILED_TO_INIT_GIT_LFS;
+    }
+
+    return StatusCode::OK;
+}
+
 Status HfDownloader::cloneRepository() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -261,11 +283,16 @@ Status HfDownloader::cloneRepository() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
 
-    auto status = checkIfOverwriteAndRemove(this->downloadPath);
+    auto status = checkRequiredToolsArePresent();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }

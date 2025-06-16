@@ -19,6 +19,7 @@
 #include <limits>
 #include <regex>
 #include <thread>
+#include <vector>
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
@@ -85,16 +86,97 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
 }
 
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            usedButDisallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!usedButDisallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
+
+        return false;
+    }
+
+    return true;
+}
+
 bool Config::validate() {
-    // TODO: CVS-166727 Add validation of all parameters once the CLI model export flags will be implemented
-    if (this->serverSettings.hfSettings.pullHfModelMode) {
-        if (this->serverSettings.hfSettings.task == unknown) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE) {
+        if (!serverSettings.hfSettings.sourceModel.size()) {
+            std::cerr << "source_model parameter is required for pull mode";
+            return false;
+        }
+        if (!serverSettings.hfSettings.downloadPath.size()) {
+            std::cerr << "model_repository_path parameter is required for pull mode";
+            return false;
+        }
+        if (this->serverSettings.hfSettings.task == UNKNOWN_GRAPH) {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
+        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+            std::cerr << "For now only OpenVINO models are supported in pulling mode";
+            return false;
+        }
+        if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
+            if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for text generation.";
+                return false;
+            }
+            auto settings = std::get<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+            std::vector allowedPipelineTypes = {"LM", "LM_CB", "VLM", "VLM_CB", "AUTO"};
+            if (settings.pipelineType.has_value() && std::find(allowedPipelineTypes.begin(), allowedPipelineTypes.end(), settings.pipelineType) == allowedPipelineTypes.end()) {
+                std::cerr << "pipeline_type: " << settings.pipelineType.value() << " is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
+            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
+                std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+                return false;
+            }
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.enablePrefixCaching) == allowedBoolValues.end()) {
+                std::cerr << "enable_prefix_caching: " << settings.enablePrefixCaching << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.dynamicSplitFuse) == allowedBoolValues.end()) {
+                std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+        }
+
+        if (this->serverSettings.hfSettings.task == EMBEDDINGS_GRAPH) {
+            if (!std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
+                std::cerr << "Graph options not initialized for embeddings.";
+                return false;
+            }
+            auto settings = std::get<EmbeddingsGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings);
+
+            std::vector allowedBoolValues = {"false", "true"};
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.normalize) == allowedBoolValues.end()) {
+                std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
+        }
         return true;
     }
-    if (this->serverSettings.listServables) {
+    if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
             std::cerr << "Use --list_models with --model_repository_path" << std::endl;
             return false;
@@ -102,27 +184,57 @@ bool Config::validate() {
         return true;
     }
 
-    if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
-        std::cerr << "Use either config_path or model_path with model_name" << std::endl;
-        return false;
-    }
+    if (this->serverSettings.serverMode != MODIFY_CONFIG_MODE) {
+        if (!configPath().empty() && (!modelName().empty() || !modelPath().empty())) {
+            std::cerr << "Use either config_path or model_path with model_name" << std::endl;
+            return false;
+        }
+        if (configPath().empty() && !(!modelName().empty() && !modelPath().empty())) {
+            std::cerr << "Use config_path or model_path with model_name" << std::endl;
+            return false;
+        }
+        if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
+                                         nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
+                                         !pluginConfig().empty())) {
+            std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
+            return false;
+        }
+        // check grpc_workers value
+        if (((grpcWorkers() > AVAILABLE_CORES) || (grpcWorkers() < 1))) {
+            std::cerr << "grpc_workers count should be from 1 to CPU core count : " << AVAILABLE_CORES << std::endl;
+            return false;
+        }
+        // metrics on rest port
+        if (metricsEnabled() && restPort() == 0) {
+            std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
+            return false;
+        }
+        // metrics_list without metrics_enable
+        if (!metricsEnabled() && !metricsList().empty()) {
+            std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;
+            return false;
+        }
+        // both ports cannot be unset
+        if (startedFromCLI() && ((restPort() == 0) && (port() == 0))) {
+            std::cerr << "port and rest_port cannot both be unset" << std::endl;
+            return false;
+        }
+    } else {
+        if (configPath().empty()) {
+            std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
+            return false;
+        }
+        if (modelName().empty()) {
+            std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl;
+            return false;
+        }
+        if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
+            std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
+            return false;
+        }
 
-    if (configPath().empty() && !(!modelName().empty() && !modelPath().empty())) {
-        std::cerr << "Use config_path or model_path with model_name" << std::endl;
-        return false;
-    }
-
-    if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
-                                     nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
-                                     !pluginConfig().empty())) {
-        std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
-        return false;
-    }
-
-    // check grpc_workers value
-    if (((grpcWorkers() > AVAILABLE_CORES) || (grpcWorkers() < 1))) {
-        std::cerr << "grpc_workers count should be from 1 to CPU core count : " << AVAILABLE_CORES << std::endl;
-        return false;
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+            return false;
     }
 
     // check rest_workers value
@@ -153,18 +265,6 @@ bool Config::validate() {
         return false;
     }
 
-    // metrics on rest port
-    if (metricsEnabled() && restPort() == 0) {
-        std::cerr << "rest_port setting is missing, metrics are enabled on rest port" << std::endl;
-        return false;
-    }
-
-    // metrics_list without metrics_enable
-    if (!metricsEnabled() && !metricsList().empty()) {
-        std::cerr << "metrics_enable setting is missing, required when metrics_list is provided" << std::endl;
-        return false;
-    }
-
     // check bind addresses:
     if (!restBindAddress().empty() && check_hostname_or_ip(restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
@@ -177,11 +277,6 @@ bool Config::validate() {
     // port and rest_port cannot be the same
     if ((port() == restPort()) && (port() != 0)) {
         std::cerr << "port and rest_port cannot have the same values" << std::endl;
-        return false;
-    }
-    // both ports cannot be unset
-    if (startedFromCLI() && ((restPort() == 0) && (port() == 0))) {
-        std::cerr << "port and rest_port cannot both be unset" << std::endl;
         return false;
     }
 

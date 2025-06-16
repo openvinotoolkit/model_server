@@ -44,18 +44,14 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS")
-        ("truncate",
-            "Truncate the prompts to fit to the embeddings model.",
-            cxxopts::value<std::string>()->default_value("false"),
-            "TRUNCATE")
         ("normalize",
             "Normalize the embeddings.",
-            cxxopts::value<std::string>()->default_value("false"),
+            cxxopts::value<std::string>()->default_value("true"),
             "NORMALIZE")
-        ("model_version",
-            "Version of the model.",
-            cxxopts::value<uint32_t>()->default_value("1"),
-            "MODEL_VERSION");
+        ("mean_pooling",
+            "Mean pooling option.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "MEAN_POOLING");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -79,7 +75,7 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
     return  result->unmatched();
 }
 
-void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
+void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
     embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
     if (modelName != "") {
@@ -89,14 +85,13 @@ void EmbeddingsGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::st
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
         embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-        embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
-        embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+        embeddingsGraphSettings.meanPooling = result->operator[]("mean_pooling").as<std::string>();
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }

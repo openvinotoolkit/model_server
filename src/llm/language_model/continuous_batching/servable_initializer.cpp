@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
@@ -73,6 +73,15 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     properties->modelsPath = parsedModelsPath;
+    std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
+    if (std::filesystem::exists(modelGenerationConfigPath)) {
+        properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
+    }
+
+    if (nodeOptions.has_response_parser()) {
+        properties->responseParserName = nodeOptions.response_parser();
+    }
+
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();

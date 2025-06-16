@@ -380,6 +380,5 @@ static bool computeExpectedBufferSizeReturnFalseIfOverflow(const std::vector<T>&
     expectedBufferSize *= itemsize;
     return true;
 }
-// TODO FIXME remove Status validateAgainstMax2DStringArraySize(int32_t inputBatchSize, size_t inputWidth);
 }  // namespace request_validation_utils
 }  // namespace ovms

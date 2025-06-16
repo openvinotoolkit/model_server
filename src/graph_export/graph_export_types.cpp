@@ -20,13 +20,13 @@
 #include "graph_export_types.hpp"
 namespace ovms {
 
-std::string enumToString(ExportType type) {
+std::string enumToString(GraphExportType type) {
     auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown";
+    return (it != typeToString.end()) ? it->second : "unknown_graph";
 }
 
-ExportType stringToEnum(std::string inString) {
+GraphExportType stringToEnum(std::string inString) {
     auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : unknown;
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }
 }  // namespace ovms

@@ -1140,10 +1140,8 @@ inline static std::string createErrorJsonWithMessage(std::string message) {
 Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, ModelManager& manager) {
     SPDLOG_DEBUG("Processing config reload request started.");
     Status status;
-    auto& config = ovms::Config::instance();
-
     bool reloadNeeded = false;
-    if (manager.getConfigFilename() != "") {
+    if (manager.isStartedWithConfigFile()) {
         status = manager.configFileReloadNeeded(reloadNeeded);
         if (!reloadNeeded) {
             if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {
@@ -1154,14 +1152,14 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     if (reloadNeeded) {
-        status = manager.loadConfig(config.configPath());
+        status = manager.loadConfig();
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;
         }
     } else {
         if (!status.ok()) {
-            status = manager.loadConfig(config.configPath());
+            status = manager.loadConfig();
             if (!status.ok()) {
                 response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
                 return status;

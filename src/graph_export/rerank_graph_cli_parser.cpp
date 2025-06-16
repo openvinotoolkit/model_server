@@ -44,14 +44,10 @@ void RerankGraphCLIParser::createOptions() {
             "The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.",
             cxxopts::value<uint32_t>()->default_value("1"),
             "NUM_STREAMS")
-        ("max_doc_length",
-            "Maximum length of input documents in tokens.",
-            cxxopts::value<uint32_t>()->default_value("16000"),
-            "MAX_DOC_LENGTH")
-        ("model_version",
-            "Version of the model.",
-            cxxopts::value<uint32_t>()->default_value("1"),
-            "MODEL_VERSION");
+        ("max_allowed_chunks",
+            "Maximum allowed chunks.",
+            cxxopts::value<uint64_t>()->default_value("10000"),
+            "MAX_ALLOWED_CHUNKS");
 }
 
 void RerankGraphCLIParser::printHelp() {
@@ -75,8 +71,8 @@ std::vector<std::string> RerankGraphCLIParser::parse(const std::vector<std::stri
     return  result->unmatched();
 }
 
-void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string& modelName) {
-    RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
+void RerankGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
+    ovms::RerankGraphSettingsImpl rerankGraphSettings = RerankGraphCLIParser::defaultGraphSettings();
     rerankGraphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
@@ -86,13 +82,12 @@ void RerankGraphCLIParser::prepare(HFSettingsImpl& hfSettings, const std::string
     }
     if (nullptr == result) {
         // Pull with default arguments - no arguments from user
-        if (!hfSettings.pullHfModelMode || !hfSettings.pullHfAndStartModelMode) {
+        if (serverMode != HF_PULL_MODE && serverMode != HF_PULL_AND_START_MODE) {
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
         rerankGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
-        rerankGraphSettings.maxDocLength = result->operator[]("max_doc_length").as<uint32_t>();
-        rerankGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+        rerankGraphSettings.maxAllowedChunks = result->operator[]("max_allowed_chunks").as<uint64_t>();
     }
 
     hfSettings.graphSettings = std::move(rerankGraphSettings);
