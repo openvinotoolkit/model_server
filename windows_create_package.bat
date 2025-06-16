@@ -54,7 +54,7 @@ if /i "%with_python%"=="true" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 
     :: Prepare self-contained python
-    set "python_version=3.12.9"
+    set "python_version=3.12.10"
 
     call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
     if !errorlevel! neq 0 (
@@ -70,12 +70,6 @@ if /i "%with_python%"=="true" (
     .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
     if !errorlevel! neq 0 (
         echo Error during Python dependencies for LLM installation. The package will not be fully functional.
-        exit /b !errorlevel!
-    )
-    del /S /Q dist\windows\ovms\python\sqlite3.dll
-    if !errorlevel! neq 0 (
-        echo Error during Python dependencies: Cannot remove file.
-        exit /b !errorlevel!
     )
 )
 
