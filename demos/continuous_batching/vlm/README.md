@@ -29,7 +29,8 @@ Select deployment option depending on how you prepared models in the previous st
 
 Running this command starts the container with CPU only target device:
 ```bash
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM
+mkdir -p models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path /models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM
 ```
 **GPU**
 
@@ -37,6 +38,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
+mkdir models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server-gpu:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --target_device GPU --pipeline_type VLM
 ```
 :::
@@ -46,6 +48,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-a
 If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
+mkdir models
 ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM --target_device CPU
 ```
 or
