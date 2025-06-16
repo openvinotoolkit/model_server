@@ -7,14 +7,14 @@ hidden:
 ---
 ovms_docs_models_repository_classic
 ovms_docs_models_repository_graph
-ovms_demos_common_export
+ovms_docs_prepare_genai
 
 ```
 
+Depending on what kind of models are to be served, you should follow steps below for:
 
 [Classical models](./models_repository_classic.md)
 
 [Graphs](./models_repository_graph.md)
 
-[Generative use cases](../demos/common/export_models/README.md)
-
+[Generative AI use cases](./prepare_generative_use_cases.md)
