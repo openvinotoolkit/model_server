@@ -227,7 +227,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests

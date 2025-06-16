@@ -46,7 +46,7 @@ Check the container logs to confirm successful start:
 docker logs ovms
 ```
 
-Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/main/docs/deploying_server_baremetal.md] for deployment on bare metal.
+Alternatively see (instructions)[https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/docs/deploying_server_baremetal.md] for deployment on bare metal.
 
 Make sure to:
 

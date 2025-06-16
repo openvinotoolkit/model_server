@@ -102,7 +102,7 @@ Assuming you have unpacked model server package with python enabled version, mak
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU, GPU or NPU (it's defined in `graph.pbtxt`). If you run on GPU or NPU, make sure to have appropriate drivers installed, so the device is accessible for the model server.
 

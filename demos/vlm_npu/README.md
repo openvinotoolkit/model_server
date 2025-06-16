@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -123,13 +123,13 @@ curl http://localhost:8000/v1/config
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
-![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg)
+![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg)
 
 :::{dropdown} **Unary call with curl using image from local filesystem**
 
-Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](parameters.md) section) when starting docker container: 
+Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](../../docs/parameters.md) section) when starting docker container: 
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro -v $(pwd):/images:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json --allowed_local_media_path /images
@@ -285,7 +285,7 @@ python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-pa
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2025/2/demos/continuous_batching/accuracy/README.md)
 
 ## Limitations
 
