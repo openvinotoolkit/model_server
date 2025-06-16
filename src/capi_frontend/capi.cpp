@@ -351,6 +351,10 @@ DLL_PUBLIC void OVMS_StringFree(const char* ptr) {
     free((void*)ptr);
 }
 
+static void server_atexit_handler() {
+    ovms::Server::instance().shutdownModules();
+}
+
 DLL_PUBLIC OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* server,
     OVMS_ServerSettings* server_settings,
     OVMS_ModelsSettings* models_settings) {
@@ -367,8 +371,10 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerStartFromConfigurationFile(OVMS_Server* serve
     ovms::ServerSettingsImpl* serverSettings = reinterpret_cast<ovms::ServerSettingsImpl*>(server_settings);
     ovms::ModelsSettingsImpl* modelsSettings = reinterpret_cast<ovms::ModelsSettingsImpl*>(models_settings);
     auto res = srv->start(serverSettings, modelsSettings);
-    if (res.ok())
+    if (res.ok()) {
+        std::atexit(server_atexit_handler);
         return nullptr;
+    }
     return reinterpret_cast<OVMS_Status*>(new ovms::Status(std::move(res)));
 }
 
