@@ -84,7 +84,7 @@ python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --w
 
 **GPU**
 ```console
-python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models  --overwrite_models --target_device GPU
+python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json --model_repository_path models --overwrite_models --target_device GPU
 ```
 
 > **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
