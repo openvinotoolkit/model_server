@@ -511,7 +511,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case IMAGE_GENERATION_GRAPH: {
-                    std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    if (std::holds_alternative<ImageGenerationGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case UNKNOWN_GRAPH: {

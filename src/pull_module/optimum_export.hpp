@@ -20,22 +20,20 @@
 
 namespace ovms {
 class Status;
+enum GraphExportType : unsigned int;
 
 class OptimumDownloader : public HfDownloader {
 public:
-    OptimumDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
+    OptimumDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const HFSettingsImpl& hfSettings, bool inOverwrite);
     Status cloneRepository();
     std::string getGraphDirectory();
 
 protected:
     std::string sourceModel;
     std::string downloadPath;
-    std::string hfEndpoint;
-    std::string hfToken;
-    std::string httpProxy;
+    HFSettingsImpl hfSettings;
     bool overwriteModels;
 
     OptimumDownloader();
-    Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
 };
 }  // namespace ovms

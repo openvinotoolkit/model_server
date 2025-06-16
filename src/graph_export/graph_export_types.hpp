@@ -19,7 +19,7 @@
 #pragma once
 namespace ovms {
 
-enum GraphExportType {
+enum GraphExportType : unsigned int {
     TEXT_GENERATION_GRAPH,
     RERANK_GRAPH,
     EMBEDDINGS_GRAPH,

@@ -62,6 +62,7 @@ cc_library(
     srcs = ["optimum_export.cpp"],
     hdrs = ["optimum_export.hpp"],
     deps =  [
+        ":cmd_exec",
         ":libgit2",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovmsstatus",
