@@ -11,6 +11,7 @@ pipeline {
                 script {
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
                     echo "WORKSPACE: ${env.WORKSPACE}"
+                    echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
@@ -22,7 +23,7 @@ pipeline {
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                           def python_presence = ""
-                          if (env.OVMS_PYTHON_ENABLED) {
+                          if (env.OVMS_PYTHON_ENABLED == "true") {
                               python_presence = "with_python"
                           } else {
                               python_presence = "without_python"
