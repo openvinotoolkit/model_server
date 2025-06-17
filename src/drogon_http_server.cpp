@@ -111,6 +111,36 @@ Status DrogonHttpServer::startAcceptingRequests() {
                     // .setServerHeaderField("OpenVINO Model Server")
                     .enableServerHeader(false)
                     .enableDateHeader(false)
+                    .registerSyncAdvice([](const drogon::HttpRequestPtr& req)
+                        -> drogon::HttpResponsePtr {
+                            using namespace drogon;
+                            if (req->method() == Options) {
+                                auto resp = HttpResponse::newHttpResponse();
+                                resp->setStatusCode(k200OK);
+                                auto origin = req->getHeader("Origin");
+                                resp->addHeader("Access-Control-Allow-Origin",
+                                                origin.empty() ? "*" : origin);
+                                resp->addHeader("Access-Control-Allow-Methods",
+                                                req->getHeader("Access-Control-Request-Method"));
+                                resp->addHeader("Access-Control-Allow-Headers",
+                                                req->getHeader("Access-Control-Request-Headers"));
+                                resp->addHeader("Access-Control-Allow-Credentials", "true");
+                                return resp;
+                            }
+                            return {};
+                    })
+                    .registerPostHandlingAdvice(
+                        [](const drogon::HttpRequestPtr& req,
+                           const drogon::HttpResponsePtr& resp) {
+                            auto origin = req->getHeader("Origin");
+                            resp->addHeader("Access-Control-Allow-Origin",
+                                            origin.empty() ? "*" : origin);
+                            resp->addHeader("Access-Control-Allow-Methods",
+                                            "GET,POST,OPTIONS");
+                            resp->addHeader("Access-Control-Allow-Headers",
+                                            "Content-Type,Authorization");
+                           resp->addHeader("Access-Control-Allow-Credentials", "true");
+                    })
                     .addListener(this->address, this->port)
                     .run();
             } catch (...) {
