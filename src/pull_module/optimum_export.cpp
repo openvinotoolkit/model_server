@@ -31,13 +31,15 @@ namespace ovms {
 std::string getTextGenCmd(const std::string& directoryPath, TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
     // NPU specific settings
-    if (graphSettings.targetDevice == "NPU" && !graphSettings.extra_quantization_params.has_value()){
+    if (graphSettings.targetDevice == "NPU" && !graphSettings.extra_quantization_params.has_value()) {
         graphSettings.extra_quantization_params.value() = "--sym --ratio 1.0 --group-size -1";
     }
     // clang-format off
     oss << "optimum-cli export openvino --model " << graphSettings.modelName << " --trust-remote-code ";
     oss << " --weight-format " << graphSettings.precision;
-    oss << graphSettings.extra_quantization_params.has_value() ? graphSettings.extra_quantization_params.value() : std::string();
+    if (graphSettings.extra_quantization_params.has_value()) {
+        oss << graphSettings.extra_quantization_params.value();
+    }
     oss << " " << directoryPath;
     // clang-format on
 
@@ -99,8 +101,9 @@ OptimumDownloader::OptimumDownloader(const std::string& inSourceModel, const std
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string cmd = "optimum-cli -h";
-    std::string output = exec_cmd(cmd);
-    if (output.find("usage: optimum-cli") == std::string::npos) {
+    int retCode = 0;
+    std::string output = exec_cmd(cmd, retCode);
+    if (retCode != 0 || output.find("usage: optimum-cli") == std::string::npos) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
@@ -135,55 +138,56 @@ Status OptimumDownloader::cloneRepository() {
 
     std::string cmd = "";
     switch (this->hfSettings.task) {
-        case TEXT_GENERATION_GRAPH: {
-            if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings));
-            } else {
-                SPDLOG_ERROR("Text generation task options not initialised.");
-                return StatusCode::INTERNAL_ERROR;
-            }
-            break;
-        }
-        case EMBEDDINGS_GRAPH: {
-            if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings));
-            } else {
-                SPDLOG_ERROR("Embeddings task options not initialised.");
-                return StatusCode::INTERNAL_ERROR;
-            }
-            break;
-        }
-        case RERANK_GRAPH: {
-            if (std::holds_alternative<RerankGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<RerankGraphSettingsImpl>(this->hfSettings.graphSettings));
-            } else {
-                SPDLOG_ERROR("Rerank taskoptions not initialised.");
-                return StatusCode::INTERNAL_ERROR;
-            }
-            break;
-        }
-        case IMAGE_GENERATION_GRAPH: {
-            if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings));
-            } else {
-                SPDLOG_ERROR("Image generation task options not initialised.");
-                return StatusCode::INTERNAL_ERROR;
-            }
-            break;
-        }
-        case UNKNOWN_GRAPH: {
-            SPDLOG_ERROR("Optimum cli task options not initialised.");
+    case TEXT_GENERATION_GRAPH: {
+        if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+            cmd = getTextGenCmd(this->downloadPath, std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Text generation task options not initialised.");
             return StatusCode::INTERNAL_ERROR;
-            break;
         }
+        break;
+    }
+    case EMBEDDINGS_GRAPH: {
+        if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+            cmd = getTextGenCmd(this->downloadPath, std::get<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Embeddings task options not initialised.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+        break;
+    }
+    case RERANK_GRAPH: {
+        if (std::holds_alternative<RerankGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+            cmd = getTextGenCmd(this->downloadPath, std::get<RerankGraphSettingsImpl>(this->hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Rerank taskoptions not initialised.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+        break;
+    }
+    case IMAGE_GENERATION_GRAPH: {
+        if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+            cmd = getTextGenCmd(this->downloadPath, std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Image generation task options not initialised.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+        break;
+    }
+    case UNKNOWN_GRAPH: {
+        SPDLOG_ERROR("Optimum cli task options not initialised.");
+        return StatusCode::INTERNAL_ERROR;
+        break;
+    }
     }
 
     SPDLOG_DEBUG("Executing command: {}", cmd);
-    std::string output = exec_cmd(cmd);
-    if (output.find("usage: optimum-cli") == std::string::npos) {
+    int retCode = 0;
+    std::string output = exec_cmd(cmd, retCode);
+    if (retCode != 0 || output.find("Applying Weight Compression") == std::string::npos) {
         SPDLOG_DEBUG(output);
-        SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
-        return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
+        SPDLOG_ERROR("optimum-cli command failed.");
+        return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;
     }
 
     return StatusCode::OK;

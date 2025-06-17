@@ -112,7 +112,7 @@ Status HfPullModelModule::clone() const {
         if (std::holds_alternative<Status>(guardOrError)) {
             return std::get<Status>(guardOrError);
         }
-    
+
         HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
         auto status = hfDownloader.cloneRepository();
         if (!status.ok()) {

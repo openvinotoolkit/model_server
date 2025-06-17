@@ -479,11 +479,13 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
-        if (result->count("source_model"))
+        if (result->count("source_model")){
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if(serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0)
+            if(serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
+            }
+        }
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
