@@ -47,6 +47,7 @@ class OvmsBaseType(Enum):
     REDHAT_PYTHON = "redhat_python"
     REDHAT_GPU = "redhat_gpu"
     WINDOWS = "windows"
+    WINDOWS_PYTHON = "windows_python"
 
 
 # Libraries listed by ldd /ovms/bin/ovms
@@ -166,6 +167,26 @@ libraries = {
         'tbb12.dll',
         'zlib1.dll',
     },
+    OvmsBaseType.WINDOWS_PYTHON: {
+        'libcrypto-3.dll',
+        'libffi-8.dll',
+        'pip.exe',
+        'pip3.exe',
+        'pip3.12.exe',
+        'python.exe',
+        'python3.dll',
+        'python312.dll',
+        'pythonw.exe',
+        'sqlite3.dll',
+        't32.exe',
+        't64.exe',
+        't64-arm.exe',
+        'w32.exe',
+        'w64.exe',
+        'w64-arm.exe',
+        'vcruntime140.dll',
+        'vcruntime140_1.dll',
+    },
 }
 
 whitelisted_libraries = {
@@ -178,7 +199,7 @@ whitelisted_libraries = {
     OvmsType.UBUNTU24_NGINX: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU24]},
     OvmsType.REDHAT: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT]},
     OvmsType.REDHAT_GPU: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT]},
-    OvmsType.WINDOWS: {"default": libraries[OvmsBaseType.WINDOWS]},
+    OvmsType.WINDOWS: {"default": libraries[OvmsBaseType.WINDOWS], "python": libraries[OvmsBaseType.WINDOWS_PYTHON]},
 }
 
 # Apt/yum packages
@@ -252,7 +273,9 @@ packages = {
         'nginx',
         'nginx-common',
     },
-    OvmsBaseType.REDHAT: set(),
+    OvmsBaseType.REDHAT: {
+        'libtool-ltdl',
+    },
     OvmsBaseType.REDHAT_PYTHON: {
         'expat',
         'python3-libs',
