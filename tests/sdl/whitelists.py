@@ -170,6 +170,7 @@ libraries = {
     OvmsBaseType.WINDOWS_PYTHON: {
         'libcrypto-3.dll',
         'libffi-8.dll',
+        'libssl-3.dll',
         'pip.exe',
         'pip3.exe',
         'pip3.12.exe',
@@ -177,7 +178,6 @@ libraries = {
         'python3.dll',
         'python312.dll',
         'pythonw.exe',
-        'sqlite3.dll',
         't32.exe',
         't64.exe',
         't64-arm.exe',
