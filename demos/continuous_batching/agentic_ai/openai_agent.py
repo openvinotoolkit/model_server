@@ -45,7 +45,6 @@ async def run(query, agent, OVMS_MODEL_PROVIDER):
     await weather_server.connect()
     print(f"\n\nRunning: {query}")
     result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
-    print(result.raw_responses, dir(result))
     print(result.final_output)
 
 
