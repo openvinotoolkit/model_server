@@ -7,7 +7,7 @@ Image generation pipeline is exposed via [OpenAI API](https://platform.openai.co
 
 ## Prerequisites
 
-**RAM/vRAM** Model used in this demo takes up to 7GB of RAM/vRAM. Please consider lower precision to decrease it, or better/bigger model to get better image results.
+**RAM/vRAM** Model used in this demo takes up to 14GB of RAM/vRAM. Please consider lower precision to decrease it, or better/bigger model to get better image results.
 
 **Model preparation** (one of the below):
 - preconfigured models from HuggingFaces directly in OpenVINO IR format, list of Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
@@ -56,8 +56,8 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 
-```console
-mkdir -p models
+```bat
+mkdir models
 
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
@@ -95,10 +95,10 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```console
-mkdir -p models
+```bat
+mkdir models
 
-ovms.exe --rest_port 8000 ^
+ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
   --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
@@ -190,7 +190,7 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-```console
+```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
   --model_path ./models/black-forest-labs/FLUX.1-schnell
@@ -224,9 +224,9 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```console
-ovms.exe --rest_port 8000 ^
-  --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+```bat
+ovms --rest_port 8000 ^
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
   --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
@@ -277,7 +277,8 @@ curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
     "model": "OpenVINO/FLUX.1-schnell-int4-ov",
-    "prompt": "three happy cats",
+    "prompt": "three cute cats sitting on a bench",
+    "rng_seed": 45,
     "num_inference_steps": 3,
     "size": "512x512"
   }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
@@ -288,7 +289,7 @@ Windows Powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three happy cats", "num_inference_steps": 3}'
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "rng_seed": 45, "num_inference_steps": 3, "size": "512x512"}'
 
 $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
@@ -299,7 +300,7 @@ Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/generations ^
   -H "Content-Type: application/json" ^
-  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three happy cats\", \"num_inference_steps\": 3, \"size\": \"512x512\"}"
+  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three cute cats sitting on a bench\", \"rng_seed\": 45, \"num_inference_steps\": 3, \"size\": \"512x512\"}"
 ```
 
 
@@ -328,32 +329,26 @@ Install the client library:
 pip3 install openai pillow
 ```
 
-```console
-pip3 install openai
-```
 ```python
 from openai import OpenAI
 import base64
 from io import BytesIO
 from PIL import Image
-import time
-
 
 client = OpenAI(
-    base_url="http://ov-spr-36.sclab.intel.com:7774/v3",
+    base_url="http://localhost:8000/v3",
     api_key="unused"
 )
 
-now = time.time()
 response = client.images.generate(
             model="OpenVINO/FLUX.1-schnell-int4-ov",
-            prompt="three happy cats",
+            prompt="three cute cats sitting on a bench",
             extra_body={
-                "rng_seed": 43,
+                "rng_seed": 60,
+                "size": "512x512",
                 "num_inference_steps": 3
             }
         )
-print("Time elapsed: ", time.time()-now, "seconds")
 base64_image = response.data[0].b64_json
 
 image_data = base64.b64decode(base64_image)
@@ -365,11 +360,7 @@ image.save('output2.png')
 Output file (`output2.png`):  
 ![output2](./output2.png)
 
-Client side logs confirm image generation latency on Intel® Xeon®:
 
-```
-Time elapsed:  18.89774751663208 seconds
-```
 
 
 ## References
