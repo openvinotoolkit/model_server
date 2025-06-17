@@ -338,7 +338,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.9"
+set "python_version=3.12.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -347,7 +347,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
