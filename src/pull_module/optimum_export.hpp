@@ -17,6 +17,7 @@
 #include <string>
 
 #include "libgit2.hpp"
+#include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
 class Status;
@@ -35,5 +36,6 @@ protected:
     bool overwriteModels;
 
     OptimumDownloader();
+    Status checkRequiredToolsArePresent();
 };
 }  // namespace ovms

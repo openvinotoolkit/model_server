@@ -36,8 +36,43 @@ std::string getTextGenCmd(const std::string& directoryPath, TextGenGraphSettings
     }
     // clang-format off
     oss << "optimum-cli export openvino --model " << graphSettings.modelName << " --trust-remote-code ";
-    oss << " --weight-format " <<graphSettings.precision.has_value() ? graphSettings.precision.value() : std::string();
+    oss << " --weight-format " << graphSettings.precision;
     oss << graphSettings.extra_quantization_params.has_value() ? graphSettings.extra_quantization_params.value() : std::string();
+    oss << " " << directoryPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string getTextGenCmd(const std::string& directoryPath, EmbeddingsGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << graphSettings.modelName << " --trust-remote-code ";
+    oss << " --weight-format " << graphSettings.precision;
+    oss << " --task feature-extraction --library sentence_transformers ";
+    oss << " " << directoryPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string getTextGenCmd(const std::string& directoryPath, RerankGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << graphSettings.modelName << " --trust-remote-code ";
+    oss << " --weight-format " << graphSettings.precision;
+    oss << " --task text-classification ";
+    oss << " " << directoryPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+std::string getTextGenCmd(const std::string& directoryPath, ImageGenerationGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    // clang-format off
+    oss << "optimum-cli export openvino --model " << graphSettings.modelName;
+    oss << " --weight-format " << graphSettings.precision;
     oss << " " << directoryPath;
     // clang-format on
 
@@ -47,7 +82,7 @@ std::string getTextGenCmd(const std::string& directoryPath, TextGenGraphSettings
 OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
-    this->hfSettings = HFSettingsImpl();
+    this->hfSettings = {};
     this->overwriteModels = false;
 }
 
@@ -55,10 +90,10 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const HFSettingsImpl& hfSettings, bool inOverwrite) {
+OptimumDownloader::OptimumDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const HFSettingsImpl& inHfSettings, bool inOverwrite) {
     this->sourceModel = inSourceModel;
     this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
-    this->hfSettings = hfSettings;
+    this->hfSettings = inHfSettings;
     this->overwriteModels = inOverwrite;
 }
 
@@ -71,6 +106,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
+    SPDLOG_DEBUG("Optimum-cli executable is present");
     return StatusCode::OK;
 }
 
@@ -92,56 +128,57 @@ Status OptimumDownloader::cloneRepository() {
         return status;
     }
 
-    auto status = checkIfOverwriteAndRemove(this->downloadPath);
+    status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }
 
     std::string cmd = "";
-    switch (this->task) {
+    switch (this->hfSettings.task) {
         case TEXT_GENERATION_GRAPH: {
-            if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<TextGenGraphSettingsImpl>(this->hfSettings));
+            if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+                cmd = getTextGenCmd(this->downloadPath, std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings));
             } else {
                 SPDLOG_ERROR("Text generation task options not initialised.");
-                return INTERNAL_ERROR;
+                return StatusCode::INTERNAL_ERROR;
             }
             break;
         }
         case EMBEDDINGS_GRAPH: {
-            if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->hfSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<EmbeddingsGraphSettingsImpl>(this->hfSettings));
+            if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+                cmd = getTextGenCmd(this->downloadPath, std::get<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings));
             } else {
                 SPDLOG_ERROR("Embeddings task options not initialised.");
-                return INTERNAL_ERROR;
+                return StatusCode::INTERNAL_ERROR;
             }
             break;
         }
         case RERANK_GRAPH: {
-            if (std::holds_alternative<RerankGraphSettingsImpl>(this->hfSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<RerankGraphSettingsImpl>(this->hfSettings));
+            if (std::holds_alternative<RerankGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+                cmd = getTextGenCmd(this->downloadPath, std::get<RerankGraphSettingsImpl>(this->hfSettings.graphSettings));
             } else {
                 SPDLOG_ERROR("Rerank taskoptions not initialised.");
-                return INTERNAL_ERROR;
+                return StatusCode::INTERNAL_ERROR;
             }
             break;
         }
         case IMAGE_GENERATION_GRAPH: {
-            if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings)) {
-                cmd = getTextGenCmd(this->downloadPath, std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings));
+            if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
+                cmd = getTextGenCmd(this->downloadPath, std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings));
             } else {
                 SPDLOG_ERROR("Image generation task options not initialised.");
-                return INTERNAL_ERROR;
+                return StatusCode::INTERNAL_ERROR;
             }
             break;
         }
         case UNKNOWN_GRAPH: {
             SPDLOG_ERROR("Optimum cli task options not initialised.");
-            return INTERNAL_ERROR;
+            return StatusCode::INTERNAL_ERROR;
             break;
         }
     }
 
+    SPDLOG_DEBUG("Executing command: {}", cmd);
     std::string output = exec_cmd(cmd);
     if (output.find("usage: optimum-cli") == std::string::npos) {
         SPDLOG_DEBUG(output);

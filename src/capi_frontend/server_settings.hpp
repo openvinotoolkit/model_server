@@ -49,10 +49,10 @@ struct TextGenGraphSettingsImpl {
     uint32_t cacheSize = 10;
     std::string dynamicSplitFuse = "true";
     PluginConfigSettingsImpl pluginConfig;
+    std::string precision = "int8";
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
-    std::optional<std::string> precision;
     std::optional<std::string> extra_quantization_params;
 };
 
@@ -63,6 +63,7 @@ struct EmbeddingsGraphSettingsImpl {
     uint32_t numStreams = 1;
     std::string normalize = "true";
     std::string meanPooling = "false";
+    std::string precision = "int8";
 };
 
 struct RerankGraphSettingsImpl {
@@ -71,6 +72,7 @@ struct RerankGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     uint64_t maxAllowedChunks = 10000;
+    std::string precision = "int8";
 };
 
 struct ImageGenerationGraphSettingsImpl {
@@ -79,10 +81,11 @@ struct ImageGenerationGraphSettingsImpl {
     std::string targetDevice = "CPU";
     std::string maxResolution = "";
     std::string defaultResolution = "";
+    std::string pluginConfig;
+    std::string precision = "int8";
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
-    std::string pluginConfig;
 };
 
 struct HFSettingsImpl {
@@ -90,6 +93,7 @@ struct HFSettingsImpl {
     std::string sourceModel = "";
     std::string downloadPath = "";
     bool overwriteModels = false;
+    ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };

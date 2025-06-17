@@ -127,7 +127,7 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+        if (serverSettings.hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD && serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
             std::cerr << "For now only OpenVINO models are supported in pulling mode";
             return false;
         }

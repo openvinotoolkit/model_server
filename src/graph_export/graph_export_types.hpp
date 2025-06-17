@@ -27,6 +27,12 @@ enum GraphExportType : unsigned int {
     UNKNOWN_GRAPH
 };
 
+enum ModelDownlaodType : unsigned int {
+    GIT_CLONE_DOWNLOAD,
+    OPTIMUM_CLI_DOWNLOAD,
+    UNKNOWN_DOWNLOAD
+};
+
 const std::map<GraphExportType, std::string> typeToString = {
     {TEXT_GENERATION_GRAPH, "text_generation"},
     {RERANK_GRAPH, "rerank"},

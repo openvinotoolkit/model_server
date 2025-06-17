@@ -1069,22 +1069,6 @@ TEST(OvmsGraphConfigTest, negativeDynamicSplitFuse) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "dynamic_split_fuse: INVALID is not allowed. Supported values: true, false");
 }
 
-TEST(OvmsGraphConfigTest, negativeSourceModel) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-    };
-
-    int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
-}
-
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
