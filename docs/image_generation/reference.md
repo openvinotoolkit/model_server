@@ -61,10 +61,6 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 max_num_inference_steps` - maximum number of inference steps allowed for generation. Requests exceeding this value will be rejected. [default = 100];
 
 
-## Canceling the generation
-
-Unavailable for now.
-
 ## Models Directory
 
 In node configuration we set `models_path` indicating location of the directory with files loaded by LLM engine. It loads following files:
@@ -118,8 +114,8 @@ models/OpenVINO/
 └── stable-diffusion-v1-5-int8-ov
     ├── feature_extractor
     │   └── preprocessor_config.json
-    ├── graph.pbtxt
-    ├── model_index.json
+    ├── graph.pbtxt <----------------- - OVMS MediaPipe graph configuration file
+    ├── model_index.json <------------ - GenAI configuration file including pipeline type SD/SDXL/SD3/FLUX
     ├── README.md
     ├── safety_checker
     │   ├── config.json

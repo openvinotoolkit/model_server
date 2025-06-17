@@ -580,7 +580,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
         if os.system(optimum_command):
-            raise ValueError("Failed to export image generation model model", source_model)   
+            raise ValueError("Failed to export image generation model", source_model)
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"

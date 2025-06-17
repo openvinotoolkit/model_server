@@ -3,11 +3,11 @@
 This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) in the OpenVINO Model Server.
 Image generation pipeline is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
 
-> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770 on Ubuntu 22/24, RedHat 9 and Windows 11.
+> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
 ## Prerequisites
 
-**RAM/vRAM** Model used in this demo takes up to 14GB of RAM/vRAM. Please consider lower precision to decrease it, or better/bigger model to get better image results.
+**RAM/vRAM** Select model size and precision according to your hardware capabilities (RAM/vRAM). Request resolution plays significant role in memory consumption, so the higher resolution you request, the more RAM/vRAM is required.
 
 **Model preparation** (one of the below):
 - preconfigured models from HuggingFaces directly in OpenVINO IR format, list of Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
@@ -131,7 +131,7 @@ Run `export_model.py` script to download and quantize the model:
 ```console
 python export_model.py image_generation \
   --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int8 \
+  --weight-format int4 \
   --config_file_path models/config.json \
   --model_repository_path models \
   --overwrite_models
@@ -141,7 +141,7 @@ python export_model.py image_generation \
 ```console
 python export_model.py image_generation \
   --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int8 \
+  --weight-format int4 \
   --target_device GPU \
   --config_file_path models/config.json \
   --model_repository_path models \
