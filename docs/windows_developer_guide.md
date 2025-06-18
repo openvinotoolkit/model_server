@@ -89,7 +89,7 @@ The default version creates C++ only version without Python dependency.
 windows_create_package.bat
 ```
 
-Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_pathon` flag in the previous step as well.
+Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
 ```bat
 windows_create_package.bat opt --with_python
 ```
