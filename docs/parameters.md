@@ -58,10 +58,10 @@ Configuration options for the server are defined only via command-line options a
 Configuration options for the config management mode, which is used to manage config file in the model repository.
 | Option  | Value format  | Description  |
 |---|---|---|
-| `model_repository_path` | `string` | Path to the model repository. This path is prefixed to the relative model path. Use|
+| `model_repository_path` | `string` | Path to the model repository. This path is prefixed to the relative model path. Use either this parameter or ```--model_path```|
 | `list_models`| `NA` | List all models paths in the model repository. |
 | `model_name` | `string` | Name of the model as visible in serving. If ```--model_path``` is not provided, path is deduced from name. |
-| `model_path` | `string` | Optional. Path to the model repository. If path is relative then it is prefixed with ```--model_repository_path```. |
+| `model_path` | `string` | Optional. Path to the model repository. If path is relative then it is prefixed with ```--model_repository_path```. Use either this parameter or ```--model_repository_path```| |
 | `add_to_config` | `string` |  Path to config file directory for OVMS, where to add the model. |
 | `remove_from_config` | `string` |  Path to config file directory for OVMS, where to remove the model. |
 
