@@ -1,7 +1,7 @@
 #  Optical Character Recognition with Directed Acyclic Graph {#ovms_demo_optical_character_recognition}
 
 This document demonstrates how to create and use an Optical Character Recognition (OCR) pipeline based on [east-resnet50](https://github.com/argman/EAST) text detection model,
-[text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) combined with a custom node implementation.
+[text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2023.0.0/models/intel/text-recognition-0012) combined with a custom node implementation.
 
 Using such a pipeline, a single request to OVMS can perform a complex set of operations with a response containing
 recognized characters for all detected text boxes.
@@ -91,9 +91,9 @@ Converted east-resnet50 model will have the following interface:
 - Output name: `feature_fusion/concat_3` ; shape: `[1 256 480 5]` ; precision: `FP32`; layout: `N...`
 
 ### Text-recognition model
-Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2022.1.0/models/intel/text-recognition-0014) model and store it in `${PWD}/text-recognition/1` folder.
+Download [text-recognition](https://github.com/openvinotoolkit/open_model_zoo/tree/2023.0.0/models/intel/text-recognition-0012) model and store it in `${PWD}/text-recognition/1` folder.
 ```bash
-curl -L --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.bin -o text-recognition/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/text-recognition-0014/FP32/text-recognition-0014.xml -o text-recognition/1/model.xml
+curl -L --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/text-recognition-0012/FP32/text-recognition-0012.bin -o text-recognition/1/model.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/text-recognition-0012/FP32/text-recognition-0012.xml -o text-recognition/1/model.xml
 chmod -R 755 text-recognition
 ```
 
@@ -192,7 +192,7 @@ openvino
 pipeline
 2021
 intel
-rotations
+rotation
 Output: name[text_images]
     numpy => shape[(9, 1, 32, 128, 1)] data[float32]
 Output: name[text_coordinates]

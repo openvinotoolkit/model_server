@@ -57,8 +57,8 @@ curl http://localhost/v3/completions \
 | stream_options | ✅ | ✅ | ✅ | object (optional) | Options for streaming response. Only set this when you set stream: true |
 | stream_options.include_usage | ✅ | ✅ | ✅ | bool (optional) | Streaming option. If set, an additional chunk will be streamed before the data: [DONE] message. The usage field in this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value. |
 | prompt | ⚠️ | ✅ | ✅ | string or array (required) | The prompt(s) to generate completions for, encoded as a string, array of strings, array of tokens, or array of token arrays. **_Limitations: only single string prompt is currently supported._** |
-| max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. |
-| ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`, the maximum allowed `max_tokens` value is `4000`. |
+| max_tokens | ✅ | ✅ | ✅ | integer | The maximum number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. If max_tokens_limit is set in graph.pbtxt it will be default value of max_tokens. |
+| ignore_eos | ✅ | ❌ | ✅ | bool (default: `false`) | Whether to ignore the `EOS` token and continue generating tokens after the `EOS` token is generated. If set to `true`. |
 | include_stop_str_in_output | ✅ | ❌ | ✅ | bool (default: `false` if `stream=false`, `true` if `stream=true`) | Whether to include matched stop string in output. Setting it to false when `stream=true` is invalid configuration and will result in error. |
 | logprobs | ⚠️ | ✅ | ✅ | integer (optional) | Include the log probabilities on the logprob of the returned output token. **_ in stream mode logprobs are not returned. Only value 1 is accepted which returns logarithm or the chosen token _** |
 | echo | ✅ | ✅ | ✅ | boolean (optional) | Echo back the prompt in addition to the completion |
@@ -68,7 +68,6 @@ curl http://localhost/v3/completions \
 |-------|----------|----------|----------|---------|-----|
 | n | ✅ | ✅ | ✅ | integer (default: `1`) | Number of output sequences to return for the given prompt. This value must be between `1 <= N <= BEST_OF`. |
 | best_of | ✅ | ✅ | ✅ | integer (default: `1`) | Number of output sequences that are generated from the prompt. From these _best_of_ sequences, the top _n_ sequences are returned. _best_of_ must be greater than or equal to _n_. This is treated as the beam width for beam search sampling.  |
-| diversity_penalty | ✅ | ❌ | ❌ | float (default: `1.0`) | This value is subtracted from a beam's score if it generates the same token as any beam from other group at a particular time. See [arXiv 1909.05858](https://arxiv.org/pdf/1909.05858). |
 | length_penalty | ✅ | ❌ | ✅ | float (default: `1.0`) | Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while `length_penalty` < 0.0 encourages shorter sequences. |
 
 #### Multinomial sampling specific
@@ -88,6 +87,17 @@ curl http://localhost/v3/completions \
 |-------|----------|----------|----------|---------|-----|
 | num_assistant_tokens | ✅ | ❌ | ⚠️ | int | This value defines how many tokens should a draft model generate before main model validates them. Equivalent of `num_speculative_tokens` in vLLM. Cannot be used with `assistant_confidence_threshold`. |
 | assistant_confidence_threshold | ✅ | ❌ | ❌ | float | This parameter determines confidence level for continuing generation. If draft model generates token with confidence below that threshold, it stops generation for the current cycle and main model starts validation. Cannot be used with `num_assistant_tokens`. |
+
+#### Prompt lookup decoding specific
+
+Note that below parameters are valid only for prompt lookup pipeline. Add `"prompt_lookup": true` to `plugin_config` in your graph config node options to serve it.
+
+| Param | OpenVINO Model Server | OpenAI /completions API | vLLM Serving Sampling Params | Type | Description |
+|-------|----------|----------|----------|---------|-----|
+| num_assistant_tokens | ✅ | ❌ | ❌ | int | Number of candidate tokens proposed after ngram match is found |
+| max_ngram_size | ✅ | ❌ | ❌ | int | The maximum ngram to use when looking for matches in the prompt |
+
+**Note**: vLLM does not support those parameters as sampling parameters, but enables prompt lookup decoding, by setting them in [LLM config](https://docs.vllm.ai/en/stable/features/spec_decode.html#speculating-by-matching-n-grams-in-the-prompt)
 
 #### Unsupported params from OpenAI service:
 - logit_bias

@@ -19,6 +19,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../capi_frontend/capi_utils.hpp"
+#include "../tfs_frontend/tfs_utils.hpp"
+#include "../kfs_frontend/kfs_utils.hpp"
+#include "../capi_frontend/deserialization.hpp"
+#include "../tfs_frontend/deserialization.hpp"
+#include "../kfs_frontend/deserialization.hpp"
 #include "../tensor_conversion.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
@@ -492,7 +498,7 @@ const std::vector<ovms::Precision> BINARY_SUPPORTED_INPUT_PRECISIONS{
     // ovms::Precision::MIXED,
     ovms::Precision::FP64,
     ovms::Precision::FP32,
-    //    ovms::Precision::FP16,  // TODO FIXME Mediapipe update to 0.10.18
+    ovms::Precision::FP16,
     // InferenceEngine::Precision::Q78,
     ovms::Precision::I16,
     ovms::Precision::U8,
@@ -516,11 +522,9 @@ INSTANTIATE_TEST_SUITE_P(
 static const std::vector<ovms::Precision> BINARY_UNSUPPORTED_INPUT_PRECISIONS{
     ovms::Precision::UNDEFINED,
     ovms::Precision::MIXED,
-// ovms::Precision::FP64,
-// ovms::Precision::FP32,
-#ifndef _WIN32
-    ovms::Precision::FP16,
-#endif
+    // ovms::Precision::FP64,
+    // ovms::Precision::FP32,
+    // ovms::Precision::FP16,
     ovms::Precision::Q78,
     // ovms::Precision::I16,
     // ovms::Precision::U8,
@@ -580,7 +584,8 @@ TEST_P(NativeFileInputConversionKFSInvalidPrecisionTest, Invalid) {
         Layout{"NHWC"});
 
     ov::Tensor tensor;
-    ASSERT_EQ(convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, *tensorInfo, nullptr), ovms::StatusCode::INVALID_PRECISION);
+    auto status = convertNativeFileFormatRequestTensorToOVTensor(inferTensorContent, tensor, *tensorInfo, nullptr);
+    ASSERT_EQ(status, ovms::StatusCode::INVALID_PRECISION) << status.string();
 }
 
 INSTANTIATE_TEST_SUITE_P(

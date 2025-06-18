@@ -3,73 +3,80 @@
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
+You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
+
+- Deploying [Python nodes](./python_support/reference.md) is not available.
+- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax functions for flow control or input processing might not render all parts of the prompt correctly.
+- System message is not included in the prompt.
+- Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible.
+
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
-Download precompiled package (without python support):
+Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu22_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22_python_on.tar.gz
 tar -xzvf ovms_ubuntu22_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
-sudo apt update -y && apt install -y libxml2 curl
+sudo apt update -y && sudo apt install -y libxml2 curl
 ```
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.10
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
-Download precompiled package (without python support):
+Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu24.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_ubuntu24_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24_python_on.tar.gz
 tar -xzvf ovms_ubuntu24_python_on.tar.gz
 ```
 Install required libraries:
 ```{code} sh
-sudo apt update -y && apt install -y libxml2 curl
+sudo apt update -y && sudo apt install -y libxml2 curl
 ```
 Set path to the libraries and add binary to the `PATH`
 ```{code} sh
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo apt -y install libpython3.12
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
-:::{tab-item} RHEL 9.4
-:sync: rhel-9.4
-Download precompiled package (without python support):
+:::{tab-item} RHEL 9.5
+:sync: rhel-9.5
+Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
-or precompiled package (with python and LLM support):
+or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_redhat_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat_python_on.tar.gz
 tar -xzvf ovms_redhat_python_on.tar.gz
 ```
 Install required libraries:
@@ -81,11 +88,11 @@ Set path to the libraries and add binary to the `PATH`
 export LD_LIBRARY_PATH=${PWD}/ovms/lib
 export PATH=$PATH:${PWD}/ovms/bin
 ```
-In case of the version with python and LLM support run also:
+In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
 sudo yum install -y python39-libs
-pip3 install "Jinja2==3.1.5" "MarkupSafe==3.0.2"
+pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
 :::{tab-item} Windows
@@ -95,7 +102,7 @@ Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/r
 Download and unpack model server archive for Windows:
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.0/ovms_windows.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_windows.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
@@ -111,7 +118,9 @@ Run `setupvars` script to set required environment variables.
 .\ovms\setupvars.ps1
 ```
 
-> **Note**: Running this script changes Python settings for the shell that runs it.Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+> **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+
+> **Note**: If package contains Python, OVMS uses Python's Jinja package to apply chat template when serving LLMs. In such case, please ensure you have Windows "Beta Unicode UTF-8 for worldwide language support" enabled. [Instruction](llm_utf8_troubleshoot.png)
 
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 

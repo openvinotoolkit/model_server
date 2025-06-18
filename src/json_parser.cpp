@@ -64,17 +64,17 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
 
         } else if (it->value.IsInt64()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
-                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetInt64());
+                pluginConfig["NUM_STREAMS"] = it->value.GetInt64();
                 SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
             } else {
-                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetInt64());
+                pluginConfig[it->name.GetString()] = it->value.GetInt64();
             }
         } else if (it->value.IsDouble()) {
             if (it->name.GetString() == std::string("CPU_THROUGHPUT_STREAMS") || it->name.GetString() == std::string("GPU_THROUGHPUT_STREAMS")) {
-                pluginConfig["NUM_STREAMS"] = std::to_string(it->value.GetDouble());
+                pluginConfig["NUM_STREAMS"] = it->value.GetDouble();
                 SPDLOG_WARN("{} plugin config key is deprecated. Use  NUM_STREAMS instead", it->name.GetString());
             } else {
-                pluginConfig[it->name.GetString()] = std::to_string(it->value.GetDouble());
+                pluginConfig[it->name.GetString()] = it->value.GetDouble();
             }
         } else if (it->value.IsBool()) {
             pluginConfig[it->name.GetString()] = bool(it->value.GetBool());

@@ -1,0 +1,7 @@
+{
+    "model_config_list": [{"config": {
+                "name":"graphdummy",
+                "base_path":"/ovms/src/test/mediapipe/relative_paths/graph_only_name/graphdummy"
+            }
+    }]
+}

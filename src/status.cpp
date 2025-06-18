@@ -130,6 +130,8 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::REST_INVALID_URL, "Invalid request URL"},
     {StatusCode::REST_UNSUPPORTED_METHOD, "Unsupported method"},
     {StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE, "Request components type not recognized"},
+    {StatusCode::FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE, "Request of multipart type but failed to parse"},
+    {StatusCode::FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI, "Failed to deduce model name from all possible ways"},
 
     // Rest parser failure
     {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, "Request body should be JSON object"},
@@ -333,6 +335,14 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::SERVER_ALREADY_STARTING, "Server is already starting"},
     {StatusCode::MODULE_ALREADY_INSERTED, "Module already inserted"},
 
+    // Huggingface model download errors for libgit2
+    {StatusCode::HF_FAILED_TO_INIT_LIBGIT2, "Failed to initialize libgit2 library"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT, "Failed to initialize git executable"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT_LFS, "Failed to initialize git-lfs executable"},
+    {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
+
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
+    {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
+    {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},
 };
 }  // namespace ovms

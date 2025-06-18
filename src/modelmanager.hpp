@@ -50,6 +50,7 @@ extern const std::string DEFAULT_MODEL_CACHE_DIRECTORY;
 
 class Config;
 struct CNLIMWrapper;
+struct ModelsSettingsImpl;
 class CustomLoaderConfig;
 class CustomNodeLibraryManager;
 class MetricRegistry;
@@ -103,12 +104,18 @@ private:
     Status cleanupModelTmpFiles(ModelConfig& config);
     Status reloadModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToReload, std::shared_ptr<model_versions_t>& versionsFailed);
     Status addModelVersions(std::shared_ptr<ovms::Model>& model, std::shared_ptr<FileSystem>& fs, ModelConfig& config, std::shared_ptr<model_versions_t>& versionsToStart, std::shared_ptr<model_versions_t>& versionsFailed);
-    Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
+
 #if (MEDIAPIPE_DISABLE == 0)
+    Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
     Status processMediapipeConfig(const MediapipeGraphConfig& config, std::set<std::string>& mediapipesInConfigFile, MediapipeFactory& factory);
     Status loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs, std::vector<ovms::MediapipeGraphConfig>& mediapipesInConfigFile);
+    Status loadMediapipeSubConfigModels(std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile,
+        std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, std::vector<MediapipeGraphConfig>& mediapipesInConfigFile);
+    static Status validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings);
+    bool CheckStartFromGraph(std::string inputPath, MediapipeGraphConfig& mpConfig, bool checkModelMeshPath);
 #else
+    Status loadModels(const rapidjson::Value::MemberIterator& modelsConfigList, std::vector<ModelConfig>& gatedModelConfigs, std::set<std::string>& modelsInConfigFile, std::set<std::string>& modelsWithInvalidConfig, std::unordered_map<std::string, ModelConfig>& newModelConfigs, const std::string& rootDirectoryPath);
     Status loadModelsConfig(rapidjson::Document& configJson, std::vector<ModelConfig>& gatedModelConfigs);
 #endif
     Status tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedModelConfigs);
@@ -139,8 +146,10 @@ private:
     /**
      * @brief A JSON configuration filename
      */
+protected:
     std::string configFilename;
 
+private:
     /**
      * @brief A thread object used for monitoring changes in config
      */
@@ -194,7 +203,7 @@ protected:
      * Time interval between each config file check
      */
     uint32_t watcherIntervalMillisec = 1000;
-    const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
+    static const int WRONG_CONFIG_FILE_RETRY_DELAY_MS = 10;
 
 private:
     /**
@@ -228,7 +237,7 @@ private:
      *
      */
     std::string rootDirectoryPath;
-
+    bool startedWithConfigFile = false;
     /**
      * @brief Set json config directory path
      *
@@ -291,8 +300,8 @@ public:
      * 
      * @return config filename
      */
-    const std::string& getConfigFilename() {
-        return configFilename;
+    bool isStartedWithConfigFile() {
+        return startedWithConfigFile;
     }
 
     /**
@@ -350,18 +359,7 @@ public:
      *
      * @return pointer to ModelInstance or nullptr if not found 
      */
-    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const {
-        auto model = findModelByName(name);
-        if (!model) {
-            return nullptr;
-        }
-
-        if (version == 0) {
-            return model->getDefaultModelInstance();
-        } else {
-            return model->getModelInstanceByVersion(version);
-        }
-    }
+    const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const;
 
     template <typename RequestType, typename ResponseType>
     Status createPipeline(std::unique_ptr<Pipeline>& pipeline,
@@ -485,15 +483,13 @@ public:
      */
     Status configFileReloadNeeded(bool& isNeeded);
 
-    Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJson);
-
     /**
      * @brief Reads models from configuration file
      * 
      * @param jsonFilename configuration file
      * @return Status 
      */
-    Status loadConfig(const std::string& jsonFilename);
+    Status loadConfig();
 
     /**
      * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions

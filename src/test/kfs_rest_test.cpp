@@ -57,7 +57,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -75,10 +75,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
     void SetUp() override {
         handler = std::make_unique<HttpRestApiHandler>(*server, 5);
@@ -101,7 +98,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -117,10 +114,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -129,7 +123,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -147,10 +141,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(11, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -159,7 +150,7 @@ public:
     static void SetUpTestSuite() {
         HttpRestApiHandlerTest::server = std::make_unique<MockedServer>();
         std::string port = "9000";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         char* argv[] = {
             (char*)"OpenVINO Model Server",
             (char*)"--model_name",
@@ -175,10 +166,7 @@ public:
             [&argv]() {
                 ASSERT_EQ(EXIT_SUCCESS, server->start(9, argv));
             });
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server->getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
+        EnsureServerStartedWithTimeout(*server, 5);
     }
 };
 
@@ -190,9 +178,8 @@ std::unique_ptr<std::thread> HttpRestApiHandlerTest::thread = nullptr;
 #pragma GCC diagnostic ignored "-Wnarrowing"
 
 static void testInference(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, const std::string endpoint = "/v2/models/mediapipeAdd/versions/1/infer") {
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = std::to_string(headerLength);
 
     ovms::HttpRequestComponents comp;
 
@@ -201,7 +188,8 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -222,9 +210,8 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
 static void testInferenceNegative(int headerLength, std::string& request_body, std::unique_ptr<HttpRestApiHandler>& handler, ovms::Status processorStatus) {
     std::string request = "/v2/models/mediapipeAdd/versions/1/infer";
 
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", std::to_string(headerLength)};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = std::to_string(headerLength);
 
     ovms::HttpRequestComponents comp;
 
@@ -233,7 +220,8 @@ static void testInferenceNegative(int headerLength, std::string& request_body, s
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), processorStatus);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), processorStatus);
 }
 
 class HttpRestApiHandlerWithMediapipe : public ::testing::TestWithParam<std::string> {
@@ -246,11 +234,6 @@ protected:
 
     void SetUpServer(const char* configPath) {
         ::SetUpServer(this->t, this->server, this->port, configPath);
-        auto start = std::chrono::high_resolution_clock::now();
-        while ((server.getModuleState(SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-        }
-
         handler = std::make_unique<HttpRestApiHandler>(server, 5);
     }
 
@@ -383,7 +366,8 @@ TEST_F(HttpRestApiHandlerWithMediapipePassthrough, inferRequestBYTES) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -535,27 +519,24 @@ TEST_F(HttpRestApiHandlerTest, RegexParseServerLive) {
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputs) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "15"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "15";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::OK);
 }
 
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNegative) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "-15"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "-15";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
 
 TEST_F(HttpRestApiHandlerTest, RegexParseInferWithBinaryInputsSizeNotInt) {
     std::string request = "/v2/models/dummy/versions/1/infer";
     ovms::HttpRequestComponents comp;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::pair<std::string, std::string> binaryInputsHeader{"inference-header-content-length", "value"};
-    headers.emplace_back(binaryInputsHeader);
+    std::unordered_map<std::string, std::string> headers;
+    headers["inference-header-content-length"] = "value";
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", request, headers), StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_INVALID);
 }
 
@@ -564,7 +545,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>) {
+    handler->registerHandler(KFS_GetModelMetadata, [&](const std::string_view uri, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>, std::shared_ptr<ovms::MultiPartParser>) {
         c++;
         return ovms::StatusCode::OK;
     });
@@ -572,7 +553,8 @@ TEST_F(HttpRestApiHandlerTest, dispatchMetadata) {
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer, multiPartParser);
 
     ASSERT_EQ(c, 1);
 }
@@ -582,7 +564,7 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     ovms::HttpRequestComponents comp;
     int c = 0;
 
-    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter> writer) {
+    handler->registerHandler(KFS_GetModelReady, [&](const std::string_view, const ovms::HttpRequestComponents& request_components, std::string& response, const std::string& request_body, ovms::HttpResponseComponents& response_components, std::shared_ptr<ovms::HttpAsyncWriter>, std::shared_ptr<ovms::MultiPartParser>) {
         c++;
         return ovms::StatusCode::OK;
     });
@@ -590,7 +572,8 @@ TEST_F(HttpRestApiHandlerTest, dispatchReady) {
     std::string discard;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    handler->dispatchToProcessor("", std::string(), &discard, comp, responseComponents, writer, multiPartParser);
 
     ASSERT_EQ(c, 1);
 }
@@ -603,7 +586,8 @@ TEST_F(HttpRestApiHandlerTest, modelMetadataRequest) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -639,7 +623,8 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, modelMetadataRequest) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", std::string(), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -666,7 +651,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithMultidimensionalMatrix) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -687,7 +673,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequest) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -710,7 +697,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithSpecificBinaryOutputNotBool) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -732,7 +720,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithDefaultBinaryOutputFalse) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -754,7 +743,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithSpecificBinaryOutputFalse) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -776,7 +766,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithDefaultBinaryOutputTrue) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -800,7 +791,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithSpecificBinaryOutputTrue) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -824,7 +816,8 @@ TEST_F(HttpRestApiHandlerTest, inferRequestWithSpecificBinaryOutputTrueDefaultFa
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(doc["model_name"].GetString(), std::string("dummy"));
@@ -848,7 +841,8 @@ TEST_F(HttpRestApiHandlerWithScalarModelTest, inferRequestScalar) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -871,7 +865,8 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroBatch) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -895,7 +890,8 @@ TEST_F(HttpRestApiHandlerWithDynamicModelTest, inferRequestZeroDim) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -1458,7 +1454,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::REST_COULD_NOT_PARSE_INPUT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
@@ -1470,7 +1467,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
@@ -1482,7 +1480,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_noData) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
@@ -1494,7 +1493,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, invalidShape_emptyData) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::INVALID_VALUE_COUNT);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::INVALID_VALUE_COUNT);
 }
 
 void assertStringMetadataOutput(rapidjson::Document& doc) {
@@ -1529,7 +1529,8 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -1572,14 +1573,15 @@ TEST_F(HttpRestApiHandlerWithStringModelTest, positivePassthrough_binaryInput) {
     std::string binaryInputData{0x05, 0x00, 0x00, 0x00, 'H', 'e', 'l', 'l', 'o', 0x02, 0x00, 0x00, 0x00, '1', '2'};
     request_body += binaryInputData;
 
-    std::vector<std::pair<std::string, std::string>> headers{
+    std::unordered_map<std::string, std::string> headers{
         {"inference-header-content-length", std::to_string(jsonEnd)},
         {"Content-Type", "application/json"},
     };
     ovms::HttpResponseComponents responseComponents;
     std::string output;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents, writer), ovms::StatusCode::OK);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ASSERT_EQ(handler->processRequest("POST", request, request_body, &headers, &output, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     ASSERT_TRUE(responseComponents.inferenceHeaderContentLength.has_value());
     ASSERT_EQ(responseComponents.inferenceHeaderContentLength.value(), 272);
 
@@ -1606,7 +1608,8 @@ TEST_F(HttpRestApiHandlerTest, serverReady) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer, multiPartParser);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -1618,7 +1621,8 @@ TEST_F(HttpRestApiHandlerTest, serverLive) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer, multiPartParser);
 
     ASSERT_EQ(status, ovms::StatusCode::OK);
 }
@@ -1630,7 +1634,8 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
-    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer);
+    std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
+    ovms::Status status = handler->dispatchToProcessor("", request, &response, comp, responseComponents, writer, multiPartParser);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());

@@ -4,10 +4,14 @@ def client_test_needed = "false"
 def shortCommit = ""
 def agent_name_windows = ""
 def agent_name_linux = ""
+def windows_success = ""
 
 pipeline {
     agent {
       label 'ovmsbuilder'
+    }
+    options {
+      timeout(time: 4, unit: 'HOURS')
     }
     stages {
         stage('Configure') {
@@ -28,7 +32,7 @@ pipeline {
               } else {  // branches without PR - check changes in last commit
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
-              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|WORKSPACE|(\n|^)run_unit_tests\.sh/)
+              def matched = (git_diff =~ /src|export_models|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh/)
                 if (matched){
                   image_build_needed = "true"
               }
@@ -43,7 +47,10 @@ pipeline {
             }
           }
         }
-        stage('Style, SDL and clean') {
+        stage('Style, SDL') {
+          options {
+                timeout(time: 20, unit: 'MINUTES')
+          }
           parallel {
             stage('Style check') {
               agent {
@@ -72,7 +79,29 @@ pipeline {
             }
           }
         }
+        stage('Cleanup node') {
+          options {
+              timeout(time: 30, unit: 'MINUTES')
+          }
+          agent {
+            label 'win_ovms'
+          }
+          steps {
+            script {
+                agent_name_windows = env.NODE_NAME
+                def windows = load 'ci/loadWin.groovy'
+                if (windows != null) {
+                    windows.cleanup_directories()
+                } else {
+                    error "Cannot load ci/loadWin.groovy file."
+                }
+            }
+          }
+        }
         stage('Build') {
+          options {
+            timeout(time: 4, unit: 'HOURS')
+          }
           parallel {
             stage("Build linux") {
               agent {
@@ -81,6 +110,8 @@ pipeline {
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
+                      sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
+                      sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
                       sh "make ovms_builder_image RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                     }
             }
@@ -102,6 +133,7 @@ pipeline {
                           windows.build()
                         } finally {
                           windows.archive_build_artifacts()
+                          windows_success = "True"
                         }
                       } else {
                           error "Cannot load ci/loadWin.groovy file."
@@ -113,6 +145,9 @@ pipeline {
         }
         stage("Release image and tests in parallel") {
           when { expression { image_build_needed == "true" } }
+          options {
+            timeout(time: 120, unit: 'MINUTES')
+          }
           parallel {
             stage("Run unit tests") {
               agent {
@@ -130,7 +165,7 @@ pipeline {
               }
               } 
               }
-            } 
+            }
             stage("Internal tests") {
               agent {
                 label "${agent_name_linux}"
@@ -174,8 +209,21 @@ pipeline {
                       }
                   }
               }
-            }           
+            }
           }
+        }
+    }
+    post {
+        always {
+            node("${agent_name_windows}") {
+                script {
+                    if (env.BRANCH_NAME == "main" && windows_success == "True") {
+                        bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_oncommit_main\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-without_python-main-latest.zip")
+                    } else {
+                        echo "Not a main branch, skipping copying artifacts."
+                    }
+                }
+            }
         }
     }
 }

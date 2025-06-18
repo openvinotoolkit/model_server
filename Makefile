@@ -51,7 +51,7 @@ BASE_OS ?= ubuntu22
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 22.04
-BASE_OS_TAG_REDHAT ?= 9.4
+BASE_OS_TAG_REDHAT ?= 9.6
 
 INSTALL_RPMS_FROM_URL ?=
 BUILD_IMAGE ?= build
@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 5e16b688156dac78f419d326c7e8f1e718d5708f # master / 2025-03-04
+OV_SOURCE_BRANCH ?= c01cd93e24d1cd78bfbb401eed51c08fb93e0816 # releases/2025/2 RC4
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= d6ab2bb0f6237176d40149c7eeca7781172abec7 # master 2025-02-28
+OV_TOKENIZERS_BRANCH ?= 85be884a69f10270703f81f970a5ee596a4c8df7 # releases/2025/2 RC4
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -161,11 +161,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "24.52.32224"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_ubuntu24_2025.1.0.dev20250304_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.2/linux/openvino_toolkit_ubuntu24_2025.2.0.19140.c01cd93e24d_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_ubuntu22_2025.1.0.dev20250304_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.2/linux/openvino_toolkit_ubuntu22_2025.2.0.19140.c01cd93e24d_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -174,8 +174,8 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  INSTALL_DRIVER_VERSION ?= "24.45.31740"
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.1.0-18343-5e16b688156/openvino_toolkit_rhel8_2025.1.0.dev20250304_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.2/linux/openvino_toolkit_rhel8_2025.2.0.19140.c01cd93e24d_x86_64.tgz
+  INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -187,7 +187,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2025.1"
+PRODUCT_VERSION ?= "2025.2"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
@@ -412,12 +412,12 @@ get_gpl_mpl_packages:
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	@docker run -u 0 --entrypoint bash $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'dpkg --get-selections | sed "s/\t//g" | sed "s/install//g" | cut -d":" -f1 | tr -d "\r"' > ubuntu.txt
 	@-docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'cd /ovms ; cat ubuntu.txt | tr -d "\r" | xargs -I % bash -c "grep -l -e GPL -e MPL /usr/share/doc/%/copyright" 2> /dev/null' > sources.txt
-	@docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'sed -Ei "s/# deb-src /deb-src /" /etc/apt/sources.list ; apt update ; cd /ovms ; d="ovms_ubuntu_$(OVMS_CPP_IMAGE_TAG)" ;mkdir "$$d" ; cd "$$d" ; for I in `cat /ovms/sources.txt | cut -d"/" -f5`; do apt-get source -q --download-only $$I; done'
+	@docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'sed -Ei "s/^Types: deb$$/Types: deb deb-src/" /etc/apt/sources.list.d/ubuntu.sources ; apt update ; cd /ovms ; d="ovms_ubuntu_$(OVMS_CPP_IMAGE_TAG)" ;mkdir "$$d" ; cd "$$d" ; for I in `cat /ovms/sources.txt | cut -d"/" -f5`; do apt-get source -q --download-only $$I; done'
 	@rm ubuntu.txt sources.txt
 endif
 ifeq ($(BASE_OS),redhat)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi9-minimal:9.4 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run registry.access.redhat.com/ubi9-minimal:9.6 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)

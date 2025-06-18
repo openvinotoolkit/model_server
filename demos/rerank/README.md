@@ -15,8 +15,8 @@ That ensures faster initialization time, better performance and lower memory con
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models 
 ```
 
@@ -25,12 +25,12 @@ Run `export_model.py` script to download and quantize the model:
 **CPU**
 
 ```console
-python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
+python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --config_file_path models/config.json --model_repository_path models 
 ```
 
 **GPU**:
 ```console
-python export_model.py rerank --source_model BAAI/bge-reranker-large --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models 
+python export_model.py rerank_ov --source_model BAAI/bge-reranker-large --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models 
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
@@ -98,7 +98,6 @@ curl -i http://localhost:8000/v2/models/BAAI%2Fbge-reranker-large/ready
 HTTP/1.1 200 OK
 content-length: 0
 content-type: application/json; charset=utf-8
-content-type: application/json
 ```
 
 ## Client code
@@ -106,8 +105,7 @@ content-type: application/json
 :::{dropdown} **Requesting rerank score with cURL**
 
 ```bash
-curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" \
--d '{ "model": "BAAI/bge-reranker-large", "query": "welcome", "documents":["good morning","farewell"]}' | jq .
+curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"query\": \"welcome\", \"documents\":[\"good morning\",\"farewell\"]}"
 ```
 ```json
 {

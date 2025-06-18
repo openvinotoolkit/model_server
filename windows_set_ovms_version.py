@@ -19,8 +19,9 @@ import re
 import subprocess
 
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
+WIN_OV_ZIP_PACKAGE_DIR = "openvino_genai_windows_"
 VERSION_FILE = "src\\version.hpp"
-OVMS_PROJECT_VERSION="2025.1"
+OVMS_PROJECT_VERSION="2025.2"
 
 def help():
     print("Usage:\n\
@@ -45,15 +46,18 @@ def replace_in_file(file_path, old_string, new_string):
 def get_openvino_name(openvino_dir):
     openvino_name = "Unknown"
     for root, dirs, files in os.walk(openvino_dir):
+        # Start searching from directories with biggest version numbers
+        dirs = sorted(dirs, reverse=True)
         for dir in dirs:
-            matches = WIN_OV_VERSION_REGEX.findall(dir)
-            if len(matches) > 1:
-                print("[ERROR] Multiple openvino versions detected in " + os.path.join(root, dir))
-                exit(-1)
-            if len(matches) == 1:
-                print("[INFO] Openvino detected in " + os.path.join(root, dir))
-                openvino_name = matches[0]
-                break
+            if WIN_OV_ZIP_PACKAGE_DIR in dir:
+                matches = WIN_OV_VERSION_REGEX.findall(dir)
+                if len(matches) > 1:
+                    print("[ERROR] Multiple openvino versions detected in " + os.path.join(root, dir))
+                    exit(-1)
+                if len(matches) == 1:
+                    print("[INFO] Openvino detected in " + os.path.join(root, dir))
+                    openvino_name = matches[0]
+                    break
         
         # we search only 1 directory level deep
         break

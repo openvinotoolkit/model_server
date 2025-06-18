@@ -20,7 +20,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/ubuntu/ubuntu22-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
+              build job: "ovmsc/ubuntu/ubuntu24-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }
         }
 

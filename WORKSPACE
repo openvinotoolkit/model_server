@@ -122,9 +122,8 @@ new_local_repository(
     build_file = "@//third_party/boringssl:BUILD",
 )
 
-# overriding GCS curl dependency to force using system provided openssl
 new_local_repository(
-    name = "libcurl",
+    name = "linux_curl",
     path = "/usr/",
     build_file_content = """
 cc_library(
@@ -136,6 +135,28 @@ cc_library(
 )
 """,
 )
+
+new_local_repository(
+    name = "windows_curl",
+    path = "C:\\opt\\curl-8.14.1_1-win64-mingw",
+    build_file_content = """
+cc_import(
+    name = "curl_lib",
+    hdrs = [],
+    shared_library = "bin/libcurl-x64.dll",
+    visibility = ["//visibility:public"],
+)
+cc_library(
+    name = "curl",
+    hdrs = glob(["include/curl/curl.h"]),
+    srcs = glob(["lib/libcurl.dll.a"]),
+    includes = ["include/"],
+    visibility = ["//visibility:public"],
+    deps = [":curl_lib"],
+)
+""",
+)
+
 
 # Used for gRPC API protos only
 # Tensorflow serving
@@ -171,7 +192,7 @@ http_archive(
 git_repository(
     name = "mediapipe",
     remote = "https://github.com/openvinotoolkit/mediapipe",
-    commit = "461102a3e67024d0f4baa17d3c5a2241ca8ff982", # main as of 24 Feb 2025
+    commit = "45c2fb897206348f78cd1e75eee4a499b9619d9b", # main as of 26 May 2025
 )
 
 # DEV mediapipe 1 source - adjust local repository path for build
@@ -472,6 +493,10 @@ aws_sdk_cpp()
 load("@//third_party/llm_engine:llm_engine.bzl", "llm_engine")
 llm_engine()
 
+### Libgit2
+load("@//third_party/libgit2:libgit2_engine.bzl", "libgit2_engine")
+libgit2_engine()
+
 load("@//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
@@ -595,7 +620,7 @@ new_git_repository(
     build_file_content = """
 cc_library(
     name = "image",
-    hdrs = ["stb_image.h"],
+    hdrs = ["stb_image.h", "stb_image_write.h"],
     visibility = ["//visibility:public"],
     local_defines = [
     ],

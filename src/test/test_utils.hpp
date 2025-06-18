@@ -55,11 +55,17 @@
 #include "../status.hpp"
 #include "../tensorinfo.hpp"
 
+#include "../kfs_frontend/validation.hpp"
+
 #if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
 #endif
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
+
+void SetEnvironmentVar(const std::string& var, const std::string& val);
+void UnSetEnvironmentVar(const std::string& var);
+const std::string GetEnvVar(const std::string& var);
 
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
@@ -67,6 +73,9 @@ const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool l
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
 
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath();
+#endif
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
 std::string adjustConfigForTargetPlatformCStr(const char* input);
@@ -498,6 +507,8 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
+std::string GetFileContents(const std::string& filePath);
+
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
@@ -720,8 +731,12 @@ public:
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
     }
+    /*
+     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
+     */
     ovms::Status loadConfig(const std::string& jsonFilename) {
-        return ModelManager::loadConfig(jsonFilename);
+        this->configFilename = jsonFilename;
+        return ModelManager::loadConfig();
     }
 
     /**
@@ -752,6 +767,18 @@ public:
     const ovms::Status mockValidate(const ovms::InferenceRequest* request) {
         return validate(request);
     }
+    template <typename RequestType>
+    ovms::Status validate(const RequestType* request) {
+        return ovms::request_validation_utils::validate(
+            *request,
+            this->getInputsInfo(),
+            this->getOutputsInfo(),
+            this->getName(),
+            this->getVersion(),
+            this->getOptionalInputNames(),
+            this->getModelConfig().getBatchingMode(),
+            this->getModelConfig().getShapes());
+    }
 };
 
 class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
@@ -764,6 +791,9 @@ public:
         this->resourcesCleanupIntervalMillisec = value;
     }
 };
+
+void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
+void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
 
 class TestWithTempDir : public ::testing::Test {
 protected:
@@ -1006,12 +1036,35 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
     // ovms::Precision::CUSTOM)
 };
 
-void randomizePort(std::string& port);
-void randomizePorts(std::string& port1, std::string& port2);
+void randomizeAndEnsureFree(std::string& port);
+void randomizeAndEnsureFrees(std::string& port1, std::string& port2);
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath);
+/*
+ *  Waits until server is ready
+ */
+void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
+/*
+ *  Waits until server downloads model
+ */
+void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ */
+void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code = EXIT_SUCCESS, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
+ *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ */
+void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+/*
+ *  starts loading OVMS on separate thread but waits until it is ready
+ */
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:
@@ -1032,8 +1085,8 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
-        auto it = this->pythonNodeResourcesMap.find(nodeName);
-        if (it == std::end(pythonNodeResourcesMap)) {
+        auto it = this->sidePacketMaps.pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1042,8 +1095,8 @@ public:
 #endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
-        auto it = this->genAiServableMap.find(nodeName);
-        if (it == std::end(genAiServableMap)) {
+        auto it = this->sidePacketMaps.genAiServableMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1054,7 +1107,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps.genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

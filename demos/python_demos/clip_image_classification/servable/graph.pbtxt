@@ -80,11 +80,11 @@ node {
           }
           tag_to_input_tensor_names {
             key: "OVTENSOR1"
-            value: "1132"
+            value: "900"
           }
           tag_to_input_tensor_names {
             key: "OVTENSOR2"
-            value: "66"
+            value: "87"
           }
           tag_to_output_tensor_names {
             key: "OVTENSOR"

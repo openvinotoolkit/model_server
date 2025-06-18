@@ -193,7 +193,7 @@ Recommended steps to investigate achievable performance and discover bottlenecks
 
 ## Analyzing accuracy issues
 
-Please note that the target devices GPU and NVIDIA usually change the default model execution precision from FP32 to FP16.
+Please note that the target devices GPU and CPU with AMX feature usually change the default model execution precision from FP32 to BF16.
 It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
 It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:

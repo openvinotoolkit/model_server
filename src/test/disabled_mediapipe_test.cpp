@@ -33,29 +33,26 @@ protected:
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
 
-    std::vector<std::pair<std::string, std::string>> headers;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
     const std::string endpointChatCompletions = "/v3/chat/completions";
     const std::string endpointCompletions = "/v3/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
     ovms::HttpResponseComponents responseComponents;
     std::string response;
     std::vector<std::string> expectedMessages;
 
     static void SetUpTestSuite() {
         std::string port = "9173";
-        randomizePort(port);
+        randomizeAndEnsureFree(port);
         ovms::Server& server = ovms::Server::instance();
         ::SetUpServer(t, server, port, getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json").c_str());
-        auto start = std::chrono::high_resolution_clock::now();
-        const int numberOfRetries = 5;
-        while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < numberOfRetries)) {
-        }
     }
 
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
         ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));  // make the streaming flow sequential
         ovms::Server& server = ovms::Server::instance();
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
@@ -88,7 +85,7 @@ TEST_F(MediapipeDisabledTest, completionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }
 
@@ -111,6 +108,6 @@ TEST_F(MediapipeDisabledTest, chatCompletionsRequest) {
     )";
 
     ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer),
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::NOT_IMPLEMENTED);
 }

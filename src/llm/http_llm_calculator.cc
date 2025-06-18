@@ -26,6 +26,7 @@
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
+#include "../logging.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -33,8 +34,6 @@
 using namespace ovms;
 
 namespace mediapipe {
-
-#define IGNORE_EOS_MAX_TOKENS_LIMIT 4000
 
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 
@@ -72,12 +71,11 @@ public:
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
-        servable = it->second;
-        executionContext = servable->createExecutionContext();
+        this->servable = it->second;
+        this->executionContext = servable->createExecutionContext();
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
-
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Process start", cc->NodeName());
         OVMS_PROFILE_FUNCTION();

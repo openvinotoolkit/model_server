@@ -10,6 +10,7 @@ Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
+Image generation API <ovms_docs_rest_api_image_generation>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -19,6 +20,8 @@ OpenAI compatible endpoints:
 - [chat/completions](./model_server_rest_api_chat.md)
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
+- [images/generations](./model_server_rest_api_image_generation.md)
+
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
 
@@ -70,6 +73,47 @@ print(response.text)
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}'
+```
+:::
+::::
+
+### Request chat completions with unary calls (with image input)
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+import base64
+from openai import OpenAI
+
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode("utf-8")
+
+image_path = "/path/to/image"
+image = encode_image(image_path)
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+response = client.chat.completions.create(
+  model="openbmb/MiniCPM-V-2_6",
+  messages=[
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?",
+        },
+        {
+          "type": "image_url",
+          "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+        },
+      ],
+    }
+  ],
+  stream=False,
+)
+print(response.choices[0].message)
 ```
 :::
 ::::
@@ -137,6 +181,52 @@ for chunk in stream:
 ```
 :::
 ::::
+
+### Request chat completions with streaming (with image input)
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+import base64
+from openai import OpenAI
+
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode("utf-8")
+
+image_path = "/path/to/image"
+image = encode_image(image_path)
+
+client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
+
+stream = client.chat.completions.create(
+  model="openbmb/MiniCPM-V-2_6",
+  messages=[
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "What is in this image?",
+        },
+        {
+          "type": "image_url",
+          "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+        },
+      ],
+    }
+  ],
+  stream=True,
+)
+
+for chunk in stream:
+  if chunk.choices[0].delta.content is not None:
+    print(chunk.choices[0].delta.content, end="")
+```
+:::
+::::
+
 Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text generation](../demos/continuous_batching/README.md).
 
 ### Request completions with streaming
@@ -200,6 +290,75 @@ curl http://localhost:8000/v3/embeddings \
 :::
 ::::
 Check [text embeddings end to end demo](../demos/embeddings/README.md).
+
+### Image generation
+
+Install the pillow package to be able to save images to disk:
+
+```{code} bash
+pip3 install pillow
+```
+
+
+
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+response = client.images.generate(
+            model="OpenVINO/FLUX.1-schnell-int4-ov",
+            prompt="three cute cats sitting on a bench",
+            "size": "512x512",
+            extra_body={
+                "rng_seed": 45,
+                "num_inference_steps": 3
+            }
+        )
+base64_image = response.data[0].b64_json
+image_data = base64.b64decode(base64_image)
+image = Image.open(BytesIO(image_data))
+image.save('output.png')
+```
+:::
+:::{tab-item} curl [Linux]
+:sync: curl
+```{code} bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "black-forest-labs/FLUX.1-schnell",
+    "prompt": "three cute cats sitting on a bench",
+    "num_inference_steps": 3,
+    "size": "512x512"
+  }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
+```
+:::
+:::{tab-item} Windows PowerShell
+:sync: power-shell
+```{code} powershell
+$response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
+    -Method POST `
+    -Headers @{ "Content-Type" = "application/json" } `
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "num_inference_steps": 3,  "size": "512x512"}'
+$base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
+[IO.File]::WriteAllBytes('output.png', [Convert]::FromBase64String($base64))
+```
+:::
+::::
+
+
+Check [image generation end to end demo](../demos/image_generation/README.md).
+
 
 ## Cohere Python Client
 

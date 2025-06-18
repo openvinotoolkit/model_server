@@ -95,9 +95,13 @@
     }
 
 struct ServerSettingsGuard {
-    ServerSettingsGuard(int port) {
+    ServerSettingsGuard(bool startGrpc = false) {
         THROW_ON_ERROR_CAPI(OVMS_ServerSettingsNew(&settings));
-        THROW_ON_ERROR_CAPI(OVMS_ServerSettingsSetGrpcPort(settings, port));
+        if (!startGrpc)
+            return;
+        std::string port = "9000";
+        randomizeAndEnsureFree(port);
+        THROW_ON_ERROR_CAPI(OVMS_ServerSettingsSetGrpcPort(settings, std::stoi(port)));
     }
     ~ServerSettingsGuard() {
         if (settings)
@@ -118,10 +122,8 @@ struct ModelsSettingsGuard {
 };
 
 struct ServerGuard {
-    ServerGuard(const std::string configPath) {
-        std::string port = "9000";
-        randomizePort(port);
-        ServerSettingsGuard serverSettingsGuard(std::stoi(port));
+    ServerGuard(const std::string configPath, bool startGrpc = false) {
+        ServerSettingsGuard serverSettingsGuard(startGrpc);
         ModelsSettingsGuard modelsSettingsGuard(configPath);
         THROW_ON_ERROR_CAPI(OVMS_ServerNew(&server));
         THROW_ON_ERROR_CAPI(OVMS_ServerStartFromConfigurationFile(server, serverSettingsGuard.settings, modelsSettingsGuard.settings));

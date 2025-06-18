@@ -52,8 +52,8 @@ cd model_server
 
 ## Install dependencies
 Run windows_install_build_dependencies.bat
-This will install around 3.3 GB dependencies in the c:\opt directory:
-- wet.exe, msys2 tools, Openvinotoolkit, OpenCL headers, BoringSSL, bazel, Python 3.11.9, OpenCV
+This will install around 6 GB dependencies in the c:\opt directory:
+- wet.exe, msys2 tools, Openvinotoolkit for GenAI, OpenCL headers, BoringSSL, bazel, Python 3.12.10, OpenCV, Go, Git-lfs, Curl
 
 If error occurs during the script execution, please fix the error and rerun the script.
 ```bat
@@ -61,21 +61,37 @@ windows_install_build_dependencies.bat
 ```
 
 ## COMPILE
-[WARNING] This step consumes 11GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
+[WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
+This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
 ```bat
 windows_build.bat
 ```
 
+Optionally you can build ovms.exe with python dependency that allows to use python chat templates for GENAI LLM support.
+```bat
+windows_build.bat opt --with_python
+```
 # Running unit tests - optional
-The script compiles ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
+The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
 ```bat
 windows_test.bat
 ```
 
+The optional script compiles ovms_test binary with python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
+```bat
+windows_test.bat opt --with_python
+```
+
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
+The default version creates C++ only version without Python dependency.
 ```bat
 windows_create_package.bat
+```
+
+Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
+```bat
+windows_create_package.bat opt --with_python
 ```
 
 # Test the Deployment

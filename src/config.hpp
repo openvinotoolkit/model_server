@@ -48,8 +48,11 @@ protected:
     ServerSettingsImpl serverSettings;
 
 public:
-    ServerSettingsImpl getServerSettings() {
+    const ServerSettingsImpl& getServerSettings() const {
         return serverSettings;
+    }
+    const ModelsSettingsImpl& getModelSettings() const {
+        return modelsSettings;
     }
     /**
          * @brief Gets the instance of the config
@@ -71,9 +74,15 @@ public:
     bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
+         * @brief Validate passed arguments against config add/remove allowed parameters
+         * 
+         * @return bool 
+         */
+    static bool validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings);
+    /**
          * @brief Validate passed arguments
          * 
-         * @return void 
+         * @return bool 
          */
     bool validate();
 
@@ -316,5 +325,8 @@ public:
          * @return const std::string& 
          */
     const std::string cacheDir() const;
+    bool startedFromCLI() {
+        return serverSettings.startedWithCLI;
+    }
 };
 }  // namespace ovms

@@ -71,10 +71,9 @@ ovms --config_path config_holistic.json --port 9000
 ```
 ### Start the client with real time stream analysis
 
-Prepare the python environment by cloning the repo and installing required dependencies:
+Prepare the python environment from [model_server](https://github.com/openvinotoolkit/model_server) repo cloned in previous step and install required dependencies:
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/real_time_stream_analysis/python/
+cd ../../real_time_stream_analysis/python/
 pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.

@@ -36,7 +36,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
-#include <spdlog/spdlog.h>
 
 #include "config.hpp"
 #include "dags/pipeline.hpp"
@@ -70,6 +69,11 @@
 #include "http_frontend/http_graph_executor_impl.hpp"
 #include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
+
+#include "tfs_frontend/tfs_utils.hpp"
+#include "tfs_frontend/deserialization.hpp"
+#include "deserialization_main.hpp"
+#include "inference_executor.hpp"
 
 using tensorflow::serving::PredictRequest;
 using tensorflow::serving::PredictResponse;
@@ -159,7 +163,7 @@ void HttpRestApiHandler::registerHandler(RequestType type, HandlerCallbackFn f) 
 }
 
 void HttpRestApiHandler::registerAll() {
-    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(Predict, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (request_components.processing_method == "predict") {
             return processPredictRequest(request_components.model_name, request_components.model_version,
                 request_components.model_version_label, request_body, &response);
@@ -169,44 +173,44 @@ void HttpRestApiHandler::registerAll() {
         }
     });
 
-    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    registerHandler(GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
         return processModelMetadataRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    registerHandler(GetModelStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
         return processModelStatusRequest(request_components.model_name, request_components.model_version,
             request_components.model_version_label, &response);
     });
-    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(ConfigReload, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processConfigReloadRequest(response, this->modelManager);
     });
-    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(ConfigStatus, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processConfigStatusRequest(response, this->modelManager);
     });
-    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetModelReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processModelReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
     });
-    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerReady, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerReadyKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerLive, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerLiveKFSRequest(request_components, response, request_body);
     });
-    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(KFS_GetServerMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
-    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter));
+        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
-    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) -> Status {
+    registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
     });
 }
@@ -437,40 +441,72 @@ Status HttpRestApiHandler::dispatchToProcessor(
     std::string* response,
     const HttpRequestComponents& request_components,
     HttpResponseComponents& response_components,
-    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser) {
 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
-        return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter));
+        return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
     } else {
         return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
     }
     return StatusCode::UNKNOWN_REQUEST_COMPONENTS_TYPE;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
 #if (MEDIAPIPE_DISABLE == 0)
-    OVMS_PROFILE_FUNCTION();
-    HttpPayload request;
-    std::shared_ptr<Document> doc = std::make_shared<Document>();
-    std::shared_ptr<MediapipeGraphExecutor> executor;
-    bool streamFieldVal = false;
-    {
-        OVMS_PROFILE_SCOPE("rapidjson parse body");
-        doc->Parse(request_body.c_str());
-    }
-    {
+static void ensureJsonParserInErrorState(std::shared_ptr<Document>& parsedJson) {
+    // Hack to set json parser in invalid state in order to get HasParseError to respond with true
+    parsedJson->Parse("error");
+}
+
+static Status createV3HttpPayload(
+    const std::string_view uri,
+    const HttpRequestComponents& request_components,
+    std::string& response,
+    const std::string& request_body,
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser,
+    HttpPayload& request,
+    std::string& modelName,
+    bool& streamFieldVal) {
+    OVMS_PROFILE_SCOPE("createV3HttpPayload");
+
+    std::shared_ptr<Document> parsedJson = std::make_shared<Document>();
+
+    auto it = request_components.headers.find("content-type");
+    bool isApplicationJson = it != request_components.headers.end() && it->second.find("application/json") != std::string::npos;
+    bool isMultiPart = it != request_components.headers.end() && it->second.find("multipart/form-data") != std::string::npos;
+    bool isUriBasedRouting = !isApplicationJson && !isMultiPart;  // For content types other than "application/json" and "multipart/form-data", we look for model information in the URI
+
+    if (isMultiPart) {
+        OVMS_PROFILE_SCOPE("multipart parse");
+        if (!multiPartParser->parse()) {
+            SPDLOG_DEBUG("Failed to parse multipart content type request");
+            return StatusCode::FAILED_TO_PARSE_MULTIPART_CONTENT_TYPE;
+        }
+        modelName = multiPartParser->getFieldByName("model");
+        if (modelName.empty()) {
+            isUriBasedRouting = true;
+        } else {
+            SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
+        }
+        ensureJsonParserInErrorState(parsedJson);
+    } else if (isApplicationJson) {
+        {
+            OVMS_PROFILE_SCOPE("rapidjson parse");
+            parsedJson->Parse(request_body.c_str());
+        }
         OVMS_PROFILE_SCOPE("rapidjson validate");
-        if (doc->HasParseError()) {
+        if (parsedJson->HasParseError()) {
             return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
         }
 
-        if (!doc->IsObject()) {
+        if (!parsedJson->IsObject()) {
             return Status(StatusCode::JSON_INVALID, "JSON body must be an object");
         }
 
-        auto modelNameIt = doc->FindMember("model");
-        if (modelNameIt == doc->MemberEnd()) {
+        auto modelNameIt = parsedJson->FindMember("model");
+        if (modelNameIt == parsedJson->MemberEnd()) {
             return Status(StatusCode::JSON_INVALID, "model field is missing in JSON body");
         }
 
@@ -478,12 +514,10 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             return Status(StatusCode::JSON_INVALID, "model field is not a string");
         }
 
-        const std::string model_name = modelNameIt->value.GetString();
-
         bool isTextGenerationEndpoint = uri.find("completions") != std::string_view::npos;
         if (isTextGenerationEndpoint) {
-            auto streamIt = doc->FindMember("stream");
-            if (streamIt != doc->MemberEnd()) {
+            auto streamIt = parsedJson->FindMember("stream");
+            if (streamIt != parsedJson->MemberEnd()) {
                 if (!streamIt->value.IsBool()) {
                     return Status(StatusCode::JSON_INVALID, "stream field is not a boolean");
                 }
@@ -491,17 +525,57 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
             }
         }
 
-        auto status = this->modelManager.createPipeline(executor, model_name);
-        if (!status.ok()) {
-            return status;
+        modelName = modelNameIt->value.GetString();
+        if (modelName.empty()) {
+            isUriBasedRouting = true;
+        } else {
+            SPDLOG_DEBUG("Model name from deduced from JSON: {}", modelName);
         }
-        // TODO: Possibly avoid making copy
-        request.headers = request_components.headers;
-        request.body = request_body;
-        request.parsedJson = std::move(doc);
-        request.uri = std::string(uri);
-        request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
     }
+
+    // Deduce Graph Name from URI since there is no info in JSON or MultiPart
+    if (isUriBasedRouting) {
+        if (uri.size() <= 4) {  // nothing after "/v3/..."
+            SPDLOG_DEBUG("Failed to deduce model name from URI");
+            return StatusCode::FAILED_TO_DEDUCE_MODEL_NAME_FROM_URI;
+        }
+        modelName = std::string(uri.substr(4));
+        SPDLOG_DEBUG("Model name from deduced from URI: {}", modelName);
+        // Set json parser in invalid state in order to get HasParseError to respond with true
+        ensureJsonParserInErrorState(parsedJson);
+    }
+
+    request.headers = request_components.headers;
+    request.body = request_body;
+    request.parsedJson = std::move(parsedJson);
+    request.uri = std::string(uri);
+    request.client = std::make_shared<HttpClientConnection>(serverReaderWriter);
+    request.multipartParser = std::move(multiPartParser);
+
+    return StatusCode::OK;
+}
+#endif
+
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+#if (MEDIAPIPE_DISABLE == 0)
+    OVMS_PROFILE_FUNCTION();
+
+    HttpPayload request;
+    std::string modelName;
+    bool streamFieldVal = false;
+
+    auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Failed to create V3 payload: {}", status.string());
+        return status;
+    }
+
+    std::shared_ptr<MediapipeGraphExecutor> executor;
+    status = this->modelManager.createPipeline(executor, modelName);
+    if (!status.ok()) {
+        return status;
+    }
+
     if (streamFieldVal == false) {
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
         return executor->infer(&request, &response, executionContext);
@@ -657,7 +731,7 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
 }
 
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
-    const std::vector<std::pair<std::string, std::string>>& headers) {
+    const std::unordered_map<std::string, std::string>& headers) {
     for (auto& header : headers) {
         if (toLower(header.first) == "inference-header-content-length") {  // drogon automatically converts all headers to lowercase, net_http does not
             requestComponents.inferenceHeaderContentLength = stoi32(header.second);
@@ -672,7 +746,7 @@ static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestCo
 Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& requestComponents,
     const std::string_view http_method,
     const std::string& request_path,
-    const std::vector<std::pair<std::string, std::string>>& headers) {
+    const std::unordered_map<std::string, std::string>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
     if (http_method != "POST" && http_method != "GET") {
@@ -817,10 +891,11 @@ Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,
     const std::string_view request_path,
     const std::string& request_body,
-    std::vector<std::pair<std::string, std::string>>* headers,
+    std::unordered_map<std::string, std::string>* headers,
     std::string* response,
     HttpResponseComponents& responseComponents,
-    std::shared_ptr<HttpAsyncWriter> serverReaderWriter) {
+    std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
+    std::shared_ptr<MultiPartParser> multiPartParser) {
 
     std::smatch sm;
     std::string request_path_str(request_path);
@@ -832,13 +907,11 @@ Status HttpRestApiHandler::processRequest(
     HttpRequestComponents requestComponents;
     auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
 
-    headers->clear();
-    response->clear();
-    headers->push_back({"Content-Type", "application/json"});
-
     if (!status.ok())
         return status;
-    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter));
+
+    response->clear();
+    return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
 }
 
 Status HttpRestApiHandler::processPredictRequest(
@@ -929,7 +1002,7 @@ Status HttpRestApiHandler::processSingleModelRequest(const std::string& modelNam
     if (modelVersion.has_value()) {
         requestProto.mutable_model_spec()->mutable_version()->set_value(modelVersion.value());
     }
-    status = modelInstance->infer(&requestProto, &responseProto, modelInstanceUnloadGuard);
+    status = infer(*modelInstance, &requestProto, &responseProto, modelInstanceUnloadGuard);
     INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::Predict}, status.ok()));
     return status;
 }
@@ -1067,10 +1140,8 @@ inline static std::string createErrorJsonWithMessage(std::string message) {
 Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, ModelManager& manager) {
     SPDLOG_DEBUG("Processing config reload request started.");
     Status status;
-    auto& config = ovms::Config::instance();
-
     bool reloadNeeded = false;
-    if (manager.getConfigFilename() != "") {
+    if (manager.isStartedWithConfigFile()) {
         status = manager.configFileReloadNeeded(reloadNeeded);
         if (!reloadNeeded) {
             if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {
@@ -1081,14 +1152,14 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     if (reloadNeeded) {
-        status = manager.loadConfig(config.configPath());
+        status = manager.loadConfig();
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;
         }
     } else {
         if (!status.ok()) {
-            status = manager.loadConfig(config.configPath());
+            status = manager.loadConfig();
             if (!status.ok()) {
                 response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
                 return status;

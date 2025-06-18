@@ -1,2 +1,0 @@
-tritonclient[grpc]==2.51.0
-

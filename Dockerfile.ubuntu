@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
-            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
@@ -49,6 +48,23 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+            
+# Need to upgrade git for ubuntu22-24 git vulnerability fix
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common gpg-agent ; \
+        add-apt-repository ppa:git-core/ppa -y ; \
+        apt-get update && apt-get install --no-install-recommends -y git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ;
+
+WORKDIR /
+# hadolint ignore=DL3003
+RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+git clone https://github.com/git-lfs/git-lfs && \
+    cd git-lfs && \
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
+    /usr/local/go/bin/go build . && \
+    cp git-lfs /usr/bin/git-lfs
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -119,6 +135,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             python3-pip \
             unzip \
             gdb \
+            tree \
             vim && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
@@ -128,8 +145,8 @@ RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    python3.12 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
-RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.5" "MarkupSafe==3.0.2" --no-cache-dir ; fi
+    python3.12 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
+RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir ; fi
 
 ARG JOBS=8
 ARG ov_use_binary=0
@@ -157,7 +174,6 @@ ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/ex
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
@@ -200,6 +216,17 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
+WORKDIR /openvino_tokenizers/
+# Install the openvino_tokenizers python bindings and use a symlink to point
+# to the shared object in it's final location.
+RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
+    cp -r python/* /opt/intel/openvino/python/ ; \
+    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.2\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.2.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info/METADATA ; \
+    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
@@ -258,12 +285,12 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make && cp libcustom_relu_cpu_extension.so /opt
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.1.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.1' > /opt/intel/openvino/python/openvino-2025.1.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.2.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.2' > /opt/intel/openvino/python/openvino-2025.2.dist-info/METADATA
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.1"
+ARG PROJECT_VERSION="2025.2"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
@@ -279,7 +306,7 @@ WORKDIR /ovms
 # Test Coverage
 COPY ci/check_coverage.bat /ovms/
 ARG CHECK_COVERAGE=0
-COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh /ovms/
+COPY run_unit_tests.sh prepare_llm_models.sh install_va.sh demos/common/export_models/export_model.py /ovms/
 
 ARG FUZZER_BUILD=0
 # Custom Nodes
@@ -294,7 +321,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 RUN if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n //src:ovms_test; fi); fi;
 
 ARG RUN_TESTS=0
-RUN if [ "$RUN_TESTS" == "1" ] ; then ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
+RUN if [ "$RUN_TESTS" == "1" ] ; then mkdir -p demos/common/export_models/ && mv export_model.py demos/common/export_models/ && ./prepare_llm_models.sh /ovms/src/test/llm_testing docker && ./run_unit_tests.sh ; fi
 
 RUN if [ "$FUZZER_BUILD" == "0" ]; then /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms; fi;
 
@@ -386,15 +413,15 @@ RUN apt-get update ; \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-driver-compiler-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-fw-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.10.1/intel-level-zero-npu_1.10.1.20241220-12430270326_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.17.44/level-zero_1.17.44+u22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-driver-compiler-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-fw-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-level-zero-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.21.9/level-zero_1.21.9+u22.04_amd64.deb ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-driver-compiler-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-fw-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb    ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.13.0/intel-level-zero-npu_1.13.0.20250131-13074932693_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.18.5/level-zero_1.18.5+u24.04_amd64.deb ; \ 
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-driver-compiler-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \	
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-fw-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-level-zero-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.21.9/level-zero_1.21.9+u24.04_amd64.deb ; \ 
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
@@ -405,9 +432,11 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
+# hadolint ignore=SC2114
+RUN mv /ovms/bin/git* /usr/bin
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.5.dist-info /ovms/python_deps/jinja2-3.1.5.dist-info
+COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
 
 # For image with Python enabled install Python library
@@ -418,6 +447,7 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ENV LD_LIBRARY_PATH=/ovms/lib
+ENV PATH="$PATH:/ovms/bin"
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

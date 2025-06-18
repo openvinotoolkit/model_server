@@ -13,7 +13,7 @@ ovms_demos_continuous_batching_speculative_decoding
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.
 Text generation use case is exposed via OpenAI API `chat/completions` and `completions` endpoints.
-That makes it easy to use and efficient especially on on Intel® Xeon® processors.
+That makes it easy to use and efficient especially on on Intel® Xeon® processors and ARC GPUs.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ GPU Series and Intel® Data Center GPU Series on Ubuntu22/24, RedHat8/9 and Windows11.
 
@@ -33,8 +33,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/0/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -111,7 +111,7 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
@@ -147,8 +147,12 @@ A single servable exposes both `chat/completions` and `completions` endpoints wi
 Chat endpoint is expected to be used for scenarios where conversation context should be pasted by the client and the model prompt is created by the server based on the jinja model template.
 Completion endpoint should be used to pass the prompt directly by the client and for models without the jinja template.
 
-:::{dropdown} **Unary call with cURL**
-```console
+### Unary calls to chat/completions endpoint using cURL 
+
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -167,6 +171,26 @@ curl http://localhost:8000/v3/chat/completions \
     ]
   }'| jq .
 ```
+:::
+
+:::{tab-item} Windows
+Windows Powershell
+```powershell
+(Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
+ -Method POST `
+ -Headers @{ "Content-Type" = "application/json" } `
+ -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
+```
+
+Windows Command Prompt
+```bat
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+```
+:::
+
+::::
+
+:::{dropdown} Expected Response
 ```json
 {
   "choices": [
@@ -190,9 +214,13 @@ curl http://localhost:8000/v3/chat/completions \
   }
 }
 ```
-
+:::
+### Unary calls to completions endpoint using cURL 
 A similar call can be made with a `completion` endpoint:
-```console
+::::{tab-set}
+
+:::{tab-item} Linux
+```bash
 curl http://localhost:8000/v3/completions \
   -H "Content-Type: application/json" \
   -d '{
@@ -202,6 +230,26 @@ curl http://localhost:8000/v3/completions \
     "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
   }'| jq .
 ```
+:::
+
+:::{tab-item} Windows
+Windows Powershell
+```powershell
+(Invoke-WebRequest -Uri "http://localhost:8000/v3/completions" `
+ -Method POST `
+ -Headers @{ "Content-Type" = "application/json" } `
+ -Body '{"model": "meta-llama/Meta-Llama-3-8B-Instruct", "max_tokens": 30, "temperature": 0, "stream": false, "prompt":"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat is OpenVINO?<|eot_id|><|start_header_id|>assistant<|end_header_id|>"}').Content
+```
+
+Windows Command Prompt
+```bat
+curl -s http://localhost:8000/v3/completions -H "Content-Type: application/json" -d "{\"model\": \"meta-llama/Meta-Llama-3-8B-Instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"prompt\":\"^<^|begin_of_text^|^>^<^|start_header_id^|^>system^<^|end_header_id^|^>\n\nYou are assistant^<^|eot_id^|^>^<^|start_header_id^|^>user^<^|end_header_id^|^>\n\nWhat is OpenVINO?^<^|eot_id^|^>^<^|start_header_id^|^>assistant^<^|end_header_id^|^>\"}"
+```
+::: 
+
+::::
+
+:::{dropdown} Expected Response
 ```json
 {
   "choices": [
@@ -224,14 +272,18 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 
-:::{dropdown} **Streaming call with OpenAI Python package**
+### Streaming call with OpenAI Python package
 
-The endpoints `chat/completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
+The endpoints `chat/completions` and `completions` are compatible with OpenAI client so it can be easily used to generate code also in streaming mode:
 
 Install the client library:
 ```console
 pip3 install openai
 ```
+
+::::{tab-set}
+
+:::{tab-item} Chat completions
 ```python
 from openai import OpenAI
 
@@ -255,7 +307,10 @@ Output:
 It looks like you're testing me!
 ```
 
-A similar code can be applied for the completion endpoint:
+:::
+
+:::{tab-item} Completions
+
 ```console
 pip3 install openai
 ```
@@ -283,19 +338,22 @@ It looks like you're testing me!
 ```
 :::
 
+::::
+
 ## Benchmarking text generation with high concurrency
 
 OpenVINO Model Server employs efficient parallelization for text generation. It can be used to generate text also in high concurrency in the environment shared by multiple clients.
 It can be demonstrated using benchmarking app from vLLM repository:
 ```console
-git clone --branch v0.6.0 --depth 1 https://github.com/vllm-project/vllm
+git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
 pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
 python benchmark_serving.py --host localhost --port 8000 --endpoint /v3/chat/completions --backend openai-chat --model meta-llama/Meta-Llama-3-8B-Instruct --dataset-path ShareGPT_V3_unfiltered_cleaned_split.json --num-prompts 1000 --request-rate inf
 
-Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset=None, dataset_name='sharegpt', dataset_path='ShareGPT_V3_unfiltered_cleaned_split.json', model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, sharegpt_output_len=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, request_rate=inf, seed=0, trust_remote_code=False, disable_tqdm=False, profile=False, save_result=False, metadata=None, result_dir=None, result_filename=None, percentile_metrics='ttft,tpot,itl', metric_percentiles='99')
+Namespace(backend='openai-chat', base_url=None, host='localhost', port=8000, endpoint='/v3/chat/completions', dataset=None, dataset_name='sharegpt', dataset_path='ShareGPT_V3_unfiltered_cleaned_split.json', max_concurrency=None, model='meta-llama/Meta-Llama-3-8B-Instruct', tokenizer=None, best_of=1, use_beam_search=False, num_prompts=1000, logprobs=None, request_rate=inf, burstiness=1.0, seed=0, trust_remote_code=False, disable_tqdm=False, profile=False, save_result=False, metadata=None, result_dir=None, result_filename=None, ignore_eos=False, percentile_metrics='ttft,tpot,itl', metric_percentiles='99', goodput=None, sonnet_input_len=550, sonnet_output_len=150, sonnet_prefix_len=200, sharegpt_output_len=None, random_input_len=1024, random_output_len=128, random_range_ratio=1.0, random_prefix_len=0, hf_subset=None, hf_split=None, hf_output_len=None, tokenizer_mode='auto', served_model_name=None, lora_modules=None)
+
 Traffic request rate: inf
 100%|██████████████████████████████████████████████████| 1000/1000 [17:17<00:00,  1.04s/it]
 ============ Serving Benchmark Result ============
@@ -336,6 +394,13 @@ Check the [guide of using lm-evaluation-harness](https://github.com/openvinotool
 
 Check the [guide for speculative decoding](./speculative_decoding/README.md)
 
+## Check how to use text generation with visual language models
+
+Check the demo [text generation with visual model](./vlm/README.md)
+
+## Check how to use AI agents with MCP servers and language models
+
+Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)

@@ -30,6 +30,7 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../execution_context.hpp"
 #include "../model_service.hpp"
+#include "../modelinstanceunloadguard.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelmanager.hpp"
 #include "../modelversionstatus.hpp"
@@ -398,7 +399,7 @@ TEST_F(TFSModelServiceTest, getAllModelsStatuses_two_models_with_one_versions) {
 
 TEST_F(TFSModelServiceTest, config_reload) {
     std::string port = "9000";
-    randomizePort(port);
+    randomizeAndEnsureFree(port);
     char* argv[] = {
         (char*)"OpenVINO Model Server",
         (char*)"--model_name",
@@ -414,10 +415,7 @@ TEST_F(TFSModelServiceTest, config_reload) {
     std::thread t([&argv, &server]() {
         ASSERT_EQ(EXIT_SUCCESS, server.start(9, argv));
     });
-    auto start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::GRPC_SERVER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
-           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 5)) {
-    }
+    EnsureServerStartedWithTimeout(server, 5);
     ModelServiceImpl s(server);
     tensorflow::serving::ReloadConfigRequest modelStatusRequest;
     tensorflow::serving::ReloadConfigResponse modelStatusResponse;

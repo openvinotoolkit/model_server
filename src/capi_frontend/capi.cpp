@@ -38,6 +38,11 @@
 #endif
 #include "../model_service.hpp"
 #include "../modelinstance.hpp"
+#include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
+#include "capi_utils.hpp"
+#include "deserialization.hpp"
+#include "../deserialization_main.hpp"
+#include "../inference_executor.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../modelmanager.hpp"
 #include "../module_names.hpp"
@@ -49,13 +54,14 @@
 #include "../status.hpp"
 #include "../timer.hpp"
 #include "buffer.hpp"
-#include "capi_utils.hpp"
+#include "capi_dag_utils.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"
 #include "inferencetensor.hpp"
 #include "servablemetadata.hpp"
 #include "server_settings.hpp"
+#include "serialization.hpp"
 
 using ovms::Buffer;
 using ovms::ExecutionContext;
@@ -74,6 +80,62 @@ using ovms::Status;
 using ovms::StatusCode;
 using ovms::Timer;
 using std::chrono::microseconds;
+
+namespace {
+enum : uint32_t {
+    TIMER_TOTAL,
+    TIMER_CALLBACK,
+    TIMER_END
+};
+
+static Status getModelManager(Server& server, ModelManager** modelManager) {
+    if (!server.isLive(ovms::CAPI_MODULE_NAME)) {
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
+    }
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    if (!servableModule) {
+        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not ready - missing servable manager");
+    }
+    *modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    return StatusCode::OK;
+}
+
+static Status getModelInstance(ovms::Server& server, const std::string& modelName, int64_t modelVersion, std::shared_ptr<ovms::ModelInstance>& modelInstance,
+    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
+    }
+    return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
+}
+
+static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
+    InferenceResponse* response,
+    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
+    OVMS_PROFILE_FUNCTION();
+    ModelManager* modelManager{nullptr};
+    auto status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
+    }
+    return modelManager->createPipeline(pipelinePtr, request->getServableName(), request, response);
+}
+
+static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard) {
+    ModelManager* modelManager{nullptr};
+    Status status = getModelManager(server, &modelManager);
+    if (!status.ok()) {
+        return status;
+    }
+    *pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
+    if (!*pipelineDefinition) {
+        return Status(StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
+    }
+    return (*pipelineDefinition)->waitForLoaded(unloadGuard, 0);
+}
+}  // namespace
 
 #ifdef __cplusplus
 extern "C" {
@@ -897,64 +959,6 @@ DLL_PUBLIC void OVMS_InferenceResponseDelete(OVMS_InferenceResponse* res) {
     delete response;
 }
 
-namespace {
-enum : uint32_t {
-    TIMER_TOTAL,
-    TIMER_CALLBACK,
-    TIMER_END
-};
-#pragma warning(push)
-#pragma warning(disable : 4190)  // TODO verify
-static Status getModelManager(Server& server, ModelManager** modelManager) {
-    if (!server.isLive(ovms::CAPI_MODULE_NAME)) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not live");
-    }
-    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
-    if (!servableModule) {
-        return ovms::Status(ovms::StatusCode::SERVER_NOT_READY, "not ready - missing servable manager");
-    }
-    *modelManager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    return StatusCode::OK;
-}
-
-static Status getModelInstance(ovms::Server& server, const std::string& modelName, int64_t modelVersion, std::shared_ptr<ovms::ModelInstance>& modelInstance,
-    std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr) {
-    OVMS_PROFILE_FUNCTION();
-    ModelManager* modelManager{nullptr};
-    auto status = getModelManager(server, &modelManager);
-    if (!status.ok()) {
-        return status;
-    }
-    return modelManager->getModelInstance(modelName, modelVersion, modelInstance, modelInstanceUnloadGuardPtr);
-}
-
-static Status getPipeline(ovms::Server& server, const InferenceRequest* request,
-    InferenceResponse* response,
-    std::unique_ptr<ovms::Pipeline>& pipelinePtr) {
-    OVMS_PROFILE_FUNCTION();
-    ModelManager* modelManager{nullptr};
-    auto status = getModelManager(server, &modelManager);
-    if (!status.ok()) {
-        return status;
-    }
-    return modelManager->createPipeline(pipelinePtr, request->getServableName(), request, response);
-}
-
-static Status getPipelineDefinition(Server& server, const std::string& servableName, PipelineDefinition** pipelineDefinition, std::unique_ptr<PipelineDefinitionUnloadGuard>& unloadGuard) {
-    ModelManager* modelManager{nullptr};
-    Status status = getModelManager(server, &modelManager);
-    if (!status.ok()) {
-        return status;
-    }
-    *pipelineDefinition = modelManager->getPipelineFactory().findDefinitionByName(servableName);
-    if (!*pipelineDefinition) {
-        return Status(StatusCode::PIPELINE_DEFINITION_NAME_MISSING);
-    }
-    return (*pipelineDefinition)->waitForLoaded(unloadGuard, 0);
-}
-#pragma warning(pop)
-}  // namespace
-
 DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceRequest* request, OVMS_InferenceResponse** response) {
     struct CallbackGuard {
         OVMS_InferenceRequestCompletionCallback_t userCallback{nullptr};
@@ -1045,7 +1049,7 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         status = pipelinePtr->execute(executionContext);
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
-        status = modelInstance->infer(req, res.get(), modelInstanceUnloadGuard);
+        status = ovms::infer(*modelInstance, req, res.get(), modelInstanceUnloadGuard);
         //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 
@@ -1109,7 +1113,7 @@ DLL_PUBLIC OVMS_Status* OVMS_InferenceAsync(OVMS_Server* serverPtr, OVMS_Inferen
         return reinterpret_cast<OVMS_Status*>(new Status(StatusCode::NOT_IMPLEMENTED));
         // INCREMENT_IF_ENABLED(pipelinePtr->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     } else {
-        status = modelInstance->inferAsync<InferenceRequest, InferenceResponse>(req, modelInstanceUnloadGuard);
+        status = ovms::modelInferAsync<InferenceRequest, InferenceResponse>(*modelInstance, req, modelInstanceUnloadGuard);
         //   INCREMENT_IF_ENABLED(modelInstance->getMetricReporter().getInferRequestMetric(executionContext, status.ok()));
     }
 
@@ -1417,7 +1421,6 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void*
 #endif
     return nullptr;
 }
-
 #ifdef __cplusplus
 }
 #endif

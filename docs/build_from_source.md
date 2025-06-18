@@ -1,11 +1,11 @@
-# Building from source
+# Building from source {#ovms_docs_build_from_source}
 
 This document gives information how to build docker images and the binary package from source with different variants.
 
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.4 host
+1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.5 host
 1. make
 1. bash
 
@@ -79,23 +79,6 @@ make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
 
 Parameter used to specify URL to the OpenVINO tar.gz archive, appropriate for the target OS. Here are the [latest public packages from master branch](https://storage.openvinotoolkit.org/repositories/openvino/packages/master/).
 Use this parameter together with `OV_USE_BINARY=1`.
-
-<hr />
-
-### `NVIDIA`
-
-By default set to `0`. When set to `1`, there will be additional docker image prepared: `openvino/model_server:latest-cuda` which contains environment required to run inference on NVIDIA GPUs. Please note that such image is significantly larger than the base one.
-
-Hint: optionally use `OV_SOURCE_BRANCH` parameter to specify which branch from [OpenVINO repository](https://github.com/openvinotoolkit/openvino) should be used
-and `OV_CONTRIB_BRANCH` to choose the branch from [OpenVINO contrib](https://github.com/openvinotoolkit/openvino_contrib) repository for NVIDIA plugin.
-
-Example:
-```bash
-make release_image NVIDIA=1 OV_USE_BINARY=0
-```
-
- > **Note**: In order to build the image with redhat UBI8.8 as the base os, it is required to use a host with RedHat subscription and entitlements in `/etc/pki/entitlement` and `/etc/rhsm`.
-That is required to install several building dependencies.
 
 <hr />
 
