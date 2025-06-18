@@ -317,9 +317,10 @@ client = OpenAI(
 )
 response = client.images.generate(
             model="OpenVINO/FLUX.1-schnell-int4-ov",
-            prompt="three happy cats",
+            prompt="three cute cats sitting on a bench",
+            "size": "512x512",
             extra_body={
-                "rng_seed": 42,
+                "rng_seed": 45,
                 "num_inference_steps": 3
             }
         )
@@ -336,7 +337,7 @@ curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
     "model": "black-forest-labs/FLUX.1-schnell",
-    "prompt": "three happy cats",
+    "prompt": "three cute cats sitting on a bench",
     "num_inference_steps": 3,
     "size": "512x512"
   }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
@@ -344,11 +345,11 @@ curl http://localhost:8000/v3/images/generations \
 :::
 :::{tab-item} Windows PowerShell
 :sync: power-shell
-```{code} bash
+```{code} powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three happy cats", "num_inference_steps": 3}'
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "num_inference_steps": 3,  "size": "512x512"}'
 $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 [IO.File]::WriteAllBytes('output.png', [Convert]::FromBase64String($base64))
 ```
