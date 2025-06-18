@@ -135,6 +135,19 @@ void CLIParser::parse(int argc, char** argv) {
             ("config_path",
                 "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
+        options->add_options("config management")
+            ("list_models",
+                "Directive to show available servables in models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "LIST_MODELS")
+            ("add_to_config",
+                "Path to directory containing config.json file for OVMS, to add specific model to",
+                cxxopts::value<std::string>(),
+                "ADD_TO_CONFIG")
+            ("remove_from_config",
+                "Path to directory containing config.json file for OVMS, to remove specific model from",
+                cxxopts::value<std::string>(),
+                "REMOVE_FROM_CONFIG");
 
         options->add_options("pull hf model")
             ("pull",
@@ -156,19 +169,7 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK")
-            ("list_models",
-                "Directive to show available servables in models repository",
-                cxxopts::value<bool>()->default_value("false"),
-                "LIST_MODELS")
-            ("add_to_config",
-                "Path to config file for ovms, where to add specific model",
-                cxxopts::value<std::string>()->default_value("config.json"),
-                "ADD_TO_CONFIG")
-            ("remove_from_config",
-                "Path to config file for ovms, to remove specific model from",
-                cxxopts::value<std::string>()->default_value("config.json"),
-                "REMOVE_FROM_CONFIG");
+                "TASK");
 
         options->add_options("single model")
             ("model_name",
