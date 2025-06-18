@@ -10,6 +10,7 @@ Chat completion API <ovms_docs_rest_api_chat>
 Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
+Image generation API <ovms_docs_rest_api_image_generation>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -19,6 +20,8 @@ OpenAI compatible endpoints:
 - [chat/completions](./model_server_rest_api_chat.md)
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
+- [images/generations](./model_server_rest_api_image_generation.md)
+
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
 
@@ -287,6 +290,75 @@ curl http://localhost:8000/v3/embeddings \
 :::
 ::::
 Check [text embeddings end to end demo](../demos/embeddings/README.md).
+
+### Image generation
+
+Install the pillow package to be able to save images to disk:
+
+```{code} bash
+pip3 install pillow
+```
+
+
+
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```{code} python
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+  base_url="http://localhost:8000/v3",
+  api_key="unused"
+)
+response = client.images.generate(
+            model="OpenVINO/FLUX.1-schnell-int4-ov",
+            prompt="three cute cats sitting on a bench",
+            "size": "512x512",
+            extra_body={
+                "rng_seed": 45,
+                "num_inference_steps": 3
+            }
+        )
+base64_image = response.data[0].b64_json
+image_data = base64.b64decode(base64_image)
+image = Image.open(BytesIO(image_data))
+image.save('output.png')
+```
+:::
+:::{tab-item} curl [Linux]
+:sync: curl
+```{code} bash
+curl http://localhost:8000/v3/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "black-forest-labs/FLUX.1-schnell",
+    "prompt": "three cute cats sitting on a bench",
+    "num_inference_steps": 3,
+    "size": "512x512"
+  }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
+```
+:::
+:::{tab-item} Windows PowerShell
+:sync: power-shell
+```{code} powershell
+$response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
+    -Method POST `
+    -Headers @{ "Content-Type" = "application/json" } `
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "num_inference_steps": 3,  "size": "512x512"}'
+$base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
+[IO.File]::WriteAllBytes('output.png', [Convert]::FromBase64String($base64))
+```
+:::
+::::
+
+
+Check [image generation end to end demo](../demos/image_generation/README.md).
+
 
 ## Cohere Python Client
 

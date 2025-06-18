@@ -105,8 +105,9 @@ struct OpenAIChatCompletionsRequest {
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;
 
-    ov::genai::GenerationConfig createGenerationConfig() const {
-        ov::genai::GenerationConfig config;
+    ov::genai::GenerationConfig createGenerationConfig(const ov::genai::GenerationConfig& base) const {
+        // Start with config that may contain some default values for the model
+        ov::genai::GenerationConfig config = base;
         // Generic
         config.apply_chat_template = false;  // template is applied on the serving side
         if (maxTokens.has_value())
@@ -181,7 +182,7 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
 
     absl::Status parseCompletionsPart();
-    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit);
+    absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
 public:
@@ -208,13 +209,14 @@ public:
 
     void incrementProcessedTokens(size_t numTokens = 1);
 
-    ov::genai::GenerationConfig createGenerationConfig() const;
+    ov::genai::GenerationConfig createGenerationConfig(const ov::genai::GenerationConfig& base) const;
 
-    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
-    absl::Status parseMessages();
+    absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath = std::nullopt);
+    absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
+    absl::Status parseTools();
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
-    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string& responseParserName = "");
+    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string& responseParserName = "");
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);

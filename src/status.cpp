@@ -337,8 +337,12 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
 
     // Huggingface model download errors for libgit2
     {StatusCode::HF_FAILED_TO_INIT_LIBGIT2, "Failed to initialize libgit2 library"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT, "Failed to initialize git executable"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT_LFS, "Failed to initialize git-lfs executable"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
+    {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
+    {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},
 };
 }  // namespace ovms

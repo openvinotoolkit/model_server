@@ -26,10 +26,12 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
+#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #pragma warning(pop)
+#endif
 
 #include "../../http_rest_api_handler.hpp"
 #include "../../http_status_code.hpp"
@@ -37,6 +39,7 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
+#include "../../llm/text_utils.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -136,6 +139,8 @@ public:
     }
 
     static void TearDownTestSuite() {
+        llmExecutorWrapper.reset();
+        cbPipe.reset();
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();

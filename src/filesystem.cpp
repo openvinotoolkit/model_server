@@ -187,4 +187,17 @@ const std::string& FileSystem::getOsSeparator() {
     return separator;
 }
 
+Status FileSystem::createFileOverwrite(const std::string& filePath, const std::string& contents) {
+    SPDLOG_DEBUG("Creating file {}", filePath);
+    // Always overwrite
+    std::ofstream graphFile(filePath, std::ios::trunc | std::ofstream::binary);
+    if (graphFile.is_open()) {
+        graphFile << contents << std::endl;
+    } else {
+        SPDLOG_ERROR("Unable to open file: {}", filePath);
+        return StatusCode::FILE_INVALID;
+    }
+    return StatusCode::OK;
+}
+
 }  // namespace ovms

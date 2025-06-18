@@ -26,10 +26,12 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
+#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #pragma warning(pop)
+#endif
 
 #include "../../http_rest_api_handler.hpp"
 #include "../../http_status_code.hpp"
@@ -39,7 +41,7 @@
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
-#include "../../llm/text_processor.hpp"
+#include "../../llm/text_utils.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "rapidjson/document.h"
@@ -149,6 +151,8 @@ public:
     }
 
     static void TearDownTestSuite() {
+        llmExecutorWrapper.reset();
+        cbPipe.reset();
         ovms::Server& server = ovms::Server::instance();
         server.setShutdownRequest(1);
         t->join();
@@ -1586,9 +1590,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsFinishReasonLength) {
     }
 }
 
-// Potential sporadic - move to functional if problematic
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
-    GTEST_SKIP() << "Real sporadic, either fix or move to functional";
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -1603,7 +1605,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
             "messages": [
             {
                 "role": "user",
-                "content": "What is OpenVINO?"
+                "content": "What is OpenVINO? In short"
             }
             ]
         }
@@ -1611,25 +1613,87 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsSingleStopString) {
 
     std::vector<std::string> responses;
 
+    // Gather responses
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([this, &responses](std::string response) {
             responses.push_back(response);
         });
+
+    // dispatchToProcessor is blocking because of mocked PartialReplyBegin in fixture:
+    // ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
+
+    // Check if there is at least one response
+    ASSERT_GT(responses.size(), 0);
+
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"stop\"") != std::string::npos);
     }
-    std::regex content_regex("\"content\":\".*\\.[ ]{0,1}\"");
-    if (params.modelName.find("legacy") != std::string::npos) {
-        // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
-        // Because of that, we might get additional response with empty content at the end of the stream.
-        ASSERT_TRUE(std::regex_search(responses[responses.size() - 2], content_regex) || std::regex_search(responses.back(), content_regex));
-    } else {
-        ASSERT_TRUE(std::regex_search(responses.back(), content_regex));
+
+    // In legacy streaming we don't know if the callback is the last one, so we rely on entire generation call finish.
+    // Because of that, we might get additional response with empty content at the end of the stream.
+    const size_t numberOfLastResponsesToCheckForStopString = params.modelName.find("legacy") != std::string::npos ? 2 : 1;
+
+    // The stop string (.) does not need to be at the end of the message.
+    // There are cases when the last generation contains dot and a new lines, or generated token is "e.g",
+    // or simply any token (or group of tokens) that has dot in a middle.
+
+    // Check for no existence of a dot:
+    for (size_t i = 0; i < responses.size() - numberOfLastResponsesToCheckForStopString; ++i) {
+        // Assert there is no dot '.' in the response
+
+        // Cut "data: " prefix
+        std::string dataPrefix = "data:";
+        std::string resp = responses[i].substr(dataPrefix.size());
+
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(resp.c_str());
+        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                << resp;
+
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        ASSERT_TRUE(d["choices"][0].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+        resp = d["choices"][0]["delta"]["content"].GetString();
+        ASSERT_EQ(resp.find('.'), std::string::npos) << "found dot in response: " << responses[i] << " at index: " << i << " out of: " << responses.size();
     }
+
+    bool foundDotInLastResponse = false;
+    // Check for existence of a dot:
+    for (size_t i = responses.size() - numberOfLastResponsesToCheckForStopString; i < responses.size(); ++i) {
+        // Assert there is a dot '.' in the response
+
+        // Cut "data: " prefix
+        std::string dataPrefix = "data:";
+        std::string resp = responses[i].substr(dataPrefix.size());
+
+        // remove from resp: "data: [DONE]" (not only in the beginning)
+        size_t pos = resp.find("data: [DONE]");
+        if (pos != std::string::npos) {
+            resp.erase(pos, std::string("data: [DONE]").length());
+        }
+
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(resp.c_str());
+        ASSERT_EQ(ok.Code(), 0) << d.GetParseError() << "\n"
+                                << resp;
+
+        ASSERT_TRUE(d["choices"].IsArray());
+        ASSERT_EQ(d["choices"].Size(), 1);
+        ASSERT_TRUE(d["choices"][0].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"].IsObject());
+        ASSERT_TRUE(d["choices"][0]["delta"]["content"].IsString());
+        resp = d["choices"][0]["delta"]["content"].GetString();
+        if (resp.find('.') != std::string::npos) {
+            foundDotInLastResponse = true;
+        }
+    }
+    ASSERT_TRUE(foundDotInLastResponse) << "cannot find dot last responses";
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsFinishReasonLength) {
@@ -2459,7 +2523,7 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAnObject) {
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
-TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
+TEST_P(LLMHttpParametersValidationTest, contentNotValid) {
     auto params = GetParam();
     std::string requestBody = R"(
         {
@@ -2470,7 +2534,31 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
             "messages": [
             {
                 "role": "user",
-                "content": 1
+                "content": [1,2,3]
+            }
+            ]
+        }
+    )";
+
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    ASSERT_NE(status.string().find("Invalid message structure - content array should contain objects"), std::string::npos);
+}
+
+TEST_P(LLMHttpParametersValidationTest, additionalArrayTypeElementInMessage) {
+    // Note that tool calls are not visible in non-Python build
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "content": "Some content",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
             }
             ]
         }
@@ -2478,7 +2566,54 @@ TEST_P(LLMHttpParametersValidationTest, messageNotAString) {
 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "max_tokens": 1,
+            "messages": [
+            {
+                "role": "assistant",
+                "tool_calls": [{"type": "function", "function": {"name": "get_current_weather", "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"}}]
+            }
+            ]
+        }
+    )";
+
+    ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+#if (PYTHON_DISABLE == 0)
+    bool genAiTemplateParsing = false;  // With Python enabled, we use native Jinja2 template parsing
+#else
+    bool genAiTemplateParsing = true;  // With Python disabled, we use GenAI template parsing
+#endif
+
+    if (params.modelName.find("vlm") != std::string::npos) {
+        genAiTemplateParsing = true;  // VLM models always use GenAI template parsing
+    }
+
+    if (genAiTemplateParsing) {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect generic error here is that with GenAI template rendering missing content is unexpected.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Response generation failed"), std::string::npos);
+    } else {
+        /*
+            This test checks if API handler validation allows messages without content.
+            The reason why we expect error here is that for the tested LLM model, lack of content means that pipeline input is empty.
+            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
+        */
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ASSERT_NE(status.string().find("Final prompt after applying chat template is empty"), std::string::npos);
+    }
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
@@ -3057,9 +3192,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 // Common tests for all pipeline types (testing logic executed prior pipeline type selection)
 class LLMConfigHttpTest : public ::testing::Test {
+#if (PYTHON_DISABLE == 0)
 public:
     void SetUp() { py::initialize_interpreter(); }
     void TearDown() { py::finalize_interpreter(); }
+#endif
 };
 
 TEST_F(LLMConfigHttpTest, LLMNodeNameMissing) {
@@ -3316,9 +3453,11 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
+#if (PYTHON_DISABLE == 0)
 public:
     void SetUp() { py::initialize_interpreter(); }
     void TearDown() { py::finalize_interpreter(); }
+#endif
 };
 
 TEST_P(LLMConfigHttpTestParameterized, LLMNodeResourceInitFailed) {
@@ -3382,9 +3521,11 @@ INSTANTIATE_TEST_SUITE_P(
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {
+#if (PYTHON_DISABLE == 0)
 public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
+#endif
 };
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
@@ -3645,6 +3786,7 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
                 enable_prefix_caching: true
                 max_tokens_limit: 700
                 best_of_limit: 3
+                cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672, aggregation_mode: NORM_SUM, apply_rotation: true}
             }
         }
         input_stream_handler {
@@ -3673,6 +3815,11 @@ void LLMNodeOptionsCheckNonDefault(std::string& modelsPath) {
     ASSERT_EQ(properties->schedulerConfig.enable_prefix_caching, true);
     ASSERT_EQ(properties->maxTokensLimit, 700);
     ASSERT_EQ(properties->bestOfLimit, 3);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_start_size(), 32);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_recent_size(), 128);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.get_max_cache_size(), 672);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.aggregation_mode, ov::genai::AggregationMode::NORM_SUM);
+    ASSERT_EQ(properties->schedulerConfig.cache_eviction_config.apply_rotation, true);
 }
 TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckNonDefault) {
     LLMNodeOptionsCheckNonDefault(modelsPath);

@@ -26,13 +26,14 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../config.hpp"
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
-#include "text_processor.hpp"
+#include "text_utils.hpp"
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
@@ -58,8 +59,9 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->endpoint,
         std::chrono::system_clock::now(),
         getProperties()->tokenizer);
+    auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -91,15 +93,21 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     std::string inputText;
     switch (executionContext->endpoint) {
     case Endpoint::CHAT_COMPLETIONS: {
+#if (PYTHON_DISABLE == 0)
         bool success;
         if (executionContext->apiHandler->getProcessedJson().size() > 0) {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->apiHandler->getProcessedJson(), inputText);
         } else {
-            success = TextProcessor::applyChatTemplate(getProperties()->textProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
+            success = PyJinjaTemplateProcessor::applyChatTemplate(getProperties()->templateProcessor, getProperties()->modelsPath, executionContext->payload.body, inputText);
         }
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
         }
+#else
+        ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
+        constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
+        inputText = getProperties()->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);
+#endif
         if (inputText.size() == 0) {
             return absl::Status(absl::StatusCode::kInvalidArgument, "Final prompt after applying chat template is empty");
         }
@@ -109,7 +117,6 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         inputText = executionContext->apiHandler->getPrompt().value();
     }
     }
-
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
@@ -128,13 +135,14 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
 
     executionContext->apiHandler->setPromptTokensUsage(executionContext->inputIds.get_size());
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", inputText);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(executionContext->inputIds));
 
     return absl::OkStatus();
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs, getProperties()->responseParserName);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }

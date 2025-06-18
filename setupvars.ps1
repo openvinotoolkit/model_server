@@ -15,6 +15,10 @@
 #
 
 $env:OVMS_DIR=$PSScriptRoot
-$env:PYTHONHOME="$env:OVMS_DIR\python"
-$env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:PATH"
+if (Test-Path "$env:OVMS_DIR\python") {
+    $env:PYTHONHOME="$env:OVMS_DIR\python"
+    $env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:PATH"
+} else {
+    $env:PATH="$env:OVMS_DIR;$env:PATH"
+}
 echo "OpenVINO Model Server Environment Initialized"

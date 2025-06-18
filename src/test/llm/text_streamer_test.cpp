@@ -40,7 +40,9 @@ public:
 )";
 
     static void SetUpTestSuite() {
+#if (PYTHON_DISABLE == 0)
         py::initialize_interpreter();
+#endif
         std::string adjustedPbtxt = testPbtxt;
         adjustConfigForTargetPlatform(adjustedPbtxt);
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(adjustedPbtxt, &config));
@@ -53,8 +55,12 @@ public:
         streamer = std::make_shared<ov::genai::TextStreamer>(*tokenizer, callback);
     }
     static void TearDownTestSuite() {
+        streamer.reset();
+        tokenizer.reset();
         servable.reset();
+#if (PYTHON_DISABLE == 0)
         py::finalize_interpreter();
+#endif
     }
     void assertTokensValues(ov::Tensor generatedTokens, std::vector<int64_t> expectedTokens) {
         ASSERT_EQ(generatedTokens.get_size(), expectedTokens.size());

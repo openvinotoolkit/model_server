@@ -33,7 +33,10 @@
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../apis/openai_completions.hpp"
-#include "../../text_processor.hpp"
+#include "../../text_utils.hpp"
+#if (PYTHON_DISABLE == 0)
+#include "../../py_jinja_template_processor.hpp"
+#endif
 #include "llm_executor.hpp"
 #include "servable.hpp"
 
@@ -49,9 +52,16 @@ void ContinuousBatchingServable::notifyExecutorThread() {
 }
 
 absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
+    // Additional validation for big prompt and setting without dynamic split fuse (GenAI checks it during scheduling which is too late for us)
+    if (executionContext->inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received request with more tokens than max_num_batch_tokens {} > {}. Without dynamic split fuse on, such request is invalid",
+            executionContext->inputIds.get_size(), properties->schedulerConfig.max_num_batched_tokens);
+        return absl::InvalidArgumentError("Input length exceeds pipeline capabilities: " + std::to_string(executionContext->inputIds.get_size()) +
+                                          " > " + std::to_string(properties->schedulerConfig.max_num_batched_tokens));
+    }
     executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         executionContext->inputIds,
-        executionContext->apiHandler->createGenerationConfig());
+        executionContext->apiHandler->createGenerationConfig(properties->baseGenerationConfig));
     return absl::OkStatus();
 }
 

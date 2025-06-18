@@ -34,6 +34,10 @@ constexpr uint64_t NANOS_PER_SECOND = 1000000000;
 const std::vector<std::string> FileSystem::acceptedFiles = {".bin", ".onnx", ".xml", "mapping_config.json", ".pdiparams", ".pdmodel", ".pb", ".tflite"};
 
 StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
+    return LocalFileSystem::exists(path, exists).getCode();
+}
+
+Status LocalFileSystem::exists(const std::string& path, bool* exists) {
     try {
         if (isPathEscaped(path)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", path);
@@ -49,6 +53,10 @@ StatusCode LocalFileSystem::fileExists(const std::string& path, bool* exists) {
 }
 
 StatusCode LocalFileSystem::isDirectory(const std::string& path, bool* is_dir) {
+    return LocalFileSystem::isDir(path, is_dir).getCode();
+}
+
+Status LocalFileSystem::isDir(const std::string& path, bool* is_dir) {
     try {
         if (isPathEscaped(path)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Path {} escape with .. is forbidden.", path);
@@ -163,7 +171,7 @@ StatusCode LocalFileSystem::deleteFileFolder(const std::string& path) {
     }
     // delete empty folder with model version
     if (std::filesystem::is_empty(parentPath)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Deleting empty folder: ()", parentPath.string());
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Deleting empty folder: {}", parentPath.string());
         std::filesystem::remove(parentPath);
     }
 

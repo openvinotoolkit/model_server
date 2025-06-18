@@ -49,7 +49,10 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     auto properties = std::static_pointer_cast<VisualLanguageModelLegacyServableProperties>(servable->getProperties());
 
     properties->modelsPath = parsedModelsPath;
-
+    std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
+    if (std::filesystem::exists(modelGenerationConfigPath)) {
+        properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
+    }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
@@ -71,7 +74,7 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     }
 
     try {
-        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device);
+        properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = properties->pipeline->get_tokenizer();
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during llm node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
@@ -81,7 +84,6 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
-    loadTextProcessor(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

@@ -2,44 +2,25 @@
 
 Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
 It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct) quantized to INT4 precision and converted to IR format.
+You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and 
+hardware configuration.
 
 ## Requirements
 - Linux or Windows 11
 - Docker Engine or `ovms` binary package [installed](../deploying_server_baremetal.md)
-- Intel iGPU or ARC GPU 
+- Intel iGPU or ARC GPU
 
 ## Deployment Steps
-
-### 1. Install Python dependencies:
-```console
-pip3 install huggingface_hub jinja2
-```
-
-### 2. Download and Prepare the Model:
-Using `export_model.py` script, download the OpenVINO model and prepare models repository including all configuration required for deployment with OpenVINO Model Server. For details, see [Exporting GEN AI Models](../../demos/common/export_models/README.md).
-
-```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-mkdir models
-python export_model.py text_generation --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --target_device GPU --cache 2
-```
-LLM engine parameters will be defined inside the `graph.pbtxt` file.
-
-> **Note:** The users in China need to set environment variable `HF_ENDPOINT="https://hf-mirror.com"` before running the export script to connect to the HF Hub.
-
-> **Note:** If you want to export models outside of the `OpenVINO` organization in HuggingFace, you need to install additional Python dependencies:
-> ```console
-> pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
-> ```
  
-### 3. Deploy the Model
+### 1. Deploy the Model
 ::::{tab-set}
 
 :::{tab-item} With Docker
 **Required:** Docker Engine installed
 
 ```bash
-docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:latest-gpu --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path /models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
+mkdir models
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 
@@ -47,12 +28,15 @@ docker run -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --r
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms --rest_port 8000 --model_name Phi-3.5-mini-instruct --model_path models/OpenVINO/Phi-3.5-mini-instruct-int4-ov
+ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 ::::
 
-### 4. Check Model Readiness
+First run of the command will download the https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov to models/OpenVINO/Phi-3.5-mini-instruct-int4-ov directory and start serving it with ovms.
+The consecutive run of the command will check that the model exists and start serving it.
+
+### 2. Check Model Readiness
 
 Wait for the model to load. You can check the status with a simple command:
 
@@ -63,7 +47,7 @@ curl http://localhost:8000/v1/config
 :::{dropdown} Expected Response
 ```json
 {
-  "Phi-3.5-mini-instruct": {
+  "OpenVINO/Phi-3.5-mini-instruct-int4-ov": {
     "model_version_status": [
       {
         "version": "1",
@@ -79,7 +63,7 @@ curl http://localhost:8000/v1/config
 ```
 :::
 
-### 5. Run Generation
+### 3. Run Generation
 
 ::::{tab-set}
 
@@ -88,7 +72,7 @@ curl http://localhost:8000/v1/config
 curl -s http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Phi-3.5-mini-instruct",
+    "model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov",
     "max_tokens": 30,
     "temperature": 0,
     "stream": false,
@@ -103,16 +87,16 @@ curl -s http://localhost:8000/v3/chat/completions \
 :::{tab-item} Windows
 
 Windows Powershell
-```bat
+```powershell
 (Invoke-WebRequest -Uri "http://localhost:8000/v3/chat/completions" `
  -Method POST `
  -Headers @{ "Content-Type" = "application/json" } `
- -Body '{"model": "Phi-3.5-mini-instruct", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
+ -Body '{"model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov", "max_tokens": 30, "temperature": 0, "stream": false, "messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}]}').Content
 ```
 
 Windows Command Prompt
 ```bat
-curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"Phi-3.5-mini-instruct\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
+curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"OpenVINO/Phi-3.5-mini-instruct-int4-ov\", \"max_tokens\": 30, \"temperature\": 0, \"stream\": false, \"messages\": [{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"What are the 3 main tourist attractions in Paris?\"}]}"
 ```
 :::
 
@@ -133,7 +117,7 @@ curl -s http://localhost:8000/v3/chat/completions -H "Content-Type: application/
     }
   ],
   "created": 1744716414,
-  "model": "Phi-3.5-mini-instruct",
+  "model": "OpenVINO/Phi-3.5-mini-instruct-int4-ov",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 24,
@@ -161,7 +145,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="Phi-3.5-mini-instruct",
+    model="OpenVINO/Phi-3.5-mini-instruct-int4-ov",
     messages=[{"role": "system", "content": "You are a helpful assistant."},
               {"role": "user", "content": "What are the 3 main tourist attractions in Paris?"}
     ],

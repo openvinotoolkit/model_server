@@ -1,3 +1,6 @@
+boolean windows_success = false
+def agent_name_windows = ""
+
 pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
@@ -9,6 +12,7 @@ pipeline {
         stage ("Build and test windows") {
             steps {
                 script {
+                    agent_name_windows = env.NODE_NAME
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
@@ -18,7 +22,15 @@ pipeline {
                           windows.build()
                           windows.unit_test()
                           windows.check_tests()
-                        } finally {
+                          def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
+                          def python_presence = ""
+                          if (env.OVMS_PYTHON_ENABLED) {
+                              python_presence = "with_python"
+                          } else {
+                              python_presence = "without_python"
+                          }
+                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E C:\\Jenkins\\workspace\\ovms_ovms-windows_${safeBranchName}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
+                          } finally {
                           windows.archive_build_artifacts()
                           windows.archive_test_artifacts()
                         }

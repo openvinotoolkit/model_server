@@ -1,7 +1,10 @@
-# Exporting GEN AI Models {#ovms_demos_common_export}
+# Exporting models using script {#ovms_demos_common_export}
+
+This documents describes how to export, optimize and configure models prior to server deployment with provided python script. This approach is more flexible than using [pull feature](../../../docs/pull_hf_models.md) from OVMS as it allows for using models that were not optimized beforehand and provided in [OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace, but requires having Python set up to work.
+
+## What it does
 
 This script automates exporting models from Hugging Faces hub or fine-tuned in PyTorch format to the `models` repository for deployment with OpenVINO Model Server. In one step it prepares a complete set of resources in the `models` repository for a supported GenAI use case.
-
 
 ## Quick Start
 ```console
@@ -13,16 +16,19 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h] {text_generation,embeddings,rerank} ...
+usage: export_model.py [-h] {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,rerank}
+  {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
-    embeddings          export model for embeddings endpoint
-    rerank              export model for rerank endpoint
+    embeddings          [deprecated] export model for embeddings endpoint with models split into separate, versioned directories
+    embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
+    rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
+    rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
+    image_generation    export model for image generation endpoint
 ```
 For every use case subcommand there is adjusted list of parameters:
 
@@ -33,7 +39,8 @@ Expected Output:
 ```console
 usage: export_model.py text_generation [-h] [--model_repository_path MODEL_REPOSITORY_PATH] --source_model SOURCE_MODEL [--model_name MODEL_NAME] [--weight-format PRECISION] [--config_file_path CONFIG_FILE_PATH] [--overwrite_models] [--target_device TARGET_DEVICE]
                                        [--ov_cache_dir OV_CACHE_DIR] [--pipeline_type {LM,LM_CB,VLM,VLM_CB,AUTO}] [--kv_cache_precision {u8}] [--extra_quantization_params EXTRA_QUANTIZATION_PARAMS] [--enable_prefix_caching] [--disable_dynamic_split_fuse]
-                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--max_prompt_len MAX_PROMPT_LEN]
+                                       [--max_num_batched_tokens MAX_NUM_BATCHED_TOKENS] [--max_num_seqs MAX_NUM_SEQS] [--cache_size CACHE_SIZE] [--draft_source_model DRAFT_SOURCE_MODEL] [--draft_model_name DRAFT_MODEL_NAME] [--max_prompt_len MAX_PROMPT_LEN] [--prompt_lookup_decoding]
+                                       [--tools_model_type {llama3,phi4,hermes3,qwen3}]
 
 options:
   -h, --help            show this help message and exit
@@ -74,6 +81,10 @@ options:
                         Draft model name that should be used in the deployment. Equal to draft_source_model if HF model name is used. Available only in draft_source_model has been specified.
   --max_prompt_len MAX_PROMPT_LEN
                         Sets NPU specific property for maximum number of tokens in the prompt. Not effective if target device is not NPU
+  --prompt_lookup_decoding
+                        Set pipeline to use prompt lookup decoding
+  --tools_model_type {llama3,phi4,hermes3,qwen3}
+                        Set the type of model chat template and output parser
 ```
 
 ## Model Export Examples
@@ -132,6 +143,15 @@ python export_model.py rerank \
     --weight-format int8 \
     --config_file_path models/config_all.json \
     --num_streams 2
+```
+
+### Image Generation Models
+```console
+python export_model.py image_generation \
+    --source_model dreamlike-art/dreamlike-anime-1.0 \
+    --weight-format int8 \
+    --config_file_path models/config_all.json \
+    --max_resolution 2048x2048
 ```
 
 ## Deployment example
