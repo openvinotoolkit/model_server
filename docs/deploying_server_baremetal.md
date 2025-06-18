@@ -99,10 +99,17 @@ pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 :sync: windows
 Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/VC_redist.x64.exe) installed before moving forward.
 
-Download and unpack model server archive for Windows:
+Download and unpack model server archive for Windows(with python):
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows_python_on.zip -o ovms.zip
+tar -xf ovms.zip
+```
+
+or archive without python:
+
+```bat
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows_python_off.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
