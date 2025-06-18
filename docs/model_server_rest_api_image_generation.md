@@ -83,7 +83,7 @@ curl http://localhost:8000/v3/images/generations \
 ## Error handling
 Endpoint can raise an error related to incorrect request in the following conditions:
 - Incorrect format of any of the fields based on the schema
-- Tokenized prompt exceeds the maximum length of the model context. **TODO** Verify
+- Tokenized prompt exceeds the maximum length of the model context.
 - Model does not support requested width and height
 - Administrator defined min/max parameter value requirements are not met
 
