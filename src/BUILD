@@ -2721,6 +2721,19 @@ cc_binary(
     linkstatic = True,
 )
 
+
+
+cc_binary(
+    name = "optimum_cli",
+    srcs = [
+        "test/optimum_cli_mock.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [],
+    # linkstatic = False,  # Use for dynamic linking when necessary
+)
+
 cc_binary(
     name = "ovms",
     srcs = [
@@ -3007,6 +3020,7 @@ cc_test(
         "//src:libcustom_node_horizontal_ocr.so",
     ],
     deps = [
+            "optimum_cli",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
