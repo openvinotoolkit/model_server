@@ -273,9 +273,7 @@ packages = {
         'nginx',
         'nginx-common',
     },
-    OvmsBaseType.REDHAT: {
-        'libtool-ltdl',
-    },
+    OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: {
         'expat',
         'python3-libs',
