@@ -907,6 +907,104 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
+
+TEST(OvmsExportHfSettingsTest, positiveDefault) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+    };
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "int8");
+    ASSERT_EQ(hfSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChanged) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+         (char*)"--precision",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+    };
+
+    int arg_count = 13;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--rest_port",
+        (char*)"8080",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--precision",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+    };
+
+    int arg_count = 14;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+}
+
 TEST(OvmsGraphConfigTest, positiveDefault) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";

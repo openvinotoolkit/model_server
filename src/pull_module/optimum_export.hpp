@@ -25,17 +25,24 @@ enum GraphExportType : unsigned int;
 
 class OptimumDownloader : public HfDownloader {
 public:
-    OptimumDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const HFSettingsImpl& hfSettings, bool inOverwrite);
+    OptimumDownloader(const HFSettingsImpl& hfSettings);
     Status cloneRepository();
     std::string getGraphDirectory();
-
+    
 protected:
     std::string sourceModel;
     std::string downloadPath;
     HFSettingsImpl hfSettings;
     bool overwriteModels;
+    std::string EXPORT_SUCCESS_OUTPUT_STRING = "Applying Weight Compression";
+    std::string OPTIMUM_CLI_IS_PRESET_OUTPUT_STRING = "usage: optimum-cli";
 
     OptimumDownloader();
     Status checkRequiredToolsArePresent();
+    std::string getExportCmd();
+    std::string getExportCmdText();
+    std::string getExportCmdEmbeddings();
+    std::string getExportCmdRerank();
+    std::string getExportCmdImage();
 };
 }  // namespace ovms

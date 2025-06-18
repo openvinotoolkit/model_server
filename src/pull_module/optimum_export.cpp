@@ -28,59 +28,85 @@
 
 namespace ovms {
 
-std::string getTextGenCmd(const std::string& directoryPath, TextGenGraphSettingsImpl& graphSettings) {
+std::string OptimumDownloader::getExportCmdText() {
     std::ostringstream oss;
     // NPU specific settings
-    if (graphSettings.targetDevice == "NPU" && !graphSettings.extra_quantization_params.has_value()) {
-        graphSettings.extra_quantization_params.value() = "--sym --ratio 1.0 --group-size -1";
+    if (this->hfSettings.targetDevice == "NPU" && !this->hfSettings.extraQuantizationParams.has_value()) {
+        this->hfSettings.extraQuantizationParams.value() = "--sym --ratio 1.0 --group-size -1";
     }
     // clang-format off
-    oss << "optimum-cli export openvino --model " << graphSettings.modelName << " --trust-remote-code ";
-    oss << " --weight-format " << graphSettings.precision;
-    if (graphSettings.extra_quantization_params.has_value()) {
-        oss << graphSettings.extra_quantization_params.value();
+    oss << "optimum-cli export openvino --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->hfSettings.precision << " ";
+    if (this->hfSettings.extraQuantizationParams.has_value()) {
+        oss << this->hfSettings.extraQuantizationParams.value() << " ";
     }
-    oss << " " << directoryPath;
+    oss << this->downloadPath;
+    // clang-format on
+    return oss.str();
+}
+
+std::string OptimumDownloader::getExportCmdEmbeddings() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
+    oss << " --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->hfSettings.precision;
+    oss << " " << this->downloadPath;
     // clang-format on
 
     return oss.str();
 }
 
-std::string getTextGenCmd(const std::string& directoryPath, EmbeddingsGraphSettingsImpl& graphSettings) {
+std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
-    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << graphSettings.modelName << " --trust-remote-code ";
-    oss << " --weight-format " << graphSettings.precision;
-    oss << " --task feature-extraction --library sentence_transformers ";
-    oss << " " << directoryPath;
-    // clang-format on
-
-    return oss.str();
-}
-
-std::string getTextGenCmd(const std::string& directoryPath, RerankGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << graphSettings.modelName << " --trust-remote-code ";
-    oss << " --weight-format " << graphSettings.precision;
+    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << " --weight-format " << this->hfSettings.precision;
     oss << " --task text-classification ";
-    oss << " " << directoryPath;
+    oss << " " << this->downloadPath;
     // clang-format on
 
     return oss.str();
 }
 
-std::string getTextGenCmd(const std::string& directoryPath, ImageGenerationGraphSettingsImpl& graphSettings) {
+std::string OptimumDownloader::getExportCmdImage() {
     std::ostringstream oss;
     // clang-format off
-    oss << "optimum-cli export openvino --model " << graphSettings.modelName;
-    oss << " --weight-format " << graphSettings.precision;
-    oss << " " << directoryPath;
+    oss << "optimum-cli export openvino --model " << this->hfSettings.sourceModel;
+    oss << " --weight-format " << this->hfSettings.precision;
+    oss << " " << this->downloadPath;
     // clang-format on
 
     return oss.str();
 }
 
+std::string OptimumDownloader::getExportCmd() {
+    std::string cmd = "";
+    switch (this->hfSettings.task) {
+        case TEXT_GENERATION_GRAPH: {
+            cmd = getExportCmdText();
+            break;
+        }
+        case EMBEDDINGS_GRAPH: {
+            cmd = getExportCmdEmbeddings();
+            break;
+        }
+        case RERANK_GRAPH: {
+            cmd = getExportCmdRerank();
+            break;
+        }
+        case IMAGE_GENERATION_GRAPH: {
+            cmd = getExportCmdImage();
+            break;
+        }
+        case UNKNOWN_GRAPH: {
+            SPDLOG_ERROR("Optimum cli task options not initialised.");
+            break;
+        }
+    }
+
+    return cmd;
+}
 OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
@@ -92,18 +118,18 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const HFSettingsImpl& inHfSettings, bool inOverwrite) {
-    this->sourceModel = inSourceModel;
-    this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
+OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings) {
+    this->sourceModel = inHfSettings.sourceModel;
+    this->downloadPath = HfDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel);
     this->hfSettings = inHfSettings;
-    this->overwriteModels = inOverwrite;
+    this->overwriteModels = inHfSettings.overwriteModels;
 }
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string cmd = "optimum-cli -h";
     int retCode = 0;
     std::string output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find("usage: optimum-cli") == std::string::npos) {
+    if (retCode != 0 || output.find(OPTIMUM_CLI_IS_PRESET_OUTPUT_STRING) == std::string::npos) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
@@ -114,6 +140,10 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
 }
 
 Status OptimumDownloader::cloneRepository() {
+    if (this->hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD) {
+        SPDLOG_ERROR("Wrong download type selected. Expected optiumum-cli type.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
@@ -136,55 +166,15 @@ Status OptimumDownloader::cloneRepository() {
         return status;
     }
 
-    std::string cmd = "";
-    switch (this->hfSettings.task) {
-    case TEXT_GENERATION_GRAPH: {
-        if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-            cmd = getTextGenCmd(this->downloadPath, std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Text generation task options not initialised.");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        break;
-    }
-    case EMBEDDINGS_GRAPH: {
-        if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-            cmd = getTextGenCmd(this->downloadPath, std::get<EmbeddingsGraphSettingsImpl>(this->hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Embeddings task options not initialised.");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        break;
-    }
-    case RERANK_GRAPH: {
-        if (std::holds_alternative<RerankGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-            cmd = getTextGenCmd(this->downloadPath, std::get<RerankGraphSettingsImpl>(this->hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Rerank taskoptions not initialised.");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        break;
-    }
-    case IMAGE_GENERATION_GRAPH: {
-        if (std::holds_alternative<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings)) {
-            cmd = getTextGenCmd(this->downloadPath, std::get<ImageGenerationGraphSettingsImpl>(this->hfSettings.graphSettings));
-        } else {
-            SPDLOG_ERROR("Image generation task options not initialised.");
-            return StatusCode::INTERNAL_ERROR;
-        }
-        break;
-    }
-    case UNKNOWN_GRAPH: {
-        SPDLOG_ERROR("Optimum cli task options not initialised.");
+    std::string cmd = getExportCmd();
+    if (cmd == "") {
         return StatusCode::INTERNAL_ERROR;
-        break;
     }
-    }
-
+    
     SPDLOG_DEBUG("Executing command: {}", cmd);
     int retCode = 0;
     std::string output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find("Applying Weight Compression") == std::string::npos) {
+    if (retCode != 0 || output.find(OptimumDownloader::EXPORT_SUCCESS_OUTPUT_STRING) == std::string::npos) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;

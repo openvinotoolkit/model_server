@@ -163,12 +163,20 @@ void CLIParser::parse(int argc, char** argv) {
                 "LIST_MODELS")
             ("add_to_config",
                 "Path to config file for ovms, where to add specific model",
-                cxxopts::value<std::string>()->default_value("config.json"),
+                cxxopts::value<std::string>(),
                 "ADD_TO_CONFIG")
             ("remove_from_config",
                 "Path to config file for ovms, to remove specific model from",
-                cxxopts::value<std::string>()->default_value("config.json"),
-                "REMOVE_FROM_CONFIG");
+                cxxopts::value<std::string>(),
+                "REMOVE_FROM_CONFIG")
+            ("precision",
+                "Model precision used in optimum-cli export with conversion",
+                cxxopts::value<std::string>()->default_value("int8"),
+                "PRECISION")
+            ("extra_quantization_params",
+                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
+                cxxopts::value<std::string>(),
+                "EXTRA_QUANTIZATION_PARAMS");
 
         options->add_options("single model")
             ("model_name",
@@ -486,6 +494,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
+        if (result->count("precision"))
+            hfSettings.precision = result->operator[]("precision").as<std::string>();
+        if (result->count("extra_quantization_params"))
+            hfSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {

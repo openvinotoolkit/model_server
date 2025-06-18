@@ -120,7 +120,7 @@ Status HfPullModelModule::clone() const {
         }
         graphDirectory = hfDownloader.getGraphDirectory();
     } else {
-        OptimumDownloader optimumDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings, this->hfSettings.overwriteModels);
+        OptimumDownloader optimumDownloader(this->hfSettings);
         auto status = optimumDownloader.cloneRepository();
         if (!status.ok()) {
             return status;
