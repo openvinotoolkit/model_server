@@ -126,7 +126,7 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc3/openvino_genai_windows_2025.2.0.0rc3_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.2/windows/openvino_genai_windows_2025.2.0.0_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -338,7 +338,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.9"
+set "python_version=3.12.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -347,7 +347,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
