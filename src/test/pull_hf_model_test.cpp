@@ -346,9 +346,9 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     git_libgit2_shutdown();
 }
 
-class TestEnabledConfig : public ovms::Config {
+class DefaultEmptyValuesConfig : public ovms::Config {
 public:
-    TestEnabledConfig() :
+    DefaultEmptyValuesConfig() :
         Config() {
         std::string port{"9000"};
         randomizeAndEnsureFree(port);
@@ -378,9 +378,10 @@ public:
 TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
-    TestEnabledConfig config;
+    DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::LIST_MODELS_MODE;
     auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
     // [error][listmodels.cpp:121] Path is not a directory:
     EXPECT_TRUE(retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
@@ -393,9 +394,10 @@ TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModules
 TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
-    TestEnabledConfig config;
+    DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::MODIFY_CONFIG_MODE;
     auto retCode = server.startModules(config);
+    // Empty modelSettings.configPath
     // [error][config_export.cpp:197] Directory path empty:
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
@@ -408,9 +410,10 @@ TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModules
 TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
-    TestEnabledConfig config;
+    DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_MODE;
     auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
     // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
@@ -423,9 +426,10 @@ TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStar
 TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
     std::unique_ptr<ServerShutdownGuard> serverGuard;
     ovms::Server& server = ovms::Server::instance();
-    TestEnabledConfig config;
+    DefaultEmptyValuesConfig config;
     config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
     auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
     // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
     EXPECT_TRUE(!retCode.ok()) << retCode.string();
     serverGuard = std::make_unique<ServerShutdownGuard>(server);
