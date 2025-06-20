@@ -15,6 +15,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace ovms {
 
@@ -33,6 +34,8 @@ public:
     // API for MP calculators to get the multipart file content by field name.
     // Returns empty string if file is not found.
     virtual std::string_view getFileContentByFieldName(const std::string& name) const = 0;
+
+    virtual std::vector<std::string_view> getFilesArrayByFieldName(const std::string& name) const = 0;
 };
 
 }  // namespace ovms

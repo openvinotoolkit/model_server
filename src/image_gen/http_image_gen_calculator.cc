@@ -64,6 +64,20 @@ static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     }
     return absl::OkStatus();
 }
+static absl::Status generateTensorImg2Img(ov::genai::Image2ImagePipeline& request,
+    const std::string& prompt, ov::Tensor img, ov::AnyMap& requestOptions,
+    std::unique_ptr<ov::Tensor>& images) {
+    try {
+        requestOptions.insert(ov::genai::callback(progress_bar));
+        images = std::make_unique<ov::Tensor>(request.generate(prompt, img, requestOptions));
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Error: {}", e.what());
+        return absl::InternalError("Error during images generation");
+    } catch (...) {
+        return absl::InternalError("Unknown error during image generation");
+    }
+    return absl::OkStatus();
+}
 // written out separately to avoid msvc crashing when using try-catch in process method ...
 static absl::Status convert2String(const std::unique_ptr<ov::Tensor>& images, std::unique_ptr<std::string>& imageAsString) {
     try {
@@ -110,48 +124,109 @@ public:
         auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
-        if (payload.parsedJson->HasParseError())
-            return absl::InvalidArgumentError("Failed to parse JSON");
 
-        if (!payload.parsedJson->IsObject()) {
-            return absl::InvalidArgumentError("JSON body must be an object");
-        }
-        SET_OR_RETURN(std::string, prompt, getPromptField(payload));
+        // uri starts with /v3/images/generations
+        if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
+            RET_CHECK(!payload.parsedJson->HasParseError()) << "Failed to parse JSON in payload";
 
-        // TODO: Support more pipeline types
-        // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
 
-        ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
-        SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
-        // preview limitation put here to not mess up tests underneath
-        auto imagesPerPromptIt = requestOptions.find("num_images_per_prompt");
-        if (imagesPerPromptIt != requestOptions.end()) {
-            auto numImages = imagesPerPromptIt->second.as<int>();
-            if (numImages != 1) {
-                return absl::InvalidArgumentError(absl::StrCat("Only 1 image in response can be requested. n value:", numImages, " is not supported."));
+            if (payload.parsedJson->HasParseError())
+                return absl::InvalidArgumentError("Failed to parse JSON");
+
+            if (!payload.parsedJson->IsObject()) {
+                return absl::InvalidArgumentError("JSON body must be an object");
             }
+            SET_OR_RETURN(std::string, prompt, getPromptField(payload));
+
+            // TODO: Support more pipeline types
+            // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
+
+            ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
+            // preview limitation put here to not mess up tests underneath
+            auto imagesPerPromptIt = requestOptions.find("num_images_per_prompt");
+            if (imagesPerPromptIt != requestOptions.end()) {
+                auto numImages = imagesPerPromptIt->second.as<int>();
+                if (numImages != 1) {
+                    return absl::InvalidArgumentError(absl::StrCat("Only 1 image in response can be requested. n value:", numImages, " is not supported."));
+                }
+            }
+
+            std::unique_ptr<ov::Tensor> images;
+            auto status = generateTensor(request, prompt, requestOptions, images);
+            if (!status.ok()) {
+                return status;
+            }
+            auto imageAsString = std::make_unique<std::string>();
+            status = convert2String(images, imageAsString);
+            if (!status.ok()) {
+                return status;
+            }
+
+            std::string base64image;
+            absl::Base64Escape(*imageAsString, &base64image);
+            // Create the JSON response
+            auto output = generateJSONResponseFromB64Image(base64image);
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
+
+            return absl::OkStatus();
+        } else if (absl::StartsWith(payload.uri, "/v3/images/edits") || absl::StartsWith(payload.uri, "/v3/images/variations")) {
+            RET_CHECK(!payload.multipartParser->hasParseError()) << "Failed to parse MultiPart in payload";
+            
+            // log body
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process edits request with body: {}", cc->NodeName(), payload.body);
+
+            std::string prompt = payload.multipartParser->getFieldByName("prompt");
+            std::string fileStr = std::string(payload.multipartParser->getFileContentByFieldName("image"));  // conversion from string_view
+            RET_CHECK(!prompt.empty()) << "Prompt is missing in the request";
+            if (fileStr.empty()) {
+                // check also an array
+                auto files = payload.multipartParser->getFilesArrayByFieldName("image[]");
+                RET_CHECK(!files.empty()) << "Files array is missing in the request";
+                RET_CHECK(files.size() == 1) << "Only 1 image is supported";
+                fileStr = std::string(files[0]);  // conversion from string_view
+            }
+            ov::Tensor tensor;
+            try {
+                tensor = loadImageStbiFromMemory(fileStr);
+            } catch (std::runtime_error& e) {
+                std::stringstream ss;
+                ss << "Image parsing failed: " << e.what();
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                return absl::InvalidArgumentError(ss.str());
+            }
+
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process edits request with prompt: {}", cc->NodeName(), prompt);
+
+            ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline.clone();
+
+            ov::AnyMap requestOptions;
+
+            std::unique_ptr<ov::Tensor> images;
+            auto status = generateTensorImg2Img(request, prompt, tensor, requestOptions, images);
+            if (!status.ok()) {
+                return status;
+            }
+            auto imageAsString = std::make_unique<std::string>();
+            status = convert2String(images, imageAsString);
+            if (!status.ok()) {
+                return status;
+            }
+
+            std::string base64image;
+            absl::Base64Escape(*imageAsString, &base64image);
+            // Create the JSON response
+            auto output = generateJSONResponseFromB64Image(base64image);
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
+
+            return absl::OkStatus();
+        } else {
+            return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
-
-        std::unique_ptr<ov::Tensor> images;
-        auto status = generateTensor(request, prompt, requestOptions, images);
-        if (!status.ok()) {
-            return status;
-        }
-        auto imageAsString = std::make_unique<std::string>();
-        status = convert2String(images, imageAsString);
-        if (!status.ok()) {
-            return status;
-        }
-
-        std::string base64image;
-        absl::Base64Escape(*imageAsString, &base64image);
-        // Create the JSON response
-        auto output = generateJSONResponseFromB64Image(base64image);
-        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
-
-        return absl::OkStatus();
     }
 };
 

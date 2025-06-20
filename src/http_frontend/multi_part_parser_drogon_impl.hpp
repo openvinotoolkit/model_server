@@ -25,6 +25,7 @@
 #include <string>
 #include <string_view>
 #include <memory>
+#include <vector>
 
 namespace ovms {
 
@@ -44,6 +45,7 @@ public:
 
     std::string getFieldByName(const std::string& name) const override;
     std::string_view getFileContentByFieldName(const std::string& name) const override;
+    std::vector<std::string_view> getFilesArrayByFieldName(const std::string& name) const override;
 };
 
 }  // namespace ovms

@@ -243,7 +243,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // num_images_per_prompt, max_sequence_length, height, width, rng_seed, num_inference_steps,
     // strength, guidance_scale, size
     // if we have any other fields return error
-    static std::set<std::string> acceptedFields{
+    const static std::set<std::string> acceptedFields{
         "prompt", "prompt_2", "prompt_3",
         "image",
         "negative_prompt", "negative_prompt_2", "negative_prompt_3",

@@ -31,13 +31,36 @@ std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const
 }
 
 std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::string& name) const {
+    
     auto fileMap = this->parser->getFilesMap();
+    // std::cout << "There are " << fileMap.size() << " files in the multipart request." << std::endl;
+
+    // for (const auto& file : fileMap) {
+    //     std::cout << "File name: " << file.first << ", size: " << file.second.fileLength() << " bytes." << std::endl;
+    // }
+
+    auto v = this->parser->getFiles();
+    std::cout << "There are " << v.size() << " files in the multipart request." << std::endl;
+    for (const auto& file : v) {
+        std::cout << "File name: " << file.getFileName() << ", itemname: " << file.getItemName() << ", size: " << file.fileLength() << " bytes." << std::endl;
+    }
 
     auto it = fileMap.find(name);
     if (it == fileMap.end()) {
         return "";
     }
     return it->second.fileContent();
+}
+
+std::vector<std::string_view> DrogonMultiPartParser::getFilesArrayByFieldName(const std::string& name) const {
+    auto files = this->parser->getFiles();
+    std::vector<std::string_view> result;
+    for (const auto& file : files) {
+        if (file.getItemName() == name) {  // take, it contains []
+            result.push_back(file.fileContent());
+        }
+    }
+    return result;
 }
 
 }  // namespace ovms
