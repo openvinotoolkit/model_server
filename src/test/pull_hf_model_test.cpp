@@ -27,6 +27,7 @@
 #include "src/servables_config_manager_module/listmodels.hpp"
 #include "src/modelextensions.hpp"
 
+#include "../module.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "src/stringutils.hpp"
@@ -343,4 +344,97 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     }
 
     git_libgit2_shutdown();
+}
+
+class DefaultEmptyValuesConfig : public ovms::Config {
+public:
+    DefaultEmptyValuesConfig() :
+        Config() {
+        std::string port{"9000"};
+        randomizeAndEnsureFree(port);
+        this->serverSettings.grpcPort = std::stoul(port);
+    }
+
+    ovms::ServerSettingsImpl& getServerSettings() {
+        return this->serverSettings;
+    }
+
+    ovms::ModelsSettingsImpl& getModelSettings() {
+        return this->modelsSettings;
+    }
+};
+
+class ServerShutdownGuard {
+    ovms::Server& ovmsServer;
+
+public:
+    ServerShutdownGuard(ovms::Server& ovmsServer) :
+        ovmsServer(ovmsServer) {}
+    ~ServerShutdownGuard() {
+        ovmsServer.shutdownModules();
+    }
+};
+
+TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::LIST_MODELS_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][listmodels.cpp:121] Path is not a directory:
+    EXPECT_TRUE(retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::GRPC_SERVER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::MODIFY_CONFIG_MODE;
+    auto retCode = server.startModules(config);
+    // Empty modelSettings.configPath
+    // [error][config_export.cpp:197] Directory path empty:
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }

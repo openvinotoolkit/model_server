@@ -254,17 +254,19 @@ spell: venv-style
 
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
+	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip3 install --upgrade pip
-	@. $(ACTIVATE); pip3 install -vUqq setuptools
+	@. $(ACTIVATE); pip3 install -vUqq "setuptools<80"
 	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt
 	@touch $(ACTIVATE)
 
 $(ACTIVATE_STYLE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
+	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
 	@. $(ACTIVATE_STYLE); pip3 install --upgrade pip
-	@. $(ACTIVATE_STYLE); pip3 install -vUqq setuptools
+	@. $(ACTIVATE_STYLE); pip3 install -vUqq "setuptools<80"
 	@. $(ACTIVATE_STYLE); pip3 install -qq -r ci/style_requirements.txt
 	@touch $(ACTIVATE_STYLE)
 
