@@ -173,7 +173,7 @@ The LLM calculator config can also restrict the range of sampling parameters in 
 
 As mentioned above, in LLM pipelines, `plugin_config` map holds not only OpenVINO device plugin options, but also additional pipeline configuration. Those additional options are:
 
-- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`
+- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`. With prompt lookup enabled it is recommended to disable `dynamic_split_fuse` and set `max_num_batched_tokens` to be higher than model context length.
 - `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"MAX_PROMPT_LEN": 2048}'`
 
 
