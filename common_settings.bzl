@@ -161,6 +161,19 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Werror", 
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
                     "-Wno-deprecated-declarations",
+                    "-Werror",
+                    "-Wimplicit-fallthrough",
+                    "-fcf-protection=full",
+                    "-Wformat",
+                    "-Wformat-security",
+                    "-Werror=format-security",
+                    "-Wl,-z,noexecstack",
+                    "-fPIC",
+                    "-D_GLIBCXX_ASSERTIONS",
+                    "-Wl,-z,relro",
+                    "-Wl,-z,relro,-z,now",
+                    "-Wl,-z,nodlopen",
+                    "-fstack-protector-strong",
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
@@ -186,6 +199,7 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
+                        "/guard:cf",
 ]
 
 COMMON_STATIC_LIBS_COPTS = select({
