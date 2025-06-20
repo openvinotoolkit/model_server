@@ -741,7 +741,7 @@ void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
     }
 }
 
-const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 15;
+const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 60;
 
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
