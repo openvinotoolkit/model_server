@@ -1842,9 +1842,18 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+
+    // For streaming endpoint only continuous batching servables support usage
+    if (params.modelName.find("cb") != std::string::npos) {
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+    } else {
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\"") == std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") == std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") == std::string::npos);
+    }
+
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
     }
@@ -1879,9 +1888,18 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
-    ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
-    ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+    
+    // For streaming endpoint only continuous batching servables support usage
+    if (params.modelName.find("cb") != std::string::npos) {
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos);
+    } else {
+        ASSERT_TRUE(responses.back().find("\"completion_tokens\"") == std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") == std::string::npos);
+        ASSERT_TRUE(responses.back().find("\"total_tokens\"") == std::string::npos);
+    }
+
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos);
     }

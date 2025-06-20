@@ -179,8 +179,10 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (!executionContext->lastStreamerCallbackOutput.empty())
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
         executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP));
+        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
+            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
+            // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
 
