@@ -124,8 +124,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
                         },
                         {drogon::Get}
                     )
-                    .registerSyncAdvice([](const drogon::HttpRequestPtr& req)
-                        -> drogon::HttpResponsePtr {
+                    .registerSyncAdvice([](const drogon::HttpRequestPtr& req)-> drogon::HttpResponsePtr {
                             using namespace drogon;
                             if (req->method() == Options) {
                                 auto resp = HttpResponse::newHttpResponse();
@@ -142,17 +141,13 @@ Status DrogonHttpServer::startAcceptingRequests() {
                             }
                             return {};
                     })
-                    .registerPostHandlingAdvice(
-                        [](const drogon::HttpRequestPtr& req,
-                           const drogon::HttpResponsePtr& resp) {
+                    .registerPreSendingAdvice([](const drogon::HttpRequestPtr& req,const drogon::HttpResponsePtr& resp)
+                    {
                             auto origin = req->getHeader("Origin");
-                            resp->addHeader("Access-Control-Allow-Origin",
-                                            origin.empty() ? "*" : origin);
-                            resp->addHeader("Access-Control-Allow-Methods",
-                                            "GET,POST,OPTIONS");
-                            resp->addHeader("Access-Control-Allow-Headers",
-                                            "Content-Type,Authorization");
-                           resp->addHeader("Access-Control-Allow-Credentials", "true");
+                            resp->addHeader("Access-Control-Allow-Origin", origin.empty() ? "*" : origin);
+                            resp->addHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+                            resp->addHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+                            resp->addHeader("Access-Control-Allow-Credentials", "true");
                     })
                     .addListener(this->address, this->port)
                     .run();

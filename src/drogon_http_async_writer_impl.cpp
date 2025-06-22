@@ -66,17 +66,6 @@ void DrogonHttpAsyncWriterImpl::PartialReplyBegin(std::function<void()> actualWo
         this->responsePtr->addHeader(key, value);
     }
 
-    {
-        auto origin = this->requestPtr->getHeader("Origin");
-        this->responsePtr->addHeader("Access-Control-Allow-Origin",
-                                     origin.empty() ? "*" : origin);
-        this->responsePtr->addHeader("Access-Control-Allow-Methods",
-                                     "GET,POST,OPTIONS");
-        this->responsePtr->addHeader("Access-Control-Allow-Headers",
-                                     "Content-Type,Authorization");
-        this->responsePtr->addHeader("Access-Control-Allow-Credentials",
-                                     "true");
-    }
     // Originally this also sent http response header (with status code)
     // We have drogon patch that delays it till first streaming response
     this->drogonResponseInitializeCallback(this->responsePtr);
