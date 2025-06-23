@@ -125,3 +125,20 @@ TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctoolsThrows) {
     },
         std::runtime_error);
 }
+
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithArrayArguments) {
+    //std::string input = "functools[{\"name\": \"extractLastTransactionId\", \"arguments\": {\n  \"filepath\": \"/var/log/db.log\",\n  \"status\": [\"completed\", \"failed\"],\n  \"encoding\": \"utf-8\",\n  \"processFunction\": \"processFunction\"\n}}]";
+    std::string input = "functools[{\"name\": \"extractLastTransactionId\", \"arguments\": { \"filepath\": \"/var/log/db.log\", \"status\": [\"completed\", \"failed\"], \"encoding\": \"utf-8\", \"processFunction\": \"processFunction\"}}]";
+    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
+    EXPECT_EQ(parsedResponse.content, "");
+    EXPECT_EQ(parsedResponse.reasoning, "");
+    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
+    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
+    EXPECT_EQ(parsedResponse.toolCalls[0].name, "extractLastTransactionId");
+    // Parser removes whitespaces, so we expect arguments value to be without spaces
+    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"filepath\":\"/var/log/db.log\",\"status\":[\"completed\",\"failed\"],\"encoding\":\"utf-8\",\"processFunction\":\"processFunction\"}");
+    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
+}
+
