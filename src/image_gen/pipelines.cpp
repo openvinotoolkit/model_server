@@ -17,11 +17,25 @@
 
 namespace ovms {
 
-ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
-    image2ImagePipeline(ov::genai::Image2ImagePipeline(args.modelsPath,
-        args.device.value_or("CPU"),
-        args.pluginConfig)),
-    text2ImagePipeline(image2ImagePipeline),
-    args(args) {}
-// TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
+ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) {
+//    image2ImagePipeline(ov::genai::Image2ImagePipeline(args.modelsPath,
+//        args.device.value_or("CPU"),
+//        args.pluginConfig)),
+//    text2ImagePipeline(image2ImagePipeline),
+//    args(args) {
+  
+    if (args.device.has_value() && args.device.value() == "NPU") {
+        this->image2ImagePipeline = std::make_unique<ov::genai::Image2ImagePipeline>(args.modelsPath);
+        this->image2ImagePipeline->reshape(1/*???*/, args.defaultResolution.value().first, args.defaultResolution.value().second, /*guidance scale??*/0.1f);
+        this->image2ImagePipeline->compile(args.device.value_or("CPU"), args.pluginConfig);
+        this->text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(*this->image2ImagePipeline);
+        this->args = args;
+    } else {
+        this->image2ImagePipeline = std::make_unique<ov::genai::Image2ImagePipeline>(args.modelsPath,
+            args.device.value_or("CPU"),
+            args.pluginConfig);
+        this->text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(*this->image2ImagePipeline);
+        this->args = args;
+    }
+}
 }  // namespace ovms

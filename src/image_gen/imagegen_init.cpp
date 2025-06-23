@@ -59,6 +59,14 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     if (nodeOptions.has_device()) {
         args.device = nodeOptions.device();
     }
+    if (args.device == "NPU") {
+        // enforce static h/w by default_resolution
+        // probably make new param - static_resolution? static_n? static_guidance_scale?
+        if (!nodeOptions.has_default_resolution()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution must be specified for NPU device");
+            return StatusCode::UNKNOWN_ERROR;  // FIXME
+        }
+    }
     if (nodeOptions.has_plugin_config()) {
         std::string pluginConfig = nodeOptions.plugin_config();
         auto status = JsonParser::parsePluginConfig(pluginConfig, args.pluginConfig);
