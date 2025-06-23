@@ -36,6 +36,15 @@ cd client/java/kserve-api
 mvn install
 ```
 
+> **NOTE:** In proxy environment, you may need to set `http_proxy` and `https_proxy` environment variables before running the above command. To do that with mvn, run:
+```Bash
+mvn install \
+  -Dhttp.proxyHost=<proxy_host> \
+  -Dhttp.proxyPort=<proxy_port> \
+  -Dhttps.proxyHost=<proxy_host> \
+  -Dhttps.proxyPort=<proxy_port>
+```
+
 ## GRPC Examples
 
 
