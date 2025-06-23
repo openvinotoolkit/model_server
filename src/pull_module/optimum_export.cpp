@@ -63,7 +63,8 @@ std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--disable-convert-tokenizer --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << "--disable-convert-tokenizer --model " << this->hfSettings.sourceModel;
+    oss << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " --task text-classification ";
     oss << " " << this->downloadPath;
