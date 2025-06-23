@@ -19,7 +19,7 @@ Start the model server by running the following command with your parameters:
 :sync: docker
 **Required:** Docker Engine installed
 
-```bash
+```text
 docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
@@ -29,7 +29,7 @@ docker run -d --rm -v <models_repository>:/models -p 9000:9000 -p 8000:8000 open
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bash
+```text
 ovms --model_path <path_to_model> --model_name <model_name> --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 :::
@@ -82,7 +82,7 @@ In case you do not want to prepare model repository before starting the server a
 :sync: docker
 **Required:** Docker Engine installed
 
-```bash
+```text
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --port 8000 --rest_port 9000 --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
@@ -92,7 +92,7 @@ docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_rep
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bat
+```text
 ovms --source_model <model_name_in_HF> --model_repository_path /models --model_name <ovms_servable_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_OPTIONS]
 ```
 :::
@@ -111,7 +111,7 @@ Example using `Phi-3-mini-FastDraft-50M-int8-ov` model:
 :::{tab-item} With Docker
 :sync: docker
 **Required:** Docker Engine installed
-```bash
+```text
 docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --port 8000 --rest_port 9000 --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation
 ```
@@ -176,7 +176,7 @@ To serve multiple models and pipelines from the same container you will need an 
 :::{tab-item} With Docker
 :sync: docker
 **Required:** Docker Engine installed
-```bash
+```text
 docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models:ro -p 9000:9000 -p 8000:8000 openvino/model_server:latest \
 --config_path /models/config.json --port 9000 --rest_port 8000
 ```
@@ -186,7 +186,7 @@ docker run --user $(id -u):$(id -g) --rm -v <models_repository>:/models:ro -p 90
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bash
+```text
 ovms --config_path /models/config.json --port 9000 --rest_port 8000
 ```
 :::
@@ -203,7 +203,7 @@ Assuming you have models repository already prepared, to check what models/graph
 **Required:** Docker Engine installed
 :sync: docker
 
-```bash
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models --list_models
 ```
@@ -213,7 +213,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bat
+```text
 docker run -d --rm -v <model_repository_path>:/models:ro openvino/model_server:latest \
 --model_repository_path /models --list_models
 ```
@@ -252,7 +252,7 @@ To add model to ovms configuration file you can either do it manually or use:
 :sync: docker
 **Required:** Docker Engine installed
 
-```bash
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
@@ -262,7 +262,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
-```bat
+```text
 ovms --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
 ```
 :::
@@ -272,6 +272,7 @@ When model is directly inside models repository.
 
 *Note*:
 If you want to add model with specific path you can use ```--model_path``` parameter:
+
 ```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --add_to_config <config_file_directory_path> --model_name <name> --model_path <model_path>
@@ -292,7 +293,7 @@ If you want to remove model from configuration file you can do it either manuall
 :::{tab-item} With Docker
 :sync: docker
 **Required:** Docker Engine installed
-```bash
+```text
 docker run -d --rm -v <model_repository_path>:/models openvino/model_server:latest \
 --remove_from_config <config_file_directory_path> --model_name <name>
 ```
@@ -302,7 +303,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bat
+```text
 ovms --remove_from_config <config_file_directory_path> --model_name <name>
 ```
 :::
