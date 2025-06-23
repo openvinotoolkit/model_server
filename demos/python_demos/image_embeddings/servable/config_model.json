@@ -1,0 +1,15 @@
+{
+  "model_config_list": [
+    {
+      "config": {
+        "name": "clip",
+        "base_path": "/saved_mod/"
+      }
+    }],
+    "mediapipe_config_list": [
+      {
+        "name": "python_model",
+        "graph_path": "/workspace/grph_pipeline.pbtxt"
+      }
+    ]
+}
