@@ -71,9 +71,7 @@ lm-eval --model local-completions --tasks wikitext --model_args model=meta-llama
 
 ## Running the tests for VLM models
 
-
 Use [lmms-eval project](https://github.com/EvolvingLMMs-Lab/lmms-eval) - mme and mmmu_val tasks. 
-
 
 ```bash
 export OPENAI_COMPATIBLE_API_URL=http://localhost:8000/v3
@@ -92,11 +90,9 @@ python -m lmms_eval \
     --output_path ./logs
 ```
 
+**Results example:**
 
-### 5. Results
-
-Results:
-```
+```text
 openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kwargs: (), limit: None, num_fewshot: None, batch_size: 1
 | Tasks  |Version|Filter|n-shot|       Metric       |   |  Value  |   |Stderr|
 |--------|-------|------|-----:|--------------------|---|--------:|---|------|
@@ -107,7 +103,35 @@ openai_compatible (model_version=OpenGVLab/InternVL2_5-8B,max_retries=1), gen_kw
 ```
 
 
+## Running the tests for agentic models with function calls
 
+Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard)
+
+
+```bash
+export OPENAI_API_URL=http://localhost:8000/v3
+export OPENAI_API_KEY="unused"
+git clone https://github.com/ShishirPatil/gorilla
+cd gorilla/berkeley-function-call-leaderboard
+git checkout ac37049f00022af54cc44b6aa0cad4402c22d1a0
+git apply gorila.patch
+pip install -e . 
+export OPENAI_BASE_URL=http://localhost:8000/v3
+bfcl generate --model openvino-qwen3-8b-int8-FC --test-category multiple --num-threads 100 -o
+bfcl evaluate --model openvino-qwen3-8b-int8-FC
+```
+
+**Analyzing results**
+The command above assumes the models is deployed with the name `openivno-qwen3-8b-int8`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
+The output artifacts will be stored in `result` and `scores`. For example:
+
+```text
+cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_score.json | head -1
+{"accuracy": 0.95, "correct_count": 380, "total_count": 400}
+```
+Those results can be compared with the reference from the [berkeley leaderbaord](https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard).
+
+---
 
 > **Note:** The same procedure can be used to validate vLLM component. The only needed change would be updating base_url including replacing `/v3/` with `/v1/`.  
 
