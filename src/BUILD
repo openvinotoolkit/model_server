@@ -404,6 +404,22 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
+    name = "dags_pipeline",
+    hdrs = ["dags/pipeline.hpp",],
+    srcs = ["dags/pipeline.cpp",],
+    deps = [
+        "libovms_dags_aliases",
+        "libovms_dags_node",
+        "libovms_execution_context",
+        "libovmsprofiler",
+        "libovmslogging",
+        "libovmsstatus",
+        "libovms_dags_pipelineeventqueue",
+        "libovms_dags_nodesession",
+    ],
+    visibility = ["//visibility:public",],
+)
+ovms_cc_library(
     name = "libovms_sequence_manager",
     hdrs = ["sequence_manager.hpp"],
     srcs = ["sequence_manager.cpp"],
@@ -476,8 +492,6 @@ ovms_cc_library(
         "dags/exitnodesession.cpp",
         "dags/exitnodesession.hpp",
         "dags/gatherexitnodeinputhandler.hpp",
-        "dags/pipeline.cpp",
-        "dags/pipeline.hpp",
         "dags/pipelinedefinition.hpp",
         "dags/pipelinedefinition.cpp",
         "dags/pipelinedefinitionunloadguard.cpp",
@@ -580,6 +594,7 @@ ovms_cc_library(
             "libovms_config",
             "libovms_dags_pipelinedefinitionstatus",
             "libovms_dags_aliases",
+            "dags_pipeline",
             "custom_node",
             "custom_node_library_manager",
             "libovms_dags_node",
