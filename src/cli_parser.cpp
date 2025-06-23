@@ -170,7 +170,15 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK");
+                "TASK")
+            ("precision",
+                "Model precision used in optimum-cli export with conversion",
+                cxxopts::value<std::string>()->default_value("int8"),
+                "PRECISION")
+            ("extra_quantization_params",
+                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
+                cxxopts::value<std::string>(),
+                "EXTRA_QUANTIZATION_PARAMS");
 
         options->add_options("single model")
             ("model_name",
