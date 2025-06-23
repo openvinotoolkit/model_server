@@ -24,11 +24,11 @@ int main(int argc, char** argv) {
         std::cout << "Argument " << i << ": " << argv[i] << std::endl;
     }
     for (int i = 0; i < argc; ++i) {
-        if (i==1 && argv[i][0] == '-') {
+        if (i == 1 && argv[i][0] == '-') {
             std::cout << "usage: optimum-cli" << std::endl;
             return 0;
         }
-        if (i==1 && argv[i][0] == 'e') {
+        if (i == 1 && argv[i][0] == 'e') {
             std::cout << "Applying Weight Compression" << std::endl;
             return 0;
         }

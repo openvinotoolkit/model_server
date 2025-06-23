@@ -28,7 +28,7 @@ public:
     OptimumDownloader(const HFSettingsImpl& hfSettings);
     Status cloneRepository();
     std::string getGraphDirectory();
-    
+
 protected:
     std::string sourceModel;
     std::string downloadPath;

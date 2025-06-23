@@ -907,7 +907,6 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
 }
 
-
 TEST(OvmsExportHfSettingsTest, positiveDefault) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
@@ -947,7 +946,7 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-         (char*)"--precision",
+        (char*)"--precision",
         (char*)"fp64",
         (char*)"--extra_quantization_params",
         (char*)"--sym --ratio 1.0",

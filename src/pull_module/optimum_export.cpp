@@ -87,26 +87,26 @@ std::string OptimumDownloader::getExportCmdImage() {
 std::string OptimumDownloader::getExportCmd() {
     std::string cmd = "";
     switch (this->hfSettings.task) {
-        case TEXT_GENERATION_GRAPH: {
-            cmd = getExportCmdText();
-            break;
-        }
-        case EMBEDDINGS_GRAPH: {
-            cmd = getExportCmdEmbeddings();
-            break;
-        }
-        case RERANK_GRAPH: {
-            cmd = getExportCmdRerank();
-            break;
-        }
-        case IMAGE_GENERATION_GRAPH: {
-            cmd = getExportCmdImage();
-            break;
-        }
-        case UNKNOWN_GRAPH: {
-            SPDLOG_ERROR("Optimum cli task options not initialised.");
-            break;
-        }
+    case TEXT_GENERATION_GRAPH: {
+        cmd = getExportCmdText();
+        break;
+    }
+    case EMBEDDINGS_GRAPH: {
+        cmd = getExportCmdEmbeddings();
+        break;
+    }
+    case RERANK_GRAPH: {
+        cmd = getExportCmdRerank();
+        break;
+    }
+    case IMAGE_GENERATION_GRAPH: {
+        cmd = getExportCmdImage();
+        break;
+    }
+    case UNKNOWN_GRAPH: {
+        SPDLOG_ERROR("Optimum cli task options not initialised.");
+        break;
+    }
     }
 
     return cmd;
@@ -173,11 +173,11 @@ Status OptimumDownloader::cloneRepository() {
     if (cmd == "") {
         return StatusCode::INTERNAL_ERROR;
     }
-    
+
     SPDLOG_DEBUG("Executing command: {}", cmd);
     int retCode = -1;
     std::string output = exec_cmd(cmd, &retCode);
-    if (retCode != 0){
+    if (retCode != 0) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;

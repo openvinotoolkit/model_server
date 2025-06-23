@@ -30,7 +30,6 @@ std::string exec_cmd(const std::string& command, int* returnCode) {
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
                 *returnCode = _pclose(ptr);
-                std::cout << "Command return code: " << *returnCode << std::endl;
             }
         };
         std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
@@ -38,7 +37,6 @@ std::string exec_cmd(const std::string& command, int* returnCode) {
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
                 *returnCode = pclose(ptr);
-                std::cout << "Command return code: " << *returnCode << std::endl;
             }
         };
         std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pcloseDeleter);
