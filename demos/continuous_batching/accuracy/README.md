@@ -109,8 +109,6 @@ Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorill
 
 
 ```bash
-export OPENAI_API_URL=http://localhost:8000/v3
-export OPENAI_API_KEY="unused"
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
 git checkout ac37049f00022af54cc44b6aa0cad4402c22d1a0
@@ -129,7 +127,7 @@ The output artifacts will be stored in `result` and `scores`. For example:
 cat score/openvino-qwen3-8b-int4-FC/BFCL_v3_simple_score.json | head -1
 {"accuracy": 0.95, "correct_count": 380, "total_count": 400}
 ```
-Those results can be compared with the reference from the [berkeley leaderbaord](https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard).
+Those results can be compared with the reference from the [berkeley leaderbaord](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
 
 ---
 
