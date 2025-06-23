@@ -116,7 +116,7 @@ TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
 }
-TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctools) {
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctoolsReturnsContentOnly) {
     std::string input = "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());

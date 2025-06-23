@@ -39,17 +39,17 @@ ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTo
     // Phi4 with vLLM template produces tool calls in the format:
     // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
     std::string decoded = tokenizer.decode(generatedTokens);
-    std::string toolsStart = "functools";
-    size_t toolsStartPos = decoded.find(toolsStart);
+    std::string toolsStartString = "functools";
+    size_t toolsStartPos = decoded.find(toolsStartString);
     if (toolsStartPos != std::string::npos) {
         // Extract the content before the tools part
         parsedResponse.content = decoded.substr(0, toolsStartPos);
         // Extract the tools part, assuming it's all the remaining content after "functools"
-        std::string toolsArray = decoded.substr(toolsStartPos + toolsStart.length());
-        rapidjson::Document toolsArrayDoc;
-        toolsArrayDoc.Parse(toolsArray.c_str());
-        if (!toolsArrayDoc.HasParseError() && toolsArrayDoc.IsArray()) {
-            for (auto& toolVal : toolsArrayDoc.GetArray()) {
+        std::string toolsString = decoded.substr(toolsStartPos + toolsStartString.length());
+        rapidjson::Document toolsDoc;
+        toolsDoc.Parse(toolsString.c_str());
+        if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
+            for (auto& toolVal : toolsDoc.GetArray()) {
                 if (!toolVal.IsObject()) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
                     continue;
