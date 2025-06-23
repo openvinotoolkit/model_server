@@ -34,8 +34,8 @@ protected:
     std::string downloadPath;
     HFSettingsImpl hfSettings;
     bool overwriteModels;
-    std::string EXPORT_SUCCESS_OUTPUT_STRING = "Applying Weight Compression";
-    std::string OPTIMUM_CLI_IS_PRESET_OUTPUT_STRING = "usage: optimum-cli";
+    std::string OPTIMUM_CLI_EXPORT_COMMAND = "optimum-cli export openvino ";
+    std::string OPTIMUM_CLI_CHECK_COMMAND = "optimum-cli -h";
 
     OptimumDownloader();
     Status checkRequiredToolsArePresent();

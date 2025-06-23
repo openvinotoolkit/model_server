@@ -21,7 +21,7 @@
 #include <string>
 
 namespace ovms {
-std::string exec_cmd(const std::string& command, int returnCode) {
+std::string exec_cmd(const std::string& command, int* returnCode) {
     char buffer[200];
     std::string result = "";
     try {
@@ -29,14 +29,16 @@ std::string exec_cmd(const std::string& command, int returnCode) {
 #ifdef _WIN32
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
-                returnCode = _pclose(ptr);
+                *returnCode = _pclose(ptr);
+                std::cout << "Command return code: " << *returnCode << std::endl;
             }
         };
         std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
 #elif __linux__
         auto pcloseDeleter = [&returnCode](FILE* ptr) {
             if (ptr) {
-                returnCode = pclose(ptr);
+                *returnCode = pclose(ptr);
+                std::cout << "Command return code: " << *returnCode << std::endl;
             }
         };
         std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pcloseDeleter);
@@ -49,8 +51,6 @@ std::string exec_cmd(const std::string& command, int returnCode) {
         while (fgets(buffer, sizeof(buffer), pipe.get()) != NULL) {
             result += buffer;
         }
-
-        std::cout << "Command return code: " << returnCode << std::endl;
     } catch (const std::exception& e) {
         return std::string("Error occurred when running command: ") + e.what();
     } catch (...) {

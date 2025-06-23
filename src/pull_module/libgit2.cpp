@@ -257,8 +257,8 @@ Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
 
 Status HfDownloader::checkRequiredToolsArePresent() {
     std::string cmd = "git --version";
-    int retCode = 0;
-    std::string output = exec_cmd(cmd, retCode);
+    int retCode = -1;
+    std::string output = exec_cmd(cmd, &retCode);
     if (retCode != 0 || output.find("git version ") == std::string::npos) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("Required git executable is not present. Please add git from ovms package to PATH.");
@@ -266,7 +266,8 @@ Status HfDownloader::checkRequiredToolsArePresent() {
     }
 
     cmd = "git-lfs --version";
-    output = exec_cmd(cmd, retCode);
+    retCode = -1;
+    output = exec_cmd(cmd, &retCode);
     if (retCode != 0 || output.find("git-lfs/") == std::string::npos) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("Required git-lfs executable is not present. Please add git-lfs from ovms package to PATH.");

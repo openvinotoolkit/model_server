@@ -35,7 +35,8 @@ std::string OptimumDownloader::getExportCmdText() {
         this->hfSettings.extraQuantizationParams.value() = "--sym --ratio 1.0 --group-size -1";
     }
     // clang-format off
-    oss << "optimum-cli export openvino --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--model " << this->hfSettings.sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision << " ";
     if (this->hfSettings.extraQuantizationParams.has_value()) {
         oss << this->hfSettings.extraQuantizationParams.value() << " ";
@@ -48,7 +49,8 @@ std::string OptimumDownloader::getExportCmdText() {
 std::string OptimumDownloader::getExportCmdEmbeddings() {
     std::ostringstream oss;
     // clang-format off
-    oss << "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
     oss << " --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " " << this->downloadPath;
@@ -60,7 +62,8 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
 std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
-    oss << "optimum-cli export openvino --disable-convert-tokenizer --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--disable-convert-tokenizer --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " --task text-classification ";
     oss << " " << this->downloadPath;
@@ -72,7 +75,8 @@ std::string OptimumDownloader::getExportCmdRerank() {
 std::string OptimumDownloader::getExportCmdImage() {
     std::ostringstream oss;
     // clang-format off
-    oss << "optimum-cli export openvino --model " << this->hfSettings.sourceModel;
+    oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
+    oss << "--model " << this->hfSettings.sourceModel;
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
@@ -126,10 +130,9 @@ OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings) {
 }
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
-    std::string cmd = "optimum-cli -h";
-    int retCode = 0;
-    std::string output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find(OPTIMUM_CLI_IS_PRESET_OUTPUT_STRING) == std::string::npos) {
+    int retCode = -1;
+    std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, &retCode);
+    if (retCode != 0) {
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
@@ -172,9 +175,9 @@ Status OptimumDownloader::cloneRepository() {
     }
     
     SPDLOG_DEBUG("Executing command: {}", cmd);
-    int retCode = 0;
-    std::string output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find(OptimumDownloader::EXPORT_SUCCESS_OUTPUT_STRING) == std::string::npos) {
+    int retCode = -1;
+    std::string output = exec_cmd(cmd, &retCode);
+    if (retCode != 0){
         SPDLOG_DEBUG(output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;

@@ -207,8 +207,8 @@ public:
         ovms::OptimumDownloader(inHfSettings) {}
     std::string getExportCmd() { return ovms::OptimumDownloader::getExportCmd(); }
     std::string getGraphDirectory() { return ovms::OptimumDownloader::getGraphDirectory(); }
-    void setExpectedOutputString(const std::string& input) { this->EXPORT_SUCCESS_OUTPUT_STRING = input; }
-    void setExportCliOutputString(const std::string& input) { this->OPTIMUM_CLI_IS_PRESET_OUTPUT_STRING = input; }
+    void setExportCliCheckCommand(const std::string& input) { this->OPTIMUM_CLI_CHECK_COMMAND = input; }
+    void setExportCliExportCommand(const std::string& input) { this->OPTIMUM_CLI_EXPORT_COMMAND = input; }
     ovms::Status checkRequiredToolsArePresent() { return ovms::OptimumDownloader::checkRequiredToolsArePresent(); }
 };
 
@@ -315,16 +315,42 @@ TEST_F(TestOptimumDownloaderSetup, NegativeUnknownDownloadType) {
     ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::INTERNAL_ERROR);
 }
 
-TEST_F(TestOptimumDownloaderSetup, NegativeNoExpectedStringInOutput) {
+TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    optimumDownloader->setExpectedOutputString("Nothing_TO_match");
+    optimumDownloader->setExportCliExportCommand("NonExistingCommand22");
     ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED);
 }
 
-TEST_F(TestOptimumDownloaderSetup, NegativeNoOptimumCliStringInOutput) {
+TEST_F(TestOptimumDownloaderSetup, NegativeCheckOptimumExistsCommandFailed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    optimumDownloader->setExportCliOutputString("Nothing_TO_match");
+    optimumDownloader->setExportCliCheckCommand("NonExistingCommand33");
     ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI);
+}
+
+TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+#ifdef _WIN32
+    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+#elif
+    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+#endif
+    cliMockPath += " -h";
+    optimumDownloader->setExportCliCheckCommand(cliMockPath);
+    ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::OK);
+}
+
+TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+#ifdef _WIN32
+    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+#elif
+    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+#endif
+    std::string cliCheckCommand = cliMockPath += " -h";
+    optimumDownloader->setExportCliCheckCommand(cliCheckCommand);
+    cliMockPath += " export";
+    optimumDownloader->setExportCliExportCommand(cliMockPath);
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::OK);
 }
 
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {

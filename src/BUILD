@@ -2724,7 +2724,7 @@ cc_binary(
 
 
 cc_binary(
-    name = "optimum_cli",
+    name = "optimum-cli",
     srcs = [
         "test/optimum_cli_mock.cpp",
     ],
@@ -3020,7 +3020,7 @@ cc_test(
         "//src:libcustom_node_horizontal_ocr.so",
     ],
     deps = [
-            "optimum_cli",
+            "optimum-cli",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
