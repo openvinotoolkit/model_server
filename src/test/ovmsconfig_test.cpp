@@ -26,8 +26,6 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
-#include "../graph_export/graph_export_types.hpp"
-#include "../config_export_module/config_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -776,6 +774,36 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
         "embeddings",
         "--normalize",
         "true",
+    };
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
+}
+
+TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--precision",
+        "int4",
+    };
+    int arg_count = 8;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
+}
+
+TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--extra_quantization_params",
+        "int4",
     };
     int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");

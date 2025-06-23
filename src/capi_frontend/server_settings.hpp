@@ -15,15 +15,66 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
 
-#include "../graph_export/graph_export_types.hpp"
-#include "../config_export_module/config_export_types.hpp"
-
 namespace ovms {
+
+enum GraphExportType : unsigned int {
+    TEXT_GENERATION_GRAPH,
+    RERANK_GRAPH,
+    EMBEDDINGS_GRAPH,
+    IMAGE_GENERATION_GRAPH,
+    UNKNOWN_GRAPH
+};
+
+enum ModelDownlaodType : unsigned int {
+    GIT_CLONE_DOWNLOAD,
+    OPTIMUM_CLI_DOWNLOAD,
+    UNKNOWN_DOWNLOAD
+};
+
+const std::map<GraphExportType, std::string> typeToString = {
+    {TEXT_GENERATION_GRAPH, "text_generation"},
+    {RERANK_GRAPH, "rerank"},
+    {EMBEDDINGS_GRAPH, "embeddings"},
+    {IMAGE_GENERATION_GRAPH, "image_generation"},
+    {UNKNOWN_GRAPH, "unknown_graph"}};
+
+const std::map<std::string, GraphExportType> stringToType = {
+    {"text_generation", TEXT_GENERATION_GRAPH},
+    {"rerank", RERANK_GRAPH},
+    {"embeddings", EMBEDDINGS_GRAPH},
+    {"image_generation", IMAGE_GENERATION_GRAPH},
+    {"unknown_graph", UNKNOWN_GRAPH}};
+
+std::string enumToString(GraphExportType type);
+GraphExportType stringToEnum(std::string inString);
+
+enum ConfigExportType : int {
+    ENABLE_MODEL,
+    DISABLE_MODEL,
+    DELETE_MODEL,
+    UNKNOWN_MODEL
+};
+
+const std::map<ConfigExportType, std::string> configExportTypeToString = {
+    {ENABLE_MODEL, "ENABLE_MODEL"},
+    {DISABLE_MODEL, "DISABLE_MODEL"},
+    {DELETE_MODEL, "DELETE_MODEL"},
+    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
+
+const std::map<std::string, ConfigExportType> stringToConfigExportType = {
+    {"ENABLE_MODEL", ENABLE_MODEL},
+    {"DISABLE_MODEL", DISABLE_MODEL},
+    {"DELETE_MODEL", DELETE_MODEL},
+    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
+
+std::string enumToString(ConfigExportType type);
+ConfigExportType stringToConfigExportEnum(std::string inString);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,

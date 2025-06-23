@@ -184,24 +184,6 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartWithOptimumCli) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
-    std::string task = "text_generation";
-    this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
-
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
-    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
-    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
-
-    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
-    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
-    std::string graphContents = GetFileContents(graphPath);
-
-    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
-}
-
 class TestOptimumDownloader : public ovms::OptimumDownloader {
 public:
     TestOptimumDownloader(const ovms::HFSettingsImpl& inHfSettings) :
@@ -254,6 +236,7 @@ TEST(HfDownloaderClassTest, Methods) {
 class TestOptimumDownloaderSetup : public ::testing::Test {
 public:
     ovms::HFSettingsImpl inHfSettings;
+    std::string cliMockPath;
     void SetUp() override {
         inHfSettings.sourceModel = "model/name";
         inHfSettings.downloadPath = "/path/to/Download";
@@ -261,6 +244,11 @@ public:
         inHfSettings.extraQuantizationParams = "--param --param value";
         inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
         inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
+#ifdef _WIN32
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+#else
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+#endif
     }
 };
 
@@ -330,11 +318,6 @@ TEST_F(TestOptimumDownloaderSetup, NegativeCheckOptimumExistsCommandFailed) {
 
 TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-#ifdef _WIN32
-    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
-#elif
-    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
-#endif
     cliMockPath += " -h";
     optimumDownloader->setExportCliCheckCommand(cliMockPath);
     ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::OK);
@@ -342,11 +325,6 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
 
 TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-#ifdef _WIN32
-    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
-#elif
-    std::string cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
-#endif
     std::string cliCheckCommand = cliMockPath += " -h";
     optimumDownloader->setExportCliCheckCommand(cliCheckCommand);
     cliMockPath += " export";

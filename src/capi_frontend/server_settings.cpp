@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
 #include <map>
 #include <string>
 
-#include "config_export_types.hpp"
+#include "server_settings.hpp"
+
 namespace ovms {
 
 std::string enumToString(ConfigExportType type) {
@@ -29,4 +29,15 @@ ConfigExportType stringToConfigExportEnum(std::string inString) {
     auto it = stringToConfigExportType.find(inString);
     return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
 }
+
+std::string enumToString(GraphExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown_graph";
+}
+
+GraphExportType stringToEnum(std::string inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
+}
+
 }  // namespace ovms

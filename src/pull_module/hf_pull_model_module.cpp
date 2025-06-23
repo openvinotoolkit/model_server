@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "hf_pull_model_module.hpp"
 
+#include <iostream>
 #include <string>
 #include <utility>
 #include <variant>

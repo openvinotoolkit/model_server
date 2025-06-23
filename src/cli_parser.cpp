@@ -22,8 +22,6 @@
 #include <vector>
 
 #include "capi_frontend/server_settings.hpp"
-#include "config_export_module/config_export_types.hpp"
-#include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
@@ -494,6 +492,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
+        if (result->count("precision") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD)
+            throw std::logic_error("--precision parameter unsupported for Openvino huggingface organization models.");
+        if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD)
+            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
         if (result->count("precision"))
             hfSettings.precision = result->operator[]("precision").as<std::string>();
         if (result->count("extra_quantization_params"))

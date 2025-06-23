@@ -179,9 +179,8 @@ cc_library(
 ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
-    srcs = [],
-    deps = ["//src/config_export_module:config_export_types",
-            "//src/graph_export:graph_export_types",],
+    srcs = ["capi_frontend/server_settings.cpp"],
+    deps = [],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2318,10 +2317,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [
-        "//src/graph_export:graph_export_types",
-        "//src/config_export_module:config_export_types",
-    ],
+    deps = [],
     visibility = ["//visibility:public"],
 )
 
