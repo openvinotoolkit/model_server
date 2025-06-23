@@ -255,29 +255,45 @@ public:
 TEST_F(TestOptimumDownloaderSetup, Methods) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedPath = inHfSettings.downloadPath + "/" + inHfSettings.sourceModel;
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --param --param value \\path\\to\\Download\\model\\name";
 #ifdef _WIN32
     std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
 #endif
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
     ASSERT_EQ(optimumDownloader->getGraphDirectory(), expectedPath);
-    ASSERT_EQ(optimumDownloader->getExportCmd(), "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --param --param value \\path\\to\\Download\\model\\name");
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
 }
 
 TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
     inHfSettings.task = ovms::RERANK_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->getExportCmd(), "optimum-cli export openvino --disable-convert-tokenizer --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  \\path\\to\\Download\\model\\name");
+    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
 }
 
 TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
     inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->getExportCmd(), "optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name");
+    std::string expectedCmd ="optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
 }
 
 TEST_F(TestOptimumDownloaderSetup, EmbeddingsExportCmd) {
     inHfSettings.task = ovms::EMBEDDINGS_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->getExportCmd(), "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name");
+    std::string expectedCmd ="optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
 }
 
 TEST_F(TestOptimumDownloaderSetup, UnknownExportCmd) {
@@ -306,6 +322,10 @@ TEST_F(TestOptimumDownloaderSetup, NegativeUnknownDownloadType) {
 
 TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    optimumDownloader->setExportCliCheckCommand("ls");
+#ifdef _WIN32
+    optimumDownloader->setExportCliCheckCommand("dir");
+#endif
     optimumDownloader->setExportCliExportCommand("NonExistingCommand22");
     ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED);
 }
