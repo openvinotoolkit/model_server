@@ -32,6 +32,8 @@
 
 namespace ovms {
 
+constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
+
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
@@ -134,6 +136,20 @@ void CLIParser::parse(int argc, char** argv) {
                 "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
 
+        options->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
+            ("list_models",
+                "Directive to show available servables in models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "LIST_MODELS")
+            ("add_to_config",
+                "Path to directory containing config.json file for OVMS, to add specific model to",
+                cxxopts::value<std::string>(),
+                "ADD_TO_CONFIG")
+            ("remove_from_config",
+                "Path to directory containing config.json file for OVMS, to remove specific model from",
+                cxxopts::value<std::string>(),
+                "REMOVE_FROM_CONFIG");
+
         options->add_options("pull hf model")
             ("pull",
                 "Pull model from HF. Uses optional environment variables: HF_TOKEN - when set used for authentication, HF_ENDPOINT - when set replaces huggingface.co for model download.",
@@ -154,27 +170,7 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK")
-            ("list_models",
-                "Directive to show available servables in models repository",
-                cxxopts::value<bool>()->default_value("false"),
-                "LIST_MODELS")
-            ("add_to_config",
-                "Path to config file for ovms, where to add specific model",
-                cxxopts::value<std::string>(),
-                "ADD_TO_CONFIG")
-            ("remove_from_config",
-                "Path to config file for ovms, to remove specific model from",
-                cxxopts::value<std::string>(),
-                "REMOVE_FROM_CONFIG")
-            ("precision",
-                "Model precision used in optimum-cli export with conversion",
-                cxxopts::value<std::string>()->default_value("int8"),
-                "PRECISION")
-            ("extra_quantization_params",
-                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
-                cxxopts::value<std::string>(),
-                "EXTRA_QUANTIZATION_PARAMS");
+                "TASK");
 
         options->add_options("single model")
             ("model_name",
@@ -304,7 +300,7 @@ void CLIParser::parse(int argc, char** argv) {
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
+            std::cout << options->help({"", "multi model", "single model", "pull hf model", CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
