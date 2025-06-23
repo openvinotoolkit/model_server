@@ -116,18 +116,19 @@ TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
     EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
 }
-TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctoolsThrows) {
+TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithMultipleFunctools) {
     std::string input = "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    EXPECT_THROW({
-        responseParser->parse(generatedTokens);
-    },
-        std::runtime_error);
+    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
+    // Content after 'functools' cannot be parsed as array of JSON objects, so it is treated as content
+    EXPECT_EQ(parsedResponse.content, "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]");
+    EXPECT_EQ(parsedResponse.reasoning, "");
+    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
+    ASSERT_EQ(parsedResponse.toolCalls.size(), 0);  // No valid tool calls parsed
 }
 
 TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithArrayArguments) {
-    //std::string input = "functools[{\"name\": \"extractLastTransactionId\", \"arguments\": {\n  \"filepath\": \"/var/log/db.log\",\n  \"status\": [\"completed\", \"failed\"],\n  \"encoding\": \"utf-8\",\n  \"processFunction\": \"processFunction\"\n}}]";
     std::string input = "functools[{\"name\": \"extractLastTransactionId\", \"arguments\": { \"filepath\": \"/var/log/db.log\", \"status\": [\"completed\", \"failed\"], \"encoding\": \"utf-8\", \"processFunction\": \"processFunction\"}}]";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -141,4 +142,3 @@ TEST_F(Phi4ResponseParserTest, ParseToolCallOutputWithArrayArguments) {
     EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"filepath\":\"/var/log/db.log\",\"status\":[\"completed\",\"failed\"],\"encoding\":\"utf-8\",\"processFunction\":\"processFunction\"}");
     EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
 }
-
