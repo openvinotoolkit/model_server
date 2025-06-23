@@ -791,7 +791,6 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
 
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
     char* n_argv[] = {
-        // --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --model_repository_path /models --list_models
         "ovms",
         "--pull",
         "--source_model",
