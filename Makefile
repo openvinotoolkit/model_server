@@ -83,6 +83,8 @@ OV_CONTRIB_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+MNT_LLM_MODELS_PATH ?= "/mnt/llm_models"
+OVMS_MODELS_PATH ?= "/opt/home/k8sworker/ovms_models"
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -663,6 +665,8 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
+		-v $(shell realpath ${MNT_LLM_MODELS_PATH}):/mnt/llm_models:ro \
+		-v $(shell realpath ${OVMS_MODELS_PATH}):/opt/home/k8sworker/ovms_models:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
@@ -680,6 +684,8 @@ else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ${MNT_LLM_MODELS_PATH}):/mnt/llm_models:ro \
+		-v $(shell realpath ${OVMS_MODELS_PATH}):/opt/home/k8sworker/ovms_models:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
