@@ -31,8 +31,10 @@ struct ImageGenPipelineArgs {
     resolution_t maxResolution;
     std::optional<resolution_t> defaultResolution;
     std::optional<uint64_t> seed;
+    std::optional<uint64_t> defaultNumImagesPerPrompt;  // taken from GenAI otherwise, default is 1
     uint64_t maxNumImagesPerPrompt;
     uint64_t defaultNumInferenceSteps;
     uint64_t maxNumInferenceSteps;
+    std::optional<float> defaultGuidanceScale;  // taken from GenAI otherwise, default is 7.5f
 };
 }  // namespace ovms

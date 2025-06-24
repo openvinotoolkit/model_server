@@ -58,6 +58,14 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     }
     if (nodeOptions.has_device()) {
         args.device = nodeOptions.device();
+
+        if (args.device.value() == "NPU") {
+            // Require default_resolution
+            if (!nodeOptions.has_default_resolution()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU device requires default resolution to be specified for image generation");
+                return StatusCode::UNKNOWN_ERROR;  // TODO
+            }
+        }
     }
     if (nodeOptions.has_plugin_config()) {
         std::string pluginConfig = nodeOptions.plugin_config();
@@ -87,6 +95,12 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: {} > {}", args.defaultResolution.value(), args.maxResolution);
             return StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION;
         }
+    }
+    if (nodeOptions.has_default_num_images_per_prompt()) {
+        args.defaultNumImagesPerPrompt = nodeOptions.default_num_images_per_prompt();
+    }
+    if (nodeOptions.has_default_guidance_scale()) {
+        args.defaultGuidanceScale = nodeOptions.default_guidance_scale();
     }
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();
     args.defaultNumInferenceSteps = nodeOptions.default_num_inference_steps();

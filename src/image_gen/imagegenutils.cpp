@@ -132,6 +132,12 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     auto it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
+        if (args.device.has_value() && args.device.value() == "NPU") {
+            auto allowedNumImages = args.defaultNumImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
+            if (numImages != allowedNumImages) {
+                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedNumImages) + " images per prompt, but " + std::to_string(numImages) + " requested.");
+            }
+        }
         if (numImages > args.maxNumImagesPerPrompt) {
             return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
         }
@@ -153,6 +159,18 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         } else if (strength < 0.0f) {
             return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
         }
+    }
+    it = requestOptions.find("guidance_scale");
+    if (it != requestOptions.end()) {
+        if (args.device.has_value() && args.device.value() == "NPU") {
+            auto guidanceScale = it->second.as<float>();
+            auto allowedGuidanceScale = args.defaultGuidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
+            if (guidanceScale != allowedGuidanceScale) {
+                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedGuidanceScale) + " guidance scale, but " + std::to_string(guidanceScale) + " requested.");
+            }
+        }
+    } else {
+        requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
     }
     return absl::OkStatus();
 }
