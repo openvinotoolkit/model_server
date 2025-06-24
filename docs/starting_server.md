@@ -39,8 +39,8 @@ Server will detect the type of requested servable (classic model, generative mod
 
 **Example using a ResNet model:**
 
-```bash
-mkdir -p models/resnet/1
+```console
+mkdir models/resnet/1
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 ```
