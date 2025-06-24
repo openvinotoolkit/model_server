@@ -1,14 +1,14 @@
-input_stream: "OVMS_PY_TENSOR: image"
-output_stream: "OVMS_PY_TENSOR: embedding"
+input_stream: "OVMS_PY_TENSOR:image"
+output_stream: "OVMS_PY_TENSOR:embedding"
 
 node{
     name: "ImagePreprocessor"
     calculator: "PythonExecutorCalculator"
-    input_stream: "OVMS_PY_TENSOR: image"
-    output_stream: "OVMS_PY_TENSOR: pixel_values"
+    input_stream: "OVMS_PY_TENSOR:image"
+    output_stream: "OVMS_PY_TENSOR:pixel_values"
     node_options:{
         [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]:{
-            handler_path=/workspace/pre.py
+            handler_path: "/workspace/pre.py"
         }
     }
 }
@@ -16,8 +16,8 @@ node{
 node{
     name: "PixelValuesConverter"
     calculator: "PyTensorOvTensorConverterCalculator"
-    input_stream: "OVMS_PY_TENSOR: pixel_values"
-    output_stream: "OVTensor: 40"
+    input_stream: "OVMS_PY_TENSOR:pixel_values"
+    output_stream: "OVTENSOR:40"
 }
 
 node {
@@ -50,7 +50,7 @@ node {
   }
 }
 
-#Convert openvino -> pyovms tensor
+
 node {
   name: "EmbeddingConverter"
   calculator: "OvTensorPyTensorConverterCalculator"
@@ -58,7 +58,7 @@ node {
   output_stream: "OVMS_PY_TENSOR:pooler_output"
 }
 
-posttprocessing Node (normalize embeddings)
+
 node {
   name: "Postprocessor"
   calculator: "PythonExecutorCalculator"
