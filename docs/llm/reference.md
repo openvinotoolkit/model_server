@@ -271,6 +271,7 @@ Some servable types introduce additional limitations:
 - sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
 - prompt lookup decoding is not supported
+- `usage` is not supported in streaming mode
 - **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
