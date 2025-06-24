@@ -60,8 +60,8 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-```console
-ovms --model_path /models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
+```bat
+ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 :::
 ::::
@@ -121,13 +121,13 @@ docker run --user $(id -u):$(id -g) -p 9000:9000 -p 8000:8000 --rm -v <model_rep
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bash
-ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device GPU --task text_generation --port 8000 --rest_port 9000
+```bat
+ovms --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path models/ --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device GPU --task text_generation --port 8000 --rest_port 9000
 ```
 :::
 ::::
 
-## Serving Multiple Models 
+## Serving Multiple Models
 
 To serve multiple models and pipelines from the same container you will need an additional JSON configuration file that defines each model. To use a container with several models, you need an additional JSON configuration file defining each model. `model_config_list` array that includes a collection of config objects for each served model. The `name` and the `base_path` values of the model are required for each config object.
 
