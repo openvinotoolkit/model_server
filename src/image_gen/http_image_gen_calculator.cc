@@ -121,7 +121,7 @@ public:
         // TODO: Support more pipeline types
         // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
 
-        ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline.clone();
+        ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
         SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
         // preview limitation put here to not mess up tests underneath
         auto imagesPerPromptIt = requestOptions.find("num_images_per_prompt");

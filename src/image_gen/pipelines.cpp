@@ -17,10 +17,15 @@
 
 namespace ovms {
 
-ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
-    text2ImagePipeline(ov::genai::Text2ImagePipeline(args.modelsPath,
-        args.device.value_or("CPU"),
-        args.pluginConfig)),
-    args(args) {}
+ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) : args(args) {
+    const std::string device = args.device.value_or("CPU");
+    if (device == "NPU") {
+        text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
+        text2ImagePipeline->reshape(1, 256, 256, 7.5f);  // TODO
+        text2ImagePipeline->compile(device, args.pluginConfig);
+    } else {
+        text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath, device, args.pluginConfig);
+    }
+}
 // TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
 }  // namespace ovms
