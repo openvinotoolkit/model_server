@@ -39,8 +39,8 @@ Server will detect the type of requested servable (classic model, generative mod
 
 **Example using a ResNet model:**
 
-```console
-mkdir models/resnet/1
+```bash
+mkdir -p models/resnet/1
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin
 wget -P models/resnet/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 ```
@@ -60,7 +60,7 @@ docker run -d --rm -v ${PWD}/models:/models -p 9000:9000 -p 8000:8000 openvino/m
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-```bat
+```text
 ovms --model_path models/resnet/ --model_name resnet --port 9000 --rest_port 8000 --log_level DEBUG
 ```
 :::
