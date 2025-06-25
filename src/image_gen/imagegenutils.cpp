@@ -160,17 +160,33 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
             return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
         }
     }
-    it = requestOptions.find("guidance_scale");
-    if (it != requestOptions.end()) {
-        if (args.device.has_value() && args.device.value() == "NPU") {
+    if (args.device.has_value() && args.device.value() == "NPU") {
+        it = requestOptions.find("width");
+        if (it != requestOptions.end()) {
+            auto width = it->second.as<int64_t>();
+            auto allowedWidth = args.defaultResolution.value().first;  // at this point it should be validated for existence
+            if (width != allowedWidth) {
+                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedWidth) + " width, but " + std::to_string(width) + " requested.");
+            }
+        }
+
+        it = requestOptions.find("height");
+        if (it != requestOptions.end()) {
+            auto height = it->second.as<int64_t>();
+            auto allowedHeight = args.defaultResolution.value().second;  // at this point it should be validated for existence
+            if (height != allowedHeight) {
+                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedHeight) + " height, but " + std::to_string(height) + " requested.");
+            }
+        }
+
+        it = requestOptions.find("guidance_scale");
+        if (it != requestOptions.end()) {
             auto guidanceScale = it->second.as<float>();
             auto allowedGuidanceScale = args.defaultGuidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
             if (guidanceScale != allowedGuidanceScale) {
                 return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedGuidanceScale) + " guidance scale, but " + std::to_string(guidanceScale) + " requested.");
             }
         }
-    } else {
-        requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
     }
     return absl::OkStatus();
 }
