@@ -657,13 +657,12 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 prepare_container_mounts:
-    @if [ -d $(MNT_LLM_MODELS_PATH) ]; then \
-        CONTAINER_VOLUME_MOUNTS="$${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models"; \
-    fi
-    @if [ -d $(OVMS_MODELS_PATH) ]; then \
-        CONTAINER_VOLUME_MOUNTS="$${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models"; \
-    fi
-
+ifeq ($(wildcard $(MNT_LLM_MODELS_PATH)),)
+    CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
+endif
+ifeq ($(wildcard $(OVMS_MODELS_PATH)),)
+    CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
+endif
 
 run_unit_tests: prepare_models prepare_container_mounts
         docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
