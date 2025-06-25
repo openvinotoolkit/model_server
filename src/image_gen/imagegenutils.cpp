@@ -272,6 +272,12 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
             requestOptions.insert({"width", args.defaultResolution->first});
         }
     }
+    if (args.defaultNumImagesPerPrompt.has_value() && requestOptions.find("num_images_per_prompt") == requestOptions.end()) {
+        requestOptions.insert({"num_images_per_prompt", args.defaultNumImagesPerPrompt.value()});
+    }
+    if (args.defaultGuidanceScale.has_value() && requestOptions.find("guidance_scale") == requestOptions.end()) {
+        requestOptions.insert({"guidance_scale", args.defaultGuidanceScale.value()});
+    }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
     // accepted are: prompt, prompt_2, prompt_3, negative_prompt, negative_prompt_2, negative_prompt_3,
     // num_images_per_prompt, max_sequence_length, height, width, rng_seed, num_inference_steps,

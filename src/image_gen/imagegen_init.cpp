@@ -102,7 +102,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     if (nodeOptions.has_default_guidance_scale()) {
         args.defaultGuidanceScale = nodeOptions.default_guidance_scale();
     }
-    
+
     if (nodeOptions.has_device() && nodeOptions.device() == "NPU") {
         if (nodeOptions.has_max_num_images_per_prompt()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU device cannot have max_num_images_per_prompt set, it is always defined by default");
