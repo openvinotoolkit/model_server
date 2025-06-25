@@ -189,6 +189,8 @@ class OpenAIChatCompletionsHandler {
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
+    ParsedResponse parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
         ov::genai::Tokenizer tokenizer, const std::string& responseParserName = "") :
@@ -229,6 +231,5 @@ public:
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
-    static void writeLogprob(Writer<StringBuffer>& writer, float logprob);
 };
 }  // namespace ovms
