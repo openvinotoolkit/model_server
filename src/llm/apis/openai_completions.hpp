@@ -17,6 +17,7 @@
 
 #include <limits>
 #include <optional>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string>
@@ -39,6 +40,7 @@
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
 #pragma warning(pop)
+#include "../response_parsers/response_parser.hpp"
 
 using namespace rapidjson;
 
@@ -180,6 +182,8 @@ class OpenAIChatCompletionsHandler {
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
+    // Response parser is used to parse chat completions response for specific models
+    std::unique_ptr<ResponseParser> responseParser = nullptr;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
@@ -187,18 +191,22 @@ class OpenAIChatCompletionsHandler {
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
-        ov::genai::Tokenizer tokenizer) :
+        ov::genai::Tokenizer tokenizer, const std::string& responseParserName = "") :
         doc(doc),
         endpoint(endpoint),
         created(creationTime),
-        tokenizer(tokenizer) {}
+        tokenizer(tokenizer) {
+        if (!responseParserName.empty()) {
+            responseParser = std::make_unique<ResponseParser>(tokenizer, responseParserName);
+        }
+    }
 
     std::optional<std::string> getPrompt() const;
     std::optional<int> getNumReturnSequences() const;
     StreamOptions getStreamOptions() const;
     const std::string& getProcessedJson() const;
-    // User input might be modified by the servable logic, so it is not const
     const ImageHistory& getImageHistory() const;
+    // User input might be modified by the servable logic, so it is not const
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
 
@@ -215,8 +223,8 @@ public:
     absl::Status parseMessages(std::optional<std::string> allowedLocalMediaPath = std::nullopt);
     absl::Status parseTools();
 
-    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs, const std::string& responseParserName = "");
-    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results, const std::string& responseParserName = "");
+    std::string serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs);
+    std::string serializeUnaryResponse(const ov::genai::EncodedResults& results);
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
