@@ -185,7 +185,7 @@ echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
 set "opencl_ver=v2024.10.24"
-set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
+set "opencl_dir=%opt_install_dir%\opencl"
 
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
