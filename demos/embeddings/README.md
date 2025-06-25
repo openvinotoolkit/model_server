@@ -145,7 +145,8 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
       ],
       "index": 0
     }
-  ]
+  ],
+  "usage":{"prompt_tokens":4,"total_tokens":4}
 }
 
 ```
