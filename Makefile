@@ -85,6 +85,7 @@ TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 MNT_LLM_MODELS_PATH ?= "/mnt/llm_models"
 OVMS_MODELS_PATH ?= "/opt/home/k8sworker/ovms_models"
+CONTAINER_VOLUME_MOUNTS :=
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
@@ -656,21 +657,28 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 run_unit_tests: prepare_models
-    @if [ ! -d $(MNT_LLM_MODELS_PATH) ] || [ ! -d $(OVMS_MODELS_PATH) ]; then \
-        echo "Creating paths: $(MNT_LLM_MODELS_PATH) and $(OVMS_MODELS_PATH)"; \
-        mkdir -p $(MNT_LLM_MODELS_PATH) $(OVMS_MODELS_PATH); \
-    fi
-	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+        docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+        @if [ -d $(MNT_LLM_MODELS_PATH) ]; then \
+            CONTAINER_VOLUME_MOUNTS="$${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models"; \
+        fi
+        @if [ -d $(OVMS_MODELS_PATH) ]; then \
+            CONTAINER_VOLUME_MOUNTS="$${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models"; \
+        fi
+# ifeq ($(wildcard $(MNT_LLM_MODELS_PATH)),)
+#     CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
+# endif
+# ifeq ($(wildcard $(OVMS_MODELS_PATH)),)
+#     CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
+# endif
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		--device=/dev/dri \
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
+		${CONTAINER_VOLUME_MOUNTS} \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
-		-v $(shell realpath ${MNT_LLM_MODELS_PATH}):/mnt/llm_models:ro \
-		-v $(shell realpath ${OVMS_MODELS_PATH}):/opt/home/k8sworker/ovms_models:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
@@ -687,9 +695,8 @@ ifeq ($(RUN_GPU_TESTS),1)
 else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
+		${CONTAINER_VOLUME_MOUNTS} \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
-		-v $(shell realpath ${MNT_LLM_MODELS_PATH}):/mnt/llm_models:ro \
-		-v $(shell realpath ${OVMS_MODELS_PATH}):/opt/home/k8sworker/ovms_models:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
