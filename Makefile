@@ -656,6 +656,10 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 run_unit_tests: prepare_models
+    @if [ ! -d $(MNT_LLM_MODELS_PATH) ] || [ ! -d $(OVMS_MODELS_PATH) ]; then \
+        echo "Creating paths: $(MNT_LLM_MODELS_PATH) and $(OVMS_MODELS_PATH)"; \
+        mkdir -p $(MNT_LLM_MODELS_PATH) $(OVMS_MODELS_PATH); \
+    fi
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
