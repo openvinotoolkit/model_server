@@ -664,12 +664,6 @@ run_unit_tests: prepare_models
         @if [ -d $(OVMS_MODELS_PATH) ]; then \
             CONTAINER_VOLUME_MOUNTS="$${CONTAINER_VOLUME_MOUNTS} -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models"; \
         fi
-# ifeq ($(wildcard $(MNT_LLM_MODELS_PATH)),)
-#     CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
-# endif
-# ifeq ($(wildcard $(OVMS_MODELS_PATH)),)
-#     CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
-# endif
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
