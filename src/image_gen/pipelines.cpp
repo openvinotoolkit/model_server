@@ -19,17 +19,26 @@ namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
     args(args) {
-    const std::string device = args.device.value_or("CPU");
-    if (args.staticReshapeSettings.has_value()) {
-        text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
+    //const std::string device = args.device.value_or("CPU");
+    std::vector<std::string> device;
+    if (!args.device.size()) {
+        device.push_back("CPU");
+    }
+    // at this point device contains 1 or 3 devices
+    text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
+
+    if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
         text2ImagePipeline->reshape(
             args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt),
-            args.staticReshapeSettings.value().resolution.first,   // at this point it should be validated for existence
-            args.staticReshapeSettings.value().resolution.second,  // at this point it should be validated for existence
+            args.staticReshapeSettings.value().resolution[0].first,   // at this point it should be validated for existence
+            args.staticReshapeSettings.value().resolution[0].second,  // at this point it should be validated for existence
             args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
-        text2ImagePipeline->compile(device, args.pluginConfig);
+    }
+
+    if (device.size() == 1) {
+        text2ImagePipeline->compile(device[0], args.pluginConfig);
     } else {
-        text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath, device, args.pluginConfig);
+        text2ImagePipeline->compile(device[0], device[1], device[2], args.pluginConfig);
     }
 }
 // TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that

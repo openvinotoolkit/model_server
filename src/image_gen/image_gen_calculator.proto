@@ -19,11 +19,11 @@ package mediapipe;
 
 import "mediapipe/framework/calculator.proto";
 
-message StaticReshapeOptions {
-  required string resolution = 1;
-  optional float guidance_scale = 2;
-  optional uint64 num_images_per_prompt = 3;
-}
+//message StaticReshapeOptions {
+//  required string resolution = 1;
+//  optional float guidance_scale = 2;
+//  optional uint64 num_images_per_prompt = 3;
+//}
 
 message ImageGenCalculatorOptions {
   extend mediapipe.CalculatorOptions {
@@ -45,5 +45,8 @@ message ImageGenCalculatorOptions {
     optional uint64 max_num_inference_steps = 8 [default = 100];
 
     // static reshape setting, required for NPU
-    optional StaticReshapeOptions static_settings = 9;
+    //optional StaticReshapeOptions static_settings = 9;
+    optional string resolution = 9;
+    optional int64 num_images_per_prompt = 10;
+    optional float guidance_scale = 11;
 }

@@ -144,20 +144,37 @@ absl::Status ensureAcceptableForStatic(ov::AnyMap& requestOptions, const ovms::I
         }
     }
 
+    std::optional<int64_t> requestedWidth;
+    std::optional<int64_t> requestedHeight;
     it = requestOptions.find("width");
     if (it != requestOptions.end()) {
-        auto requestedWidth = it->second.as<int64_t>();
-        if (requestedWidth != args.staticReshapeSettings.value().resolution.first) {
-            return absl::InvalidArgumentError("NPU Image Generation requested width doesnt match underlying model shape");
-        }
+        requestedWidth = it->second.as<int64_t>();
     }
 
     it = requestOptions.find("height");
     if (it != requestOptions.end()) {
-        auto requestedHeight = it->second.as<int64_t>();
-        if (requestedHeight != args.staticReshapeSettings.value().resolution.second) {
-            return absl::InvalidArgumentError("NPU Image Generation requested height doesnt match underlying model shape");
+        requestedHeight = it->second.as<int64_t>();
+    }
+
+    if (!requestedWidth.has_value() && !requestedHeight.has_value()) {
+        return absl::OkStatus();
+    }
+
+    if (requestedWidth.has_value() && requestedHeight.has_value()) {
+        // Search for matching resolution in staticReshapeSettings
+        auto& resolutions = args.staticReshapeSettings.value().resolution;
+        auto it = std::find_if(resolutions.begin(), resolutions.end(), [&](const resolution_t& res) {
+            return res.first == requestedWidth.value() && res.second == requestedHeight.value();
+        });
+        if (it == resolutions.end()) {
+            return absl::InvalidArgumentError(absl::StrCat("NPU Image Generation requested resolution ", requestedWidth.value(), "x", requestedHeight.value(), " is not supported by static reshape settings"));
         }
+    }
+    else if (requestedWidth.has_value() && !requestedHeight.has_value()) {
+        return absl::InvalidArgumentError("NPU Image Generation requested width but height is missing");
+    }
+    else if (!requestedWidth.has_value() && requestedHeight.has_value()) {
+        return absl::InvalidArgumentError("NPU Image Generation requested height but width is missing");
     }
 
     return absl::OkStatus();

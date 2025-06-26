@@ -47,6 +47,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovmsfilesystem",
+        "//src:libovmsstring_utils",
         "imagegenutils",
         "imagegenpipelineargs",
         "image_gen_calculator_cc_proto",
