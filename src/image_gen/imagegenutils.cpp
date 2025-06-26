@@ -127,17 +127,55 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
     SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(payload, key)); \
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(key, value);
 
+absl::Status ensureAcceptableForStatic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    auto it = requestOptions.find("num_images_per_prompt");
+    if (it != requestOptions.end()) {
+        auto requestedNumImagesPerPrompt = it->second.as<int>();
+        if (requestedNumImagesPerPrompt != args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt)) {
+            return absl::InvalidArgumentError("NPU Image Generation requested num_images_per_prompt doesnt match underlying model shape");
+        }
+    }
+
+    it = requestOptions.find("guidance_scale");
+    if (it != requestOptions.end()) {
+        auto requestedGuidanceScale = it->second.as<float>();
+        if (requestedGuidanceScale != args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale)) {
+            return absl::InvalidArgumentError("NPU Image Generation requested guidance_scale doesnt match underlying model shape");
+        }
+    }
+
+    it = requestOptions.find("width");
+    if (it != requestOptions.end()) {
+        auto requestedWidth = it->second.as<int64_t>();
+        if (requestedWidth != args.staticReshapeSettings.value().resolution.first) {
+            return absl::InvalidArgumentError("NPU Image Generation requested width doesnt match underlying model shape");
+        }
+    }
+
+    it = requestOptions.find("height");
+    if (it != requestOptions.end()) {
+        auto requestedHeight = it->second.as<int64_t>();
+        if (requestedHeight != args.staticReshapeSettings.value().resolution.second) {
+            return absl::InvalidArgumentError("NPU Image Generation requested height doesnt match underlying model shape");
+        }
+    }
+
+    return absl::OkStatus();
+}
+
 absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    // validate for static
+    if (args.staticReshapeSettings.has_value()) {
+        auto status = ensureAcceptableForStatic(requestOptions, args);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
     // check if we have any unhandled parameters
     auto it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
-        if (args.device.has_value() && args.device.value() == "NPU") {
-            auto allowedNumImages = args.defaultNumImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
-            if (numImages != allowedNumImages) {
-                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedNumImages) + " images per prompt, but " + std::to_string(numImages) + " requested.");
-            }
-        }
         if (numImages > args.maxNumImagesPerPrompt) {
             return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
         }
@@ -158,34 +196,6 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
             return absl::InvalidArgumentError(absl::StrCat("strength is greater than maxStrength: ", 1));
         } else if (strength < 0.0f) {
             return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
-        }
-    }
-    if (args.device.has_value() && args.device.value() == "NPU") {
-        it = requestOptions.find("width");
-        if (it != requestOptions.end()) {
-            auto width = it->second.as<int64_t>();
-            auto allowedWidth = args.defaultResolution.value().first;  // at this point it should be validated for existence
-            if (width != allowedWidth) {
-                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedWidth) + " width, but " + std::to_string(width) + " requested.");
-            }
-        }
-
-        it = requestOptions.find("height");
-        if (it != requestOptions.end()) {
-            auto height = it->second.as<int64_t>();
-            auto allowedHeight = args.defaultResolution.value().second;  // at this point it should be validated for existence
-            if (height != allowedHeight) {
-                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedHeight) + " height, but " + std::to_string(height) + " requested.");
-            }
-        }
-
-        it = requestOptions.find("guidance_scale");
-        if (it != requestOptions.end()) {
-            auto guidanceScale = it->second.as<float>();
-            auto allowedGuidanceScale = args.defaultGuidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
-            if (guidanceScale != allowedGuidanceScale) {
-                return absl::InvalidArgumentError("NPU Image Generation pipeline configured to serve " + std::to_string(allowedGuidanceScale) + " guidance scale, but " + std::to_string(guidanceScale) + " requested.");
-            }
         }
     }
     return absl::OkStatus();
@@ -271,12 +281,6 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         if (requestOptions.find("width") == requestOptions.end()) {
             requestOptions.insert({"width", args.defaultResolution->first});
         }
-    }
-    if (args.defaultNumImagesPerPrompt.has_value() && requestOptions.find("num_images_per_prompt") == requestOptions.end()) {
-        requestOptions.insert({"num_images_per_prompt", args.defaultNumImagesPerPrompt.value()});
-    }
-    if (args.defaultGuidanceScale.has_value() && requestOptions.find("guidance_scale") == requestOptions.end()) {
-        requestOptions.insert({"guidance_scale", args.defaultGuidanceScale.value()});
     }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
     // accepted are: prompt, prompt_2, prompt_3, negative_prompt, negative_prompt_2, negative_prompt_3,

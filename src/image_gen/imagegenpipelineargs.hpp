@@ -24,6 +24,13 @@
 namespace ovms {
 
 using resolution_t = std::pair<int64_t, int64_t>;
+
+struct StaticReshapeSettingsArgs {
+    resolution_t resolution;
+    std::optional<uint64_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
+};
+
 struct ImageGenPipelineArgs {
     std::string modelsPath;
     std::optional<std::string> device;
@@ -31,10 +38,10 @@ struct ImageGenPipelineArgs {
     resolution_t maxResolution;
     std::optional<resolution_t> defaultResolution;
     std::optional<uint64_t> seed;
-    std::optional<uint64_t> defaultNumImagesPerPrompt;  // taken from GenAI otherwise, default is 1
     uint64_t maxNumImagesPerPrompt;
     uint64_t defaultNumInferenceSteps;
     uint64_t maxNumInferenceSteps;
-    std::optional<float> defaultGuidanceScale;  // taken from GenAI otherwise, default is 7.5f
+
+    std::optional<StaticReshapeSettingsArgs> staticReshapeSettings;
 };
 }  // namespace ovms

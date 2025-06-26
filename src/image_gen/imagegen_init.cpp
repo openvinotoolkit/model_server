@@ -67,6 +67,25 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             }
         }
     }
+    if (nodeOptions.has_static_settings()) {
+        auto resOptOrStatus = getDimensionsConfig(nodeOptions.static_settings().resolution());
+        if (std::holds_alternative<Status>(resOptOrStatus)) {
+            return std::get<Status>(resOptOrStatus);
+        }
+        if (!std::get<std::optional<resolution_t>>(resOptOrStatus).has_value()) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Static resolution is not specified or is invalid: {}", nodeOptions.static_settings().resolution());
+            return StatusCode::SHAPE_WRONG_FORMAT;
+        }
+        args.staticReshapeSettings = StaticReshapeSettingsArgs{
+            .resolution = std::get<std::optional<resolution_t>>(resOptOrStatus).value(),
+        };
+        if (nodeOptions.static_settings().has_num_images_per_prompt()) {
+            args.staticReshapeSettings->numImagesPerPrompt = nodeOptions.static_settings().num_images_per_prompt();
+        }
+        if (nodeOptions.static_settings().has_guidance_scale()) {
+            args.staticReshapeSettings->guidanceScale = nodeOptions.static_settings().guidance_scale();
+        }
+    }
     if (nodeOptions.has_plugin_config()) {
         std::string pluginConfig = nodeOptions.plugin_config();
         auto status = JsonParser::parsePluginConfig(pluginConfig, args.pluginConfig);
@@ -96,13 +115,6 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             return StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION;
         }
     }
-    if (nodeOptions.has_default_num_images_per_prompt()) {
-        args.defaultNumImagesPerPrompt = nodeOptions.default_num_images_per_prompt();
-    }
-    if (nodeOptions.has_default_guidance_scale()) {
-        args.defaultGuidanceScale = nodeOptions.default_guidance_scale();
-    }
-
     if (nodeOptions.has_device() && nodeOptions.device() == "NPU") {
         if (nodeOptions.has_max_num_images_per_prompt()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU device cannot have max_num_images_per_prompt set, it is always defined by default");

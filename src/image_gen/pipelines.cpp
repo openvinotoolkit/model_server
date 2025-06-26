@@ -20,13 +20,13 @@ namespace ovms {
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
     args(args) {
     const std::string device = args.device.value_or("CPU");
-    if (device == "NPU") {
+    if (args.staticReshapeSettings.has_value()) {
         text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
         text2ImagePipeline->reshape(
-            args.defaultNumImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt),
-            args.defaultResolution.value().first,   // at this point it should be validated for existence
-            args.defaultResolution.value().second,  // at this point it should be validated for existence
-            args.defaultGuidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
+            args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt),
+            args.staticReshapeSettings.value().resolution.first,   // at this point it should be validated for existence
+            args.staticReshapeSettings.value().resolution.second,  // at this point it should be validated for existence
+            args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
         text2ImagePipeline->compile(device, args.pluginConfig);
     } else {
         text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath, device, args.pluginConfig);
