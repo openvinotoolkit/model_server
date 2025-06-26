@@ -1,31 +1,15 @@
-input_stream: "pipeline_input"
-output_stream: "pipeline_output"
+input_stream: "OVMS_PY_TENSOR:pipeline_input"
+output_stream: "OVMS_PY_TENSOR:pipeline_output"
 
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:session"
-  node_options {
-    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions] {
-      servable_name: "iris_pipeline"
-    }
-  }
-}
-
-node {
-  calculator: "OpenVINOInferenceCalculator"
-  input_side_packet: "SESSION:session"
-  input_stream: "A:pipeline_input"
-  output_stream: "B:pipeline_output"
-  node_options {
-    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
-      tag_to_input_tensor_names {
-        key: "A"
-        value: "input"
-      }
-      tag_to_output_tensor_names {
-        key: "B"
-        value: "output"
-      }
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "PIPELINE_INPUT:pipeline_input"
+  output_stream: "PIPELINE_OUTPUT:pipeline_output"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/pipeline/ovmsmodel.py"
     }
   }
 }
