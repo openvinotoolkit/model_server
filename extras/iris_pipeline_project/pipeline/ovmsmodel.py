@@ -35,7 +35,7 @@ class OvmsPythonModel:
             f.write(onx.SerializeToString())
 
         print(f"Model saved to {output_path}")
-        return [Tensor.from_numpy(np.array([True]))]
+        return [Tensor("output", (np.array([True]))]
 
     def finalize(self):
         print("Training handler finalized.")
