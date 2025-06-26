@@ -85,6 +85,18 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         if (nodeOptions.static_settings().has_guidance_scale()) {
             args.staticReshapeSettings->guidanceScale = nodeOptions.static_settings().guidance_scale();
         }
+        if (nodeOptions.has_max_num_images_per_prompt()) {  // non default
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max num images per prompt when using static settings");
+            return StatusCode::SHAPE_WRONG_FORMAT;
+        }
+        if (nodeOptions.has_max_resolution()) {  // non default
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max resolution when using static settings");
+            return StatusCode::SHAPE_WRONG_FORMAT;
+        }
+        if (nodeOptions.has_default_resolution()) {  // non default
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use default resolution when using static settings");
+            return StatusCode::SHAPE_WRONG_FORMAT;
+        }
     }
     if (nodeOptions.has_plugin_config()) {
         std::string pluginConfig = nodeOptions.plugin_config();
