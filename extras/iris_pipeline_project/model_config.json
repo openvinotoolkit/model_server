@@ -3,7 +3,7 @@
     {
       "config": {
         "name": "iris_pipeline",
-        "base_path": "/models/iris_pipeline"
+        "base_path": "/models/iris_logreg"
       }
     }
   ]
