@@ -21,7 +21,15 @@
 #include "base_response_parser.hpp"
 
 namespace ovms {
+struct StreamingState {
+    bool isToolCallStarted = false; // Indicates if the tool call has started
+    bool isToolCallEnded = false;   // Indicates if the tool call has ended
+    std::string toolCallContent;     // Content of the tool call
+    std::string toolCallArgumentsContent; // Arguments of the tool call
+};
+
 class Qwen3ResponseParser : public BaseResponseParser {
+    StreamingState streamingState;  // State for streaming responses
 protected:
     // Tool calls are wrapped in <tool_call> and </tool_call> tags
     std::string toolCallStartTag = "<tool_call>";
@@ -40,5 +48,6 @@ public:
         BaseResponseParser(tokenizer) {}
 
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+    void parseChunk(const std::string& chunk);
 };
 }  // namespace ovms
