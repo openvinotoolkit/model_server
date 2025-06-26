@@ -658,10 +658,10 @@ endif
 
 prepare_container_mounts:
 ifeq ($(shell test -d $(MNT_LLM_MODELS_PATH) && echo exists),exists)
-	CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
+	CONTAINER_VOLUME_MOUNTS += -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
 endif
 ifeq ($(shell test -d $(OVMS_MODELS_PATH) && echo exists),exists)
-	CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
+	CONTAINER_VOLUME_MOUNTS += -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
 endif
 
 run_unit_tests: prepare_models prepare_container_mounts
