@@ -42,8 +42,8 @@ set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set MODELS_LIST=%TEXT_GENERATION_MODEL% %EMBEDDING_MODEL% %EMBEDDING_MODEL%\ov %RERANK_MODEL% %VLM_MODEL% %QWEN3_MODEL% %LLAMA3_MODEL% %HERMES3_MODEL% %PHI4_MODEL%
 
 set "ALL_EXIST=1"
-for %%M in (%MODELS_LIST%) do (
-  if not exist "%~1\%%M" (
+for %%M in ("%MODELS_LIST%") do (
+  if not exist "%~1\%%~M" (
     set "ALL_EXIST=0"
   )
 )
