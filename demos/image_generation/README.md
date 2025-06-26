@@ -361,7 +361,100 @@ Output file (`output2.png`):
 ![output2](./output2.png)
 
 
+## Measuring performance
+Prepare example request `input_data.json`:
+```
+{
+  "data": [
+    {
+      "payload": [
+        {
+          "model": "OpenVINO/stable-diffusion-v1-5-int8-ov",
+          "prompt": "dog",
+          "num_inference_steps": 2
+        }
+      ]
+    }
+  ]
+}
 
+```
+
+Run benchmark:
+```bash
+docker run --rm -it --net=host -v $(pwd):/work:rw nvcr.io/nvidia/tritonserver:24.12-py3-sdk \
+  perf_analyzer \
+    -m OpenVINO/stable-diffusion-v1-5-int8-ov \
+    --input-data=/work/input_data.json \
+    --service-kind=openai \
+    --endpoint=v3/images/generations \
+    --async \
+    -u localhost:8000 \
+    --request-count 8 \
+    --concurrency-range 8
+```
+
+MCLX23
+```
+*** Measurement Settings ***
+  Service Kind: OPENAI
+  Sending 8 benchmark requests
+  Using asynchronous calls for inference
+
+Request concurrency: 8
+  Client: 
+    Request count: 8
+    Throughput: 0.210501 infer/sec
+    Avg latency: 29514881 usec (standard deviation 1509943 usec)
+    p50 latency: 31140977 usec
+    p90 latency: 36002018 usec
+    p95 latency: 37274567 usec
+    p99 latency: 37274567 usec
+    Avg HTTP time: 29514870 usec (send/recv 3558 usec + response wait 29511312 usec)
+Inferences/Second vs. Client Average Batch Latency
+Concurrency: 8, throughput: 0.210501 infer/sec, latency 29514881 usec
+```
+
+SPR36
+```
+*** Measurement Settings ***
+  Service Kind: OPENAI
+  Sending 8 benchmark requests
+  Using asynchronous calls for inference
+
+Request concurrency: 8
+  Client: 
+    Request count: 8
+    Throughput: 1.14268 infer/sec
+    Avg latency: 5124694 usec (standard deviation 695195 usec)
+    p50 latency: 5252478 usec
+    p90 latency: 5922719 usec
+    p95 latency: 6080321 usec
+    p99 latency: 6080321 usec
+    Avg HTTP time: 5124684 usec (send/recv 15272 usec + response wait 5109412 usec)
+Inferences/Second vs. Client Average Batch Latency
+Concurrency: 8, throughput: 1.14268 infer/sec, latency 5124694 usec
+```
+
+```
+*** Measurement Settings ***
+  Service Kind: OPENAI
+  Sending 16 benchmark requests
+  Using asynchronous calls for inference
+
+Request concurrency: 16
+  Client: 
+    Request count: 16
+    Throughput: 1.33317 infer/sec
+    Avg latency: 8945421 usec (standard deviation 929729 usec)
+    p50 latency: 9395319 usec
+    p90 latency: 11657659 usec
+    p95 latency: 11657659 usec
+    p99 latency: 11659369 usec
+    Avg HTTP time: 8945411 usec (send/recv 491743 usec + response wait 8453668 usec)
+Inferences/Second vs. Client Average Batch Latency
+Concurrency: 16, throughput: 1.33317 infer/sec, latency 8945421 usec
+```
 
 ## References
 - [Image Generation API](../../docs/model_server_rest_api_image_generation.md)
