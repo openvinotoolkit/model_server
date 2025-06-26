@@ -657,10 +657,10 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 prepare_container_mounts:
-ifeq ($(wildcard $(MNT_LLM_MODELS_PATH)),)
+ifeq ($(shell test -d $(MNT_LLM_MODELS_PATH) && echo exists),exists)
 	CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(MNT_LLM_MODELS_PATH)):/mnt/llm_models
 endif
-ifeq ($(wildcard $(OVMS_MODELS_PATH)),)
+ifeq ($(shell test -d $(OVMS_MODELS_PATH) && echo exists),exists)
 	CONTAINER_VOLUME_MOUNTS := $(CONTAINER_VOLUME_MOUNTS) -v $(shell realpath $(OVMS_MODELS_PATH)):/opt/home/k8sworker/ovms_models
 endif
 
