@@ -737,7 +737,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             break;
         default:
             finishReason = "unknown";
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
             break;
         }
         jsonResponse.writeFinishReason(finishReason);
