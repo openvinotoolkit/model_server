@@ -22,7 +22,6 @@
 #pragma warning(push)
 #pragma warning(disable : 6326)
 #include <drogon/drogon.h>
-#include <json/json.h>
 #pragma warning(pop)
 
 #include "logging.hpp"
@@ -112,18 +111,6 @@ Status DrogonHttpServer::startAcceptingRequests() {
                     // .setServerHeaderField("OpenVINO Model Server")
                     .enableServerHeader(false)
                     .enableDateHeader(false)
-                    .registerHandler(
-                        "/v3/models",
-                        [](const drogon::HttpRequestPtr &, std::function<void (const drogon::HttpResponsePtr &)> &&cb) {
-                            Json::Value root;
-                            root["object"] = "list";
-                            root["data"] = Json::Value(Json::arrayValue);
-                            auto resp = drogon::HttpResponse::newHttpJsonResponse(root);
-                            resp->setStatusCode(drogon::k200OK);
-                            cb(resp);
-                        },
-                        {drogon::Get}
-                    )
                     .registerSyncAdvice([](const drogon::HttpRequestPtr& req)-> drogon::HttpResponsePtr {
                             using namespace drogon;
                             if (req->method() == Options) {
