@@ -566,54 +566,40 @@ static Status createV3HttpPayload(
 }
 #endif
 
+void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp){
+    writer.StartObject();
+    writer.String("id");
+    writer.String(name.c_str());
+    writer.String("object");
+    writer.String("model");
+    writer.String("created");
+    writer.Int(timestamp);
+    writer.String("owned_by");
+    writer.String("OVMS");
+    writer.EndObject();
+}
+
 Status HttpRestApiHandler::getModelList(std::string& response){
     const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    time_t now;
-    time(&now);
+    time_t timestamp;
+    time(&timestamp);
     writer.StartObject();
     writer.String("object");
     writer.String("list");
     writer.String("data");
     writer.StartArray();
     for (auto const& model : models) {
-        writer.StartObject();
-        writer.String("id");
-        writer.String(model.first.c_str());
-        writer.String("object");
-        writer.String("model");
-        writer.String("created");
-        writer.Int(now);
-        writer.String("owned_by");
-        writer.String("OVMS");
-        writer.EndObject();
+        parseModel(writer, model.first, timestamp);
     }
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
     for (auto const& pipelineName : pipelinesNames) {
-        writer.StartObject();
-        writer.String("id");
-        writer.String(pipelineName.c_str());
-        writer.String("object");
-        writer.String("model");
-        writer.String("created");
-        writer.Int(now);
-        writer.String("owned_by");
-        writer.String("OVMS");
-        writer.EndObject();
+        parseModel(writer, pipelineName, timestamp);
     }
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
     for (auto const& graphName : mediapipes) {
-        writer.StartObject();
-        writer.String("id");
-        writer.String(graphName.c_str());
-        writer.String("object");
-        writer.String("model");
-        writer.String("created");
-        writer.Int(now);
-        writer.String("owned_by");
-        writer.String("OVMS");
-        writer.EndObject();
+        parseModel(writer, graphName, timestamp);
     }
     writer.EndArray();
     writer.String("object");
