@@ -58,6 +58,14 @@ public:
 
         return found ? ::testing::AssertionSuccess() : testing::AssertionFailure() << "message not found.";
     }
+    static std::string createCmd(int argc, char** argv) {
+        std::string result;
+        for (int i = 0; i < argc; ++i) {
+            result += argv[i];
+            result += " ";
+        }
+        return result;
+    }
 
     std::stringstream buffer{};
     std::streambuf* sbuf;
@@ -779,6 +787,20 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     };
     int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+        "--model_repository_path",
+        "/models",
+        "--list_models"};
+    int arg_count = 7;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
