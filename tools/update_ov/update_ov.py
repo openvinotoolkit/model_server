@@ -40,6 +40,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import re
+import os
 
 ### OpenVINO Part ###
 def update_openvino():
@@ -230,7 +231,11 @@ def update_openvino_genai():
     tokenizers_commit = None
     tokenizers_commit_date = None
     api_url = f"https://api.github.com/repos/openvinotoolkit/openvino.genai/git/trees/{commit}?recursive=1"
-    response = requests.get(api_url)
+    github_token = os.environ.get("GITHUB_TOKEN")
+    headers = {}
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+    response = requests.get(api_url, headers=headers)
     if response.status_code == 200:
         data = response.json()
         submodules = [item for item in data['tree'] if item['type'] == 'commit']
@@ -241,7 +246,7 @@ def update_openvino_genai():
                 
                 # Fetch the commit date
                 commit_url = f"https://api.github.com/repos/openvinotoolkit/openvino_tokenizers/commits/{tokenizers_commit}"
-                commit_response = requests.get(commit_url)
+                commit_response = requests.get(commit_url, headers=headers)
                 if commit_response.status_code == 200:
                     commit_data = commit_response.json()
                     commit_date_str = commit_data['commit']['committer']['date']
@@ -308,10 +313,7 @@ def update_openvino_genai():
     # Find a link ending with ".zip" in package_links
     zip_link = next((link for link in package_links if link.endswith('.zip')), None)
 
-    if zip_link:
-        # Break the link into two variables
-        before_last_slash, after_last_slash = zip_link.rsplit('/', 1)
-    else:
+    if not zip_link:
         raise Exception("No .zip link found in package_links.")
 
     # Update windows_install_build_dependencies.bat with new GenAI package link
@@ -321,19 +323,10 @@ def update_openvino_genai():
         new_win_build_bat_content = []
 
     for line in win_build_bat_content:
-        if 'set "genai_dir=' in line:
-            print("Updating genai_dir in windows_install_build_dependencies.bat")
-            new_line = f'set "genai_dir={after_last_slash[:-4]}"\n'
-            print(new_line)
-            new_win_build_bat_content.append(new_line)
-        elif 'set "genai_ver=' in line:
-            print("Updating genai_ver in windows_install_build_dependencies.bat")
-            new_line = f'set "genai_ver={after_last_slash}"\n'
-            print(new_line)
-            new_win_build_bat_content.append(new_line)
-        elif 'set "genai_http=' in line:
-            print("Updating genai_http in windows_install_build_dependencies.bat")
-            new_line = f'set "genai_http={before_last_slash}/"\n'
+        if 'set "GENAI_PACKAGE_URL=' in line:
+            print("Updating GENAI_PACKAGE_URL in windows_install_build_dependencies.bat")
+            indentation = line[:line.index('set "GENAI_PACKAGE_URL=')]
+            new_line = f'{indentation}set "GENAI_PACKAGE_URL={zip_link}"\n'
             print(new_line)
             new_win_build_bat_content.append(new_line)
         else:
