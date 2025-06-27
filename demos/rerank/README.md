@@ -40,16 +40,16 @@ tree models
 models
 ├── BAAI
 │   └── bge-reranker-large
-│       ├── graph.pbtxt
-│       ├── rerank
-│       │   └── 1
-│       │       ├── model.bin
-│       │       └── model.xml
-│       ├── subconfig.json
-│       └── tokenizer
-│           └── 1
-│               ├── model.bin
-│               └── model.xml
+│       ├── config.json
+│       ├── graph.pbtxt
+│       ├── openvino_model.bin
+│       |── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── sentencepiece.bpe.model
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
 └── config.json
 
 ```

@@ -39,7 +39,8 @@ curl http://localhost/v3/embeddings \
       ],
       "index": 0
     }
-  ]
+  ],
+  "usage":{"prompt_tokens":6,"total_tokens":6}
 }
 ```
 
