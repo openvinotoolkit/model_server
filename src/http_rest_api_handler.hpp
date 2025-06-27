@@ -56,6 +56,7 @@ enum RequestType { Predict,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
+    V3_ListModels,
     V3,
     Metrics };
 
@@ -103,7 +104,9 @@ public:
     static const std::string kfs_serverliveRegexExp;
     static const std::string kfs_servermetadataRegexExp;
 
+    static const std::string v3_ListModelsRegexExp;
     static const std::string v3_RegexExp;
+
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -232,7 +235,7 @@ public:
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
-
+    Status getModelList(std::string& response);
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
@@ -247,6 +250,7 @@ private:
     const std::regex kfs_serverliveRegex;
     const std::regex kfs_servermetadataRegex;
 
+    const std::regex v3_ListModelsRegex;
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;
