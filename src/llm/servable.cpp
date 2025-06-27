@@ -58,7 +58,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
         executionContext->endpoint,
         std::chrono::system_clock::now(),
-        getProperties()->tokenizer);
+        getProperties()->tokenizer,
+        getProperties()->responseParserName);
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
@@ -142,7 +143,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs, getProperties()->responseParserName);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(executionContext->generationOutputs);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
