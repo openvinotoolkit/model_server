@@ -710,10 +710,10 @@ ParsedResponse OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vect
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
-    jsonResponse.initialize();
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    jsonResponse.startArray("choices");  // "choices": [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
@@ -722,7 +722,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         updateUsage(usage, generationOutput.generated_ids, request.echo);
         ParsedResponse parsedResponse = parseOutputIfNeeded(generationOutput.generated_ids);
 
-        jsonResponse.startObject();  // {
+        jsonResponse.StartObject();
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
         // "length" => due to reaching max_tokens parameter
@@ -740,86 +740,91 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
             break;
         }
-        jsonResponse.writeFinishReason(finishReason);
+        jsonResponse.FinishReason(finishReason);
 
         // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.writeIndex(index++);
+        jsonResponse.Index(index++);
 
         // logprobs: object/null; Log probability information for the choice. TODO
         if (this->request.logprobschat || this->request.logprobs) {
-            jsonResponse.startObject("logprobs");  // "logprobs": {
+            jsonResponse.StartObject("logprobs");
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-                jsonResponse.startArray("content");  // "content": [
+                jsonResponse.StartArray("content");
 
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
                     float logprob = generationOutput.generated_log_probs[i];
-                    jsonResponse.writeLogprob(token, logprob);
+                    jsonResponse.LogprobObject(token, logprob);
                 }
-                jsonResponse.endArray();  // ]
+                jsonResponse.EndArray();
             }
             if (endpoint == Endpoint::COMPLETIONS) {
-                jsonResponse.startArray("tokens");  // "tokens": [
+                jsonResponse.StartArray("tokens");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
-                    jsonResponse.writeString(token);
+                    jsonResponse.String(token);
                 }
-                jsonResponse.endArray();  // ]
+                jsonResponse.EndArray();
 
-                jsonResponse.startArray("token_logprobs");  // "token_logprobs": [
+                jsonResponse.StartArray("token_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     float logprob = generationOutput.generated_log_probs[i];
-                    jsonResponse.writeLogprobValue(logprob);
+                    jsonResponse.LogprobValue(logprob);
                 }
-                jsonResponse.endArray();  // ]
+                jsonResponse.EndArray();
 
-                jsonResponse.startArray("top_logprobs");  // "top_logprobs": [
+                jsonResponse.StartArray("top_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    jsonResponse.startObject();  // {
+                    jsonResponse.StartObject();
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
                     float logprob = generationOutput.generated_log_probs[i];
-                    jsonResponse.writeLogprobValue(token, logprob);
-                    jsonResponse.endObject();  // }
+                    jsonResponse.Logprob(token, logprob);
+                    jsonResponse.EndObject();
                 }
-                jsonResponse.endArray();  // ]
+                jsonResponse.EndArray();
 
-                jsonResponse.startArray("text_offset");  // "text_offset": [
+                jsonResponse.StartArray("text_offset");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     if (i == 0) {
-                        jsonResponse.writeUint(0);
+                        jsonResponse.TextOffsetValue(0);
                     } else {
                         std::string text_before_token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
-                        jsonResponse.writeUint(text_before_token.size());
+                        jsonResponse.TextOffsetValue(text_before_token.size());
                     }
                 }
-                jsonResponse.endArray();  // ]
+                jsonResponse.EndArray();
             }
-            jsonResponse.endObject();  // }
+            jsonResponse.EndObject();
         } else {
-            jsonResponse.writeNull("logprobs");  // "logprobs": null
+            jsonResponse.Null("logprobs");  // "logprobs": null
         }
 
-        jsonResponse.writeParsedResponse(parsedResponse, endpoint);
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            jsonResponse.MessageObject(parsedResponse);
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            jsonResponse.Text(parsedResponse);
+        }
+
         // finish message object
-        jsonResponse.endObject();  // }
+        jsonResponse.EndObject();
     }
     // finish choices array
-    jsonResponse.endArray();  // ]
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    jsonResponse.writeInt("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    jsonResponse.writeString("model", request.model);
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        jsonResponse.writeString("object", "chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        jsonResponse.writeString("object", "text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    jsonResponse.writeUsage(usage);
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -829,17 +834,17 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
-    jsonResponse.finalize();  // }
-    return jsonResponse.toString();
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
-    jsonResponse.initialize();
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    jsonResponse.startArray("choices");  // "choices": [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = 0;
     for (int i = 0; i < results.tokens.size(); i++) {
@@ -847,32 +852,38 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         updateUsage(usage, tokens, request.echo);
         ParsedResponse parsedResponse = parseOutputIfNeeded(tokens);
-        jsonResponse.startObject();  // {
+        jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
-        jsonResponse.writeFinishReason("stop");
+        jsonResponse.FinishReason("stop");
         // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.writeIndex(index++);
-        jsonResponse.writeParsedResponse(parsedResponse, endpoint);
+        jsonResponse.Index(index++);
+
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            jsonResponse.MessageObject(parsedResponse);
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            jsonResponse.Text(parsedResponse);
+        }
+
         // finish message object
-        jsonResponse.endObject();  // }
+        jsonResponse.EndObject();
     }
     // finish choices array
-    jsonResponse.endArray();  // ]
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    jsonResponse.writeInt("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    jsonResponse.writeString("model", request.model);
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        jsonResponse.writeString("object", "chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        jsonResponse.writeString("object", "text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    jsonResponse.writeUsage(usage);
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -882,61 +893,61 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
-    jsonResponse.finalize();  // }
-    return jsonResponse.toString();
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {
     OVMS_PROFILE_FUNCTION();
     OpenAiJsonResponse jsonResponse;
-    jsonResponse.initialize();
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    jsonResponse.startArray("choices");  // "choices": [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = completionTokens;
     for (int i = 0; i < results.texts.size(); i++) {
         const std::string& text = results.texts[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
-        jsonResponse.startObject();  // {
+        jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
-        jsonResponse.writeFinishReason("stop");
+        jsonResponse.FinishReason("stop");
         // index: integer; Choice index, only n=1 supported anyway
-        jsonResponse.writeIndex(index++);
+        jsonResponse.Index(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
 
         // message: object
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.startObject("message");
-            jsonResponse.writeString("content", text);
-            jsonResponse.writeString("role", "assistant");  // TODO - hardcoded
+            jsonResponse.StartObject("message");
+            jsonResponse.String("content", text);
+            jsonResponse.String("role", "assistant");  // TODO - hardcoded
             // TODO: tools_call
             // TODO: function_call (deprecated)
-            jsonResponse.endObject();  // }
+            jsonResponse.EndObject();
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.writeString("text", text);
+            jsonResponse.String("text", text);
         }
 
         // finish message object
-        jsonResponse.endObject();  // }
+        jsonResponse.EndObject();
     }
     // finish choices array
-    jsonResponse.endArray();  // ]
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    jsonResponse.writeInt("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    jsonResponse.writeString("model", request.model);
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        jsonResponse.writeString("object", "chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        jsonResponse.writeString("object", "text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    jsonResponse.writeUsage(usage);
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -946,15 +957,15 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     // finish response object
-    jsonResponse.finalize();  // }
-    return jsonResponse.toString();
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
-    writer.StartObject();  // {
+    writer.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
     writer.String("choices");

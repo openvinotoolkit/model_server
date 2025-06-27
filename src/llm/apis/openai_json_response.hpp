@@ -24,197 +24,170 @@
 #include <string>
 #include "openai_completions.hpp"
 
+using namespace rapidjson;
+
 namespace ovms {
-class OpenAiJsonResponse {
+class OpenAiJsonResponse : public Writer<StringBuffer> {
     StringBuffer buffer;
-    Writer<StringBuffer> writer;
 
 public:
     OpenAiJsonResponse() :
-        writer(buffer) {}
+        Writer<StringBuffer>(buffer) {}
 
     // Returns the serialized JSON string
-    std::string toString() {
-        writer.Flush();
+    std::string ToString() {
+        Writer<StringBuffer>::Flush();
         return buffer.GetString();
     }
 
-    // Generic methods to start and end JSON objects and arrays
-    void initialize() {
-        writer.StartObject();  // {
-    }
-
-    void finalize() {
-        // TODO: we can potentially validate the JSON structure here if needed
-        writer.EndObject();  // }
-    }
-
-    void startObject(const std::string& name = "") {
+    // Generic wrappers for key-value pairs
+    // All return dummy boolean true to maintain consistency with the original API
+    bool StartObject(const std::string& name = "") {
         if (!name.empty()) {
-            writer.String(name.c_str());
+            Writer<StringBuffer>::String(name.c_str());
         }
-        writer.StartObject();  // [
+        Writer<StringBuffer>::StartObject();
+        return true;
     }
 
-    void endObject() {
-        writer.EndObject();  // ]
-    }
-
-    void startArray(const std::string& name = "") {
+    bool StartArray(const std::string& name = "") {
         if (!name.empty()) {
-            writer.String(name.c_str());
+            Writer<StringBuffer>::String(name.c_str());
         }
-        writer.StartArray();  // [
+        Writer<StringBuffer>::StartArray();
+        return true;
     }
 
-    void endArray() {
-        writer.EndArray();  // ]
-    }
-
-    void writeNull(const std::string& name = "") {
+    bool Null(const std::string& name = "") {
         if (!name.empty()) {
-            writer.String(name.c_str());
+            Writer<StringBuffer>::String(name.c_str());
         }
-        writer.Null();
+        Writer<StringBuffer>::Null();
+        return true;
     }
 
-    void writeString(const std::string& value) {
-        writer.String(value.c_str());
+    bool String(const std::string& value) {
+        Writer<StringBuffer>::String(value.c_str());
+        return true;
     }
 
-    void writeString(const std::string& name, const std::string& value) {
-        writer.String(name.c_str());
-        writeString(value);
+    bool String(const std::string& name, const std::string& value) {
+        String(name);
+        String(value);
+        return true;
     }
 
-    void writeInt(int value) {
-        writer.Int(value);
+    bool Int(const std::string& name, int value) {
+        String(name);
+        Writer<StringBuffer>::Int(value);
+        return true;
     }
 
-    void writeInt(const std::string& name, int value) {
-        writer.String(name.c_str());
-        writeInt(value);
+    bool Uint(const std::string& name, size_t value) {
+        String(name);
+        Writer<StringBuffer>::Uint(value);
+        return true;
     }
 
-    void writeUint(size_t value) {
-        writer.Uint(value);
-    }
+    /* 
+    API specific methods. Following convention:
+    - regular name methods (e.g., FinishReason) write a key-value pair
+    - methods with Object suffix (e.g., LogprobObject) write a JSON object
+    - methods with Value suffix (e.g., LogprobValue) write a single value directly
+    */
 
-    void writeUint(const std::string& name, size_t value) {
-        writer.String(name.c_str());
-        writeUint(value);
-    }
-
-    // API specific methods
-
-    void writeFinishReason(const std::string& reason = "") {
-        writer.String("finish_reason");
+    bool FinishReason(const std::string& reason = "") {
+        String("finish_reason");
         if (!reason.empty()) {
-            writer.String(reason.c_str());
+            String(reason);
         } else {
-            writer.Null();
+            Null();
         }
+        return true;
     }
 
-    void writeIndex(int index) {
-        writer.String("index");
-        writer.Int(index);
+    bool Index(int index) {
+        String("index");
+        Writer<StringBuffer>::Int(index);
+        return true;
     }
 
-    void writeLogprobValue(const float logprob) {
-        // genai returns logaritm of probability per token which should be in the range of -inf-0
-        // other values could be potentially invalid and should be treated as such
+    bool TextOffsetValue(size_t offset) {
+        Writer<StringBuffer>::Uint(offset);
+        return true;
+    }
+
+    bool LogprobValue(const float logprob) {
         if (logprob <= 0.0)
-            writer.Double(logprob);
+            Writer<StringBuffer>::Double(logprob);
         else
-            writer.Null();
+            Null();
+        return true;
     }
 
-    void writeLogprobValue(const std::string& token, const float logprob) {
-        writeString(token);
-        writeLogprobValue(logprob);
+    bool Logprob(const std::string& name, const float logprob) {
+        String(name);
+        LogprobValue(logprob);
+        return true;
     }
 
-    void writeLogprob(const std::string& token, const float logprob) {
-        writer.StartObject();  // {
-        writer.String("token");
-        writer.String(token.c_str());
+    bool LogprobObject(const std::string& token, const float logprob) {
+        StartObject();
+        String("token", token);
 
-        writer.String("logprob");
-        writeLogprobValue(logprob);
-
-        // Assuming tokenizer returned UTF-8 encoded string
+        Logprob("logprob", logprob);
         const unsigned char* tokenBytes = reinterpret_cast<const unsigned char*>(token.c_str());
-        writer.String("bytes");
-        writer.StartArray();  // [
+        StartArray("bytes");
         for (int j = 0; tokenBytes[j] != 0; j++)
-            writer.Int(tokenBytes[j]);
-        writer.EndArray();  // ]
+            Writer<StringBuffer>::Int(tokenBytes[j]);
+        Writer<StringBuffer>::EndArray();
 
-        // top_logprobs are currently hardcoded to return empty array to comply with the API
-        // for full support significant changes on GenAI side are required
-        writer.String("top_logprobs");
-        writer.StartArray();  // [
-                              /*                  
-        Commented out due to supported only top_logprobs 1
-        writer.StartObject();  // {
+        StartArray("top_logprobs");
+        // See comment in original code
+        Writer<StringBuffer>::EndArray();
 
-        writer.String("token");
-        writer.String(token.c_str());
-
-        writer.String("logprob");
-        writeLogprob(writer, logprob);
-        writer.String("bytes");
-        writer.StartArray();  // [
-        for (int j = 0; tokenBytes[j] != 0; j++)
-            writer.Int(tokenBytes[j]);
-        writer.EndArray();  // ]
-
-        writer.EndObject();  // } */
-        writer.EndArray();    // ]
-
-        writer.EndObject();  // }
+        Writer<StringBuffer>::EndObject();
+        return true;
     }
 
-    void writeParsedResponse(const ParsedResponse& parsedResponse, Endpoint endpoint) {
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            startObject("message");  // "message": {
-            // content: string; Actual content of the text produced
-            writeString("content", parsedResponse.content);
+    bool MessageObject(const ParsedResponse& parsedResponse) {
+        StartObject("message");
+        String("content", parsedResponse.content);
 
-            if (!parsedResponse.reasoning.empty()) {
-                writeString("reasoning_content", parsedResponse.reasoning);
-            }
-            // role: string; Role of the text producer
-            // Will make sense once we have chat templates? TODO(atobisze)
-            writeString("role", "assistant");  // TODO - hardcoded
-
-            startArray("tool_calls");  // "tool_calls": [
-            for (const ToolCall& toolCall : parsedResponse.toolCalls) {
-                startObject();                   // {
-                writeString("id", toolCall.id);  // Generate a random ID for the tool call
-                writeString("type", "function");
-
-                startObject("function");  // "function": {
-                writeString("name", toolCall.name);
-                writeString("arguments", toolCall.arguments);  // Assuming toolsResponse is a valid JSON
-                endObject();                                   // }
-
-                endObject();  // }
-            }
-            endArray();   // ]
-            endObject();  // }
-        } else if (endpoint == Endpoint::COMPLETIONS) {
-            writeString("text", parsedResponse.content);
+        if (!parsedResponse.reasoning.empty()) {
+            String("reasoning_content", parsedResponse.reasoning);
         }
+        String("role", "assistant");
+
+        StartArray("tool_calls");
+        for (const ToolCall& toolCall : parsedResponse.toolCalls) {
+            StartObject();
+            String("id", toolCall.id);
+            String("type", "function");
+
+            StartObject("function");
+            String("name", toolCall.name);
+            String("arguments", toolCall.arguments);
+            Writer<StringBuffer>::EndObject();
+
+            Writer<StringBuffer>::EndObject();
+        }
+        Writer<StringBuffer>::EndArray();
+        Writer<StringBuffer>::EndObject();
+        return true;
     }
 
-    void writeUsage(const CompletionUsageStatistics& usage) {
-        startObject("usage");  // "usage": {
-        writeInt("prompt_tokens", usage.promptTokens);
-        writeInt("completion_tokens", usage.completionTokens);
-        writeInt("total_tokens", usage.calculateTotalTokens());
-        endObject();  // }
+    bool Text(const ParsedResponse& parsedResponse) {
+        String("text", parsedResponse.content);
+        return true;
+    }
+
+    void UsageObject(const CompletionUsageStatistics& usage) {
+        StartObject("usage");
+        Int("prompt_tokens", usage.promptTokens);
+        Int("completion_tokens", usage.completionTokens);
+        Int("total_tokens", usage.calculateTotalTokens());
+        Writer<StringBuffer>::EndObject();
     }
 };
 }  // namespace ovms
