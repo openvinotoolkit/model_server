@@ -15,6 +15,9 @@
 //*****************************************************************************
 #include "pipelines.hpp"
 
+#include "../logging.hpp"
+#include "../stringutils.hpp"
+
 namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
@@ -23,17 +26,23 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     std::vector<std::string> device;
     if (!args.device.size()) {
         device.push_back("CPU");
+    } else {
+        device = args.device;
     }
-    // at this point device contains 1 or 3 devices
+
+    SPDLOG_DEBUG("Loading weights from: {}", args.modelsPath);
     text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
 
     if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
+        SPDLOG_DEBUG("Reshaping to static WxH: {}x{}", args.staticReshapeSettings.value().resolution[0].first, args.staticReshapeSettings.value().resolution[0].second);
         text2ImagePipeline->reshape(
             args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt),
             args.staticReshapeSettings.value().resolution[0].first,   // at this point it should be validated for existence
             args.staticReshapeSettings.value().resolution[0].second,  // at this point it should be validated for existence
             args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
     }
+
+    SPDLOG_DEBUG("Compiling Text2ImagePipeline on devices: {}", ovms::joins(device, ", "));
 
     if (device.size() == 1) {
         text2ImagePipeline->compile(device[0], args.pluginConfig);
