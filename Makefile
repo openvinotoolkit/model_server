@@ -85,7 +85,7 @@ TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 MNT_LLM_MODELS_PATH ?= "/mnt/llm_models"
 OVMS_MODELS_PATH ?= "/opt/home/k8sworker/ovms_models"
-CONTAINER_VOLUME_MOUNTS := ""
+CONTAINER_VOLUME_MOUNTS ?= ""
 
 OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
