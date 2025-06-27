@@ -48,7 +48,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 ### Check Out New Generative AI Demos
 | Demo | Description |
 |---|---|
-|[AI Agents with MCP servers and serving language models](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MPC servers and serving LLM models|
+|[AI Agents with MCP servers and serving language models](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MCP servers and serving LLM models|
 |[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
 |[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
 |[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
