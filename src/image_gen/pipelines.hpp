@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
@@ -25,7 +26,7 @@
 namespace ovms {
 struct ImageGenerationPipelines {
     // ov::genai::Image2ImagePipeline image2ImagePipeline;
-    ov::genai::Text2ImagePipeline text2ImagePipeline;
+    std::unique_ptr<ov::genai::Text2ImagePipeline> text2ImagePipeline;
     ImageGenPipelineArgs args;
 
     ImageGenerationPipelines() = delete;

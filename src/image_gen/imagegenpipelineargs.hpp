@@ -24,9 +24,16 @@
 namespace ovms {
 
 using resolution_t = std::pair<int64_t, int64_t>;
+
+struct StaticReshapeSettingsArgs {
+    std::vector<resolution_t> resolution;
+    std::optional<uint64_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
+};
+
 struct ImageGenPipelineArgs {
     std::string modelsPath;
-    std::optional<std::string> device;
+    std::vector<std::string> device;
     ov::AnyMap pluginConfig;
     resolution_t maxResolution;
     std::optional<resolution_t> defaultResolution;
@@ -34,5 +41,7 @@ struct ImageGenPipelineArgs {
     uint64_t maxNumImagesPerPrompt;
     uint64_t defaultNumInferenceSteps;
     uint64_t maxNumInferenceSteps;
+
+    std::optional<StaticReshapeSettingsArgs> staticReshapeSettings; 
 };
 }  // namespace ovms

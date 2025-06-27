@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "01f0fe1eded5934871fef866ed217a60fa2c6049", # releases/2025/2 RC3
+        remote = "https://github.com/dkalinowski/openvino.genai",
+        commit = "12b07ac9e95d7a42a79026634cd2cd3dd8cc43c3", # fix for NPU ImageGen
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
