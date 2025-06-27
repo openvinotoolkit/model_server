@@ -238,6 +238,7 @@ public:
 
     Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status getModelList(std::string& response);
+
 private:
     const std::regex predictionRegex;
     const std::regex modelstatusRegex;
