@@ -22,8 +22,6 @@
 #include <vector>
 
 #include "capi_frontend/server_settings.hpp"
-#include "config_export_module/config_export_types.hpp"
-#include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
@@ -172,7 +170,15 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK");
+                "TASK")
+            ("precision",
+                "Model precision used in optimum-cli export with conversion",
+                cxxopts::value<std::string>()->default_value("int8"),
+                "PRECISION")
+            ("extra_quantization_params",
+                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
+                cxxopts::value<std::string>(),
+                "EXTRA_QUANTIZATION_PARAMS");
 
         options->add_options("single model")
             ("model_name",
@@ -487,8 +493,21 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
-        if (result->count("source_model"))
+        if (result->count("source_model")){
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+            // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
+            if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+                hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
+            }
+        }
+        if (result->count("precision") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD)
+            throw std::logic_error("--precision parameter unsupported for Openvino huggingface organization models.");
+        if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD)
+            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+        if (result->count("precision"))
+            hfSettings.precision = result->operator[]("precision").as<std::string>();
+        if (result->count("extra_quantization_params"))
+            hfSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
@@ -519,7 +538,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case IMAGE_GENERATION_GRAPH: {
-                    std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    if (std::holds_alternative<ImageGenerationGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case UNKNOWN_GRAPH: {
