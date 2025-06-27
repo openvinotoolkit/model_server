@@ -563,7 +563,7 @@ static Status createV3HttpPayload(
 }
 #endif
 
-void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp){
+void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp) {
     writer.StartObject();
     writer.String("id");
     writer.String(name.c_str());
@@ -576,7 +576,7 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
     writer.EndObject();
 }
 
-Status HttpRestApiHandler::getModelList(std::string& response){
+Status HttpRestApiHandler::getModelList(std::string& response) {
     const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
