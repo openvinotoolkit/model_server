@@ -177,6 +177,10 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         return StatusCode::SHAPE_WRONG_FORMAT;
     }
     if (args.staticReshapeSettings.has_value()) {
+        if (nodeOptions.has_max_resolution()) {  // non default
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max resolution when using static settings");
+            return StatusCode::SHAPE_WRONG_FORMAT;
+        }
         if (nodeOptions.has_num_images_per_prompt()) {
             if (args.staticReshapeSettings.value().resolution.size() > 1) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use static num images per prompt with multiple resolutions");
@@ -197,10 +201,6 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         }
         if (args.staticReshapeSettings.value().resolution.size() == 1 && nodeOptions.has_max_resolution()) {  // non default
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max resolution when using static settings");
-            return StatusCode::SHAPE_WRONG_FORMAT;
-        }
-        if (args.staticReshapeSettings.value().resolution.size() == 1 && nodeOptions.has_default_resolution()) {  // non default
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use default resolution when using static settings");
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
     } else {
@@ -241,11 +241,14 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution exceeds maximum allowed resolution: {} > {}", args.defaultResolution.value(), args.maxResolution);
             return StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION;
         }
-    }
-    if (nodeOptions.has_device() && nodeOptions.device() == "NPU") {
-        if (nodeOptions.has_max_num_images_per_prompt()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU device cannot have max_num_images_per_prompt set, it is always defined by default");
-            return StatusCode::UNKNOWN_ERROR;  // TODO
+        // default resolution is not among the ones allowed
+        if (args.staticReshapeSettings.has_value()) {
+            auto& resolutions = args.staticReshapeSettings.value().resolution;
+            auto it = std::find(resolutions.begin(), resolutions.end(), args.defaultResolution.value());
+            if (it == resolutions.end()) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Default resolution {} is not among the static resolutions: {}", args.defaultResolution.value(), resolutions);
+                return StatusCode::SHAPE_WRONG_FORMAT;
+            }
         }
     }
 
