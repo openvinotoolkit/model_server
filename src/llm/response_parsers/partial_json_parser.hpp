@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
+#pragma once
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -33,16 +35,16 @@ rapidjson::Document partialParseToJson(const std::string& input) {
     bool insideString = false;
     bool insideArray = false;
     bool insideObject = false;
-    bool awaitingValue = false; // Indicates if we are waiting for a value after a key
+    bool awaitingValue = false;  // Indicates if we are waiting for a value after a key
     bool processingValue = false;
     bool processingKey = false;
     bool recentlyFinishedKey = false;
     size_t lastSeparatorPos = std::string::npos;
     std::vector<char> openCloseStack;
-    std::string closedInput = input; // Start with the original input
+    std::string closedInput = input;  // Start with the original input
     for (auto it = closedInput.begin(); it != closedInput.end(); ++it) {
         char c = *it;
-        if (!insideString) { 
+        if (!insideString) {
             if (awaitingValue) {
                 if (!std::isspace(static_cast<unsigned char>(c))) {
                     processingValue = true;
@@ -62,34 +64,34 @@ rapidjson::Document partialParseToJson(const std::string& input) {
                 if (!openCloseStack.empty() && openCloseStack.back() == '{') {
                     openCloseStack.pop_back();
                     if (!openCloseStack.empty() && openCloseStack.back() == '[') {
-                        insideArray = true; // We are still inside an array
+                        insideArray = true;  // We are still inside an array
                     } else {
-                        insideObject = false; // We are exiting an object
+                        insideObject = false;  // We are exiting an object
                     }
                 }
             } else if (c == ']') {
                 if (!openCloseStack.empty() && openCloseStack.back() == '[') {
                     openCloseStack.pop_back();
-                    insideArray = false; // We are exiting an array
+                    insideArray = false;  // We are exiting an array
                     if (!openCloseStack.empty() && openCloseStack.back() == '{') {
-                        insideObject = true; // We are still inside an object
+                        insideObject = true;  // We are still inside an object
                     } else if (!openCloseStack.empty() && openCloseStack.back() == '[') {
-                        insideArray = true; // We are still inside an array
+                        insideArray = true;  // We are still inside an array
                     } else {
-                        processingValue = false; // We are not processing a value anymore
+                        processingValue = false;  // We are not processing a value anymore
                     }
                 }
             } else if (c == ':') {
                 // Encountering a colon outside of a string indicates a key-value pair
                 awaitingValue = true;
-                recentlyFinishedKey = false; // We are now awaiting a value for the key
+                recentlyFinishedKey = false;  // We are now awaiting a value for the key
             } else if (c == ',') {
                 // Store the position of the last comma
                 lastSeparatorPos = std::distance(closedInput.begin(), it);
                 if (insideObject) {
                     // If we are inside an object, comma indicates the end of a key-value pair
                     processingValue = false;
-                    processingKey = true; // Next part should be a key
+                    processingKey = true;  // Next part should be a key
                 }
             } else if (c == '"') {
                 // If we encounter a quote outside of a string, we set insideString to true
@@ -117,7 +119,7 @@ rapidjson::Document partialParseToJson(const std::string& input) {
                     } else if (processingKey) {
                         // If we were processing a key, we are done with it
                         processingKey = false;
-                        recentlyFinishedKey = true; // We just finished processing a key
+                        recentlyFinishedKey = true;  // We just finished processing a key
                     }
                 }
             }
@@ -141,7 +143,7 @@ rapidjson::Document partialParseToJson(const std::string& input) {
             closedInput.erase(lastSeparatorPos);
         }
     }
-    
+
     // Close any unclosed objects/arrays/strings in reverse order
     for (auto it = openCloseStack.rbegin(); it != openCloseStack.rend(); ++it) {
         if (*it == '{') {
@@ -154,7 +156,6 @@ rapidjson::Document partialParseToJson(const std::string& input) {
     }
 
     rapidjson::Document doc;
-    std::cout << "Parsed partial JSON: " << closedInput << std::endl;
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
         // Throw an exception to indicate an internal error

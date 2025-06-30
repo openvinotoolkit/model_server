@@ -124,7 +124,7 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
 
 void Qwen3ResponseParser::parseChunk(const std::string& chunk) {
     // Case: tool call has not started yet
-    if(!streamingState.isToolCallStarted) {
+    if (!streamingState.isToolCallStarted) {
         // Search for the start tag of the tool call in the chunk
         auto toolCallStartPos = chunk.find(toolCallStartTag);
 
@@ -134,10 +134,9 @@ void Qwen3ResponseParser::parseChunk(const std::string& chunk) {
             streamingState.isToolCallStarted = true;
             // Store the content after the start tag
             streamingState.toolCallContent = chunk.substr(toolCallStartPos + toolCallStartTag.size());
-            // Apply partial parsing to the content
+            // TODO: Apply partial parsing to the content
         }
-    } 
+    }
 }
 
 }  // namespace ovms
-
