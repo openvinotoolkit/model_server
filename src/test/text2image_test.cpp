@@ -36,14 +36,15 @@ using ovms::resolution_t;
 // clang-format off
 ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     std::string("/ovms/src/test/dummy"),
-    std::nullopt,
+    {},
     ov::AnyMap(),
     {4096, 4096},  // maxResolution
     std::nullopt,  // defaultResolution
     std::nullopt,  // seed
-    10,
-    10,
-    100};
+    10,  // maxNumImagesPerPrompt
+    10,  // defaultNumInferenceSteps
+    10,  // maxNumInferenceSteps
+    std::nullopt};  // staticReshapeSettings
 
 TEST(Text2ImageTest, testGetDimensions) {
     ovms::HttpPayload payload;
@@ -505,8 +506,8 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_TRUE(imageGenArgs.device.has_value());
-    ASSERT_EQ(imageGenArgs.device.value(), "GPU");
+    ASSERT_EQ(imageGenArgs.device.size(), 1);
+    ASSERT_EQ(imageGenArgs.device[0], "GPU");
     ASSERT_EQ(imageGenArgs.pluginConfig.size(), 1);
     ASSERT_EQ(imageGenArgs.pluginConfig["NUM_STREAMS"].as<int>(), 2);
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(512, 256));
@@ -543,7 +544,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_FALSE(imageGenArgs.device.has_value());
+    ASSERT_EQ(imageGenArgs.device.size(), 0);
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(4096, 4096));
     ASSERT_FALSE(imageGenArgs.defaultResolution.has_value());
@@ -584,7 +585,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_FALSE(imageGenArgs.device.has_value());
+    ASSERT_EQ(imageGenArgs.device.size(), 0);
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
@@ -692,7 +693,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     ImageGenPipelineArgs args;
     args.modelsPath = "/ovms/src/test/dummy";
-    args.device = "GPU";
+    args.device.push_back("GPU");
     args.maxNumImagesPerPrompt = 4;
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 100;
