@@ -168,7 +168,7 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     IF_ERROR_SET_MSG_AND_RETURN();
     if (opts.sslCertyficateLocation != "") {
         SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertyficateLocation);
-        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertyficateLocation);
+        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertyficateLocation.c_str());
         IF_ERROR_SET_MSG_AND_RETURN();
     }
 }
