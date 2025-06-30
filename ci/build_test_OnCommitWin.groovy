@@ -23,7 +23,7 @@ pipeline {
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
                           def python_presence = ""
-                          if (env.OVMS_PYTHON_ENABLED == "true") {
+                          if (env.OVMS_PYTHON_ENABLED == "1") {
                               python_presence = "with_python"
                           } else {
                               python_presence = "without_python"
