@@ -25,7 +25,7 @@ std::string enumToString(ConfigExportType type) {
     return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
 }
 
-ConfigExportType stringToConfigExportEnum(std::string inString) {
+ConfigExportType stringToConfigExportEnum(const std::string& inString) {
     auto it = stringToConfigExportType.find(inString);
     return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
 }
@@ -35,7 +35,7 @@ std::string enumToString(GraphExportType type) {
     return (it != typeToString.end()) ? it->second : "unknown_graph";
 }
 
-GraphExportType stringToEnum(std::string inString) {
+GraphExportType stringToEnum(const std::string& inString) {
     auto it = stringToType.find(inString);
     return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }

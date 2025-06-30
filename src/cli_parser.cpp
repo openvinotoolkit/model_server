@@ -28,6 +28,7 @@
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
+#include "stringutils.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -493,10 +494,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
-        if (result->count("source_model")){
+        if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+            if (startsWith(serverSettings.hfSettings.sourceModel, "OpenVINO/")) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }

@@ -73,7 +73,7 @@ std::string OptimumDownloader::getExportCmdRerank() {
     return oss.str();
 }
 
-std::string OptimumDownloader::getExportCmdImage() {
+std::string OptimumDownloader::getExportCmdImageGeneration() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
@@ -101,7 +101,7 @@ std::string OptimumDownloader::getExportCmd() {
         break;
     }
     case IMAGE_GENERATION_GRAPH: {
-        cmd = getExportCmdImage();
+        cmd = getExportCmdImageGeneration();
         break;
     }
     case UNKNOWN_GRAPH: {
@@ -132,9 +132,9 @@ OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings) {
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     int retCode = -1;
-    std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, &retCode);
+    std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
-        SPDLOG_DEBUG(output);
+        SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
@@ -177,9 +177,9 @@ Status OptimumDownloader::cloneRepository() {
 
     SPDLOG_DEBUG("Executing command: {}", cmd);
     int retCode = -1;
-    std::string output = exec_cmd(cmd, &retCode);
+    std::string output = exec_cmd(cmd, retCode);
     if (retCode != 0) {
-        SPDLOG_DEBUG(output);
+        SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;
     }

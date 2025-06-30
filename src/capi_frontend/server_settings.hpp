@@ -52,7 +52,7 @@ const std::map<std::string, GraphExportType> stringToType = {
     {"unknown_graph", UNKNOWN_GRAPH}};
 
 std::string enumToString(GraphExportType type);
-GraphExportType stringToEnum(std::string inString);
+GraphExportType stringToEnum(const std::string& inString);
 
 enum ConfigExportType : int {
     ENABLE_MODEL,
@@ -74,7 +74,7 @@ const std::map<std::string, ConfigExportType> stringToConfigExportType = {
     {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
 
 std::string enumToString(ConfigExportType type);
-ConfigExportType stringToConfigExportEnum(std::string inString);
+ConfigExportType stringToConfigExportEnum(const std::string& inString);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,

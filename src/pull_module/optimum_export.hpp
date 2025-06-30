@@ -43,6 +43,6 @@ protected:
     std::string getExportCmdText();
     std::string getExportCmdEmbeddings();
     std::string getExportCmdRerank();
-    std::string getExportCmdImage();
+    std::string getExportCmdImageGeneration();
 };
 }  // namespace ovms
