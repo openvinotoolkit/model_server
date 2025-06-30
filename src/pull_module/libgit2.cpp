@@ -166,6 +166,11 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_TRACE("Setting libgit2 server timeout:{}", opts.serverTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, opts.serverTimeoutMs);
     IF_ERROR_SET_MSG_AND_RETURN();
+    if (opts.sslCertyficateLocation != "") {
+        SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertyficateLocation);
+        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertyficateLocation);
+        IF_ERROR_SET_MSG_AND_RETURN();
+    }
 }
 
 Libgt2InitGuard::~Libgt2InitGuard() {
@@ -319,6 +324,7 @@ Status HfDownloader::cloneRepository() {
         clone_opts.fetch_opts.proxy_opts.url = this->httpProxy.c_str();
         SPDLOG_DEBUG("Download using https_proxy settings");
     } else {
+        //clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_NONE;
         SPDLOG_DEBUG("Download with https_proxy not set");
     }
 

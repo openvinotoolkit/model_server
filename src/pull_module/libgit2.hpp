@@ -36,6 +36,7 @@ class Status;
 struct Libgit2Options {
     int serverConnectTimeoutMs = 0;
     int serverTimeoutMs = 0;
+    std::string sslCertyficateLocation = "";
 };
 
 struct Libgt2InitGuard {
