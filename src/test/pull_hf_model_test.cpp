@@ -227,22 +227,22 @@ TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
-    std::string hfEndpoint = "https://www.new_hf.com/";
+    hfEndpoint = "https://www.new_hf.com/";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
-    std::string hfEndpoint = "www.new_hf.com/";
-    std::string hfToken = "123!$token";
+    hfEndpoint = "www.new_hf.com/";
+    hfToken = "123!$token";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
-     std::string hfEndpoint = "http://www.new_hf.com/";
-    std::string hfToken = "123!$token";
+    hfEndpoint = "http://www.new_hf.com/";
+    hfToken = "123!$token";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
-    std::string hfEndpoint = "git://www.new_hf.com/";
-    std::string hfToken = "123!$token";
+    hfEndpoint = "git://www.new_hf.com/";
+    hfToken = "123!$token";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
-    std::string hfEndpoint = "ssh://www.new_hf.com/";
-    std::string hfToken = "123!$token";
+    hfEndpoint = "ssh://www.new_hf.com/";
+    hfToken = "123!$token";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
-    std::string hfEndpoint = "what_ever_is_here://www.new_hf.com/";
-    std::string hfToken = "123!$token";
+    hfEndpoint = "what_ever_is_here://www.new_hf.com/";
+    hfToken = "123!$token";
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
 }
 

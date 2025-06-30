@@ -173,7 +173,7 @@ Libgt2InitGuard::~Libgt2InitGuard() {
     git_libgit2_shutdown();
 }
 
-const std::string HF_PROTOCOL_SEPARATOR = "://"
+const std::string HF_PROTOCOL_SEPARATOR = "://";
 
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
@@ -190,19 +190,19 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
         passRepoUrl += this->hfEndpoint + this->sourceModel;
         return passRepoUrl;
     }
-    std::string protocol = "";
-    std::string address = "";
+
+    std::string outputWithPass = "";
     size_t match = this->hfEndpoint.find(HF_PROTOCOL_SEPARATOR);
+    std::cout << "MATCH: " << match << std::endl;
     if (match != std::string::npos) {
         // https://huggingface.co
         // protocol[match]//address
-        protocol = this->hfEndpoint.substr(0, match);
-        address = this->hfEndpoint.substr(match + 3, this->hfEndpoint.size());
+        std::string protocol = this->hfEndpoint.substr(0, match);
+        std::string address = this->hfEndpoint.substr(match + 3, this->hfEndpoint.size());
+        outputWithPass = protocol + HF_PROTOCOL_SEPARATOR + passRepoUrl + address + this->sourceModel;;
     } else {
-        address = this->hfEndpoint;
+        outputWithPass = passRepoUrl + this->hfEndpoint + this->sourceModel;
     }
-
-    std::string outputWithPass = protocol + HF_PROTOCOL_SEPARATOR + passRepoUrl + address + this->sourceModel;
 
     return outputWithPass;
 }
