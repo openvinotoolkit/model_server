@@ -170,7 +170,7 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 // --------------------------------------- OVMS LLM nodes tests
 
 /* 
-// TODO: Move this test to OpenAiJsonRespose tests
+// TODO: Move this test to OpenAiJsonResponse tests
 TEST(OpenAiApiHandlerTest, writeLogprobs) {
     // TODO: remove that skip
     GTEST_SKIP();
