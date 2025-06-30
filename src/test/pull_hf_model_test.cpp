@@ -287,7 +287,7 @@ TEST_F(HfDownloaderHfEnvTest, Methods) {
 
     std::string endpoint = "www.new_hf.com";
     this->guard.unset(endpoint_env);
-    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "huggingface.co/");
+    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "https://huggingface.co/");
     this->guard.set(endpoint_env, endpoint);
 
     std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();

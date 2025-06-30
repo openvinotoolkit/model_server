@@ -173,7 +173,7 @@ Libgt2InitGuard::~Libgt2InitGuard() {
     git_libgit2_shutdown();
 }
 
-const std::string HF_PROTOCOL_SEPARATOR = "://";
+const std::string PROTOCOL_SEPARATOR = "://";
 
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
@@ -182,26 +182,24 @@ bool HfDownloader::CheckIfProxySet() {
 }
 
 std::string HfDownloader::GetRepositoryUrlWithPassword() {
-    std::string passRepoUrl = "";
+    std::string repoPass = "";
     if (this->hfToken != "") {
-        passRepoUrl += this->hfToken + ":" + this->hfToken + "@";
+        repoPass += this->hfToken + ":" + this->hfToken + "@";
     } else {
         SPDLOG_DEBUG("HF_TOKEN environment variable not set");
-        passRepoUrl += this->hfEndpoint + this->sourceModel;
-        return passRepoUrl;
+        return this->hfEndpoint + this->sourceModel;
     }
 
     std::string outputWithPass = "";
-    size_t match = this->hfEndpoint.find(HF_PROTOCOL_SEPARATOR);
-    std::cout << "MATCH: " << match << std::endl;
+    size_t match = this->hfEndpoint.find(PROTOCOL_SEPARATOR);
     if (match != std::string::npos) {
         // https://huggingface.co
         // protocol[match]//address
         std::string protocol = this->hfEndpoint.substr(0, match);
-        std::string address = this->hfEndpoint.substr(match + 3, this->hfEndpoint.size());
-        outputWithPass = protocol + HF_PROTOCOL_SEPARATOR + passRepoUrl + address + this->sourceModel;
+        std::string address = this->hfEndpoint.substr(match + PROTOCOL_SEPARATOR.size());
+        outputWithPass = protocol + PROTOCOL_SEPARATOR + repoPass + address + this->sourceModel;
     } else {
-        outputWithPass = passRepoUrl + this->hfEndpoint + this->sourceModel;
+        outputWithPass = repoPass + this->hfEndpoint + this->sourceModel;
     }
 
     return outputWithPass;
