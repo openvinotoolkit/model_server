@@ -33,7 +33,7 @@ Alternatively, it is possible to use just a `curl` command or `requests` python 
 
 ### Install the Package
 
-```{code} bash
+```text
 pip3 install openai
 pip3 install requests
 pip3 install cohere
@@ -45,7 +45,7 @@ pip3 install cohere
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
 response = client.chat.completions.create(
@@ -59,7 +59,7 @@ print(response.choices[0].message)
 :::
 :::{tab-item} python [requests]
 :sync: python-requests
-```{code} python
+```python
 import requests
 payload = {"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
@@ -69,7 +69,7 @@ print(response.text)
 :::
 :::{tab-item} curl
 :sync: curl
-```{code} bash
+```text
 curl http://localhost:8000/v3/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "meta-llama/Llama-2-7b-chat-hf", "messages": [ {"role": "user","content": "Say this is a test" }]}'
@@ -82,7 +82,7 @@ curl http://localhost:8000/v3/chat/completions \
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 import base64
 from openai import OpenAI
 
@@ -125,7 +125,7 @@ Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text genera
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v3", api_key="unused")
 response = client.completions.create(
@@ -139,7 +139,7 @@ print(response.choices[0].text)
 :::
 :::{tab-item} python [requests]
 :sync: python-requests
-```{code} python
+```python
 import requests
 payload = {"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
@@ -149,7 +149,7 @@ print(response.text)
 :::
 :::{tab-item} curl
 :sync: curl
-```{code} bash
+```text
 curl http://localhost:8000/v3/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "meta-llama/Llama-2-7b", "prompt": "Say this is a test"}'
@@ -163,7 +163,7 @@ Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text genera
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 client = OpenAI(
   base_url="http://localhost:8000/v3",
@@ -187,7 +187,7 @@ for chunk in stream:
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 import base64
 from openai import OpenAI
 
@@ -234,7 +234,7 @@ Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text genera
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 client = OpenAI(
   base_url="http://localhost:8000/v3",
@@ -259,7 +259,7 @@ Check [LLM quick start](./llm/quickstart.md) and [end to end demo of text genera
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 client = OpenAI(
   base_url="http://localhost:8000/v3",
@@ -272,7 +272,7 @@ for data in responses.data:
 :::
 :::{tab-item} python [requests]
 :sync: python-requests
-```{code} python
+```python
 import requests
 payload = {"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
@@ -282,7 +282,7 @@ print(response.text)
 :::
 :::{tab-item} curl
 :sync: curl
-```{code} bash
+```text
 curl http://localhost:8000/v3/embeddings \
   -H "Content-Type: application/json" \
   -d '{"model": "Alibaba-NLP/gte-large-en-v1.5", "input": "hello world"}'
@@ -295,7 +295,7 @@ Check [text embeddings end to end demo](../demos/embeddings/README.md).
 
 Install the pillow package to be able to save images to disk:
 
-```{code} bash
+```text
 pip3 install pillow
 ```
 
@@ -305,7 +305,7 @@ pip3 install pillow
 ::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
-```{code} python
+```python
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -332,7 +332,7 @@ image.save('output.png')
 :::
 :::{tab-item} curl [Linux]
 :sync: curl
-```{code} bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -345,7 +345,7 @@ curl http://localhost:8000/v3/images/generations \
 :::
 :::{tab-item} Windows PowerShell
 :sync: power-shell
-```{code} powershell
+```powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
@@ -368,7 +368,7 @@ Just like with openAI endpoints and alternative is in `curl` command or `request
 
 ### Install the Package
 
-```{code} bash
+```text
 pip3 install cohere
 pip3 install requests
 ```
@@ -378,7 +378,7 @@ pip3 install requests
 ::::{tab-set}
 :::{tab-item} python [Cohere] 
 :sync: python-cohere
-```{code} python
+```python
 import cohere
 client = cohere.Client(base_url='http://localhost:8000/v3', api_key="not_used")
 responses = client.rerank(query="Hello",documents=["Welcome","Farewell"], model='BAAI/bge-reranker-large')
@@ -388,7 +388,7 @@ for res in responses.results:
 :::
 :::{tab-item} python [requests]
 :sync: python-requests
-```{code} python
+```python
 import requests
 payload = {"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
@@ -398,7 +398,7 @@ print(response.text)
 :::
 :::{tab-item} curl
 :sync: curl
-```{code} bash
+```text
 curl http://localhost:8000/v3/rerank \
   -H "Content-Type: application/json" \
   -d '{"model": "BAAI/bge-reranker-large", "query": "Hello", "documents":["Welcome","Farewell"]}'

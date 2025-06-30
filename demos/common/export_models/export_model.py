@@ -134,6 +134,7 @@ node {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
       models_path: "{{model_path}}",
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -151,6 +152,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
       models_path: "{{model_path}}",
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
