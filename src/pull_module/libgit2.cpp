@@ -324,7 +324,6 @@ Status HfDownloader::cloneRepository() {
         clone_opts.fetch_opts.proxy_opts.url = this->httpProxy.c_str();
         SPDLOG_DEBUG("Download using https_proxy settings");
     } else {
-        //clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_NONE;
         SPDLOG_DEBUG("Download with https_proxy not set");
     }
 
