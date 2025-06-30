@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "pipelines.hpp"
 
+#include <vector>
+
 #include "../logging.hpp"
 #include "../stringutils.hpp"
 
@@ -22,7 +24,6 @@ namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
     args(args) {
-    //const std::string device = args.device.value_or("CPU");
     std::vector<std::string> device;
     if (!args.device.size()) {
         device.push_back("CPU");
