@@ -16,7 +16,9 @@
 #include "imagegen_init.hpp"
 
 #include <optional>
+#include <set>
 #include <utility>
+#include <vector>
 
 #include "absl/strings/str_replace.h"
 #include "absl/strings/ascii.h"
@@ -50,7 +52,7 @@ static std::variant<Status, std::vector<std::string>> getListOfDevices(const std
     absl::StripAsciiWhitespace(&trimmedDevicesString);
 
     // iterate over and leave only 1 space in betweens, even if there are 3 or more spaces
-    while(trimmedDevicesString.find("  ") != std::string::npos) {
+    while (trimmedDevicesString.find("  ") != std::string::npos) {
         trimmedDevicesString = absl::StrReplaceAll(trimmedDevicesString, {{"  ", " "}});
     }
 
@@ -75,7 +77,7 @@ static std::variant<Status, std::vector<resolution_t>> getListOfResolutions(cons
     absl::StripAsciiWhitespace(&trimmedResolutionString);
 
     // iterate over and leave only 1 space in betweens, even if there are 3 or more spaces
-    while(trimmedResolutionString.find("  ") != std::string::npos) {
+    while (trimmedResolutionString.find("  ") != std::string::npos) {
         trimmedResolutionString = absl::StrReplaceAll(trimmedResolutionString, {{"  ", " "}});
     }
 
@@ -105,7 +107,7 @@ static std::variant<Status, std::vector<resolution_t>> getListOfResolutions(cons
         return Status(StatusCode::SHAPE_WRONG_FORMAT, "No valid resolutions found");
     }
 
-    // validate if there arent duplicates
+    // validate if there aren't duplicates
     std::set<resolution_t> uniqueResolutions(result.begin(), result.end());
     if (uniqueResolutions.size() != result.size()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Duplicate resolutions found in: {}", resolutionString);
@@ -153,10 +155,9 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Invalid number of devices specified: {}. Expected 1 or 3.", devices.size());
             return StatusCode::SHAPE_WRONG_FORMAT;
         }
-        
+
         args.device = std::move(devices);
     }
-    //if (nodeOptions.has_static_settings()) {
     if (nodeOptions.has_resolution()) {
         auto res = getListOfResolutions(nodeOptions.resolution());
         // list all the res
@@ -165,8 +166,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             return std::get<Status>(res);
         }
         args.staticReshapeSettings = StaticReshapeSettingsArgs{
-            .resolution = std::get<std::vector<resolution_t>>(res)
-        };
+            .resolution = std::get<std::vector<resolution_t>>(res)};
 
         if (isNPU && args.staticReshapeSettings.value().resolution.size() > 1) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU cannot have multiple resolutions in static settings");

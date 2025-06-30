@@ -27,11 +27,12 @@
 
 #include "imagegenpipelineargs.hpp"
 
-#define SET_OR_RETURN(TYPE, NAME, RHS)                      \
-    auto NAME##_OPT = RHS;                                  \
-    if (std::holds_alternative<absl::Status>(NAME##_OPT)) { \
-        return std::get<absl::Status>(NAME##_OPT);          \
-    }                                                       \
+#define SET_OR_RETURN(TYPE, NAME, RHS)                                                                                          \
+    auto NAME##_OPT = RHS;                                                                                                      \
+    if (std::holds_alternative<absl::Status>(NAME##_OPT)) {                                                                     \
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get {}: {}", #NAME, std::get<absl::Status>(NAME##_OPT).ToString()); \
+        return std::get<absl::Status>(NAME##_OPT);                                                                              \
+    }                                                                                                                           \
     auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {

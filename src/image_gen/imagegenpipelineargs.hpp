@@ -18,6 +18,7 @@
 #include <string>
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <openvino/openvino.hpp>
 
@@ -42,6 +43,6 @@ struct ImageGenPipelineArgs {
     uint64_t defaultNumInferenceSteps;
     uint64_t maxNumInferenceSteps;
 
-    std::optional<StaticReshapeSettingsArgs> staticReshapeSettings; 
+    std::optional<StaticReshapeSettingsArgs> staticReshapeSettings;
 };
 }  // namespace ovms
