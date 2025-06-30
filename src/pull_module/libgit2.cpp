@@ -199,7 +199,7 @@ std::string HfDownloader::GetRepositoryUrlWithPassword() {
         // protocol[match]//address
         std::string protocol = this->hfEndpoint.substr(0, match);
         std::string address = this->hfEndpoint.substr(match + 3, this->hfEndpoint.size());
-        outputWithPass = protocol + HF_PROTOCOL_SEPARATOR + passRepoUrl + address + this->sourceModel;;
+        outputWithPass = protocol + HF_PROTOCOL_SEPARATOR + passRepoUrl + address + this->sourceModel;
     } else {
         outputWithPass = passRepoUrl + this->hfEndpoint + this->sourceModel;
     }
