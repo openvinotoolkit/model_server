@@ -186,7 +186,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         }
         if (nodeOptions.has_guidance_scale()) {
             if (args.staticReshapeSettings.value().resolution.size() > 1) {
-                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use static num images per prompt with multiple resolutions");
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use static guidance scale with multiple resolutions");
                 return StatusCode::SHAPE_WRONG_FORMAT;
             }
             args.staticReshapeSettings->guidanceScale = nodeOptions.guidance_scale();

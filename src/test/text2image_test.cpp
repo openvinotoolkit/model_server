@@ -81,7 +81,6 @@ void testNegativeDimensions(const std::string& dims) {
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
-    std::variant<absl::Status, std::pair<int64_t, int64_t>> dimensions;
 
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"51:512"})");
@@ -516,6 +515,92 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_EQ(imageGenArgs.maxNumImagesPerPrompt, 4);
     ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 10);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 50);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings, std::nullopt);
+}
+TEST(ImageGenCalculatorOptionsTest, MultiDevices) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    <<  dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            device: "  GPU.0   MULTI:GPU.0,GPU.1   AUTO  ",
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
+    ASSERT_EQ(imageGenArgs.device.size(), 3);
+    ASSERT_EQ(imageGenArgs.device[0], "GPU.0");
+    ASSERT_EQ(imageGenArgs.device[1], "MULTI:GPU.0,GPU.1");
+    ASSERT_EQ(imageGenArgs.device[2], "AUTO");
+}
+TEST(ImageGenCalculatorOptionsTest, MultiStaticResolutions) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    <<  dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            resolution: "  128x256  128x300 512x1024        1000x1000  ",
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
+    ASSERT_TRUE(imageGenArgs.staticReshapeSettings.has_value());
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution.size(), 4);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[0].first, 128);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[0].second, 256);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[1].first, 128);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[1].second, 300);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[2].first, 512);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[2].second, 1024);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[3].first, 1000);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[3].second, 1000);
+
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
 #ifdef _WIN32
@@ -552,6 +637,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_FALSE(imageGenArgs.seed.has_value());
     ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 50);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 100);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings, std::nullopt);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
 #ifdef _WIN32
@@ -688,7 +774,20 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 max_resolution: "high_resolution")pb",
-            ovms::StatusCode::SHAPE_WRONG_FORMAT)));
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "auto")pb",
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                guidance_scale: -1.0)pb",
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                num_images_per_prompt: -1)pb",
+            ovms::StatusCode::SHAPE_WRONG_FORMAT) 
+        ));
 
 TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     ImageGenPipelineArgs args;
