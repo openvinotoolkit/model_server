@@ -271,6 +271,10 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     for (auto key : {"prompt_2", "prompt_3", "negative_prompt", "negative_prompt_2", "negative_prompt_3"}) {
         SET_OPTIONAL_KEY_OR_RETURN(std::string, getStringFromPayload);
     }
+    SET_OR_RETURN(std::optional<std::string>, responseFormatOpt, getStringFromPayload(payload, "response_format"));
+    if (responseFormatOpt.has_value() && responseFormatOpt.value() != "b64_json") {
+        return absl::InvalidArgumentError(absl::StrCat("Unsupported response_format: ", responseFormatOpt.value(), ". Only b64_json is supported."));
+    }
     // now get optional int parameters
     SET_OR_RETURN(std::optional<int>, nOpt, getIntFromPayload(payload, "n"));
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL("num_images_per_prompt", nOpt);
@@ -318,6 +322,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         "negative_prompt", "negative_prompt_2", "negative_prompt_3",
         "size", "height", "width",
         "n", "num_images_per_prompt",
+        "response_format",
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
     for (auto it = payload.parsedJson->MemberBegin(); it != payload.parsedJson->MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
