@@ -222,8 +222,8 @@ TEST(HfDownloaderClassTest, Methods) {
 
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
-    ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
@@ -352,6 +352,31 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::OK);
 }
 
+TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    hfEndpoint = "https://www.new_hf.com/";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    hfEndpoint = "www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "http://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "git://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "ssh://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "what_ever_is_here://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+}
+
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
@@ -392,7 +417,7 @@ TEST_F(HfDownloaderHfEnvTest, Methods) {
 
     std::string endpoint = "www.new_hf.com";
     this->guard.unset(endpoint_env);
-    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "huggingface.co/");
+    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "https://huggingface.co/");
     this->guard.set(endpoint_env, endpoint);
 
     std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();
