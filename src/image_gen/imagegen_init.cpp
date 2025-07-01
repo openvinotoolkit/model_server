@@ -165,8 +165,7 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to parse resolution: {}", nodeOptions.resolution());
             return std::get<Status>(res);
         }
-        args.staticReshapeSettings = StaticReshapeSettingsArgs{
-            .resolution = std::get<std::vector<resolution_t>>(res)};
+        args.staticReshapeSettings = StaticReshapeSettingsArgs(std::get<std::vector<resolution_t>>(res));
 
         if (isNPU && args.staticReshapeSettings.value().resolution.size() > 1) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU cannot have multiple resolutions in static settings");

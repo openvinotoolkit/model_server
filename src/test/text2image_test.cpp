@@ -890,10 +890,10 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
     args.maxNumImagesPerPrompt = 10;
-    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs{
-        .resolution = {{512, 256}, {1024, 512}, {2048, 1024}},
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs(
+        {{512, 256}, {1024, 512}, {2048, 1024}}
         // batch and g_c not set
-    };
+    );
 
     std::string value = R"({"prompt": "test prompt", "size": "1024x512", "n": 1, "model": "test model"})";
     ovms::HttpPayload payload;
@@ -912,10 +912,10 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
     args.maxNumImagesPerPrompt = 10;
-    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs{
-        .resolution = {{512, 256}, {1024, 512}, {2048, 1024}},
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs(
+        {{512, 256}, {1024, 512}, {2048, 1024}}
         // batch and g_c not set
-    };
+    );
 
     std::string value = R"({"prompt": "test prompt", "size": "5x5", "n": 1, "model": "test model"})";
     ovms::HttpPayload payload;
@@ -934,11 +934,11 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchNumImagesPerPro
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
     args.maxNumImagesPerPrompt = 10;
-    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs{
-        .resolution = {{512, 256}},
-        .numImagesPerPrompt = 4,
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs(
+        {{512, 256}},
+        4
         // g_c not set
-    };
+    );
 
     std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 5, "model": "test model"})";
     ovms::HttpPayload payload;
@@ -957,11 +957,12 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) 
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
-    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs{
-        .resolution = {{512, 256}},
-        .guidanceScale = 7.1f,
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs(
+        {{512, 256}},
+        std::nullopt,
+        7.1f
         // num_images_per_prompt not set
-    };
+    );
 
     std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 1, "guidance_scale": 7.3, "model": "test model"})";
     ovms::HttpPayload payload;
