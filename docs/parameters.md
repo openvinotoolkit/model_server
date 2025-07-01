@@ -95,7 +95,7 @@ There are also additional environment variables that may change the behavior of 
 | Variable                            | Format  | Description                                                                                                |
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
-| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certyficates.                                                                        |
+| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
 
 ### Advanced Environment Variables for Pull Mode before 2025.2.1 release
 | Variable                       | Format  | Description                                                                                                |
