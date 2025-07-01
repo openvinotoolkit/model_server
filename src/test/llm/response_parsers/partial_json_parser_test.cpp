@@ -23,7 +23,7 @@ class PartialJsonParserTest : public ::testing::Test {};
 
 TEST_F(PartialJsonParserTest, simpleCompleteJsonWithStringValue) {
     std::string input = "{\"name\": \"OpenVINO\"}";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
@@ -33,7 +33,7 @@ TEST_F(PartialJsonParserTest, simpleCompleteJsonWithStringValue) {
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValue) {
     std::string input = "{\"name\": \"Open";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
@@ -43,7 +43,7 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValue) {
 
 TEST_F(PartialJsonParserTest, simpleCompleteJsonWithNumberValue) {
     std::string input = "{\"age\": 5}";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("age"));
@@ -53,7 +53,7 @@ TEST_F(PartialJsonParserTest, simpleCompleteJsonWithNumberValue) {
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValue) {
     std::string input = "{\"age\": 5";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("age"));
@@ -61,9 +61,22 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValue) {
     ASSERT_EQ(parsedJson["age"].GetInt(), 5);
 }
 
+TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValueTwoKeys) {
+    std::string input = "{\"age\": 5, \"height\": 180";
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
+    auto parsedJson = partialParseToJson(input);
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("age"));
+    ASSERT_TRUE(parsedJson.HasMember("height"));
+    ASSERT_TRUE(parsedJson["age"].IsInt());
+    ASSERT_EQ(parsedJson["age"].GetInt(), 5);
+    ASSERT_TRUE(parsedJson["height"].IsInt());
+    ASSERT_EQ(parsedJson["height"].GetInt(), 180);
+}
+
 TEST_F(PartialJsonParserTest, simpleCompleteJsonWithArrayValue) {
     std::string input = "{\"numbers\": [1, 2, 3]}";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("numbers"));
@@ -73,13 +86,12 @@ TEST_F(PartialJsonParserTest, simpleCompleteJsonWithArrayValue) {
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValue) {
     std::string input = "{\"numbers\": [1, 2, 3";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("numbers"));
     ASSERT_TRUE(parsedJson["numbers"].IsArray());
-    // Last number might not be completed, so we do not include it and close the array earlier
-    ASSERT_EQ(parsedJson["numbers"].Size(), 2);
+    ASSERT_EQ(parsedJson["numbers"].Size(), 3);
 }
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValueMultipleNesting) {
@@ -100,16 +112,17 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValueMultipleNesting)
     ASSERT_EQ(parsedJson["numbers"][0][0][1].GetInt(), 2);
     ASSERT_EQ(parsedJson["numbers"][0][0][2].GetInt(), 3);
 
-    // Second element: [4,5]
+    // Second element: [4,5,6]
     ASSERT_TRUE(parsedJson["numbers"][0][1].IsArray());
-    ASSERT_EQ(parsedJson["numbers"][0][1].Size(), 2);
+    ASSERT_EQ(parsedJson["numbers"][0][1].Size(), 3);
     ASSERT_EQ(parsedJson["numbers"][0][1][0].GetInt(), 4);
     ASSERT_EQ(parsedJson["numbers"][0][1][1].GetInt(), 5);
+    ASSERT_EQ(parsedJson["numbers"][0][1][2].GetInt(), 6);
 }
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValueWithExtraCharacters) {
     std::string input = "{\"arguments\": \"{\\\"location\\\": \\\"Tokyo, ";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
@@ -119,7 +132,7 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValueWithExtraCharac
 
 TEST_F(PartialJsonParserTest, simpleJsonWithKeyWithoutValue) {
     std::string input = "{\"name\": \"OpenVINO\", \"age\": ";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
@@ -131,7 +144,7 @@ TEST_F(PartialJsonParserTest, simpleJsonWithKeyWithoutValue) {
 
 TEST_F(PartialJsonParserTest, simpleJsonWithIncompleteKey) {
     std::string input = "{\"name\": \"OpenVINO\", \"ag";
-    // If below method returns it means it the parsedJson is valid JSON, otherwise it would throw an exception
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
     auto parsedJson = partialParseToJson(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));

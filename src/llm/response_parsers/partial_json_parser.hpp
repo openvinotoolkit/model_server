@@ -27,81 +27,87 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
+enum class IteratorState {
+    AWAITING_KEY,
+    INSIDE_KEY,
+    AWAITING_VALUE,
+    INSIDE_VALUE,
+    INSIDE_STRING,
+    INSIDE_OBJECT,
+    INSIDE_ARRAY,
+    END  // indicates that JSON is completed
+};
+
 // Partial parsing of the chunk to JSON.
 // This function is used to handle the case where the chunk is not a complete JSON object,
 // but we still want to extract content from it.
 // It modifies the chunk to be a valid JSON by adding closures and dropping incomplete elements.
 rapidjson::Document partialParseToJson(const std::string& input) {
-    bool insideString = false;
-    bool insideArray = false;
-    bool insideObject = false;
-    bool awaitingValue = false;  // Indicates if we are waiting for a value after a key
-    bool processingValue = false;
-    bool processingKey = false;
-    bool recentlyFinishedKey = false;
+    IteratorState state = IteratorState::AWAITING_KEY;
     size_t lastSeparatorPos = std::string::npos;
     std::vector<char> openCloseStack;
     std::string closedInput = input;  // Start with the original input
     for (auto it = closedInput.begin(); it != closedInput.end(); ++it) {
         char c = *it;
-        if (!insideString) {
-            if (awaitingValue) {
-                if (!std::isspace(static_cast<unsigned char>(c))) {
-                    processingValue = true;
-                    awaitingValue = false;
-                }
+        // Check if we are inside a string (key or value)
+        if (state != IteratorState::INSIDE_STRING && state != IteratorState::INSIDE_KEY) {
+            // We are not inside a string. We either await key, value or process non-string value
+            if (state == IteratorState::AWAITING_VALUE && !std::isspace(static_cast<unsigned char>(c))) {
+                // We were awaiting value and now we encounter a non-whitespace character indicating we start processing a value
+                state = IteratorState::INSIDE_VALUE;
             }
             // JSON openings and closures can be counted only when we are not inside a string
             if (c == '{') {
                 openCloseStack.push_back(c);
-                insideObject = true;
-                insideArray = false;
+                state = IteratorState::INSIDE_OBJECT;
             } else if (c == '[') {
                 openCloseStack.push_back(c);
-                insideArray = true;
-                insideObject = false;
+                state = IteratorState::INSIDE_ARRAY;
             } else if (c == '}') {
                 if (!openCloseStack.empty() && openCloseStack.back() == '{') {
                     openCloseStack.pop_back();
-                    if (!openCloseStack.empty() && openCloseStack.back() == '[') {
-                        insideArray = true;  // We are still inside an array
+                    if (!openCloseStack.empty()) {
+                        if (openCloseStack.back() == '{') {
+                            state = IteratorState::INSIDE_OBJECT;
+                        } else if (openCloseStack.back() == '[') {
+                            state = IteratorState::INSIDE_ARRAY;
+                        }
                     } else {
-                        insideObject = false;  // We are exiting an object
+                        state = IteratorState::END;  // We exited the last object, so we are done
                     }
                 }
             } else if (c == ']') {
                 if (!openCloseStack.empty() && openCloseStack.back() == '[') {
                     openCloseStack.pop_back();
-                    insideArray = false;  // We are exiting an array
-                    if (!openCloseStack.empty() && openCloseStack.back() == '{') {
-                        insideObject = true;  // We are still inside an object
-                    } else if (!openCloseStack.empty() && openCloseStack.back() == '[') {
-                        insideArray = true;  // We are still inside an array
+                    if (!openCloseStack.empty()) {
+                        if (openCloseStack.back() == '{') {
+                            // We exit array, but we might still be inside another object, so now we are awaiting a key
+                            state = IteratorState::INSIDE_OBJECT;
+                        } else if (openCloseStack.back() == '[') {
+                            // We exit array, but we might still be inside another array, so we keep reading values from it
+                            state = IteratorState::INSIDE_ARRAY;
+                        }
                     } else {
-                        processingValue = false;  // We are not processing a value anymore
+                        state = IteratorState::END;  // We exited the last object, so we are done
                     }
                 }
             } else if (c == ':') {
                 // Encountering a colon outside of a string indicates a key-value pair
-                awaitingValue = true;
-                recentlyFinishedKey = false;  // We are now awaiting a value for the key
+                state = IteratorState::AWAITING_VALUE;
             } else if (c == ',') {
-                // Store the position of the last comma
-                lastSeparatorPos = std::distance(closedInput.begin(), it);
-                if (insideObject) {
+                if (state == IteratorState::INSIDE_OBJECT) {
                     // If we are inside an object, comma indicates the end of a key-value pair
-                    processingValue = false;
-                    processingKey = true;  // Next part should be a key
+                    state = IteratorState::AWAITING_KEY;
+                    // Store the position of the last comma, so we can get back in case of incomplete key
+                    lastSeparatorPos = std::distance(closedInput.begin(), it);
                 }
             } else if (c == '"') {
-                // If we encounter a quote outside of a string, we set insideString to true
-                insideString = true;
-                if (processingValue) {
-                    // We start a string inside value part
-                    processingKey = false;
+                if (state == IteratorState::AWAITING_KEY) {
+                    // If we are awaiting a key and encounter a quote, we are starting a new key
+                    state = IteratorState::INSIDE_KEY;
                 } else {
-                    // If we are not processing a value, we are starting a new key
-                    processingKey = true;
+                    // If we are not awaiting a key, we are starting a string value
+                    state = IteratorState::INSIDE_STRING;
                 }
             }
         } else {
@@ -112,28 +118,28 @@ rapidjson::Document partialParseToJson(const std::string& input) {
                     continue;
                 } else {
                     // If the quote is not escaped we are exiting the string
-                    insideString = false;
-                    if (processingValue && !insideArray) {
-                        // If we were processing a string that was not in the array, we are done with it
-                        processingValue = false;
-                    } else if (processingKey) {
-                        // If we were processing a key, we are done with it
-                        processingKey = false;
-                        recentlyFinishedKey = true;  // We just finished processing a key
+                    if (state == IteratorState::INSIDE_KEY) {
+                        state = IteratorState::INSIDE_OBJECT;  // We finished processing a key, now we are inside an object
+                    } else if (state == IteratorState::INSIDE_STRING) {
+                        // We are exiting a string value so we are either inside an object or an array
+                        if (!openCloseStack.empty() && openCloseStack.back() == '[') {
+                            state = IteratorState::INSIDE_ARRAY;
+                        } else if (!openCloseStack.empty() && openCloseStack.back() == '{') {
+                            state = IteratorState::INSIDE_OBJECT;
+                        }
                     }
                 }
             }
         }
     }
 
-    if (processingValue && insideString) {
+    if (state == IteratorState::INSIDE_STRING) {
         // The partial JSON ends with a string value that is not closed
         // We can close it by adding a closing quote
         openCloseStack.push_back('"');
-    } else if ((processingValue && insideArray) || processingKey || recentlyFinishedKey || awaitingValue) {
+    } else if (state == IteratorState::AWAITING_KEY || state == IteratorState::INSIDE_KEY || state == IteratorState::AWAITING_VALUE) {
         /*  
             Handling cases when:
-            - partial JSON ends with incomplete array
             - partial JSON ends during or immediately after key processing
             - partial JSON ends when we are awaiting a value after a key
             In such cases we need to drop the incomplete part, get back to the last separator position and remove 
