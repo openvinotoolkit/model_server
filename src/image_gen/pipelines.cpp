@@ -31,25 +31,29 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         device = args.device;
     }
 
-    // log which devices are used for image generation
-    SPDLOG_DEBUG("Image Generation Pipelines loading from: {}; will use devices: {}; loading weights", args.modelsPath, ovms::joins(device, ", "));
+    SPDLOG_DEBUG("Image Generation Pipelines weights loading from: {}", args.modelsPath);
 
     text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
 
     if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
-        SPDLOG_DEBUG("Reshaping to static WxH: {}x{}", args.staticReshapeSettings.value().resolution[0].first, args.staticReshapeSettings.value().resolution[0].second);
+        auto numImagesPerPrompt = args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
+        auto guidanceScale = args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
+
+        SPDLOG_DEBUG("Image Generation Pipelines will be reshaped to static {}x{} resolution, batch: {}, guidance scale: {}",
+            args.staticReshapeSettings.value().resolution[0].first, args.staticReshapeSettings.value().resolution[0].second, numImagesPerPrompt, guidanceScale);
+
         text2ImagePipeline->reshape(
-            args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt),
+            numImagesPerPrompt,
             args.staticReshapeSettings.value().resolution[0].first,   // at this point it should be validated for existence
             args.staticReshapeSettings.value().resolution[0].second,  // at this point it should be validated for existence
-            args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
+            guidanceScale);
     }
 
-    SPDLOG_DEBUG("Compiling Text2ImagePipeline on devices: {}", ovms::joins(device, ", "));
-
     if (device.size() == 1) {
+        SPDLOG_DEBUG("Image Generation Pipelines compiling to devices: text_encode={} denoise={} vae={}", device[0], device[0], device[0]);
         text2ImagePipeline->compile(device[0], args.pluginConfig);
     } else {
+        SPDLOG_DEBUG("Image Generation Pipelines compiling to devices: text_encode={} denoise={} vae={}", device[0], device[1], device[2]);
         text2ImagePipeline->compile(device[0], device[1], device[2], args.pluginConfig);
     }
 }
