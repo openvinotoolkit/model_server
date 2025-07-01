@@ -44,16 +44,16 @@ tree models
 models
 ├── Alibaba-NLP
 │   └── gte-large-en-v1.5
-│       ├── embeddings
-│       │   └── 1
-│       │       ├── model.bin
-│       │       └── model.xml
+│       ├── config.json
 │       ├── graph.pbtxt
-│       ├── subconfig.json
-│       └── tokenizer
-│           └── 1
-│               ├── model.bin
-│               └── model.xml
+│       ├── openvino_model.bin
+│       |── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── vocab.txt
 └── config.json
 
 ```
@@ -145,7 +145,8 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
       ],
       "index": 0
     }
-  ]
+  ],
+  "usage":{"prompt_tokens":4,"total_tokens":4}
 }
 
 ```
