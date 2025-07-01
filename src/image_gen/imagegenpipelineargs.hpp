@@ -31,10 +31,12 @@ struct StaticReshapeSettingsArgs {
     std::optional<uint64_t> numImagesPerPrompt;
     std::optional<float> guidanceScale;
 
-    StaticReshapeSettingsArgs(const std::vector<resolution_t>& resolutions, 
-                              std::optional<uint64_t> numImages = std::nullopt,
-                              std::optional<float> guidance = std::nullopt)
-        : resolution(resolutions), numImagesPerPrompt(numImages), guidanceScale(guidance) {}
+    StaticReshapeSettingsArgs(const std::vector<resolution_t>& resolutions,
+        std::optional<uint64_t> numImages = std::nullopt,
+        std::optional<float> guidance = std::nullopt) :
+        resolution(resolutions),
+        numImagesPerPrompt(numImages),
+        guidanceScale(guidance) {}
 };
 
 struct ImageGenPipelineArgs {
