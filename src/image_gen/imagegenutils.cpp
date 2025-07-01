@@ -77,16 +77,12 @@ std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(cons
 std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
     auto it = payload.parsedJson->FindMember(keyName.c_str());
     if (it == payload.parsedJson->MemberEnd()) {
-        SPDLOG_DEBUG("Key: {} not found in payload", keyName);
         return std::nullopt;
     }
     if (!it->value.IsFloat()) {
-        SPDLOG_DEBUG("Key: {} is not a number, type: {}", keyName, it->value.GetType());
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a number"));
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a float"));
     }
-    float result = it->value.GetFloat();
-    SPDLOG_DEBUG("Key: {} found with value: {}", keyName, result);
-    return result;
+    return it->value.GetFloat();
 }
 
 std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
@@ -122,12 +118,9 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
 
 #define INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(KEY, VALUE)                                                            \
     if (VALUE.has_value()) {                                                                                      \
-        SPDLOG_DEBUG("Setting key: {} with value: {}", KEY, VALUE.value());                                       \
         if (!requestOptions.insert({KEY, VALUE.value()}).second) {                                                \
             return absl::InvalidArgumentError(absl::StrCat("Key: ", KEY, " already exists in request options.")); \
         }                                                                                                         \
-    } else {                                                                                                      \
-        SPDLOG_DEBUG("Key: {} has no value, skipping", KEY);                                                      \
     }
 
 #define SET_OPTIONAL_KEY_OR_RETURN(TYPE, FUNCTION)                     \
@@ -146,8 +139,6 @@ absl::Status ensureAcceptableForStatic(ov::AnyMap& requestOptions, const ovms::I
     it = requestOptions.find("guidance_scale");
     if (it != requestOptions.end()) {
         auto requestedGuidanceScale = it->second.as<float>();
-        SPDLOG_DEBUG("Requested guidance_scale: {}", requestedGuidanceScale);
-        SPDLOG_DEBUG("Static reshape settings guidance_scale: {}", args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale));
         if (requestedGuidanceScale != args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale)) {
             return absl::InvalidArgumentError("NPU Image Generation requested guidance_scale doesn't match underlying model shape");
         }

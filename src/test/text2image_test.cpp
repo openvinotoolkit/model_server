@@ -782,16 +782,16 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 guidance_scale: -1.0)pb",
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),  // reshape to guidance_scale requested, however no resolution specified
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),  // reshape to guidance_scale requested, however no resolution specified
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 num_images_per_prompt: -1)pb",
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),  // reshape to batch size requested, however no resolution specified
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),  // reshape to batch size requested, however no resolution specified
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x1024"
                 max_resolution: "1024x1024")pb",  // there is no point in using max_resolution when static resolutions are defined
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x1024"
@@ -801,16 +801,16 @@ INSTANTIATE_TEST_SUITE_P(
                             R"pb(
                 resolution: "512x512 1024x1024"
                 device: "NPU")pb",  // resolution is not static, but device is set to NPU
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 device: "NPU")pb",  // resolution is not static, but device is set to NPU
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x1024"
                 device: " GPU MULTI:GPU.0,GPU.1 NPU ")pb",  // resolution is not static, but one of devices include NPU
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x10x24")pb",  // one of the resolutions on the list invalid
@@ -822,39 +822,39 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 device: "GPU CPU")pb",  // only 1 or 3 devices supported
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::DEVICE_WRONG_FORMAT),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 device: "GPU CPU GPU CPU")pb",  // only 1 or 3 devices supported
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::DEVICE_WRONG_FORMAT),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x1024"
                 guidance_scale: 7.2)pb",  // resolution is not static, but guidance_scale is used
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 guidance_scale: 7.2)pb",  // resolution is not static, but guidance_scale is used
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512 1024x1024"
                 num_images_per_prompt: 7)pb",  // resolution is not static, but num_images_per_prompt is used
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 num_images_per_prompt: 7)pb",  // resolution is not static, but num_images_per_prompt is used
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512"
                 max_num_images_per_prompt: 7)pb",  // there is no point, there needs to be static set
-            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 resolution: "512x512"
                 max_resolution: "512x512")pb",  // there is no point, there needs to be static set
-            ovms::StatusCode::SHAPE_WRONG_FORMAT)));
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE)));
 
 TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     ImageGenPipelineArgs args;

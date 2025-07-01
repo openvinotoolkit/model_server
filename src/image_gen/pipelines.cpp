@@ -31,7 +31,9 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         device = args.device;
     }
 
-    SPDLOG_DEBUG("Loading weights from: {}", args.modelsPath);
+    // log which devices are used for image generation
+    SPDLOG_DEBUG("Image Generation Pipelines loading from: {}; will use devices: {}; loading weights", args.modelsPath, ovms::joins(device, ", "));
+
     text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
 
     if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {

@@ -147,13 +147,13 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
         auto devices = std::get<std::vector<std::string>>(devicesOrStatus);
         if (devices.empty()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "No valid devices found in: {}", nodeOptions.device());
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::DEVICE_WRONG_FORMAT;
         }
 
         // allow only 1 or 3 devices
         if (devices.size() != 1 && devices.size() != 3) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Invalid number of devices specified: {}. Expected 1 or 3.", devices.size());
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::DEVICE_WRONG_FORMAT;
         }
 
         args.device = std::move(devices);
@@ -169,47 +169,47 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
 
         if (isNPU && args.staticReshapeSettings.value().resolution.size() > 1) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "NPU cannot have multiple resolutions in static settings");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED;
         }
     } else if (isNPU) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use NPU without setting static resolution");
-        return StatusCode::SHAPE_WRONG_FORMAT;
+        return StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED;
     }
     if (args.staticReshapeSettings.has_value()) {
         if (nodeOptions.has_max_resolution()) {  // non default
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max resolution when using static settings");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::STATIC_RESOLUTION_MISUSE;
         }
         if (nodeOptions.has_num_images_per_prompt()) {
             if (args.staticReshapeSettings.value().resolution.size() > 1) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use static num images per prompt with multiple resolutions");
-                return StatusCode::SHAPE_WRONG_FORMAT;
+                return StatusCode::STATIC_RESOLUTION_MISUSE;
             }
             args.staticReshapeSettings->numImagesPerPrompt = nodeOptions.num_images_per_prompt();
         }
         if (nodeOptions.has_guidance_scale()) {
             if (args.staticReshapeSettings.value().resolution.size() > 1) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot use static guidance scale with multiple resolutions");
-                return StatusCode::SHAPE_WRONG_FORMAT;
+                return StatusCode::STATIC_RESOLUTION_MISUSE;
             }
             args.staticReshapeSettings->guidanceScale = nodeOptions.guidance_scale();
         }
         if (args.staticReshapeSettings.value().resolution.size() == 1 && nodeOptions.has_max_num_images_per_prompt()) {  // non default
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max num images per prompt when using static settings");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::STATIC_RESOLUTION_MISUSE;
         }
         if (args.staticReshapeSettings.value().resolution.size() == 1 && nodeOptions.has_max_resolution()) {  // non default
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use max resolution when using static settings");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::STATIC_RESOLUTION_MISUSE;
         }
     } else {
         if (nodeOptions.has_guidance_scale()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use static guidance scale when not using static resolution");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::STATIC_RESOLUTION_MISUSE;
         }
         if (nodeOptions.has_num_images_per_prompt()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot explicitly use static num images per prompt when not using static resolution");
-            return StatusCode::SHAPE_WRONG_FORMAT;
+            return StatusCode::STATIC_RESOLUTION_MISUSE;
         }
     }
     if (nodeOptions.has_plugin_config()) {
