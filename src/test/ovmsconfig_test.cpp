@@ -797,9 +797,11 @@ TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
         "embeddings",
         "--precision",
         "int4",
+        "--model_repository_path",
+        "/models",
     };
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
 }
 
 TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
@@ -812,9 +814,11 @@ TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
         "embeddings",
         "--extra_quantization_params",
         "int4",
+        "--model_repository_path",
+        "/models",
     };
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
 }
 
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
