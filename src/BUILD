@@ -2264,7 +2264,8 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
         "libovmsstatus",
-        "libhttp_status_code"
+        "libhttp_status_code",
+        "libovms_config"
     ],
     visibility = ["//visibility:public",],
 )
