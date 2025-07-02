@@ -432,11 +432,23 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         inputGraphDirectory += "1" + FileSystem::getOsSeparator();
     }
 
-    mpConfig.setBasePath(inputGraphDirectory);
-    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
-    mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
-    mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
-
+    if (mpConfig.getBasePath() == "") {
+        std::cout << "setGraphPath1 " << mpConfig.getGraphPath() << std::endl;
+        mpConfig.setBasePath(inputGraphDirectory);
+    }
+    if (mpConfig.getGraphPath() == "") {
+        std::cout << "basePATH3 " << mpConfig.getBasePath() << std::endl;
+        mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    }
+    
+    if (mpConfig.getSubconfigPath() == "") {
+        std::cout << "setGraphPath2 " << mpConfig.getGraphPath() << std::endl;
+        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    }
+    if (mpConfig.getModelMeshSubconfigPath() == "") {
+        mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    }
+    
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
@@ -830,7 +842,9 @@ Status ModelManager::loadModels(const rapidjson::Value::MemberIterator& modelsCo
         // Check if config is present for mediapipe graph
         MediapipeGraphConfig mpConfig;
         mpConfig.setRootDirectoryPath(rootDirectoryPath);
+        std::cout << "basePATH1" << mpConfig.getBasePath()  << std::endl;
         auto mpStatus = mpConfig.parseNode(configs["config"]);
+        std::cout << "basePATH2" << mpConfig.getBasePath() << std::endl;
         if (!mpStatus.ok()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Parsing : {} config as mediapipe graph failed due to error: {}", mpConfig.getGraphName(), mpStatus.string());
         } else {

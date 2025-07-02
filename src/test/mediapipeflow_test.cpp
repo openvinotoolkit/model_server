@@ -244,7 +244,7 @@ protected:
 
     void SetUpFilesForRelativePathsTest(const char* filesToCopyPath) {
         std::string separator = std::string(1, std::filesystem::path::preferred_separator);
-        destinationDirectory = getOvmsTestExecutablePath() + separator + "test";
+        destinationDirectory = std::filesystem::current_path().string() + separator + "test";
         std::cout << "Copying files from: " << filesToCopyPath << " to executable path: " << destinationDirectory << std::endl;
         try {
             std::filesystem::copy(filesToCopyPath, destinationDirectory,  std::filesystem::copy_options::recursive);
@@ -659,7 +659,7 @@ class MediapipeFlowDummyRelativeConfigRelativeGraphPath : public MediapipeFlowTe
 public:
     void SetUp() {
         SetUpFilesForRelativePathsTest(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/relative_paths/graph_only_name/").c_str());
-        SetUpServer("relative_config_and_relative_base_path_in_model_config.json");
+        SetUpServer("test/relative_config_and_relative_base_path_in_model_config.json");
     }
 };
 
@@ -1073,7 +1073,7 @@ TEST_F(MediapipeFlowDummySubconfigTest, Infer) {
 TEST_F(MediapipeFlowDummyRelativeConfigRelativeGraphPath, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
-    const std::string modelName = "mediaDummy";
+    const std::string modelName = "graphdummy";
     performMediapipeInfer(server, request, response, precision, modelName);
 
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};

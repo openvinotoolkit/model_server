@@ -16,6 +16,7 @@
 
 #include "schema.hpp"
 
+#include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -31,6 +32,7 @@
 #include <windows.h>
 #endif
 
+#include "localfilesystem.hpp"
 #include "filesystem.hpp"
 #include "logging.hpp"
 #include "status.hpp"
@@ -564,6 +566,17 @@ Status parseConfig(const std::string& jsonFilename, rapidjson::Document& configJ
     Status intermediateStatus;
     do {
         SPDLOG_DEBUG("Loading configuration from {} for: {} time", jsonFilename, counter + 1);
+		bool exists;
+		ovms::LocalFileSystem lfs;
+		lfs.fileExists(jsonFilename, &exists);
+		std::cout << "Exists: " << exists << std::endl;
+
+		std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+
+		char buffer[2000];
+    	GetModuleFileNameA(NULL, buffer, 2000);
+		std::cout << "Exe path: " << std::filesystem::path(buffer).parent_path().string() << std::endl;
+
         std::ifstream ifs(jsonFilename.c_str());
         LoudFileInfoReporter loud(jsonFilename, ifs);
         if (!ifs.good()) {

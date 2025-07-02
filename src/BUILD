@@ -1114,6 +1114,7 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "libovmsfilesystem",
+        "libovmslocalfilesystem",
         "libovmsstatus",
         "libovmslogging",
     ],
