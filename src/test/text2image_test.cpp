@@ -410,6 +410,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
         "prompt": "test prompt",
         "image": "base64_image",
         "n": 4,
+        "response_format": "test response format",
         "size": "512x1024"
     })");
     requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
@@ -913,6 +914,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
     args.maxNumImagesPerPrompt = 10;
     args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}, {2048, 1024}});
 
+    // size is 5x5, but static reshape settings requires 512x256, 1024x512 or 2048x1024
     std::string value = R"({"prompt": "test prompt", "size": "5x5", "n": 1, "model": "test model"})";
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -921,6 +923,8 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchNumImagesPerPrompt) {
@@ -932,6 +936,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchNumImagesPerPro
     args.maxNumImagesPerPrompt = 10;
     args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}}, 4);
 
+    // num_images_per_prompt is 5, but static reshape settings requires 4
     std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 5, "model": "test model"})";
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -940,6 +945,8 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchNumImagesPerPro
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
 }
 
 
@@ -951,6 +958,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) 
     args.maxNumInferenceSteps = 50;
     args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}}, std::nullopt, 7.1f);
 
+    // Guidance scale is 7.3, but static reshape settings requires 7.1
     std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 1, "guidance_scale": 7.3, "model": "test model"})";
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -959,6 +967,8 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) 
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
 }
 void printNHWCOVTensor(const ov::Tensor& tensor) {
     const auto& tensorShape = tensor.get_shape();

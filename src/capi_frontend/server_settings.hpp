@@ -75,8 +75,11 @@ struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
+    std::optional<uint32_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;

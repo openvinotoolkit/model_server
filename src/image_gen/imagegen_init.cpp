@@ -136,29 +136,29 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
     bool isNPU = false;
     if (nodeOptions.has_device()) {
         isNPU = nodeOptions.device().find("NPU") != std::string::npos;
-        // use getListOfDevices
+
         auto devicesOrStatus = getListOfDevices(nodeOptions.device());
         if (std::holds_alternative<Status>(devicesOrStatus)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to parse devices: {}", nodeOptions.device());
             return std::get<Status>(devicesOrStatus);
         }
-        auto devices = std::get<std::vector<std::string>>(devicesOrStatus);
-        if (devices.empty()) {
+        auto device = std::get<std::vector<std::string>>(devicesOrStatus);
+        if (device.empty()) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "No valid devices found in: {}", nodeOptions.device());
             return StatusCode::DEVICE_WRONG_FORMAT;
         }
 
         // allow only 1 or 3 devices
-        if (devices.size() != 1 && devices.size() != 3) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Invalid number of devices specified: {}. Expected 1 or 3.", devices.size());
+        if (device.size() != 1 && device.size() != 3) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Invalid number of devices specified: {}. Expected 1 or 3.", device.size());
             return StatusCode::DEVICE_WRONG_FORMAT;
         }
 
-        args.device = std::move(devices);
+        args.device = std::move(device);
     }
     if (nodeOptions.has_resolution()) {
         auto res = getListOfResolutions(nodeOptions.resolution());
-        // list all the res
+
         if (std::holds_alternative<Status>(res)) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to parse resolution: {}", nodeOptions.resolution());
             return std::get<Status>(res);
@@ -247,6 +247,12 @@ std::variant<Status, ImageGenPipelineArgs> prepareImageGenPipelineArgs(const goo
                 return StatusCode::SHAPE_WRONG_FORMAT;
             }
         }
+    } else {
+        // if default resolution is not set, possibly inherit from allowed resolutions
+        if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() >= 1) {
+            args.defaultResolution = args.staticReshapeSettings.value().resolution[0];
+        }
+        // otherwise leave the decision for GenAI
     }
 
     args.maxNumImagesPerPrompt = nodeOptions.max_num_images_per_prompt();

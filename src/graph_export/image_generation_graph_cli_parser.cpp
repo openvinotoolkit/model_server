@@ -54,6 +54,10 @@ void ImageGenerationGraphCLIParser::createOptions() {
 
     // clang-format off
     options->add_options("image_generation")
+        ("resolution",
+            "Allowed resolutions in a format list of WxH; W=width H=height - space separated. If not specified, inherited from model. If one is specified, the pipeline will be reshaped to static.",
+            cxxopts::value<std::string>(),
+            "RESOLUTION")
         ("max_resolution",
             "Max allowed resolution in a format of WxH; W=width H=height. If not specified, inherited from model.",
             cxxopts::value<std::string>(),
@@ -62,6 +66,14 @@ void ImageGenerationGraphCLIParser::createOptions() {
             "Default resolution when not specified by client in a format of WxH; W=width H=height. If not specified, inherited from model.",
             cxxopts::value<std::string>(),
             "DEFAULT_RESOLUTION")
+        ("num_images_per_prompt",
+            "Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (1).",
+            cxxopts::value<uint32_t>(),
+            "NUM_IMAGES_PER_PROMPT")
+        ("guidance_scale",
+            "Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5).",
+            cxxopts::value<float>(),
+            "GUIDANCE_SCALE")
         ("max_num_images_per_prompt",
             "Max allowed number of images client is allowed to request for a given prompt.",
             cxxopts::value<uint32_t>(),
@@ -116,7 +128,9 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
             throw std::logic_error("Tried to prepare server and model settings without graph parse result");
         }
     } else {
-        imageGenerationGraphSettings.maxResolution = result->count("max_resolution") ? result->operator[]("max_resolution").as<std::string>() : "";
+        imageGenerationGraphSettings.resolution = result->count("resolution") ? result->operator[]("resolution").as<std::string>() : "";
+        imageGenerationGraphSettings.numImagesPerPrompt = result->count("num_images_per_prompt") ? std::optional<uint32_t>(result->operator[]("num_images_per_prompt").as<uint32_t>()) : std::nullopt;
+        imageGenerationGraphSettings.guidanceScale = result->count("guidance_scale") ? std::optional<float>(result->operator[]("guidance_scale").as<float>()) : std::nullopt;
         if (!imageGenerationGraphSettings.maxResolution.empty() && !isValidResolution(imageGenerationGraphSettings.maxResolution)) {
             throw std::invalid_argument("Invalid max_resolution format. Expected WxH, e.g., 1024x1024");
         }
