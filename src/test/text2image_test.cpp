@@ -30,6 +30,8 @@
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
 
+#include "src/image_conversion.hpp"
+
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
 
@@ -883,7 +885,6 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
         }
     }
 }
-
 TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
     ImageGenPipelineArgs args;
     args.modelsPath = "/ovms/src/test/dummy";
@@ -958,6 +959,94 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) 
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_TRUE(holdsStatus);
+}
+void printNHWCOVTensor(const ov::Tensor& tensor) {
+    const auto& tensorShape = tensor.get_shape();
+    ASSERT_EQ(tensorShape.size(), 4);
+    ASSERT_EQ(tensorShape[1], 4);
+    ASSERT_EQ(tensorShape[2], 4);
+    ASSERT_EQ(tensorShape[3], 3);
+    auto* dataR = tensor.data();
+    uint8_t* data = static_cast<uint8_t*>(dataR);
+    std::ostringstream oss;
+    // print shape
+    oss << "Tensor shape: (";
+    for (size_t i = 0; i < tensorShape.size(); ++i) {
+        oss << tensorShape[i];
+        if (i < tensorShape.size() - 1) {
+            oss << ", ";
+        }
+    }
+    oss << ")\n";
+    for (size_t b = 0; b < tensorShape[0]; ++b) {
+        oss << "image " << b << ": \n";
+    for (size_t c = 0; c < tensorShape[3]; ++c) {
+        oss << "\nChannel " << c << ": \n";
+        for (size_t h = 0; h < tensorShape[1]; ++h) {
+            for (size_t w = 0; w < tensorShape[2]; ++w) {
+                size_t index = (h * tensorShape[2] + w) * tensorShape[3] + c + b * tensorShape[1] * tensorShape[2] * tensorShape[3];
+                oss << std::setw(3) << static_cast<int>(data[index]) << " ";
+            }
+            oss << "\n";
+        }
+    }
+    }
+    SPDLOG_DEBUG("\n{}", oss.str());
+}
+void testResponseFromOvTensor(size_t n) {
+    ov::Tensor tensor(ov::element::u8, ov::Shape{n, 4, 4, 3});
+    auto* dataR = tensor.data();
+    uint8_t* originalData = static_cast<uint8_t*>(dataR);
+    // fill first channel with multiplies of 2
+    // fill second channel with multiplies of 3
+    // fill third channel with multiplies of 5
+    for (size_t i = 0; i < tensor.get_size(); ++i) {
+        if (i % 3 == 0) {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 2);  // first channel
+        } else if (i % 3 == 1) {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 3);  // second channel
+        } else {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 5);  // third channel
+        }
+    }
+    printNHWCOVTensor(tensor);
+    auto responseOrStatus = ovms::generateJSONResponseFromOvTensor(tensor);
+    ASSERT_FALSE(std::holds_alternative<absl::Status>(responseOrStatus));
+    auto response = std::move(std::get<std::unique_ptr<std::string>>(responseOrStatus));
+    SPDLOG_TRACE("Response: {}", *response);
+    rapidjson::Document document;
+    document.Parse(response->c_str());
+    ASSERT_TRUE(document.IsObject());
+    ASSERT_TRUE(document.HasMember("data"));
+    ASSERT_TRUE(document["data"].IsArray());
+    const auto& dataArray = document["data"].GetArray();
+    ASSERT_EQ(dataArray.Size(), n) << "Expected " << n << " images in response, got " << dataArray.Size();
+
+    for (size_t i = 0; i < n; ++i) {
+        const auto& imageB64PngString = dataArray[i].GetObject()["b64_json"].GetString();
+        SPDLOG_TRACE("Image base64 string: {}", imageB64PngString);
+        std::string decodedImage;
+        ASSERT_TRUE(absl::Base64Unescape(imageB64PngString, &decodedImage)) << "Failed to decode base64 image";
+        auto tensorFromImage = ovms::loadImageStbiFromMemory(decodedImage);
+        printNHWCOVTensor(tensorFromImage);
+        ASSERT_EQ(tensorFromImage.get_element_type(), tensor.get_element_type());
+        ASSERT_EQ(tensorFromImage.get_shape().size(), 4);
+        ASSERT_EQ(tensorFromImage.get_byte_size(), tensor.get_byte_size() / n);
+        ASSERT_EQ(tensorFromImage.get_shape()[0], 1);
+        ASSERT_EQ(tensorFromImage.get_shape()[1], tensor.get_shape()[1]);
+        ASSERT_EQ(tensorFromImage.get_shape()[2], tensor.get_shape()[2]);
+        ASSERT_EQ(tensorFromImage.get_shape()[3], tensor.get_shape()[3]);
+        EXPECT_EQ(0, std::memcmp(tensorFromImage.data(), (char*)tensor.data() + i * (tensor.get_byte_size() / n), tensorFromImage.get_byte_size()))
+            << "Data mismatch for image " << i;
+    }
+}
+TEST(Text2ImageTest, ResponseFromOvTensorBatch1) {
+    uint16_t n = 1;
+    testResponseFromOvTensor(n);
+}
+TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
+    uint16_t n = 3;
+    testResponseFromOvTensor(n);
 }
 // TODO:
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageEdit

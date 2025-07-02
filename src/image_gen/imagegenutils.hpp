@@ -17,6 +17,7 @@
 #include <string>
 #include <memory>
 #include <variant>
+#include <vector>
 #include <utility>
 
 #include <openvino/openvino.hpp>
@@ -27,12 +28,14 @@
 
 #include "imagegenpipelineargs.hpp"
 
-#define SET_OR_RETURN(TYPE, NAME, RHS)                                                                                          \
-    auto NAME##_OPT = RHS;                                                                                                      \
-    if (std::holds_alternative<absl::Status>(NAME##_OPT)) {                                                                     \
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to get {}: {}", #NAME, std::get<absl::Status>(NAME##_OPT).ToString()); \
-        return std::get<absl::Status>(NAME##_OPT);                                                                              \
-    }                                                                                                                           \
+#define RETURN_IF_HOLDS_STATUS(NAME)                  \
+    if (std::holds_alternative<absl::Status>(NAME)) { \
+        return std::get<absl::Status>(NAME);          \
+    }
+
+#define SET_OR_RETURN(TYPE, NAME, RHS) \
+    auto NAME##_OPT = RHS;             \
+    RETURN_IF_HOLDS_STATUS(NAME##_OPT) \
     auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {
@@ -52,5 +55,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const Ht
 std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
 std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
 
-std::unique_ptr<std::string> generateJSONResponseFromB64Image(const std::string& base64_image);
+std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector<std::string>& base64Images);
+
+std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor);
 }  // namespace ovms

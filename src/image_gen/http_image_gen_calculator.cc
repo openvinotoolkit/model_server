@@ -46,7 +46,7 @@ using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_
 const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "IMAGE_GEN_NODE_RESOURCES";
 
 static bool progress_bar(size_t step, size_t num_steps, ov::Tensor&) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step, num_steps);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image Generation Step: {}/{}", step + 1, num_steps);
     return false;
 }
 // written out separately to avoid msvc crashing when using try-catch in process method ...
@@ -56,6 +56,13 @@ static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     try {
         requestOptions.insert(ov::genai::callback(progress_bar));
         images = std::make_unique<ov::Tensor>(request.generate(prompt, requestOptions));
+        auto dims = images->get_shape();
+        std::stringstream ss;
+        for (const auto& dim : dims) {
+            ss << dim << " ";
+        }
+        ss << " element type: " << images->get_element_type().get_type_name();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator generated tensor: {}", ss.str());
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Error: {}", e.what());
         return absl::InternalError("Error during images generation");
@@ -64,19 +71,6 @@ static absl::Status generateTensor(ov::genai::Text2ImagePipeline& request,
     }
     return absl::OkStatus();
 }
-// written out separately to avoid msvc crashing when using try-catch in process method ...
-static absl::Status convert2String(const std::unique_ptr<ov::Tensor>& images, std::unique_ptr<std::string>& imageAsString) {
-    try {
-        *imageAsString = saveImageStbi(*images);
-    } catch (std::exception& e) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Error: {}", e.what());
-        return absl::InternalError("Error during image conversion");
-    } catch (...) {
-        return absl::InternalError("Unknown error during image conversion");
-    }
-    return absl::OkStatus();
-}
-
 class ImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -123,32 +117,16 @@ public:
 
         ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
         SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
-        // preview limitation put here to not mess up tests underneath
-        auto imagesPerPromptIt = requestOptions.find("num_images_per_prompt");
-        if (imagesPerPromptIt != requestOptions.end()) {
-            auto numImages = imagesPerPromptIt->second.as<int>();
-            if (numImages != 1) {
-                return absl::InvalidArgumentError(absl::StrCat("Only 1 image in response can be requested. n value:", numImages, " is not supported."));
-            }
-        }
 
         std::unique_ptr<ov::Tensor> images;
         auto status = generateTensor(request, prompt, requestOptions, images);
         if (!status.ok()) {
             return status;
         }
-        auto imageAsString = std::make_unique<std::string>();
-        status = convert2String(images, imageAsString);
-        if (!status.ok()) {
-            return status;
-        }
-
-        std::string base64image;
-        absl::Base64Escape(*imageAsString, &base64image);
-        // Create the JSON response
-        auto output = generateJSONResponseFromB64Image(base64image);
+        auto outputOrStatus = generateJSONResponseFromOvTensor(*images);
+        RETURN_IF_HOLDS_STATUS(outputOrStatus);
+        auto output = std::move(std::get<std::unique_ptr<std::string>>(outputOrStatus));
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
 
         return absl::OkStatus();
