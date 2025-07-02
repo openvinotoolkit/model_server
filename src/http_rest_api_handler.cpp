@@ -116,6 +116,8 @@ const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
 
 const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
     R"(/v3/(v1/)?models)";
+const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
+    R"(/v3/(v1/)?models/([^\/:]+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
     R"(/v3/.*?(/|$))";
 
@@ -133,6 +135,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_serverliveRegex(kfs_serverliveRegexExp),
     kfs_servermetadataRegex(kfs_servermetadataRegexExp),
     v3_ListModelsRegex(v3_ListModelsRegexExp),
+    v3_RetrieveModelRegex(v3_RetrieveModelRegexExp),
     v3_Regex(v3_RegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
@@ -211,7 +214,10 @@ void HttpRestApiHandler::registerAll() {
     });
 
     registerHandler(V3_ListModels, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
-        return getModelList(response);
+        return processListModelsRequest(response);
+    });
+    registerHandler(V3_RetrieveModel, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+        return processRetrieveModelRequest(request_components.model_name, response);
     });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
@@ -579,7 +585,45 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
     writer.EndObject();
 }
 
-Status HttpRestApiHandler::getModelList(std::string& response) {
+Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
+    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
+    bool exist = false;
+    auto it = models.find(name);
+    if (it != models.end())
+        exist = true;
+    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
+    if(std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
+        exist = true;
+    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
+    if(std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
+        exist = true;
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    if(!exist){
+        writer.StartObject();
+        writer.String("error");
+        writer.String("Model not found");
+        writer.EndObject();
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    time_t timestamp;
+    time(&timestamp);
+    writer.StartObject();
+    writer.String("object");
+    writer.String("list");
+    writer.String("data");
+    writer.StartArray();
+    parseModel(writer, name, timestamp);
+    writer.EndArray();
+    writer.String("object");
+    writer.String("list");
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
+
+Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -938,6 +982,17 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         }
         if (std::regex_match(request_path, sm, v3_ListModelsRegex)) {
             requestComponents.type = V3_ListModels;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, v3_RetrieveModelRegex)) {
+            if(sm[1] == "v1/"){
+                requestComponents.model_name = urlDecode(sm[2]);
+            }
+            else
+            {
+                requestComponents.model_name = urlDecode(sm[1]);
+            }
+            requestComponents.type = V3_RetrieveModel;
             return StatusCode::OK;
         }
         return (std::regex_match(request_path, sm, predictionRegex) ||
