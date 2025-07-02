@@ -258,7 +258,7 @@ protected:
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
-        //std::filesystem::remove_all(this->destinationDirectory);
+        std::filesystem::remove_all(this->destinationDirectory);
     }
 };
 
