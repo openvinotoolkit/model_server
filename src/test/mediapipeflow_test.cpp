@@ -247,14 +247,14 @@ protected:
         destinationDirectory = std::filesystem::current_path().string() + separator + "test";
         std::cout << "Copying files from: " << filesToCopyPath << " to executable path: " << destinationDirectory << std::endl;
         try {
-            std::filesystem::copy(filesToCopyPath, destinationDirectory,  std::filesystem::copy_options::recursive);
+            std::filesystem::copy(filesToCopyPath, destinationDirectory, std::filesystem::copy_options::recursive);
         } catch (const std::filesystem::filesystem_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;
-            ASSERT_EQ(1,0);
+            ASSERT_EQ(1, 0);
         }
     }
 
-    void TearDown() override{
+    void TearDown() override {
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
