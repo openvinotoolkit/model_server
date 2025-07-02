@@ -81,8 +81,6 @@ static std::variant<Status, std::vector<resolution_t>> getListOfResolutions(cons
         trimmedResolutionString = absl::StrReplaceAll(trimmedResolutionString, {{"  ", " "}});
     }
 
-    std::cout << "trimmedResolutionString: " << trimmedResolutionString << std::endl;
-
     // split by space
     std::vector<std::string> resolutions = ovms::tokenize(trimmedResolutionString, ' ');
 
