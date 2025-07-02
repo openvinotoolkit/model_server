@@ -276,8 +276,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledGenAIFields) {
         "num_images_per_prompt": 4,
         "num_inference_steps": 7,
         "max_sequence_length": 256,
-        "strength": 0.75,
-        "response_format": "b64_json"
+        "strength": 0.75
     })");
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
@@ -410,8 +409,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
         "prompt": "test prompt",
         "image": "base64_image",
         "n": 4,
-        "size": "512x1024",
-        "response_format": "test response format"
+        "size": "512x1024"
     })");
     requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
@@ -446,8 +444,7 @@ TEST(Image2ImageTest, getImageEditGenerationRequestOptionsAllHandledOpenAIFields
         "image": "base64_image",
         "n": 4,
         "size": "512x1024",
-        "model": "test model",
-        "response_format": "b64_json"
+        "model": "test model"
     })");
     /*
         "background": "transparent",
