@@ -25,7 +25,7 @@ enum GraphExportType : unsigned int;
 
 class OptimumDownloader : public HfDownloader {
 public:
-    OptimumDownloader(const HFSettingsImpl& hfSettings);
+    OptimumDownloader(const HFSettingsImpl& hfSettings, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
     Status cloneRepository();
     std::string getGraphDirectory();
 
@@ -34,8 +34,8 @@ protected:
     std::string downloadPath;
     HFSettingsImpl hfSettings;
     bool overwriteModels;
-    std::string OPTIMUM_CLI_EXPORT_COMMAND = "optimum-cli export openvino ";
-    std::string OPTIMUM_CLI_CHECK_COMMAND = "optimum-cli -h";
+    std::string OPTIMUM_CLI_EXPORT_COMMAND;
+    std::string OPTIMUM_CLI_CHECK_COMMAND;
 
     OptimumDownloader();
     Status checkRequiredToolsArePresent();

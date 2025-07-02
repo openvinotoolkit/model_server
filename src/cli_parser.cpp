@@ -484,7 +484,6 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
 }
 
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
-    std::cout << "prepareGraph" <<std::endl;
     // Ovms Pull models mode || pull and start models mode
     if (isHFPullOrPullAndStart(this->result)) {
         std::cout << "isHFPullOrPullAndStart pull" <<std::endl;

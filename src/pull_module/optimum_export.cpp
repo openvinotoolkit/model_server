@@ -123,11 +123,13 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings) {
+OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
     this->sourceModel = inHfSettings.sourceModel;
     this->downloadPath = HfDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel);
     this->hfSettings = inHfSettings;
     this->overwriteModels = inHfSettings.overwriteModels;
+    this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
+    this->OPTIMUM_CLI_EXPORT_COMMAND = cliExportCmd;
 }
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
