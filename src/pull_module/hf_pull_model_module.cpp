@@ -135,7 +135,7 @@ const std::string HfPullModelModule::GetHfToken() const {
 }
 
 const std::string HfPullModelModule::GetHfEndpoint() const {
-    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet("HF_ENDPOINT", "huggingface.co");
+    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet("HF_ENDPOINT", "https://huggingface.co");
     if (!endsWith(hfEndpoint, "/")) {
         hfEndpoint.append("/");
     }

@@ -52,13 +52,20 @@ bool PyJinjaTemplateProcessor::applyChatTemplate(PyJinjaTemplateProcessor& templ
             try:
                 request_json = json.loads(request_body)
                 messages = request_json["messages"]
+
+                chat_template_kwargs = request_json.get("chat_template_kwargs", None)
+                if chat_template_kwargs is None:
+                    chat_template_kwargs = {}
+                elif not isinstance(chat_template_kwargs, dict):
+                    raise Exception("chat_template_kwargs must be an object")
+
                 tools = request_json["tools"] if "tools" in request_json else None
                 if tools is None:
-                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+                    output = chat_template.render(messages=messages, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
                 else:
-                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True)
+                    output = tool_chat_template.render(messages=messages, tools=tools, bos_token=bos_token, eos_token=eos_token, add_generation_prompt=True, **chat_template_kwargs)
             except Exception as e:
-                error = str(e)            
+                error = str(e) 
         )",
             py::globals(), locals);
 

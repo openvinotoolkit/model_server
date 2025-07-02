@@ -30,13 +30,13 @@ Model Server hosts models and makes them accessible to software components over 
 
 ## Serving with OpenVINO Model Server
 
-OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [TensorFlow Serving](https://github.com/tensorflow/serving) and [KServe](https://github.com/kserve/kserve) while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
+OpenVINO&trade; Model Server (OVMS) is a high-performance system for serving models. Implemented in C++ for scalability and optimized for deployment on Intel architectures. It uses the same API as [OpenAI](./genai.md), [Cohere](./model_server_rest_api_rerank.md), [KServe](./model_server_grpc_api_kfs.md) and [TensorFlow Serving](./model_server_rest_api_tfs.md) and while applying OpenVINO for inference execution. Inference service is provided via gRPC or REST API, making deploying new algorithms and AI experiments easy.
 
-In addition, there are included endpoints for generative use cases compatible with [OpenAI API and Cohere API](./clients_genai.md).
+Check how to write the client applications using [generative endpoints](./clients_genai.md).
 
 ![OVMS picture](ovms_high_level.png)
 
-The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](deploying_server.md), on [Bare Metal](deploying_server.md), and in [Kubernetes environment](deploying_server.md).
+The models used by the server need to be stored locally or hosted remotely by object storage services. For more details, refer to [Preparing Model Repository](./models_repository.md) documentation. Model server works inside [Docker containers](./deploying_server.md), on [Bare Metal](deploying_server.md), and in [Kubernetes environment](deploying_server.md).
 Start using OpenVINO Model Server with a fast-forward serving example from the [QuickStart guide](ovms_quickstart.md) or [LLM QuickStart guide](./llm/quickstart.md).
 
 ### Key features:
