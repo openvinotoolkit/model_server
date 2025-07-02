@@ -4,6 +4,7 @@ output_stream: "OVMS_PY_TENSOR:embedding"
 node{
     name: "ImagePreprocessor"
     calculator: "PythonExecutorCalculator"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
     input_stream: "OVMS_PY_TENSOR:image"
     output_stream: "OVMS_PY_TENSOR:pixel_values"
     node_options:{
@@ -17,7 +18,7 @@ node{
     name: "PixelValuesConverter"
     calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:pixel_values"
-    output_stream: "OVTENSOR:40"
+    output_stream: "OVTENSOR:image_em"
 }
 
 node {
@@ -34,7 +35,7 @@ node {
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "OVTENSOR:40"
+  input_stream: "OVTENSOR:image_em"
   output_stream: "OVTENSOR:pooler_output"
   node_options: {
     [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
@@ -53,16 +54,24 @@ node {
 
 node {
   name: "EmbeddingConverter"
-  calculator: "OvTensorPyTensorConverterCalculator"
+  calculator: "PyTensorOvTensorConverterCalculator"
   input_stream: "OVTENSOR:pooler_output"
-  output_stream: "OVMS_PY_TENSOR:pooler_output"
+  output_stream: "OVMS_PY_TENSOR:pooler_output_em"
+  node_options: {
+        [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+          tag_to_output_tensor_names{
+            key: "OVMS_PY_TENSOR"
+            value: "pooler_output_em"
+          }
+        }
 }
-
+}
 
 node {
   name: "Postprocessor"
   calculator: "PythonExecutorCalculator"
-  input_stream: "OVMS_PY_TENSOR:pooler_output"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "OVMS_PY_TENSOR:pooler_output_em"
   output_stream: "OVMS_PY_TENSOR:embedding"
   node_options: {
     [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {

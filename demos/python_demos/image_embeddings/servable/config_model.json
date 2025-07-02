@@ -9,7 +9,7 @@
     "mediapipe_config_list": [
       {
         "name": "python_model",
-        "graph_path": "/workspace/grph_pipeline.pbtxt"
+        "graph_path": "/workspace/graph_pipeline.pbtxt"
       }
     ]
 }

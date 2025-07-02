@@ -16,5 +16,5 @@ class OvmsPythonModel:
         image=Image.open(BytesIO(image_bytes)).convert("RGB")
         processed=self.processor(images=image,return_tensors="np")
         pixel_values=processed["pixel_values"].astype(np.float32)
-        return[Tensor(name="40",data=pixel_values)]
+        return[Tensor(name="image_em",data=pixel_values)]
 
