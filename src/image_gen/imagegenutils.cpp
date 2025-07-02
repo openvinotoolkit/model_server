@@ -178,10 +178,10 @@ absl::Status ensureAcceptableForStatic(ov::AnyMap& requestOptions, const ovms::I
     if (requestedWidth.has_value() && requestedHeight.has_value()) {
         // Search for matching resolution in staticReshapeSettings
         auto& resolutions = args.staticReshapeSettings.value().resolution;
-        auto it = std::find_if(resolutions.begin(), resolutions.end(), [&](const resolution_t& res) {
+        auto itr = std::find_if(resolutions.begin(), resolutions.end(), [&](const resolution_t& res) {
             return res.first == requestedWidth.value() && res.second == requestedHeight.value();
         });
-        if (it == resolutions.end()) {
+        if (itr == resolutions.end()) {
             return absl::InvalidArgumentError(absl::StrCat("NPU Image Generation requested resolution ", requestedWidth.value(), "x", requestedHeight.value(), " is not supported by static reshape settings"));
         }
     } else if (requestedWidth.has_value() && !requestedHeight.has_value()) {
