@@ -166,9 +166,9 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_TRACE("Setting libgit2 server timeout:{}", opts.serverTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, opts.serverTimeoutMs);
     IF_ERROR_SET_MSG_AND_RETURN();
-    if (opts.sslCertyficateLocation != "") {
-        SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertyficateLocation);
-        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertyficateLocation.c_str());
+    if (opts.sslCertificateLocation != "") {
+        SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertificateLocation);
+        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertificateLocation.c_str());
         IF_ERROR_SET_MSG_AND_RETURN();
     }
 }

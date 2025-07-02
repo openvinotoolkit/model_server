@@ -79,7 +79,7 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     }
     opts.serverTimeoutMs = timeoutOpt.value();
 
-    opts.sslCertyficateLocation = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV, "");
+    opts.sslCertificateLocation = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV, "");
     return opts;
 }
 
