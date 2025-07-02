@@ -16,6 +16,7 @@
 #include "image_conversion.hpp"
 
 #include <iostream>
+#include <variant>
 #include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -31,6 +32,7 @@
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
+#include "absl/status/status.h"
 #pragma warning(pop)
 
 namespace ovms {
@@ -85,53 +87,59 @@ ov::Tensor loadImageStbiFromFile(char const* filename) {
     return loadImageStbi(image, x, y, desiredChannels);
 }
 
-std::string saveImageStbi(ov::Tensor tensor) {
+std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor) {
     // Validate tensor properties
     if (tensor.get_element_type() != ov::element::u8) {
         throw std::runtime_error{"Only U8 tensor element type is supported for image saving"};
     }
-
-    if (tensor.get_shape().size() != 4 || tensor.get_shape()[0] != 1) {
+    if (tensor.get_shape().size() != 4) {
         throw std::runtime_error{"Tensor must be in NHWC format with batch size 1"};
     }
-
+    size_t batchSize = tensor.get_shape()[0];
     size_t height = tensor.get_shape()[1];
     size_t width = tensor.get_shape()[2];
     size_t channels = tensor.get_shape()[3];
+    size_t imageSize = height * width * channels;
 
     if (channels != 3 && channels != 1) {
         throw std::runtime_error{"Only 1 or 3 channel images are supported for saving"};
     }
+    if (batchSize == 0) {
+        throw std::runtime_error{"Tensor batch size cannot be zero"};
+    }
 
-    // Get pointer to image data
-    unsigned char* image_data = tensor.data<unsigned char>();
+    unsigned char* imageData = tensor.data<unsigned char>();
 
     // Create a memory buffer to hold the PNG data
-    std::vector<unsigned char> png_buffer;
+    std::vector<std::vector<unsigned char>> pngBuffers(batchSize);
 
     // Define the write function that will store data in our buffer
-    auto write_func = [](void* context, void* data, int size) {
+    auto writeFunc = [](void* context, void* data, int size) {
         std::vector<unsigned char>* buffer = static_cast<std::vector<unsigned char>*>(context);
         unsigned char* bytes = static_cast<unsigned char*>(data);
         buffer->insert(buffer->end(), bytes, bytes + size);
     };
 
     // Write PNG to memory using our buffer
-    int success = stbi_write_png_to_func(
-        write_func,         // Our write function
-        &png_buffer,        // Context (our buffer)
-        width,              // Image width
-        height,             // Image height
-        channels,           // Number of channels
-        image_data,         // Image data
-        width * channels);  // Stride (bytes per row)
-
-    if (!success) {
-        throw std::runtime_error{"Failed to encode image to PNG format"};
+    for (size_t i = 0; i < batchSize; ++i) {
+        int success = stbi_write_png_to_func(
+            writeFunc,                    // Our write function
+            &pngBuffers.at(i),            // Context (our buffer)
+            width,                        // Image width
+            height,                       // Image height
+            channels,                     // Number of channels
+            imageData + (i * imageSize),  // Image data
+            width * channels);            // Stride (bytes per row)
+        if (!success) {
+            throw std::runtime_error{"Failed to encode image to PNG format"};
+        }
     }
 
     // Convert the buffer to a string
-    return std::string(png_buffer.begin(), png_buffer.end());
+    std::vector<std::string> result;
+    for (const auto& png_buffer : pngBuffers) {
+        result.emplace_back(png_buffer.begin(), png_buffer.end());
+    }
+    return result;
 }
-
 }  // namespace ovms
