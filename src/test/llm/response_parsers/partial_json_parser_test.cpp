@@ -31,6 +31,44 @@ TEST_F(PartialJsonParserTest, simpleCompleteJsonWithStringValue) {
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
 }
 
+TEST_F(PartialJsonParserTest, complexCompleteJsonWithDifferentValueTypes) {
+    std::string input = R"({
+        "user": {
+            "name": "OpenVINO",
+            "details": {
+                "age": 5,
+                "skills": ["C++", "Python", "AI"]
+            }
+        },
+        "numbers": [1, 2, 3]
+    })";
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
+    auto parsedJson = partialParseToJson(input);
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("user"));
+    ASSERT_TRUE(parsedJson["user"].IsObject());
+    ASSERT_TRUE(parsedJson["user"].HasMember("name"));
+    ASSERT_TRUE(parsedJson["user"]["name"].IsString());
+    ASSERT_EQ(parsedJson["user"]["name"].GetString(), std::string("OpenVINO"));
+    ASSERT_TRUE(parsedJson["user"].HasMember("details"));
+    ASSERT_TRUE(parsedJson["user"]["details"].IsObject());
+    ASSERT_TRUE(parsedJson["user"]["details"].HasMember("age"));
+    ASSERT_TRUE(parsedJson["user"]["details"]["age"].IsInt());
+    ASSERT_EQ(parsedJson["user"]["details"]["age"].GetInt(), 5);
+    ASSERT_TRUE(parsedJson["user"]["details"].HasMember("skills"));
+    ASSERT_TRUE(parsedJson["user"]["details"]["skills"].IsArray());
+    ASSERT_EQ(parsedJson["user"]["details"]["skills"].Size(), 3);
+    ASSERT_EQ(parsedJson["user"]["details"]["skills"][0].GetString(), std::string("C++"));
+    ASSERT_EQ(parsedJson["user"]["details"]["skills"][1].GetString(), std::string("Python"));
+    ASSERT_EQ(parsedJson["user"]["details"]["skills"][2].GetString(), std::string("AI"));
+    ASSERT_TRUE(parsedJson.HasMember("numbers"));
+    ASSERT_TRUE(parsedJson["numbers"].IsArray());
+    ASSERT_EQ(parsedJson["numbers"].Size(), 3);
+    ASSERT_EQ(parsedJson["numbers"][0].GetInt(), 1);
+    ASSERT_EQ(parsedJson["numbers"][1].GetInt(), 2);
+    ASSERT_EQ(parsedJson["numbers"][2].GetInt(), 3);
+}
+
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValue) {
     std::string input = "{\"name\": \"Open";
     // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
@@ -85,39 +123,47 @@ TEST_F(PartialJsonParserTest, simpleCompleteJsonWithArrayValue) {
 }
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValue) {
-    std::string input = "{\"numbers\": [1, 2, 3";
-    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
-    auto parsedJson = partialParseToJson(input);
-    ASSERT_TRUE(parsedJson.IsObject());
-    ASSERT_TRUE(parsedJson.HasMember("numbers"));
-    ASSERT_TRUE(parsedJson["numbers"].IsArray());
-    ASSERT_EQ(parsedJson["numbers"].Size(), 3);
+    auto inputs = {"{\"numbers\": [1, 2, 3",
+        "{\"numbers\": [1, 2, 3, "};
+
+    for (const auto& input : inputs) {
+        // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
+        auto parsedJson = partialParseToJson(input);
+        ASSERT_TRUE(parsedJson.IsObject());
+        ASSERT_TRUE(parsedJson.HasMember("numbers"));
+        ASSERT_TRUE(parsedJson["numbers"].IsArray());
+        ASSERT_EQ(parsedJson["numbers"].Size(), 3);
+    }
 }
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValueMultipleNesting) {
-    std::string input = "{\"numbers\": [[[1,2,3], [4,5,6";
-    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
-    auto parsedJson = partialParseToJson(input);
-    ASSERT_TRUE(parsedJson.IsObject());
-    ASSERT_TRUE(parsedJson.HasMember("numbers"));
-    ASSERT_TRUE(parsedJson["numbers"].IsArray());
-    ASSERT_TRUE(parsedJson["numbers"][0].IsArray());
-    // The first inner array ([1,2,3]) is complete, the second ([4,5,6) is incomplete, so we expect two elements
-    ASSERT_EQ(parsedJson["numbers"][0].Size(), 2);
+    auto inputs = {"{\"numbers\": [[[1,2,3], [4,5,6",
+        "{\"numbers\": [[[1,2,3], [4,5,6,"};
 
-    // First element: [1,2,3]
-    ASSERT_TRUE(parsedJson["numbers"][0][0].IsArray());
-    ASSERT_EQ(parsedJson["numbers"][0][0].Size(), 3);
-    ASSERT_EQ(parsedJson["numbers"][0][0][0].GetInt(), 1);
-    ASSERT_EQ(parsedJson["numbers"][0][0][1].GetInt(), 2);
-    ASSERT_EQ(parsedJson["numbers"][0][0][2].GetInt(), 3);
+    for (const auto& input : inputs) {
+        // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
+        auto parsedJson = partialParseToJson(input);
+        ASSERT_TRUE(parsedJson.IsObject());
+        ASSERT_TRUE(parsedJson.HasMember("numbers"));
+        ASSERT_TRUE(parsedJson["numbers"].IsArray());
+        ASSERT_TRUE(parsedJson["numbers"][0].IsArray());
+        // The first inner array ([1,2,3]) is complete, the second ([4,5,6) is incomplete, so we expect two elements
+        ASSERT_EQ(parsedJson["numbers"][0].Size(), 2);
 
-    // Second element: [4,5,6]
-    ASSERT_TRUE(parsedJson["numbers"][0][1].IsArray());
-    ASSERT_EQ(parsedJson["numbers"][0][1].Size(), 3);
-    ASSERT_EQ(parsedJson["numbers"][0][1][0].GetInt(), 4);
-    ASSERT_EQ(parsedJson["numbers"][0][1][1].GetInt(), 5);
-    ASSERT_EQ(parsedJson["numbers"][0][1][2].GetInt(), 6);
+        // First element: [1,2,3]
+        ASSERT_TRUE(parsedJson["numbers"][0][0].IsArray());
+        ASSERT_EQ(parsedJson["numbers"][0][0].Size(), 3);
+        ASSERT_EQ(parsedJson["numbers"][0][0][0].GetInt(), 1);
+        ASSERT_EQ(parsedJson["numbers"][0][0][1].GetInt(), 2);
+        ASSERT_EQ(parsedJson["numbers"][0][0][2].GetInt(), 3);
+
+        // Second element: [4,5,6]
+        ASSERT_TRUE(parsedJson["numbers"][0][1].IsArray());
+        ASSERT_EQ(parsedJson["numbers"][0][1].Size(), 3);
+        ASSERT_EQ(parsedJson["numbers"][0][1][0].GetInt(), 4);
+        ASSERT_EQ(parsedJson["numbers"][0][1][1].GetInt(), 5);
+        ASSERT_EQ(parsedJson["numbers"][0][1][2].GetInt(), 6);
+    }
 }
 
 TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValueWithExtraCharacters) {
@@ -143,13 +189,54 @@ TEST_F(PartialJsonParserTest, simpleJsonWithKeyWithoutValue) {
 }
 
 TEST_F(PartialJsonParserTest, simpleJsonWithIncompleteKey) {
-    std::string input = "{\"name\": \"OpenVINO\", \"ag";
+    auto inputs = {"{\"name\": \"OpenVINO\", \"ag",
+        "{\"name\": \"OpenVINO\",",
+        "{\"name\": \"OpenVINO\""};
     // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
-    auto parsedJson = partialParseToJson(input);
-    ASSERT_TRUE(parsedJson.IsObject());
-    ASSERT_TRUE(parsedJson.HasMember("name"));
-    ASSERT_TRUE(parsedJson["name"].IsString());
-    ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
-    // The "age" key is incomplete, so it should not be present in the parsed JSON
-    ASSERT_FALSE(parsedJson.HasMember("ag"));
+    for (const auto& input : inputs) {
+        auto parsedJson = partialParseToJson(input);
+        ASSERT_TRUE(parsedJson.IsObject());
+        EXPECT_EQ(parsedJson.MemberCount(), 1);
+        ASSERT_TRUE(parsedJson.HasMember("name"));
+        ASSERT_TRUE(parsedJson["name"].IsString());
+        ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
+    }
+}
+
+TEST_F(PartialJsonParserTest, complexJsonWithIncompleteKey) {
+    // Nested object of objects with incomplete key
+    auto inputs = {"{\"tool\": {\"name\": \"OpenVINO\", \"ag",
+        "{\"tool\": {\"name\": \"OpenVINO\",",
+        "{\"tool\": {\"name\": \"OpenVINO\""};
+    // If below method returns it means the parsedJson is valid JSON, otherwise it would throw an exception
+    for (const auto& input : inputs) {
+        auto parsedJson = partialParseToJson(input);
+        ASSERT_TRUE(parsedJson.IsObject());
+        EXPECT_EQ(parsedJson.MemberCount(), 1);
+        ASSERT_TRUE(parsedJson.HasMember("tool"));
+        ASSERT_TRUE(parsedJson["tool"].IsObject());
+        EXPECT_EQ(parsedJson["tool"].MemberCount(), 1);
+        ASSERT_TRUE(parsedJson["tool"].HasMember("name"));
+        ASSERT_TRUE(parsedJson["tool"]["name"].IsString());
+        ASSERT_EQ(parsedJson["tool"]["name"].GetString(), std::string("OpenVINO"));
+    }
+
+    // Nested array of objects with incomplete key
+    auto inputsArray = {"{\"tools\": [{\"name\": \"OpenVINO\"}, {\"ag",
+        "{\"tools\": [{\"name\": \"OpenVINO\"},",
+        "{\"tools\": [{\"name\": \"OpenVINO\"}"};
+
+    for (const auto& input : inputsArray) {
+        auto parsedJson = partialParseToJson(input);
+        ASSERT_TRUE(parsedJson.IsObject());
+        EXPECT_EQ(parsedJson.MemberCount(), 1);
+        ASSERT_TRUE(parsedJson.HasMember("tools"));
+        ASSERT_TRUE(parsedJson["tools"].IsArray());
+        ASSERT_EQ(parsedJson["tools"].Size(), 1);  // One object in the array
+        ASSERT_TRUE(parsedJson["tools"][0].IsObject());
+        EXPECT_EQ(parsedJson["tools"][0].MemberCount(), 1);
+        ASSERT_TRUE(parsedJson["tools"][0].HasMember("name"));
+        ASSERT_TRUE(parsedJson["tools"][0]["name"].IsString());
+        ASSERT_EQ(parsedJson["tools"][0]["name"].GetString(), std::string("OpenVINO"));
+    }
 }
