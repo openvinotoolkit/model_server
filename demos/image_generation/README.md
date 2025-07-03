@@ -109,6 +109,53 @@ ovms --rest_port 8000 ^
 ::::
 
 
+### NPU or mixed device
+
+Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+In case you want to use Intel NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with NPU support. Export the models with precision matching the NPU capacity and adjust pipeline configuration.
+
+> **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
+
+It can be applied using the commands below:
+```bash
+mkdir -p models
+
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  --user $(id -u):$(id -g) --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:2025.2-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/FLUX.1-schnell-int4-ov \
+    --target_device 'NPU NPU GPU' \
+    --resolution 512x512
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+
+```bat
+mkdir models
+
+ovms --rest_port 8000 ^
+  --model_repository_path ./models/ ^
+  --task image_generation ^
+  --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
+  --target_device 'NPU NPU GPU' ^
+  --resolution 512x512
+```
+:::
+
+::::
+
+
 ## Option 2. Using export script to download, convert and quantize then start the serving
 Here, the original models in `safetensors` format and the tokenizers will be converted to OpenVINO IR format and optionally quantized to desired precision.
 Quantization ensures faster initialization time, better performance and lower memory consumption.
@@ -143,6 +190,23 @@ python export_model.py image_generation \
   --source_model black-forest-labs/FLUX.1-schnell \
   --weight-format int4 \
   --target_device GPU \
+  --config_file_path models/config.json \
+  --model_repository_path models \
+  --overwrite_models
+```
+
+### Export model for NPU or mixed device
+
+Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
+
+> **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
+
+```console
+python export_model.py image_generation \
+  --source_model black-forest-labs/FLUX.1-schnell \
+  --weight-format int4 \
+  --target_device 'NPU NPU GPU' \
+  --resolution '512x512' \
   --config_file_path models/config.json \
   --model_repository_path models \
   --overwrite_models
@@ -212,6 +276,42 @@ It can be applied using the commands below:
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:2025.2-gpu \
+    --rest_port 8000 \
+    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
+```
+
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 ^
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
+```
+:::
+
+::::
+
+**NPU**  
+
+This feature will be available in 2025.3 and later releases.
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+
+In case you want to use NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
+to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
+It can be applied using the commands below:
+```bash
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
+  --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  openvino/model_server:2025.3 \
     --rest_port 8000 \
     --model_name OpenVINO/FLUX.1-schnell-int4-ov \
     --model_path /models/black-forest-labs/FLUX.1-schnell
