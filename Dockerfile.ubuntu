@@ -402,7 +402,7 @@ ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
