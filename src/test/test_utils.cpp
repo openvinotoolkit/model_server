@@ -758,7 +758,7 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     int timestepMs = 20;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
     }
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
