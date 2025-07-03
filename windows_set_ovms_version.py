@@ -74,10 +74,7 @@ def get_ovms_sha():
 
 def check_get_product_version():
     version = os.environ.get('PRODUCT_VERSION', OVMS_PROJECT_VERSION)
-    if version != None:
-        return version
-    else:
-        return OVMS_PROJECT_VERSION
+    return version
 
 def main():
     if len(sys.argv) < 2:
