@@ -2635,7 +2635,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-ovms_cc_library(
+cc_library(
     name = "image_conversion",
     hdrs = [
         "image_conversion.hpp",
@@ -2652,6 +2652,9 @@ ovms_cc_library(
         "//src:libovmsprofiler",
     ],
     visibility = ["//visibility:public",],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
 )
 
 # HTTP Server implementation using net_http of tensorflow
