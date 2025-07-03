@@ -142,7 +142,7 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
     SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(payload, key)); \
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(key, value);
 
-absl::Status ensureAcceptableForStatic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+absl::Status ensureAcceptableForStatic(const ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
     auto it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
         auto requestedNumImagesPerPrompt = it->second.as<int>();

@@ -927,7 +927,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
         << std::get<absl::Status>(requestOptions).message();
 }
 
-TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchNumImagesPerPrompt) {
+TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequested5NumImagesPerPrompt) {
     ImageGenPipelineArgs args;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
