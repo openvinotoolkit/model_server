@@ -92,6 +92,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             max_num_batched_tokens: )" << graphSettings.maxNumBatchedTokens.value() << R"(,)";
     }
+    if (graphSettings.responseParser.has_value()) {
+        oss << R"(
+            response_parser: )" << graphSettings.responseParser.value() << R"(,)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
