@@ -9,7 +9,7 @@ from skl2onnx.common.data_types import FloatTensorType
 import onnxruntime as ort
 from pyovms import Tensor
 
-from io import StringIO  # Use this for reading CSV from string
+from io import StringIO  
 
 MODEL_PATH = "/workspace/model/iris_logreg/1/model.onnx"
 LABEL_COLUMN = "Species"
@@ -22,12 +22,14 @@ class OvmsPythonModel:
         print("==== [execute] Python node called ====", file=sys.stderr, flush=True)
 
         try:
-            input_tensor = inputs[0]  # pyovms.Tensor
-            input_data = input_tensor.data  # Raw bytes
+            input_tensor = inputs[0]  
+            input_data = input_tensor.data  
             payload = json.loads(input_data.decode("utf-8"))
+            print("received data" , flush=True)
 
             mode = payload.get("mode")
             csv_str = payload.get("data")
+            
             if not isinstance(csv_str, str):
                 raise ValueError("Missing or invalid 'data' field")
 
@@ -60,6 +62,7 @@ class OvmsPythonModel:
                 sess = ort.InferenceSession(MODEL_PATH)
                 input_name = sess.get_inputs()[0].name
                 preds = sess.run(None, {input_name: X})[0]
+                print("inference made", flush = True)
 
                 result = json.dumps(preds.tolist()).encode("utf-8")
                 return [Tensor("pipeline_output", result)]
