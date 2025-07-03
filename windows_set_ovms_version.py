@@ -21,7 +21,7 @@ import subprocess
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
 WIN_OV_ZIP_PACKAGE_DIR = "openvino_genai_windows_"
 VERSION_FILE = "src\\version.hpp"
-OVMS_PROJECT_VERSION="2025.2"
+OVMS_PROJECT_VERSION="2025.3"
 
 def help():
     print("Usage:\n\
@@ -72,6 +72,13 @@ def get_ovms_sha():
     output = subprocess.check_output(command, shell=True, text=True)
     return output.rstrip()
 
+def check_get_product_version():
+    version = os.environ.get('PRODUCT_VERSION', OVMS_PROJECT_VERSION)
+    if version != None:
+        return version
+    else:
+        return OVMS_PROJECT_VERSION
+
 def main():
     if len(sys.argv) < 2:
         print('Provide bazel build flags!')
@@ -91,7 +98,7 @@ def main():
 
     openvino_name = get_openvino_name(openvino_dir)
     version_file_path = os.path.join(os.getcwd(), VERSION_FILE)
-    replace_in_file(version_file_path, "REPLACE_PROJECT_VERSION", OVMS_PROJECT_VERSION + "." + get_ovms_sha())
+    replace_in_file(version_file_path, "REPLACE_PROJECT_VERSION", check_get_product_version() + "." + get_ovms_sha())
     replace_in_file(version_file_path, "REPLACE_OPENVINO_NAME", openvino_name)
     replace_in_file(version_file_path, "REPLACE_BAZEL_BUILD_FLAGS", bazel_bld_flags)
 
