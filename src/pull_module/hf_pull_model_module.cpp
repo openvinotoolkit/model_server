@@ -30,8 +30,9 @@
 namespace ovms {
 const std::string DEFAULT_EMPTY_ENV_VALUE{""};
 
-const std::string HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV{"GIT_SERVER_CONNECT_TIMEOUT_MS"};
-const std::string HfPullModelModule::GIT_SERVER_TIMEOUT_ENV{"GIT_SERVER_TIMEOUT_MS"};
+const std::string HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV{"GIT_OPT_SET_SERVER_CONNECT_TIMEOUT"};
+const std::string HfPullModelModule::GIT_SERVER_TIMEOUT_ENV{"GIT_OPT_SET_SERVER_TIMEOUT"};
+const std::string HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV{"GIT_OPT_SET_SSL_CERT_LOCATIONS"};
 // GIT_OPT_SET_SERVER_TIMEOUT
 
 static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, const std::string& defaultValue = DEFAULT_EMPTY_ENV_VALUE) {
@@ -57,7 +58,7 @@ HfPullModelModule::HfPullModelModule() {}
 
 static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     Libgit2Options opts;
-    std::string timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, "1000");
+    std::string timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, "4000");
     auto timeoutOpt = ovms::stoi32(timeoutString);
     if (!timeoutOpt.has_value()) {
         SPDLOG_ERROR("Set invalid value for libgit2 server connection timeout:{}", timeoutString);
@@ -70,13 +71,15 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     } else {
         opts.serverConnectTimeoutMs = timeoutOpt.value();
     }
-    timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_TIMEOUT_ENV, "0");
+    timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_TIMEOUT_ENV, "4000");
     timeoutOpt = ovms::stoi32(timeoutString);
     if (!timeoutOpt.has_value()) {
         SPDLOG_ERROR("Set invalid value for libgit2 server timeout:{}", timeoutString);
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
     opts.serverTimeoutMs = timeoutOpt.value();
+
+    opts.sslCertificateLocation = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV, "");
     return opts;
 }
 
