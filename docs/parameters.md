@@ -120,9 +120,12 @@ Task specific parameters for different tasks (text generation/image generation/e
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
 |-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------|
+| `--resolution`                | `string`     | Allowed resolutions in a format list of `WxH`; `W`=width `H`=height - space separated. If not specified, inherited from model. If only one is specified, the pipeline will be reshaped to static. Static shape is required for NPU device. |
 | `--max_resolution`                | `string`     | Maximum allowed resolution in the format `WxH` (W = width, H = height). If not specified, inherited from the model. |
 | `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. If not specified, inherited from the model.|
 | `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request. In 2025.2 release only 1 image generation per request is supported. |
+| `--num_images_per_prompt`                | `integer`     | Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (1). For dynamic pipelines, by default only `max_num_images_per_prompt` limits the batch size.  |
+| `--guidance_scale`                | `integer`     | Guidance scale used for static pipeline reshape. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5)  |
 | `--default_num_inference_steps`   | `integer`    | Default number of inference steps when not specified by the client.                                                 |
 | `--max_num_inference_steps`       | `integer`    | Maximum number of inference steps a client can request for a given model.                                           |
 | `--num_streams`                   | `integer`    | Number of parallel execution streams for image generation models. Use at least 2 on 2-socket CPU systems.           |
