@@ -1273,9 +1273,15 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)"--cache_dir",
         (char*)"/cache",
         (char*)"--target_device",
-        (char*)"GPU",
+        (char*)"GPU GPU NPU",
         (char*)"--num_streams",
         (char*)"14",
+        (char*)"--num_images_per_prompt",
+        (char*)"6",
+        (char*)"--guidance_scale",
+        (char*)"8.2",
+        (char*)"--resolution",
+        (char*)" 3000x4000 200x700 100x200",
         (char*)"--max_resolution",
         (char*)"3000x4000",
         (char*)"--default_resolution",
@@ -1288,7 +1294,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
         (char*)"3",
     };
 
-    int arg_count = 24;
+    int arg_count = 30;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1298,8 +1304,12 @@ TEST(OvmsGraphConfigTest, positiveAllChangedImageGeneration) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::IMAGE_GENERATION_GRAPH);
     ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(imageGenerationGraphSettings.maxResolution, "3000x4000");
+    ASSERT_EQ(imageGenerationGraphSettings.targetDevice, "GPU GPU NPU");
+    ASSERT_EQ(imageGenerationGraphSettings.resolution, " 3000x4000 200x700 100x200");
+    ASSERT_TRUE(imageGenerationGraphSettings.guidanceScale.has_value());
+    ASSERT_NEAR(imageGenerationGraphSettings.guidanceScale.value(), 8.2, 1e-5);
+    ASSERT_TRUE(imageGenerationGraphSettings.numImagesPerPrompt.has_value());
+    ASSERT_EQ(imageGenerationGraphSettings.numImagesPerPrompt.value(), 6);
     ASSERT_EQ(imageGenerationGraphSettings.defaultResolution, "300x400");
     ASSERT_TRUE(imageGenerationGraphSettings.maxNumberImagesPerPrompt.has_value());
     ASSERT_EQ(imageGenerationGraphSettings.maxNumberImagesPerPrompt.value(), 7);
