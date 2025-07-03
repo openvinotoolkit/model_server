@@ -52,6 +52,10 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
+| `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |
+| `allow_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
+| `allow_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
+| `allow_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 
 ## Config management mode options
 
