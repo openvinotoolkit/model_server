@@ -131,6 +131,7 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
         imageGenerationGraphSettings.resolution = result->count("resolution") ? result->operator[]("resolution").as<std::string>() : "";
         imageGenerationGraphSettings.numImagesPerPrompt = result->count("num_images_per_prompt") ? std::optional<uint32_t>(result->operator[]("num_images_per_prompt").as<uint32_t>()) : std::nullopt;
         imageGenerationGraphSettings.guidanceScale = result->count("guidance_scale") ? std::optional<float>(result->operator[]("guidance_scale").as<float>()) : std::nullopt;
+        imageGenerationGraphSettings.maxResolution = result->count("max_resolution") ? result->operator[]("max_resolution").as<std::string>() : "";
         if (!imageGenerationGraphSettings.maxResolution.empty() && !isValidResolution(imageGenerationGraphSettings.maxResolution)) {
             throw std::invalid_argument("Invalid max_resolution format. Expected WxH, e.g., 1024x1024");
         }
