@@ -71,7 +71,7 @@ void ImageGenerationGraphCLIParser::createOptions() {
             cxxopts::value<uint32_t>(),
             "NUM_IMAGES_PER_PROMPT")
         ("guidance_scale",
-            "Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5).",
+            "Guidance scale used for static pipeline reshape. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5).",
             cxxopts::value<float>(),
             "GUIDANCE_SCALE")
         ("max_num_images_per_prompt",
