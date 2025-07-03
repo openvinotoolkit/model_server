@@ -18,13 +18,13 @@ cd [need to fix]
 ### 2.1. Build the Docker Image
 
 ```bash
-docker build -t ovms-iris-pipeline .
+docker build --no-cache -t iris_7 .
 ```
 
 ### 2.2. Run the OVMS Container
 
 ```bash
-docker run docker run --rm -it   --name iris_6   -v "$PWD:/workspace"   -p 9000:9000   iris_6   --config_path /workspace/model_config.json   --port 9000
+docker run --rm -it -v "$PWD:/workspace"   -p 9000:9000 -p 8000:8000  iris_7 --config_path /workspace/model_config.json   --port 9000 --rest_port 8000
 ```
 - **Note:** Adjust `$(pwd)` if you are running from a different working directory.
 
@@ -84,7 +84,7 @@ The pipeline expects input as a JSON object, sent as a single-element numpy arra
 - **Logs:**  
   For debugging, check OVMS container logs:
   ```bash
-  docker logs iris_6
+  docker logs iris_7
   ```
 - **Code Changes:**  
   After editing `pipeline/ovmsmodel.py`, **restart the OVMS container** for changes to take effect.
