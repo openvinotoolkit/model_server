@@ -104,6 +104,16 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
     }
 }
 
+std::string getOvmsTestExecutablePath() {
+#ifdef __linux__
+    return std::filesystem::canonical("/proc/self/exe").string();
+#elif _WIN32
+    char buffer[2000];
+    GetModuleFileNameA(NULL, buffer, 2000);
+    return std::filesystem::path(buffer).parent_path().string();
+#endif
+}
+
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
@@ -745,8 +755,10 @@ const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 15;
 
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
+    int timestepMs = 20;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
     }
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
