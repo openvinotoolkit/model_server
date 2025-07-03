@@ -38,7 +38,6 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../schema.hpp"
-#include "graph_export_types.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)
