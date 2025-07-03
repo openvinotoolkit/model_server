@@ -256,7 +256,8 @@ protected:
 
     void TearDown() override {
         server.setShutdownRequest(1);
-        t->join();
+        if(t)
+            t->join();
         server.setShutdownRequest(0);
         std::filesystem::remove_all(this->destinationDirectory);
     }

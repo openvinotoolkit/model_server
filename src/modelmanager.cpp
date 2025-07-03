@@ -433,16 +433,16 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
     }
 
     // Check already set members in case of loading based on config.json
-    if (mpConfig.getBasePath() == "") {
+    if (mpConfig.getBasePath() == "" || checkModelMeshPath) {
         mpConfig.setBasePath(inputGraphDirectory);
     }
-    if (mpConfig.getGraphPath() == "") {
+    if (mpConfig.getGraphPath() == "" || checkModelMeshPath) {
         mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
     }
-    if (mpConfig.getSubconfigPath() == "") {
+    if (mpConfig.getSubconfigPath() == "" || checkModelMeshPath) {
         mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
     }
-    if (mpConfig.getModelMeshSubconfigPath() == "") {
+    if (mpConfig.getModelMeshSubconfigPath() == "" || checkModelMeshPath) {
         mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
     }
 
