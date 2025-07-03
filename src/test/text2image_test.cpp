@@ -274,12 +274,13 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledGenAIFields) {
         "num_images_per_prompt": 4,
         "num_inference_steps": 7,
         "max_sequence_length": 256,
-        "strength": 0.75
+        "strength": 0.75,
+        "response_format": "b64_json"
     })");
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
     auto& options = std::get<ov::AnyMap>(requestOptions);
-    EXPECT_EQ(options.size(), 13);
+    ASSERT_EQ(options.size(), 13);
     for (auto& [key, value] : options) {
         SPDLOG_DEBUG("key: {}, value: {}", key, value.as<std::string>());
     }
@@ -443,13 +444,13 @@ TEST(Image2ImageTest, getImageEditGenerationRequestOptionsAllHandledOpenAIFields
         "image": "base64_image",
         "n": 4,
         "size": "512x1024",
-        "model": "test model"
+        "model": "test model",
+        "response_format": "b64_json"
     })");
     /*
         "background": "transparent",
         "mask": "base64_mask",
         "quality": "high",
-        "response_format": "url",
         "user"
     */
     auto requestOptions = ovms::getImageEditRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
@@ -701,7 +702,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
         {"exceeded_num_images_per_prompt", R"({"prompt": "test prompt", "image": "base64_image", "n": 101, "model": "test model"})"},
         {"exceeded_num_inference_steps", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "num_inference_steps": 101})"},
         {"exceeded_strength", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": 1.5})"},
-        {"strength_below_0", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": -0.5})"}};
+        {"strength_below_0", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": -0.5})"},
+        {"response_format_unsupported", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "response_format": "unsupported"})"}};
     for (auto& [key, value] : payloadMap) {
         ovms::HttpPayload payload;
         payload.parsedJson = std::make_shared<rapidjson::Document>();
