@@ -807,9 +807,11 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"true",
         (char*)"--draft_source_model",
         (char*)"/draft/model/source",
+        (char*)"--response_parser",
+        (char*)"parserName",
     };
 
-    int arg_count = 22;
+    int arg_count = 24;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -828,6 +830,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
+    ASSERT_EQ(graphSettings.responseParser.value(), "parserName");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {
@@ -905,6 +908,7 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
+    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
@@ -938,6 +942,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
+    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultStart) {
@@ -973,6 +978,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
+    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
