@@ -1553,6 +1553,10 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--file_system_poll_wait_seconds", "2",
         "--sequence_cleaner_poll_wait_minutes", "7",
         "--custom_node_resources_cleaner_interval_seconds", "8",
+        "--allow_credentials",
+        "--allowed_headers", "Content-Type",
+        "--allowed_methods", "GET,POST",
+        "--allowed_origins", "example.com,example.org",
 #ifdef _WIN32
         "--grpc_workers", "1",
         "--cpu_extension", "tmp_cpu_extension_library_dir",
@@ -1568,7 +1572,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 37;
+    int arg_count = 44;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1597,6 +1601,10 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.configPath(), "/config.json");
     EXPECT_EQ(config.grpcMaxThreads(), 100);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)1000000);
+    EXPECT_TRUE(config.allowCredentials());
+    EXPECT_EQ(config.allowedHeaders(), "Content-Type");
+    EXPECT_EQ(config.allowedMethods(), "GET,POST");
+    EXPECT_EQ(config.allowedOrigins(), "example.com,example.org");
 
 #ifdef _WIN32
     std::filesystem::remove_all(cpu_extension_lib_path);
