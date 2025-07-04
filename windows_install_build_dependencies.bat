@@ -293,6 +293,22 @@ IF /I EXIST %opt_install_dir%\%go_dir% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git - check required version
+set "git_exe=C:\Program Files\Git\mingw64\bin\git.exe"
+set "git_ver_link=https://github.com/git-for-windows/git/releases/download/v2.50.0.windows.2/Git-2.50.0.2-64-bit.exe"
+set "required_ver=git version 2.50.0.windows.2"
+IF /I EXIST %git_exe% (
+    %git_exe% | findstr /l %required_ver%
+    if %errorlevel% == 0 (
+    echo %required_ver% installed.
+    ) else (
+        "Install git to %git_exe% from %git_ver_link%"
+    )
+) ELSE (
+    echo "Install git to %git_exe% from %git_ver_link%"
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
 set "gitlfs_dir=git-lfs-main_9_6_2025"
 set "gitlfs_http=https://github.com/git-lfs/git-lfs"
