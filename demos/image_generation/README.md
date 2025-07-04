@@ -304,7 +304,7 @@ ovms --rest_port 8000 ^
 
 ::::
 
-**NPU**  
+**NPU or mixed device**  
 
 This feature will be available in 2025.3 and later releases. Until then, please build the model server from source from the `main` branch.
 
@@ -314,10 +314,12 @@ This feature will be available in 2025.3 and later releases. Until then, please 
 
 In case you want to use NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with NPU support. Export the models with precision matching the NPU capacity and adjust pipeline configuration.
+In this specific case, we also need to use `--device /dev/dri`, because we also use GPU.
+
 It can be applied using the commands below:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
-  --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:2025.3 \
     --rest_port 8000 \
     --model_name OpenVINO/FLUX.1-schnell-int4-ov \

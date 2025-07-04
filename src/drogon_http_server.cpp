@@ -24,6 +24,7 @@
 #include <drogon/drogon.h>
 #pragma warning(pop)
 
+#include "config.hpp"
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 #include "timer.hpp"
@@ -111,6 +112,24 @@ Status DrogonHttpServer::startAcceptingRequests() {
                     // .setServerHeaderField("OpenVINO Model Server")
                     .enableServerHeader(false)
                     .enableDateHeader(false)
+                    .registerPreSendingAdvice([](const drogon::HttpRequestPtr& req, const drogon::HttpResponsePtr& resp) {
+                        static const bool allowCredentials = ovms::Config::instance().allowCredentials();
+                        if (allowCredentials) {
+                            resp->addHeader("Access-Control-Allow-Credentials", "true");
+                        }
+                        const auto& allowedOrigins = ovms::Config::instance().allowedOrigins();
+                        if (allowedOrigins.size()) {
+                            resp->addHeader("Access-Control-Allow-Origin", allowedOrigins);
+                        }
+                        const auto& allowedMethods = ovms::Config::instance().allowedMethods();
+                        if (allowedMethods.size()) {
+                            resp->addHeader("Access-Control-Allow-Methods", allowedMethods);
+                        }
+                        const auto& allowedHeaders = ovms::Config::instance().allowedHeaders();
+                        if (allowedHeaders.size()) {
+                            resp->addHeader("Access-Control-Allow-Headers", allowedHeaders);
+                        }
+                    })
                     .addListener(this->address, this->port)
                     .run();
             } catch (...) {

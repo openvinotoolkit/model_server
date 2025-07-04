@@ -80,6 +80,9 @@ parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help=
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_image_generation.add_argument('--resolution', default="", help='Selection of allowed resolutions in a format of WxH; W=width H=height, space separated. If only one is selected, the pipeline will be reshaped to static.', dest='resolution')
+parser_image_generation.add_argument('--guidance_scale', default="", help='Static guidance scale for the image generation requests. If not specified, default 7.5f is used.', dest='guidance_scale')
+parser_image_generation.add_argument('--num_images_per_prompt', default="", help='Static number of images to be generated per the image generation request. If not specified, default 1 is used.', dest='num_images_per_prompt')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
@@ -288,6 +291,12 @@ node: {
       {%- if plugin_config_str %}
       plugin_config: '{{plugin_config_str}}',{% endif %}
       device: "{{target_device|default("CPU", true)}}",
+      {%- if resolution %}
+      resolution: "{{resolution}}",{% endif %}
+      {%- if num_images_per_prompt %}
+      num_images_per_prompt: {{num_images_per_prompt}},{% endif %}
+      {%- if guidance_scale %}
+      guidance_scale: {{guidance_scale}},{% endif %}
       {%- if max_resolution %}
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
@@ -672,6 +681,9 @@ elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',
         'target_device',
+        'resolution',
+        'num_images_per_prompt',
+        'guidance_scale',
         'max_resolution',
         'default_resolution',
         'max_num_images_per_prompt',

@@ -432,10 +432,19 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         inputGraphDirectory += "1" + FileSystem::getOsSeparator();
     }
 
-    mpConfig.setBasePath(inputGraphDirectory);
-    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
-    mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
-    mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    // Check already set members in case of loading based on config.json
+    if (mpConfig.getBasePath() == "" || checkModelMeshPath) {
+        mpConfig.setBasePath(inputGraphDirectory);
+    }
+    if (mpConfig.getGraphPath() == "" || checkModelMeshPath) {
+        mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    }
+    if (mpConfig.getSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    }
+    if (mpConfig.getModelMeshSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    }
 
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
