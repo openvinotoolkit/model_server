@@ -297,8 +297,8 @@ IF /I EXIST %opt_install_dir%\%go_dir% (
 set "git_exe=C:\Program Files\Git\mingw64\bin\git.exe"
 set "git_ver_link=https://github.com/git-for-windows/git/releases/download/v2.50.0.windows.2/Git-2.50.0.2-64-bit.exe"
 set "required_ver=git version 2.50.0.windows.2"
-IF /I EXIST %git_exe% (
-    %git_exe% | findstr /l %required_ver%
+IF /I EXIST "%git_exe%" (
+    "%git_exe%" | findstr /l %required_ver%
     if %errorlevel% == 0 (
     echo %required_ver% installed.
     ) else (
