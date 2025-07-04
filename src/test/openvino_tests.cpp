@@ -131,3 +131,60 @@ TEST_F(OpenVINO, ResetOutputTensors) {
         EXPECT_NEAR(in1[i] + 1, out[i], 0.0004) << "i:" << i;
     }
 }
+
+// Prerequisites:
+// 1. OpenVINO installed and configured:
+//   - download and install: https://storage.openvinotoolkit.org/repositories/openvino/packages/2025.2/linux/
+//   - build from src (our Dockerfile)
+
+TEST_F(OpenVINO, OpenVINODemo) {
+    // Creating core (single for all operations in an app)
+    ov::Core core;
+
+    // Reading model weights (dummy has no weights!)
+    auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
+
+    // Reshaping the model before compilation to device
+    const std::string inputName{"b"};
+    ov::Shape ovShape;
+    ovShape.emplace_back(1);
+    ovShape.emplace_back(3);
+    std::map<std::string, ov::PartialShape> inputShapes;
+    inputShapes[inputName] = ovShape;
+    model->reshape(inputShapes);
+
+    // Compilation to device: CPU, GPU, GPU.0, GPU.1, NPU, HETERO:CPU,GPU, etc.
+    auto cpuCompiledModel = core.compile_model(model, "CPU");
+
+    // Creating infer request. Use only by 1 thread at the same time, as they are not thread-safe.
+    auto cpuInferRequest = cpuCompiledModel.create_infer_request();
+
+    // Prepare input data
+    // Get the precision
+    ov::element::Type_t dtype = ov::element::Type_t::f32;
+    ov::Tensor inTensor(dtype, ovShape);  // this way tensor preallocated memory space, its possible to create one with existing memory with no copy
+    //ov::Tensor inTensor(dtype, ovShape, inData.data());  // this way tensor preallocated memory space, its possible to create one with existing memory with no copy
+
+    // Fill with data...
+    float* data = reinterpret_cast<float*>(inTensor.data());
+    for (size_t i = 0; i < ovShape[1]; ++i) {
+        data[i] = static_cast<float>(i + 1);  // Fill with data, e.g. 1, 2, 3, ..., 10000
+    }
+
+    // Attach tensors to request
+    cpuInferRequest.set_tensor("b", inTensor);
+
+    // Actual inference
+    cpuInferRequest.start_async();
+    cpuInferRequest.wait(); // sync infer() allowed as well, and setting callbacks
+    ov::Tensor outTensor = cpuInferRequest.get_tensor("a");  // still attached to request! do not use infer request while working with output
+    EXPECT_EQ(outTensor.get_element_type(), ov::element::f32);
+    EXPECT_EQ(outTensor.get_shape(), ovShape);
+
+    // Print the response
+    float* outData = reinterpret_cast<float*>(outTensor.data());
+    for (size_t i = 0; i < ovShape[1]; ++i) {
+        std::cout << "Output data[" << i << "]: " << outData[i] << std::endl;  // Should print 2, 3, 4, ..., 10001
+    }
+}
+
