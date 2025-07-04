@@ -36,7 +36,8 @@ enum class IteratorState {
     PROCESSING_KEY,
     AWAITING_COLON,
     AWAITING_VALUE,
-    PROCESSING_VALUE,
+    PROCESSING_NUMBER,
+    PROCESSING_KEYWORD,
     PROCESSING_STRING,
     PROCESSING_OBJECT,
     PROCESSING_ARRAY,
@@ -53,8 +54,6 @@ class JsonBuilder {
 private:
     // Incrementally built JSON string
     std::string buffer = "";
-    // String cache for the part that has been rejected in the last call to we can add it to the new chunk
-    std::string cache = "";
     // Current position in the buffer
     size_t currentPosition = 0;
     // Current state of the iterator
@@ -65,10 +64,8 @@ private:
     std::vector<std::pair<char, size_t>> openCloseStack;
 
 public:
-
     void clear() {
         buffer.clear();
-        cache.clear();
         currentPosition = 0;
         state = IteratorState::BEGIN;
         lastSeparator = {0, IteratorState::BEGIN};
@@ -76,25 +73,32 @@ public:
     }
 
     rapidjson::Document partialParseToJson(const std::string& chunk) {
+        bool finishedWithEscapeCharacter = false;
+
         // Adding chunk to buffer
-        buffer += (cache + chunk);
-        cache.clear();
+        buffer += chunk;
 
         // Process only the new part of the buffer
         auto beginIt = buffer.begin() + currentPosition;
         auto endIt = buffer.end();
 
         for (auto it = beginIt; it != endIt; ++it, currentPosition++) {
+            finishedWithEscapeCharacter = false;
             char c = *it;
 
             if (state != IteratorState::PROCESSING_STRING && state != IteratorState::PROCESSING_KEY) {
-                if (!std::isspace(static_cast<unsigned char>(c))) {
-                    if (state == IteratorState::AWAITING_VALUE) {
-                        state = IteratorState::PROCESSING_VALUE;
-                    } else if (state == IteratorState::AWAITING_ARRAY_ELEMENT) {
-                        state = IteratorState::PROCESSING_ARRAY;
+                if (std::isspace(static_cast<unsigned char>(c))) {
+                    continue;
+                }
+                if (state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_ARRAY) {
+                    // We either start a dict value, start a new array or continue processing an array
+                    if (c == 't' || c == 'f' || c == 'n') {
+                        state = IteratorState::PROCESSING_KEYWORD;
+                    } else {
+                        state = IteratorState::PROCESSING_NUMBER;
                     }
                 }
+
                 if (c == '{') {
                     openCloseStack.emplace_back(c, currentPosition);
                     state = IteratorState::AWAITING_KEY;
@@ -131,9 +135,9 @@ public:
                     state = IteratorState::AWAITING_VALUE;
                 } else if (c == ',') {
                     lastSeparator = {currentPosition, state};
-                    if (state == IteratorState::PROCESSING_OBJECT) {
+                    if (!openCloseStack.empty() && openCloseStack.back().first == '{') {
                         state = IteratorState::AWAITING_KEY;
-                    } else if (state == IteratorState::PROCESSING_ARRAY) {
+                    } else if (!openCloseStack.empty() && openCloseStack.back().first == '[') {
                         state = IteratorState::AWAITING_ARRAY_ELEMENT;
                     }
                 } else if (c == '"') {
@@ -154,7 +158,7 @@ public:
                             // We processed a key, now we expect a colon
                             state = IteratorState::AWAITING_COLON;
                         } else if (state == IteratorState::PROCESSING_STRING) {
-                            assert (!openCloseStack.empty() && openCloseStack.back().first == '"');
+                            assert(!openCloseStack.empty() && openCloseStack.back().first == '"');
                             openCloseStack.pop_back();
                             if (!openCloseStack.empty() && openCloseStack.back().first == '[') {
                                 state = IteratorState::PROCESSING_ARRAY;
@@ -163,6 +167,8 @@ public:
                             }
                         }
                     }
+                } else if (c == '\\') {
+                    finishedWithEscapeCharacter = true;
                 }
             }
         }
@@ -180,20 +186,19 @@ public:
         std::string closedInput = buffer;
 
         if (state == IteratorState::AWAITING_KEY || state == IteratorState::PROCESSING_KEY || state == IteratorState::AWAITING_COLON ||
-                state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT) {
+            state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_KEYWORD) {
             if (lastSeparator.position != std::string::npos && lastSeparator.position < closedInput.size()) {
                 while (!openCloseStack.empty() && openCloseStack.back().second >= lastSeparator.position) {
                     openCloseStack.pop_back();
                 }
-                // Store the rejected part in cache before erasing
-                //cache = closedInput.substr(lastSeparator.position);
-                //std::cout << "Rejected part: " << cache << std::endl;
-                std::cout << "Removing rejected part: " << closedInput.substr(lastSeparator.position) << std::endl;
                 closedInput.erase(lastSeparator.position);
                 // Reset current position and state to the last separator, so we parse rejected part again with new chunk
                 currentPosition = lastSeparator.position;
                 state = lastSeparator.state;
             }
+        } else if (state == IteratorState::PROCESSING_STRING && finishedWithEscapeCharacter) {
+            // If we are processing a string value and we finished with an escape character, we need to remove, so we can close the string properly
+            closedInput.erase(closedInput.size() - 1);
         }
 
         for (auto it = openCloseStack.rbegin(); it != openCloseStack.rend(); ++it) {
@@ -205,8 +210,6 @@ public:
                 closedInput += '"';
             }
         }
-        std::cout << "Iteration state: " << static_cast<int>(state) << std::endl;
-        std::cout << "Partial JSON closed: " << closedInput << std::endl;
         rapidjson::Document doc;
         if (closedInput.empty()) {
             doc.SetObject();

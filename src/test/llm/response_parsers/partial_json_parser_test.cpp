@@ -245,7 +245,21 @@ TEST_F(PartialJsonParserTest, complexJsonWithIncompleteKey) {
 }
 
 TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
-    std::string targetJson = "{\"user\": {\"name\": \"OpenVINO\", \"details\": {\"age\": 5, \"skills\": [\"C++\", \"Python\", \"AI\"]}}, \"numbers\": [1, 2, 3]}";
+    std::string targetJson = R"({
+        "major_object": {
+            "string": "OpenVINO",
+            "minor_object": {
+                "number": 5,
+                "number_array": [1, 2, 3],
+                "string_array": ["C++", "Python", "\"Java\"", "AI"]
+            }
+        },
+        "boolean": true,
+        "boolean_array": [true, false, true],
+        "null_value": null,
+        "null_array": [null, null, null],
+        "empty_object": {}
+    })";
     JsonBuilder builder;
     rapidjson::Document parsedJson;
     for (size_t i = 0; i < targetJson.size(); ++i) {
@@ -254,27 +268,117 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
     }
 
     ASSERT_TRUE(parsedJson.IsObject());
-    ASSERT_TRUE(parsedJson.HasMember("user"));
-    ASSERT_TRUE(parsedJson["user"].IsObject());
-    ASSERT_TRUE(parsedJson["user"].HasMember("name"));
-    ASSERT_TRUE(parsedJson["user"]["name"].IsString());
-    ASSERT_EQ(parsedJson["user"]["name"].GetString(), std::string("OpenVINO"));
-    ASSERT_TRUE(parsedJson["user"].HasMember("details"));
-    ASSERT_TRUE(parsedJson["user"]["details"].IsObject());
-    ASSERT_TRUE(parsedJson["user"]["details"].HasMember("age"));
-    ASSERT_TRUE(parsedJson["user"]["details"]["age"].IsInt());
-    ASSERT_EQ(parsedJson["user"]["details"]["age"].GetInt(), 5);
-    ASSERT_TRUE(parsedJson["user"]["details"].HasMember("skills"));
-    ASSERT_TRUE(parsedJson["user"]["details"]["skills"].IsArray());
-    ASSERT_EQ(parsedJson["user"]["details"]["skills"].Size(), 3);
-    ASSERT_EQ(parsedJson["user"]["details"]["skills"][0].GetString(), std::string("C++"));
-    ASSERT_EQ(parsedJson["user"]["details"]["skills"][1].GetString(), std::string("Python"));
-    ASSERT_EQ(parsedJson["user"]["details"]["skills"][2].GetString(), std::string("AI"));
-    ASSERT_TRUE(parsedJson.HasMember("numbers"));
-    ASSERT_TRUE(parsedJson["numbers"].IsArray());
-    ASSERT_EQ(parsedJson["numbers"].Size(), 3);
-    ASSERT_EQ(parsedJson["numbers"][0].GetInt(), 1);
-    ASSERT_EQ(parsedJson["numbers"][1].GetInt(), 2);
-    ASSERT_EQ(parsedJson["numbers"][2].GetInt(), 3);
+    ASSERT_TRUE(parsedJson.HasMember("major_object"));
+    ASSERT_TRUE(parsedJson["major_object"].IsObject());
+    ASSERT_TRUE(parsedJson["major_object"].HasMember("string"));
+    ASSERT_TRUE(parsedJson["major_object"]["string"].IsString());
+    ASSERT_EQ(parsedJson["major_object"]["string"].GetString(), std::string("OpenVINO"));
+
+    ASSERT_TRUE(parsedJson["major_object"].HasMember("minor_object"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].IsObject());
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("number"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["number"].IsInt());
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number"].GetInt(), 5);
+
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("number_array"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["number_array"].IsArray());
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"].Size(), 3);
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][0].GetInt(), 1);
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][1].GetInt(), 2);
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][2].GetInt(), 3);
+
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("string_array"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["string_array"].IsArray());
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["string_array"].Size(), 4);
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["string_array"][0].GetString(), std::string("C++"));
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["string_array"][1].GetString(), std::string("Python"));
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["string_array"][2].GetString(), std::string("\"Java\""));
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["string_array"][3].GetString(), std::string("AI"));
+
+    ASSERT_TRUE(parsedJson.HasMember("boolean"));
+    ASSERT_TRUE(parsedJson["boolean"].IsBool());
+    ASSERT_EQ(parsedJson["boolean"].GetBool(), true);
+
+    ASSERT_TRUE(parsedJson.HasMember("boolean_array"));
+    ASSERT_TRUE(parsedJson["boolean_array"].IsArray());
+    ASSERT_EQ(parsedJson["boolean_array"].Size(), 3);
+    ASSERT_TRUE(parsedJson["boolean_array"][0].IsBool());
+    ASSERT_TRUE(parsedJson["boolean_array"][1].IsBool());
+    ASSERT_TRUE(parsedJson["boolean_array"][2].IsBool());
+    ASSERT_EQ(parsedJson["boolean_array"][0].GetBool(), true);
+    ASSERT_EQ(parsedJson["boolean_array"][1].GetBool(), false);
+    ASSERT_EQ(parsedJson["boolean_array"][2].GetBool(), true);
+
+    ASSERT_TRUE(parsedJson.HasMember("null_value"));
+    ASSERT_TRUE(parsedJson["null_value"].IsNull());
+
+    ASSERT_TRUE(parsedJson.HasMember("null_array"));
+    ASSERT_TRUE(parsedJson["null_array"].IsArray());
+    ASSERT_EQ(parsedJson["null_array"].Size(), 3);
+    ASSERT_TRUE(parsedJson["null_array"][0].IsNull());
+    ASSERT_TRUE(parsedJson["null_array"][1].IsNull());
+    ASSERT_TRUE(parsedJson["null_array"][2].IsNull());
+
+    ASSERT_TRUE(parsedJson.HasMember("empty_object"));
+    ASSERT_TRUE(parsedJson["empty_object"].IsObject());
+    ASSERT_EQ(parsedJson["empty_object"].MemberCount(), 0);
 }
 
+TEST_F(PartialJsonParserTest, simpleJsonIncrementalParsing) {
+    std::string targetJson = R"({
+        "name": "get_weather",
+        "arguments": "{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"
+    })";
+    JsonBuilder builder;
+    rapidjson::Document parsedJson;
+    builder.partialParseToJson("{");
+    builder.partialParseToJson("\"");
+    parsedJson = builder.partialParseToJson("name");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_EQ(parsedJson.MemberCount(), 0);  // Should not be complete yet
+
+    builder.partialParseToJson("\": \"");
+    builder.partialParseToJson("get");
+    parsedJson = builder.partialParseToJson("_");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_"));
+
+    builder.partialParseToJson("weather");
+    builder.partialParseToJson("\", ");
+    parsedJson = builder.partialParseToJson("\"arguments\":");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
+    ASSERT_EQ(parsedJson.MemberCount(), 1);  // Only "name" should be present
+
+    builder.partialParseToJson("\"{");
+    parsedJson = builder.partialParseToJson("\\\"location\\\": \\\"");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \""));
+
+    builder.partialParseToJson("Tokyo");
+    builder.partialParseToJson("\\\", \\\"");
+    parsedJson = builder.partialParseToJson("date");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date"));
+
+    builder.partialParseToJson("\\\": \\\"");
+    builder.partialParseToJson("2025-01-01");
+    builder.partialParseToJson("\\\"}\"");
+    parsedJson = builder.partialParseToJson("}");
+
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsString());
+    ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
+}
