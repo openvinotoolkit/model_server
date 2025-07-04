@@ -464,7 +464,7 @@ TEST_F(GraphCreationTest, positiveWithResponseParser) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContentsWithResponseParser , graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContentsWithResponseParser, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
