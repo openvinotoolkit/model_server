@@ -301,6 +301,10 @@ void CLIParser::parse(int argc, char** argv) {
             std::cerr << std::endl;
             exit(OVMS_EX_USAGE);
         }
+        if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
+            std::cerr << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
 #pragma warning(push)
 #pragma warning(disable : 4129)
         if (result->count("version")) {

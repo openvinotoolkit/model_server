@@ -304,7 +304,10 @@ Status Server::startModules(ovms::Config& config) {
     Status status;
     bool inserted = false;
     auto it = modules.end();
-
+    if (config.getServerSettings().serverMode == UNKNOWN_MODE) {
+        SPDLOG_ERROR("Server mode is not set.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     if (config.getServerSettings().serverMode == LIST_MODELS_MODE || config.getServerSettings().serverMode == MODIFY_CONFIG_MODE) {
         INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
         START_MODULE(it);
