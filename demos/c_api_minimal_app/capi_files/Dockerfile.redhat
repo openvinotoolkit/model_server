@@ -29,7 +29,7 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5 as release
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6 as release
 SHELL ["/bin/bash", "-c"]
 
 RUN microdnf upgrade -y
