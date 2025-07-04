@@ -131,7 +131,7 @@ mkdir -p models
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:2025.3-gpu \
+  openvino/model_server:latest-gpu \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
@@ -320,7 +320,7 @@ It can be applied using the commands below:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  openvino/model_server:2025.3 \
+  openvino/model_server:latest-gpu \
     --rest_port 8000 \
     --model_name OpenVINO/FLUX.1-schnell-int4-ov \
     --model_path /models/black-forest-labs/FLUX.1-schnell
