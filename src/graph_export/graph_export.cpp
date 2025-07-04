@@ -94,7 +94,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     }
     if (graphSettings.responseParser.has_value()) {
         oss << R"(
-            response_parser: )" << graphSettings.responseParser.value() << R"(,)";
+            response_parser: ")" << graphSettings.responseParser.value() << R"(",)";
     }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
