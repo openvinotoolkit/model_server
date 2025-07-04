@@ -21,6 +21,7 @@
 #include "base_response_parser.hpp"
 
 namespace ovms {
+
 class Qwen3ResponseParser : public BaseResponseParser {
 protected:
     // Tool calls are wrapped in <tool_call> and </tool_call> tags

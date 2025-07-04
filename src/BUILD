@@ -2497,6 +2497,7 @@ cc_test(
                 "test/llm/response_parsers/qwen3_response_parser_test.cpp",
                 "test/llm/response_parsers/hermes3_response_parser_test.cpp",
                 "test/llm/response_parsers/phi4_response_parser_test.cpp",
+                "test/llm/response_parsers/partial_json_parser_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
