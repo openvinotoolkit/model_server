@@ -57,7 +57,8 @@ enum RequestType { Predict,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
     V3,
-    Metrics };
+    Metrics,
+    Options };
 
 struct HttpRequestComponents {
     RequestType type;
@@ -226,6 +227,7 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
