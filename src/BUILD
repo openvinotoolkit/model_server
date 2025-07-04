@@ -2646,6 +2646,7 @@ cc_library(
     deps = [
         "@stb//:image",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/status",
         "//third_party:openvino",
         "//src:libovmslogging",
         "//src:libovmsprofiler",

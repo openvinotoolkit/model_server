@@ -19,6 +19,7 @@
 #include <string>
 #include <memory>
 #include <variant>
+#include <vector>
 
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
@@ -26,12 +27,26 @@
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
+#include "absl/strings/escaping.h"
 #pragma warning(pop)
 
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
+#include "src/image_conversion.hpp"
 namespace ovms {
+// written out separately to avoid msvc crashing when using try-catch in process method ...
+static std::variant<absl::Status, std::vector<std::string>> convert2Strings(const ov::Tensor& images) {
+    try {
+        return saveImagesStbi(images);
+    } catch (std::exception& e) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "ImageGenCalculator Error: {}", e.what());
+        return absl::InternalError("Error during image conversion");
+    } catch (...) {
+        return absl::InternalError("Unknown error during image conversion");
+    }
+    return absl::OkStatus();
+}
 
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions) {
     if (dimensions == "auto") {
@@ -352,8 +367,27 @@ std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payloa
     return promptIt->value.GetString();
 }
 
-std::unique_ptr<std::string> generateJSONResponseFromB64Image(const std::string& base64_image) {
-    std::string json_response = absl::StrCat("{\"data\":[{\"b64_json\":\"", base64_image, "\"}]}");
-    return std::make_unique<std::string>(json_response);
+std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor) {
+    const auto& imagesAsStringsOrStatus = convert2Strings(tensor);
+    RETURN_IF_HOLDS_STATUS(imagesAsStringsOrStatus);
+    auto& imagesAsStrings = std::get<std::vector<std::string>>(imagesAsStringsOrStatus);
+    std::vector<std::string> base64images(imagesAsStrings.size());
+    for (size_t i = 0; i < imagesAsStrings.size(); ++i) {
+        absl::Base64Escape(imagesAsStrings[i], &base64images[i]);
+    }
+    auto output = generateJSONResponseFromB64Images(base64images);
+    return output;
+}
+
+std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector<std::string>& base64Images) {
+    std::stringstream jsonStream;
+    jsonStream << "{\"data\":[";
+    assert(base64Images.size() > 0);
+    for (size_t i = 0; i < base64Images.size() - 1; ++i) {
+        jsonStream << "{\"b64_json\":\"" << base64Images[i] << "\"},\n";
+    }
+    jsonStream << "{\"b64_json\":\"" << base64Images[base64Images.size() - 1] << "\"}"
+               << "]}" << std::endl;
+    return std::make_unique<std::string>(jsonStream.str());
 }
 }  // namespace ovms
