@@ -67,6 +67,7 @@ void SetEnvironmentVar(const std::string& var, const std::string& val);
 void UnSetEnvironmentVar(const std::string& var);
 const std::string GetEnvVar(const std::string& var);
 
+std::string dirTree(const std::string& path, const std::string& indent = "");
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
@@ -811,6 +812,7 @@ protected:
     }
 
     void TearDown() override {
+        SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
         std::filesystem::remove_all(directoryPath);
     }
 

@@ -164,55 +164,60 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
     return FileSystem::createFileOverwrite(fullPath, configString);
 }
 
-Status EnableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
-    std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
+Status EnableModel(const std::string& configFilePath, const ModelsSettingsImpl& modelSettings) {
     bool exists;
-    auto status = LocalFileSystem::exists(fullPath, &exists);
-    if (!status.ok())
+    auto status = LocalFileSystem::exists(configFilePath, &exists);
+    if (!status.ok()) {
         return status;
-
+    }
     if (exists) {
-        return updateConfigAddModel(fullPath, modelSettings);
+        return updateConfigAddModel(configFilePath, modelSettings);
     } else {
-        return createModelConfig(fullPath, modelSettings);
+        return createModelConfig(configFilePath, modelSettings);
     }
 }
 
-Status DisableModel(const std::string& configDirectoryPath, const ModelsSettingsImpl& modelSettings) {
-    std::string fullPath = FileSystem::joinPath({configDirectoryPath, "config.json"});
+Status DisableModel(const std::string& configFilePath, const ModelsSettingsImpl& modelSettings) {
     bool exists;
-    auto status = LocalFileSystem::exists(fullPath, &exists);
-    if (!status.ok())
+    auto status = LocalFileSystem::exists(configFilePath, &exists);
+    if (!status.ok()) {
         return status;
-
+    }
     if (exists) {
-        return removeModelFromConfig(fullPath, modelSettings);
+        return removeModelFromConfig(configFilePath, modelSettings);
     } else {
-        SPDLOG_ERROR("Config path does not exist: {}", fullPath);
+        SPDLOG_ERROR("Config path does not exist: {}", configFilePath);
         return StatusCode::PATH_INVALID;
     }
+}
+
+static Status validateAndPrepareConfigFilePath(std::string& configDirOrFilePath) {
+    if (configDirOrFilePath.empty()) {
+        SPDLOG_ERROR("Config path empty: {}", configDirOrFilePath);
+        return StatusCode::PATH_INVALID;
+    }
+    // check if the config path is a directory and if it is, append config.json
+    bool isDir = false;
+    auto status = LocalFileSystem::isDir(configDirOrFilePath, &isDir);
+    if (!status.ok()) {
+        return status;
+    }
+    if (isDir) {
+        configDirOrFilePath = FileSystem::joinPath({configDirOrFilePath, "config.json"});
+    }
+    return StatusCode::OK;
 }
 
 Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
-    if (modelSettings.configPath.empty()) {
-        SPDLOG_ERROR("Directory path empty: {}", modelSettings.configPath);
-        return StatusCode::PATH_INVALID;
-    }
-
-    bool is_dir = false;
-    auto status = LocalFileSystem::isDir(modelSettings.configPath, &is_dir);
-    if (!status.ok())
+    std::string configFilePath = modelSettings.configPath;
+    auto status = validateAndPrepareConfigFilePath(configFilePath);
+    if (!status.ok()) {
         return status;
-
-    if (!is_dir) {
-        SPDLOG_ERROR("Config path is not a directory: {}", modelSettings.configPath);
-        return StatusCode::PATH_INVALID;
     }
-
     if (exportType == ENABLE_MODEL) {
-        return EnableModel(modelSettings.configPath, modelSettings);
+        return EnableModel(configFilePath, modelSettings);
     } else if (exportType == DISABLE_MODEL) {
-        return DisableModel(modelSettings.configPath, modelSettings);
+        return DisableModel(configFilePath, modelSettings);
     } else if (exportType == DELETE_MODEL) {
         SPDLOG_ERROR("Delete not supported.");
         return StatusCode::NOT_IMPLEMENTED;
