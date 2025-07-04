@@ -131,7 +131,23 @@ void CLIParser::parse(int argc, char** argv) {
             ("allowed_local_media_path",
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
-                "ALLOWED_LOCAL_MEDIA_PATH");
+                "ALLOWED_LOCAL_MEDIA_PATH")
+            ("allow_credentials",
+                "Flag enabling credentials on the API.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_CREDENTIALS")
+            ("allowed_origins",
+                "Comma separated list of origins that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_ORIGINS")
+            ("allowed_methods",
+                "Comma separated list of methods that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_METHODS")
+            ("allowed_headers",
+                "Comma separated list of headers that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_HEADERS");
 
         options->add_options("multi model")
             ("config_path",
@@ -394,6 +410,11 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     if (result->count("trace_path"))
         serverSettings.tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
+
+    serverSettings.allowCredentials = result->operator[]("allow_credentials").as<bool>();
+    serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
+    serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
+    serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
 }
 
 void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {

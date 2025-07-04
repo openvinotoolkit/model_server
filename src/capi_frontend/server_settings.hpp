@@ -109,6 +109,10 @@ struct ServerSettingsImpl {
     std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool allowCredentials = false;
+    std::string allowedOrigins{"*"};
+    std::string allowedMethods{"*"};
+    std::string allowedHeaders{"*"};
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif
