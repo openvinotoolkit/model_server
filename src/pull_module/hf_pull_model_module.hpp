@@ -38,5 +38,6 @@ public:
     Status clone() const;
     static const std::string GIT_SERVER_CONNECT_TIMEOUT_ENV;
     static const std::string GIT_SERVER_TIMEOUT_ENV;
+    static const std::string GIT_SSL_CERT_LOCATIONS_ENV;
 };
 }  // namespace ovms

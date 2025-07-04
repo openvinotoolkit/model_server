@@ -1,0 +1,7 @@
+{
+    "model_config_list": [{"config": {
+                "name":"graphdummy",
+                "base_path":"graphdummy"
+            }
+    }]
+}

@@ -169,7 +169,7 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Werror=format-security",
                     "-Wl,-z,noexecstack",
                     "-fPIC",
-                    "-D_GLIBCXX_ASSERTIONS",
+                    #"-D_GLIBCXX_ASSERTIONS", - causes errors on gpu
                     "-Wl,-z,relro",
                     "-Wl,-z,relro,-z,now",
                     "-Wl,-z,nodlopen",

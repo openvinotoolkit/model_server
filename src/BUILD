@@ -2264,11 +2264,11 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
         "libovmsstatus",
-        "libhttp_status_code"
+        "libhttp_status_code",
+        "libovms_config"
     ],
     visibility = ["//visibility:public",],
 )
-
 ovms_cc_library(
     name = "image_conversion",
     hdrs = [
@@ -2280,6 +2280,7 @@ ovms_cc_library(
     deps = [
         "@stb//:image",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/status",
         "//third_party:openvino",
         "//src:libovmslogging",
         "//src:libovmsprofiler",

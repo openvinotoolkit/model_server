@@ -166,12 +166,19 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_TRACE("Setting libgit2 server timeout:{}", opts.serverTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, opts.serverTimeoutMs);
     IF_ERROR_SET_MSG_AND_RETURN();
+    if (opts.sslCertificateLocation != "") {
+        SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertificateLocation);
+        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertificateLocation.c_str());
+        IF_ERROR_SET_MSG_AND_RETURN();
+    }
 }
 
 Libgt2InitGuard::~Libgt2InitGuard() {
     SPDLOG_DEBUG("Shutdown libgit2");
     git_libgit2_shutdown();
 }
+
+const std::string PROTOCOL_SEPARATOR = "://";
 
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
@@ -180,20 +187,31 @@ bool HfDownloader::CheckIfProxySet() {
 }
 
 std::string HfDownloader::GetRepositoryUrlWithPassword() {
-    std::string passRepoUrl = "https://";
+    std::string repoPass = "";
     if (this->hfToken != "") {
-        passRepoUrl += this->hfToken + ":" + this->hfToken + "@";
+        repoPass += this->hfToken + ":" + this->hfToken + "@";
     } else {
         SPDLOG_DEBUG("HF_TOKEN environment variable not set");
+        return this->hfEndpoint + this->sourceModel;
     }
 
-    passRepoUrl += this->hfEndpoint + this->sourceModel;
+    std::string outputWithPass = "";
+    size_t match = this->hfEndpoint.find(PROTOCOL_SEPARATOR);
+    if (match != std::string::npos) {
+        // https://huggingface.co
+        // protocol[match]//address
+        std::string protocol = this->hfEndpoint.substr(0, match);
+        std::string address = this->hfEndpoint.substr(match + PROTOCOL_SEPARATOR.size());
+        outputWithPass = protocol + PROTOCOL_SEPARATOR + repoPass + address + this->sourceModel;
+    } else {
+        outputWithPass = repoPass + this->hfEndpoint + this->sourceModel;
+    }
 
-    return passRepoUrl;
+    return outputWithPass;
 }
 
 std::string HfDownloader::GetRepoUrl() {
-    std::string repoUrl = "https://";
+    std::string repoUrl = "";
     repoUrl += this->hfEndpoint + this->sourceModel;
     return repoUrl;
 }
