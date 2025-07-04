@@ -57,6 +57,18 @@ Configuration options for the server are defined only via command-line options a
 | `allow_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allow_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 
+## Config management mode options
+
+Configuration options for the config management mode, which is used to manage config file in the model repository.
+| Option  | Value format  | Description  |
+|---|---|---|
+| `model_repository_path` | `string` | Path to the model repository. This path is prefixed to the relative model path. Use|
+| `list_models`| `NA` | List all models paths in the model repository. |
+| `model_name` | `string` | Name of the model as visible in serving. If ```--model_path``` is not provided, path is deduced from name. |
+| `model_path` | `string` | Optional. Path to the model repository. If path is relative then it is prefixed with ```--model_repository_path```. |
+| `add_to_config` | `string` |  Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to. |
+| `remove_from_config` | `string` |  Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from. |
+
 ## Pull mode configuration options
 
 Shared configuration options for the pull, and pull & start mode. In the presence of ```--pull``` parameter OVMS will only pull model without serving.
@@ -66,7 +78,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.  |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |

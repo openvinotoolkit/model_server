@@ -178,12 +178,12 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "LIST_MODELS")
             ("add_to_config",
-                "Path to config file for ovms, where to add specific model",
-                cxxopts::value<std::string>()->default_value("config.json"),
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to",
+                cxxopts::value<std::string>(),
                 "ADD_TO_CONFIG")
             ("remove_from_config",
-                "Path to config file for ovms, to remove specific model from",
-                cxxopts::value<std::string>()->default_value("config.json"),
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from",
+                cxxopts::value<std::string>(),
                 "REMOVE_FROM_CONFIG");
 
         options->add_options("single model")
