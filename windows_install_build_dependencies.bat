@@ -303,10 +303,11 @@ IF /I EXIST "%git_exe%" (
     echo %required_ver% installed.
     ) else (
         echo "Install git to %git_exe% from %git_ver_link%"
+        exit /b 1
     )
 ) ELSE (
     echo "Install git to %git_exe% from %git_ver_link%"
-)
+    exit /b 1
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
