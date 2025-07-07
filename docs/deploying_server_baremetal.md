@@ -67,8 +67,8 @@ sudo apt -y install libpython3.12
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
-:::{tab-item} RHEL 9.5
-:sync: rhel-9.5
+:::{tab-item} RHEL 9.6
+:sync: rhel-9.6
 Download precompiled package (without python):
 ```{code} sh
 wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_redhat.tar.gz
