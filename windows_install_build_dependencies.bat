@@ -302,7 +302,7 @@ IF /I EXIST "%git_exe%" (
     if %errorlevel% == 0 (
     echo %required_ver% installed.
     ) else (
-        "Install git to %git_exe% from %git_ver_link%"
+        echo "Install git to %git_exe% from %git_ver_link%"
     )
 ) ELSE (
     echo "Install git to %git_exe% from %git_ver_link%"
