@@ -1,25 +1,24 @@
 import numpy as np
 import tritonclient.grpc as grpcclient
 import pandas as pd
+import json
 
+df = pd.read_csv("data/iris_test_stripped.csv")
+if "Species" in df.columns:
+    df = df.drop(columns=["Species"])  
+csv_str = df.to_csv(index=False)
+input_dict = {"mode": "infer", "data": csv_str}
+input_bytes = json.dumps(input_dict).encode("utf-8")
+pipeline_input = np.array([input_bytes], dtype=object)
 
-X_test = pd.read_csv("/home/harshitha/iris_pipeline_project/data/iris_test.csv")
-X_test = X_test.values.astype(np.float32)  
-
-input_name = "input"   
-output_name = "output_label" 
-
-inputs = []
-infer_input = grpcclient.InferInput(input_name, X_test.shape, "FP32")
-infer_input.set_data_from_numpy(X_test)
-inputs.append(infer_input)
-
-outputs = [grpcclient.InferRequestedOutput(output_name)]
+input_name = "pipeline_input"
+infer_input = grpcclient.InferInput(input_name, pipeline_input.shape, "BYTES")
+infer_input.set_data_from_numpy(pipeline_input)
 
 client = grpcclient.InferenceServerClient(url="localhost:9000")
+model_name = "pipeline"
 
-model_name = "iris_logreg"
-response = client.infer(model_name=model_name, inputs=inputs, outputs=outputs)
+response = client.infer(model_name, [infer_input])
+preds = response.as_numpy("pipeline_output")
 
-predictions = response.as_numpy(output_name)
-print("Predictions:", predictions)
+print("Inference predictions:", preds)
