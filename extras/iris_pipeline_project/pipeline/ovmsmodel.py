@@ -25,17 +25,7 @@ class OvmsPythonModel:
         try:
             input_tensor = inputs[0]
             input_data = input_tensor.data
-            if isinstance(input_data, memoryview):
-                inp_bytes = bytes(input_data)
-            elif isinstance(input_data, (bytes, bytearray)):
-                inp_bytes = input_data
-            elif isinstance(input_data, np.ndarray):
-                if input_data.dtype == object:
-                    inp_bytes = input_data[0]
-                else:
-                    inp_bytes = bytes(input_data)
-            else:
-                raise TypeError(f"Unsupported type for input_data: {type(input_data)}")
+            inp_bytes = bytes(input_tensor.data) 
 
             print("input_data preview:", inp_bytes[:40], file=sys.stderr)
             if inp_bytes[:1] != b'{' and inp_bytes.find(b'{') > 0:
