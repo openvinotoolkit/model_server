@@ -251,6 +251,8 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
             "minor_object": {
                 "number": 5,
                 "number_array": [1, 2, 3],
+                "float": 3.14,
+                "float_array": [1.1, 2.2, 3.3],
                 "string_array": ["C++", "Python", "\"Java\"", "AI"]
             }
         },
@@ -286,6 +288,16 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][0].GetInt(), 1);
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][1].GetInt(), 2);
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][2].GetInt(), 3);
+
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("float"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["float"].IsDouble());
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float"].GetDouble(), 3.14);
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("float_array"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["float_array"].IsArray());
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["float_array"].Size(), 3);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][0].GetDouble(), 1.1);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][1].GetDouble(), 2.2);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][2].GetDouble(), 3.3);
 
     ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("string_array"));
     ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["string_array"].IsArray());
@@ -381,4 +393,62 @@ TEST_F(PartialJsonParserTest, simpleJsonIncrementalParsing) {
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
     ASSERT_TRUE(parsedJson["arguments"].IsString());
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
+}
+
+TEST_F(PartialJsonParserTest, computeDeltaWithEmptyJson) {
+    rapidjson::Document previous;
+    previous.SetObject();
+    rapidjson::Document current;
+    current.SetObject();
+    auto delta = computeDelta(previous, current);
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_TRUE(delta.Empty());
+}
+
+TEST_F(PartialJsonParserTest, computeDeltaWithAddedMember) {
+    const char* previousJson = R"({
+        "name": "get_weather"
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "arguments": "\""
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+
+    auto delta = computeDelta(previous, current);
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.HasMember("name"));
+    ASSERT_TRUE(delta.HasMember("arguments"));
+    ASSERT_TRUE(delta["arguments"].IsString());
+    ASSERT_EQ(delta["arguments"].GetString(), std::string("\""));
+}
+
+TEST_F(PartialJsonParserTest, computeDeltaWithModifiedStringMember) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "arguments": "{\"location\": \"Tokyo\""
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "arguments": "{\"location\": \"Tokyo\", \"date\":"
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = computeDelta(previous, current);
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("arguments"));
+    ASSERT_TRUE(delta["arguments"].IsString());
+    // Only the new part should be present in arguments
+    ASSERT_EQ(delta["arguments"].GetString(), std::string(", \"date\":"));
 }

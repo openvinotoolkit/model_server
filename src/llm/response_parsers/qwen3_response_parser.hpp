@@ -18,7 +18,16 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
+
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
 #include "base_response_parser.hpp"
+#include "partial_json_parser.hpp"
 
 namespace ovms {
 
@@ -35,11 +44,18 @@ protected:
     std::string reasoningEndTag = "</think>";
     int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
 
+    ProcessingPhase processingPhase = CONTENT;
+    std::string toolCallBuffer;
+    rapidjson::Document lastJson;
+    JsonBuilder jsonBuilder;
+    int toolCallIndex = -1; // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+
 public:
     Qwen3ResponseParser() = delete;
     explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
         BaseResponseParser(tokenizer) {}
 
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+    rapidjson::Document parseChunk(const std::string& chunk);
 };
 }  // namespace ovms
