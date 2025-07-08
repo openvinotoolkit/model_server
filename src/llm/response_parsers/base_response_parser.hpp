@@ -39,6 +39,13 @@ struct ParsedResponse {
     size_t reasoningTokenCount = 0;
 };
 
+// Enum used to track current processing phase, used in streaming mode
+enum ProcessingPhase {
+    CONTENT,
+    REASONING,
+    TOOL_CALLS
+};
+
 class BaseResponseParser {
 protected:
     ov::genai::Tokenizer tokenizer;

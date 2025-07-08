@@ -121,4 +121,156 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
     }
     return parsedResponse;
 }
+
+rapidjson::Document Qwen3ResponseParser::parseChunk(const std::string& chunk) {
+    if (chunk.empty()) {
+        // TODO: decide how to handle that
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ResponseParser");
+        return rapidjson::Document();
+    }
+
+    rapidjson::Document doc;
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    std::string content, reasoningContent, toolCall;
+    if (processingPhase == ProcessingPhase::CONTENT) {
+        if (chunk.find(reasoningStartTag) != std::string::npos) {
+            // If we find reasoning start tag, we switch to REASONING phase
+            processingPhase = ProcessingPhase::REASONING;
+            size_t tagPos = chunk.find(reasoningStartTag);
+            content = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
+            reasoningContent = (tagPos != std::string::npos && tagPos + reasoningStartTag.length() < chunk.size())
+                ? chunk.substr(tagPos + reasoningStartTag.length())
+                : "";
+
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            if (!content.empty()) {
+                writer.String("content");
+                writer.String(content.c_str());
+            }
+            if (!reasoningContent.empty()) {
+                writer.String("reasoning_content");
+                writer.String(reasoningContent.c_str());
+            }
+            writer.EndObject();
+            writer.EndObject();
+            doc.Parse(buffer.GetString());
+            return doc;
+        } else if (chunk.find(toolCallStartTag) != std::string::npos) {
+            // If we find tool call start tag, we switch to TOOL_CALLS phase
+            processingPhase = ProcessingPhase::TOOL_CALLS;
+            size_t tagPos = chunk.find(toolCallStartTag);
+            content = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
+            toolCall = (tagPos != std::string::npos && tagPos + toolCallStartTag.length() < chunk.size())
+                ? chunk.substr(tagPos + toolCallStartTag.length())
+                : "";
+            toolCallBuffer += toolCall; // we are not processing tool calls in this step, but need to keep tool call content for later
+            jsonBuilder.partialParseToJson("{\"tool_calls\": ["); // initialize JSON builder for tool calls
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            if (!content.empty()) {
+                writer.String("content");
+                writer.String(content.c_str());
+            }
+            writer.EndObject();
+            writer.EndObject();
+            doc.Parse(buffer.GetString());
+            return doc;
+        } else {
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            writer.String("content");
+            writer.String(chunk.c_str());
+            writer.EndObject();
+            writer.EndObject();
+            doc.Parse(buffer.GetString());
+            return doc;
+        }
+    } else if (processingPhase == ProcessingPhase::REASONING) {
+        if (chunk.find(reasoningEndTag) != std::string::npos) {
+            // If we find reasoning end tag, we switch to CONTENT phase
+            processingPhase = ProcessingPhase::CONTENT;
+            size_t tagPos = chunk.find(reasoningEndTag);
+            reasoningContent = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
+            std::string content;
+            if (tagPos != std::string::npos && tagPos + reasoningEndTag.length() < chunk.size()) {
+                content = chunk.substr(tagPos + reasoningEndTag.length());
+            }
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            if (!reasoningContent.empty()) {
+                writer.String("reasoning_content");
+                writer.String(reasoningContent.c_str());
+            }
+            if (!content.empty()) {
+                writer.String("content");
+                writer.String(content.c_str());
+            }
+            writer.EndObject();
+            writer.EndObject();
+            doc.Parse(buffer.GetString());
+            return doc;
+        } else {
+            reasoningContent = chunk;
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            writer.String("reasoning_content");
+            writer.String(chunk.c_str());
+            writer.EndObject();
+            writer.EndObject();
+            doc.Parse(buffer.GetString());
+            return doc;
+        }
+    }
+
+    if (processingPhase == ProcessingPhase::TOOL_CALLS) {
+        if (chunk.find(toolCallEndTag) != std::string::npos) {
+            // If we find tool call end tag, we process the tool call buffer
+            size_t tagPos = chunk.find(toolCallEndTag);
+            std::string toolCallContent = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
+            if (!toolCallContent.empty()) {
+                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(toolCallContent);
+                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
+                doc.SetObject();
+                doc.AddMember("delta", delta, doc.GetAllocator());
+                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
+                return doc;
+            }
+        } else if (chunk.find(toolCallStartTag) != std::string::npos) {
+            // If we find another tool call start tag, we process the previous tool call buffer
+            size_t tagPos = chunk.find(toolCallStartTag);
+            std::string toolCallContent;
+            if (tagPos != std::string::npos && tagPos + toolCallStartTag.length() < chunk.size()) {
+                toolCallContent = chunk.substr(tagPos + toolCallStartTag.length());
+            } else {
+                toolCallContent = "";
+            }
+
+            if (!toolCallContent.empty()) {
+                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(toolCallContent);
+                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
+                doc.SetObject();
+                doc.AddMember("delta", delta, doc.GetAllocator());
+                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
+                return doc;
+            }
+        } else {
+                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(chunk);
+                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
+                doc.SetObject();
+                doc.AddMember("delta", delta, doc.GetAllocator());
+                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
+                return doc;
+        }
+    }
+    // If none of the above conditions are met, return an empty document
+    // todo change type to optional
+    return rapidjson::Document();
+}
 }  // namespace ovms

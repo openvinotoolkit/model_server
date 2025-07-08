@@ -107,6 +107,7 @@ cc_library(
             "response_parsers/llama3_response_parser.cpp",
             "response_parsers/phi4_response_parser.cpp",
             "response_parsers/qwen3_response_parser.cpp",
+            "response_parsers/partial_json_parser.cpp",
             "response_parsers/utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",

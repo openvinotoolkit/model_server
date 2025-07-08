@@ -996,14 +996,20 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     writer.String("logprobs");
     writer.Null();
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("delta");
-        writer.StartObject();  // {
-        writer.String("content");
-        // writer.String("role");
-        // writer.String("assistant");
-        // role: string; Role of the text producer
-        writer.String(chunkResponse.c_str());
-        writer.EndObject();  // }
+        if (responseParser != nullptr) {
+            rapidjson::Document delta = responseParser->parseChunk(chunkResponse);
+            ...
+            
+        } else {
+            writer.String("delta");
+            writer.StartObject();  // {
+            writer.String("content");
+            // writer.String("role");
+            // writer.String("assistant");
+            // role: string; Role of the text producer
+            writer.String(chunkResponse.c_str());
+            writer.EndObject();  // }
+        }
     } else if (endpoint == Endpoint::COMPLETIONS) {
         writer.String("text");
         writer.String(chunkResponse.c_str());
