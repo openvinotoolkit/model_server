@@ -55,6 +55,16 @@ public:
         return idleStreamFuture;
     }
 
+    void extendQueue() {
+        if (!constructFunc.has_value()) {
+                return;
+        }
+        size_t streamSize = streams.size();
+        streams.push_back(streamSize - 1);
+        inferRequests.reserve(streams.size());
+        inferRequests.push_back(constructFunc.value()());
+    }
+
     std::optional<int> tryToGetIdleStream() {
         // OVMS_PROFILE_FUNCTION();
         int value;
@@ -69,7 +79,6 @@ public:
             return value;
         }
     }
-
     /**
     * @brief Release stream after execution
     */
@@ -95,13 +104,16 @@ public:
     /**
     * @brief Constructor with initialization
     */
-    Queue(int streamsLength) :
-        streams(streamsLength),
+    // change constructor so that it can also accept lambda which returns T. This lambda
+    // is optional but if exists it will be used to construct T objects
+    Queue(int streamsLength, std::optional<std::function<T()>> constructFunc = std::nullopt) : streams(streamsLength),
+        constructFunc(constructFunc),
         front_idx{0},
         back_idx{0} {
         for (int i = 0; i < streamsLength; ++i) {
             streams[i] = i;
         }
+        streams.reserve(50);
     }
 
     /**
@@ -116,7 +128,7 @@ protected:
     * @brief Vector representing circular buffer for infer queue
     */
     std::vector<int> streams;
-
+    std::optional<std::function<T()>> constructFunc = std::nullopt;
     /**
     * @brief Index of the front of the idle streams list
     */
