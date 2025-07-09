@@ -290,7 +290,7 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.3"
+ARG PROJECT_VERSION="2025.3.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
