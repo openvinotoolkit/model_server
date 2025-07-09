@@ -10,4 +10,4 @@ RUN pip3 install --break-system-packages pandas numpy scikit-learn joblib skl2on
 
 
 WORKDIR /workspace
-ENTRYPOINT ["/ovms/bin/ovms", "--config_path", "/model_config.json", "--grpc_port", "9000"]
+ENTRYPOINT ["/ovms/bin/ovms"]
