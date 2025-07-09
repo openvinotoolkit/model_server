@@ -21,7 +21,7 @@ import subprocess
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9].[^_]+')
 WIN_OV_ZIP_PACKAGE_DIR = "openvino_genai_windows_"
 VERSION_FILE = "src\\version.hpp"
-OVMS_PROJECT_VERSION="2025.3"
+OVMS_PROJECT_VERSION="2025.3.0"
 
 def help():
     print("Usage:\n\
