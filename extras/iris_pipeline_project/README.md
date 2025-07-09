@@ -8,7 +8,7 @@ This repository demonstrates how to use OpenVINO Model Server (OVMS) with a cust
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd [need to fix]
+cd model_server/extras/iris_pipeline_project
 ```
 ---
 
