@@ -79,4 +79,10 @@ ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTo
     }
     return parsedResponse;
 }
+
+std::optional<rapidjson::Document> Phi4ResponseParser::parseChunk(const std::string& chunk) {
+    // Not implemented
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Phi4ResponseParser::parseChunk is not implemented");
+    return std::nullopt;
+}
 }  // namespace ovms

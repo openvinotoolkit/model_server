@@ -89,4 +89,11 @@ ParsedResponse Llama3ResponseParser::parse(const std::vector<int64_t>& generated
     }
     return parsedResponse;
 }
+
+std::optional<rapidjson::Document> Llama3ResponseParser::parseChunk(const std::string& chunk) {
+    // Not implemented
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3ResponseParser::parseChunk is not implemented");
+    return std::nullopt;
+}
+
 }  // namespace ovms

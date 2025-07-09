@@ -37,7 +37,7 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
     delta.SetObject();
 
     for (const auto& m : current) {
-        if (!previous.HasMember(m.name)) {
+        if (!previous.HasMember(m.name) || previous[m.name].IsNull()) {
             rapidjson::Value copiedValue;
             copiedValue.CopyFrom(m.value, delta.GetAllocator());
             rapidjson::Value key;
@@ -66,60 +66,17 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
                 key.CopyFrom(m.name, delta.GetAllocator());
                 delta.AddMember(key, diffArray, delta.GetAllocator());
             }
-        } else if (previous[m.name] != m.value) {
-            // For numeric values, extract the new part as string and convert back
-            if (m.value.IsNumber() && previous[m.name].IsNumber()) {
-            rapidjson::StringBuffer prevBuf, currBuf;
-            rapidjson::Writer<rapidjson::StringBuffer> prevWriter(prevBuf), currWriter(currBuf);
-            previous[m.name].Accept(prevWriter);
-            m.value.Accept(currWriter);
-            std::string prevStr = prevBuf.GetString();
-            std::string currStr = currBuf.GetString();
-            // Remove quotes if present (shouldn't be for numbers)
-            if (!prevStr.empty() && prevStr.front() == '"') prevStr = prevStr.substr(1, prevStr.size() - 2);
-            if (!currStr.empty() && currStr.front() == '"') currStr = currStr.substr(1, currStr.size() - 2);
-            // Find the new part
-            std::string diffStr = currStr.substr(prevStr.size());
-            // Convert back to number
-            rapidjson::Value diffValue;
-            if (m.value.IsInt()) {
-                diffValue.SetInt(std::stoi(diffStr.empty() ? currStr : diffStr));
-            } else if (m.value.IsUint()) {
-                diffValue.SetUint(static_cast<unsigned int>(std::stoul(diffStr.empty() ? currStr : diffStr)));
-            } else if (m.value.IsInt64()) {
-                diffValue.SetInt64(std::stoll(diffStr.empty() ? currStr : diffStr));
-            } else if (m.value.IsUint64()) {
-                diffValue.SetUint64(static_cast<uint64_t>(std::stoull(diffStr.empty() ? currStr : diffStr)));
-            } else if (m.value.IsDouble()) {
-                diffValue.SetDouble(std::stod(diffStr.empty() ? currStr : diffStr));
-            } else {
-                // fallback: just copy the value
-                diffValue.CopyFrom(m.value, delta.GetAllocator());
-            }
-            rapidjson::Value key;
-            key.CopyFrom(m.name, delta.GetAllocator());
-            delta.AddMember(key, diffValue, delta.GetAllocator());
-            } else if (m.value.IsBool() || m.value.IsNull()) {
-            // For bool and null, we do not expect partial values, just add the new value
-            rapidjson::Value copiedValue;
-            copiedValue.CopyFrom(m.value, delta.GetAllocator());
-            rapidjson::Value key;
-            key.CopyFrom(m.name, delta.GetAllocator());
-            delta.AddMember(key, copiedValue, delta.GetAllocator());
-            } else if (m.value.IsString() && previous[m.name].IsString()) {
-                // For strings, we can compute the delta
-                std::string prevStr = previous[m.name].GetString();
-                std::string currStr = m.value.GetString();
-                if (currStr.size() > prevStr.size()) {
-                    std::string diffStr = currStr.substr(prevStr.size());
+        // Supporting modifications only for string values
+        } else if (previous[m.name] != m.value && (m.value.IsString() && previous[m.name].IsString())) {
+            std::string prevStr = previous[m.name].GetString();
+            std::string currStr = m.value.GetString();
+            if (currStr.size() > prevStr.size()) {
+                std::string diffStr = currStr.substr(prevStr.size());
                     rapidjson::Value diffValue;
                     diffValue.SetString(diffStr.c_str(), diffStr.size(), delta.GetAllocator());
                     rapidjson::Value key;
                     key.CopyFrom(m.name, delta.GetAllocator());
                     delta.AddMember(key, diffValue, delta.GetAllocator());
-                }
-            } else {
-                throw std::runtime_error("Type mismatch or unsupported type for delta computation.");
             }
         }
     }
@@ -252,7 +209,9 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
     // Change is required so we need a copy of the buffer
     std::string closedInput = buffer;
 
-    if (state == IteratorState::AWAITING_KEY || state == IteratorState::PROCESSING_KEY || state == IteratorState::AWAITING_COLON ||
+    if (state == IteratorState::AWAITING_VALUE) {
+            closedInput += "null";
+    } else if (state == IteratorState::AWAITING_KEY || state == IteratorState::PROCESSING_KEY || state == IteratorState::AWAITING_COLON ||
         state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_KEYWORD) {
         if (lastSeparator.position != std::string::npos && lastSeparator.position < closedInput.size()) {
             while (!openCloseStack.empty() && openCloseStack.back().second >= lastSeparator.position) {
@@ -280,6 +239,7 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
             closedInput += '"';
         }
     }
+
     rapidjson::Document doc;
     if (closedInput.empty()) {
         doc.SetObject();
