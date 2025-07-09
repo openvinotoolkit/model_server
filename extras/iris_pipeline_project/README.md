@@ -36,8 +36,6 @@ docker run --rm -it -v "$PWD:/workspace"   -p 9000:9000 -p 8000:8000  iris_7 --c
 client/
   ├── client_inference.py
   └── client_train.py
-model/
-  └── iris_logreg/1/model.onnx
 pipeline/
   ├── __pycache__/
   ├── graph.pbtxt
@@ -59,8 +57,6 @@ python client/client_train.py train data/iris_train.csv
 ### 4.2. Inference
 
 ```bash
-python client/client_train.py infer data/iris_test.csv
-# OR
 python client/client_inference.py infer data/iris_test.csv
 ```
 
@@ -97,15 +93,22 @@ The pipeline expects input as a JSON object, sent as a single-element numpy arra
 ---
 
 ## Example Output
+For Training:
 
 ```
-read CSV file successfully
+Read CSV file successfully
 Training mode detected. Preparing data for training...
-prepped payload
 Connected to OVMS at localhost:9000
-MODEL_NAME: pipeline
-infer_input: pipeline_input [1]
-Server response: [...]
+Server response decoded: string -  [...]
+The output string formatted as: [<1 - Model trained successfully | 0 - Otherwise>   <Accuracy>  <Precision>  <Recall>  <f1-score>]
+```
+For Inference:
+
+```
+Read CSV file successfully
+Inference mode detected.
+Inference predictions: [...]
+
 ```
 
 ---
