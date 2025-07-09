@@ -14,8 +14,8 @@ This will work in streaming mode, meaning we will see the chat response/code dif
 
 Download export script, install its dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
@@ -107,7 +107,7 @@ ovms --rest_port 8000 --config_path ./models/config_all.json
 ### Linux: via Docker
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.1 --rest_port 8000 --config_path /workspace/models/config_all.json
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.2 --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 
 ## Set Up Visual Studio Code

@@ -3,11 +3,11 @@
 This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) in the OpenVINO Model Server.
 Image generation pipeline is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
 
-> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770 on Ubuntu 22/24, RedHat 9 and Windows 11.
+> **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
 ## Prerequisites
 
-**RAM/vRAM** Model used in this demo takes up to 7GB of RAM/vRAM. Please consider lower precision to decrease it, or better/bigger model to get better image results.
+**RAM/vRAM** Select model size and precision according to your hardware capabilities (RAM/vRAM). Request resolution plays significant role in memory consumption, so the higher resolution you request, the more RAM/vRAM is required.
 
 **Model preparation** (one of the below):
 - preconfigured models from HuggingFaces directly in OpenVINO IR format, list of Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
@@ -56,8 +56,8 @@ Assuming you have unpacked model server package, make sure to:
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 
-```console
-mkdir -p models
+```bat
+mkdir models
 
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
@@ -95,14 +95,65 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```console
-mkdir -p models
+```bat
+mkdir models
 
-ovms.exe --rest_port 8000 ^
+ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
   --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
   --target_device GPU
+```
+:::
+
+::::
+
+
+### NPU or mixed device
+
+Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+In case you want to use Intel NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with NPU support. Export the models with precision matching the NPU capacity and adjust pipeline configuration.
+In this specific case, we also need to use `--device /dev/dri`, because we also use GPU.
+
+> **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
+
+> **NOTE:** This feature will be available in 2025.3 and later releases, so until next release, it is required to build the model server from source from the `main` branch.
+
+
+It can be applied using the commands below:
+```bash
+mkdir -p models
+
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/FLUX.1-schnell-int4-ov \
+    --target_device 'NPU NPU GPU' \
+    --resolution 512x512
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+
+```bat
+mkdir models
+
+ovms --rest_port 8000 ^
+  --model_repository_path ./models/ ^
+  --task image_generation ^
+  --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
+  --target_device 'NPU NPU GPU' ^
+  --resolution 512x512
 ```
 :::
 
@@ -131,7 +182,7 @@ Run `export_model.py` script to download and quantize the model:
 ```console
 python export_model.py image_generation \
   --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int8 \
+  --weight-format int4 \
   --config_file_path models/config.json \
   --model_repository_path models \
   --overwrite_models
@@ -141,8 +192,28 @@ python export_model.py image_generation \
 ```console
 python export_model.py image_generation \
   --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int8 \
+  --weight-format int4 \
   --target_device GPU \
+  --config_file_path models/config.json \
+  --model_repository_path models \
+  --overwrite_models
+```
+
+### Export model for NPU or mixed device
+
+Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
+
+> **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
+
+> **NOTE:** This feature will be available in 2025.3 and later releases, so until next release, it is required to use export script from the `main` branch.
+
+
+```console
+python export_model.py image_generation \
+  --source_model black-forest-labs/FLUX.1-schnell \
+  --weight-format int4 \
+  --target_device 'NPU NPU GPU' \
+  --resolution '512x512' \
   --config_file_path models/config.json \
   --model_repository_path models \
   --overwrite_models
@@ -190,7 +261,7 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-```console
+```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
   --model_path ./models/black-forest-labs/FLUX.1-schnell
@@ -224,9 +295,47 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
-```console
-ovms.exe --rest_port 8000 ^
-  --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+```bat
+ovms --rest_port 8000 ^
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
+  --model_path ./models/black-forest-labs/FLUX.1-schnell
+```
+:::
+
+::::
+
+**NPU or mixed device**  
+
+This feature will be available in 2025.3 and later releases. Until then, please build the model server from source from the `main` branch.
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+
+In case you want to use NPU device to run the generation, add extra docker parameters `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
+to `docker run` command, use the image with NPU support. Export the models with precision matching the NPU capacity and adjust pipeline configuration.
+In this specific case, we also need to use `--device /dev/dri`, because we also use GPU.
+
+It can be applied using the commands below:
+```bash
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
+  --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
+    --model_path /models/black-forest-labs/FLUX.1-schnell
+```
+
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or NPU (it's defined in `config.json`). If you run on NPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+
+```bat
+ovms --rest_port 8000 ^
+  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
   --model_path ./models/black-forest-labs/FLUX.1-schnell
 ```
 :::
@@ -277,7 +386,8 @@ curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
     "model": "OpenVINO/FLUX.1-schnell-int4-ov",
-    "prompt": "three happy cats",
+    "prompt": "three cute cats sitting on a bench",
+    "rng_seed": 45,
     "num_inference_steps": 3,
     "size": "512x512"
   }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
@@ -288,7 +398,7 @@ Windows Powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three happy cats", "num_inference_steps": 3}'
+    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "rng_seed": 45, "num_inference_steps": 3, "size": "512x512"}'
 
 $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
@@ -299,7 +409,7 @@ Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/generations ^
   -H "Content-Type: application/json" ^
-  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three happy cats\", \"num_inference_steps\": 3, \"size\": \"512x512\"}"
+  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three cute cats sitting on a bench\", \"rng_seed\": 45, \"num_inference_steps\": 3, \"size\": \"512x512\"}"
 ```
 
 
@@ -328,32 +438,26 @@ Install the client library:
 pip3 install openai pillow
 ```
 
-```console
-pip3 install openai
-```
 ```python
 from openai import OpenAI
 import base64
 from io import BytesIO
 from PIL import Image
-import time
-
 
 client = OpenAI(
-    base_url="http://ov-spr-36.sclab.intel.com:7774/v3",
+    base_url="http://localhost:8000/v3",
     api_key="unused"
 )
 
-now = time.time()
 response = client.images.generate(
             model="OpenVINO/FLUX.1-schnell-int4-ov",
-            prompt="three happy cats",
+            prompt="three cute cats sitting on a bench",
             extra_body={
-                "rng_seed": 43,
+                "rng_seed": 60,
+                "size": "512x512",
                 "num_inference_steps": 3
             }
         )
-print("Time elapsed: ", time.time()-now, "seconds")
 base64_image = response.data[0].b64_json
 
 image_data = base64.b64decode(base64_image)
@@ -365,11 +469,7 @@ image.save('output2.png')
 Output file (`output2.png`):  
 ![output2](./output2.png)
 
-Client side logs confirm image generation latency on Intel® Xeon®:
 
-```
-Time elapsed:  18.89774751663208 seconds
-```
 
 
 ## References

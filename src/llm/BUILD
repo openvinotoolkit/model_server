@@ -72,7 +72,7 @@ mediapipe_proto_library(
 
 cc_library(
     name = "openai_completions_api_handler",
-    hdrs = ["apis/openai_completions.hpp"],
+    hdrs = ["apis/openai_completions.hpp", "apis/openai_json_response.hpp"],
     srcs = ["apis/openai_completions.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
@@ -101,6 +101,7 @@ cc_library(
             "response_parsers/phi4_response_parser.hpp",
             "response_parsers/qwen3_response_parser.hpp",
             "response_parsers/response_parser.hpp",
+            "response_parsers/partial_json_parser.hpp",
             "response_parsers/utils.hpp"],
     srcs = ["response_parsers/hermes3_response_parser.cpp",
             "response_parsers/llama3_response_parser.cpp",
