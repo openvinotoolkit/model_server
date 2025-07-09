@@ -18,13 +18,13 @@ cd model_server/extras/iris_pipeline_project
 ### 2.1. Build the Docker Image
 
 ```bash
-docker build --no-cache -t iris_7 .
+docker build --no-cache -t iris_logisticreg_ovms .
 ```
 
 ### 2.2. Run the OVMS Container
 
 ```bash
-docker run --rm -it -v "$PWD:/workspace"   -p 9000:9000 -p 8000:8000  iris_7 --config_path /workspace/model_config.json   --port 9000 --rest_port 8000
+docker run --rm -it -v "$PWD:/workspace"   -p 9000:9000 -p 8000:8000  iris_logisticreg_ovms --config_path /workspace/model_config.json   --port 9000 --rest_port 8000
 ```
 - **Note:** Adjust `$(pwd)` if you are running from a different working directory.
 
@@ -62,6 +62,18 @@ python client/client_inference.py infer data/iris_test.csv
 
 ---
 
+## Instructions for preparing the data
+Run the command to download the Iris dataset, which is taken to be the hello-world dataset of classification datasets.
+
+```bash
+curl -o iris.csv https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data
+```
+Run the following file to prepare the data and split it into data for training and for inferencing.
+
+```bash
+python data_preprocess.py
+```
+
 ## Input Format
 
 The pipeline expects input as a JSON object, sent as a single-element numpy array of bytes (`dtype=object`):
@@ -80,7 +92,7 @@ The pipeline expects input as a JSON object, sent as a single-element numpy arra
 - **Logs:**  
   For debugging, check OVMS container logs:
   ```bash
-  docker logs iris_7
+  docker logs iris_logisticreg_ovms
   ```
 - **Code Changes:**  
   After editing `pipeline/ovmsmodel.py`, **restart the OVMS container** for changes to take effect.
