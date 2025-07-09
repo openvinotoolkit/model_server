@@ -21,12 +21,11 @@
 
 namespace ovms {
 OVInferRequestsQueue::OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength) :
-    Queue(streamsLength),
-       compiledModel(compiledModel) {
+    Queue(streamsLength) {
     for (int i = 0; i < streamsLength; ++i) {
         streams[i] = i;
         OV_LOGGER("ov::CompiledModel: {} compiledModel.create_infer_request()", reinterpret_cast<void*>(&compiledModel));
-        inferRequests.push_back(compiledModel.create_infer_request());
+        inferRequests.insert({i, compiledModel.create_infer_request()});
     }
 }
 }  // namespace ovms

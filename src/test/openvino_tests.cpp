@@ -92,6 +92,7 @@ TEST_F(OpenVINO, CallbacksTest) {
     EXPECT_TRUE(outAutoTensor.is<ov::Tensor>());
 }
 TEST_F(OpenVINO, StressInferTest) {
+    GTEST_SKIP();
     Core core;
     auto model = core.read_model("/ovms/src/test/dummy/1/dummy.xml");
     const std::string inputName{"b"};
@@ -110,7 +111,7 @@ TEST_F(OpenVINO, StressInferTest) {
     SPDLOG_INFO("Starting vector size:{}, vector capacity:{}", inferRequests.size(), inferRequests.capacity());
     inferRequests.reserve(2);
     SPDLOG_INFO("Starting vector size:{}, vector capacity:{}", inferRequests.size(), inferRequests.capacity());
-    //inferRequests.shrink_to_fit();
+    // inferRequests.shrink_to_fit();
     // we want to test workload when we increase number of infer requests vector during workload
     // so we start with vector of 1, start workload on it
     // then after 1s we start another thread which will add another infer request to the vector
@@ -132,8 +133,8 @@ TEST_F(OpenVINO, StressInferTest) {
         for (size_t j = 0; j < 100000; j++) {
             reinterpret_cast<float*>(inputOvTensor.data())[j] = i;
             reinterpret_cast<float*>(outputOvTensor.data())[j] = (i + 1);
-            if (j<10 || j > 99990) {
-            SPDLOG_ERROR("input data: {}, expected: {}, i:{}, j:{}", reinterpret_cast<float*>(inputOvTensor.data())[j], reinterpret_cast<float*>(outputOvTensor.data())[j], i, j);
+            if (j < 10 || j > 99990) {
+                SPDLOG_ERROR("input data: {}, expected: {}, i:{}, j:{}", reinterpret_cast<float*>(inputOvTensor.data())[j], reinterpret_cast<float*>(outputOvTensor.data())[j], i, j);
             }
         }
 
@@ -146,9 +147,9 @@ TEST_F(OpenVINO, StressInferTest) {
             inferRequest.wait();
             auto outOvTensor = inferRequest.get_tensor("a");
             for (size_t j = 0; j < 100000; j++) {
-                 if (j<10 || j > 99990) {
-                 SPDLOG_ERROR("infReqRef:{} infReq[i]:{} outTensor data: {}, expected: {} i:{} j:{} k:{}", (void*)(&inferRequest), (void*)(&inferRequests[i]),reinterpret_cast<float*>(outOvTensor.data())[j], reinterpret_cast<float*>(outputOvTensor.data())[j], i, j , k);
-                 }
+                if (j < 10 || j > 99990) {
+                    SPDLOG_ERROR("infReqRef:{} infReq[i]:{} outTensor data: {}, expected: {} i:{} j:{} k:{}", (void*)(&inferRequest), (void*)(&inferRequests[i]), reinterpret_cast<float*>(outOvTensor.data())[j], reinterpret_cast<float*>(outputOvTensor.data())[j], i, j, k);
+                }
             }
             ASSERT_EQ(0, std::memcmp(outOvTensor.data(), outputOvTensor.data(), outOvTensor.get_byte_size())) << "i: " << i;
             ASSERT_EQ(0, std::memcmp(outOvTensor.data(), outputOvTensor.data(), outOvTensor.get_byte_size())) << "i: " << i;

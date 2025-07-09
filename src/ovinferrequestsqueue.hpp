@@ -24,7 +24,6 @@ namespace ovms {
 class OVInferRequestsQueue : public Queue<ov::InferRequest> {
 public:
     OVInferRequestsQueue(ov::CompiledModel& compiledModel, int streamsLength);
-    ov::CompiledModel& compiledModel;
 };
 
 }  // namespace ovms
