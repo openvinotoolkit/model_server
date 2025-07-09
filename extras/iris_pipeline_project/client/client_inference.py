@@ -5,6 +5,13 @@ import json
 import sys
 import os
 
+df = pd.read_csv("data/iris_test_stripped.csv")
+if "Species" in df.columns:
+    df = df.drop(columns=["Species"])  
+csv_str = df.to_csv(index=False)
+input_dict = {"mode": "infer", "data": csv_str}
+input_bytes = json.dumps(input_dict).encode("utf-8")
+pipeline_input = np.array([input_bytes], dtype=object)
 
 if len(sys.argv) < 3 or sys.argv[1] not in ("train", "infer"):
     print("Usage: python client_inference.py <infer> <path_to_csv>")
@@ -23,6 +30,9 @@ try:
 except Exception as e:
     print(f"ERROR: Could not read CSV file: {e}")
     sys.exit(1)
+input_name = "pipeline_input"
+infer_input = grpcclient.InferInput(input_name, pipeline_input.shape, "BYTES")
+infer_input.set_data_from_numpy(pipeline_input)
 
 if mode == "train":
     if "Species" not in df.columns:

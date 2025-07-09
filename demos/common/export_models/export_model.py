@@ -51,6 +51,7 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
+parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes3","qwen3"], help='Set the type of model chat template and output parser', dest='tools_model_type')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
@@ -79,6 +80,9 @@ parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help=
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_image_generation.add_argument('--resolution', default="", help='Selection of allowed resolutions in a format of WxH; W=width H=height, space separated. If only one is selected, the pipeline will be reshaped to static.', dest='resolution')
+parser_image_generation.add_argument('--guidance_scale', default="", help='Static guidance scale for the image generation requests. If not specified, default 7.5f is used.', dest='guidance_scale')
+parser_image_generation.add_argument('--num_images_per_prompt', default="", help='Static number of images to be generated per the image generation request. If not specified, default 1 is used.', dest='num_images_per_prompt')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
@@ -133,6 +137,7 @@ node {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
       models_path: "{{model_path}}",
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -150,6 +155,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
       models_path: "{{model_path}}",
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -216,6 +222,8 @@ node: {
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
+          {%- if tools_model_type %}
+          response_parser: "{{tools_model_type}}",{% endif %}
       }
   }
   input_stream_handler {
@@ -283,6 +291,12 @@ node: {
       {%- if plugin_config_str %}
       plugin_config: '{{plugin_config_str}}',{% endif %}
       device: "{{target_device|default("CPU", true)}}",
+      {%- if resolution %}
+      resolution: "{{resolution}}",{% endif %}
+      {%- if num_images_per_prompt %}
+      num_images_per_prompt: {{num_images_per_prompt}},{% endif %}
+      {%- if guidance_scale %}
+      guidance_scale: {{guidance_scale}},{% endif %}
       {%- if max_resolution %}
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
@@ -426,18 +440,36 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
             raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
-    ### 
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
     
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
-    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
-                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
+    print("task_parameters", task_parameters)
+    graph_content = gtemplate.render(model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+
+    if template_parameters.get("tools_model_type") is not None:
+        print("Adding tuned chat template")
+        template_mapping = {
+            "phi4": "tool_chat_template_phi4_mini.jinja",
+            "llama3": "tool_chat_template_llama3.1_json.jinja",
+            "hermes3": "tool_chat_template_hermes.jinja",
+            "qwen3": None
+            }
+        template_name = template_mapping[task_parameters.get("tools_model_type")]
+        if template_name is not None:
+            template_path = os.path.join(model_repository_path, model_name, "template.jinja")
+            import requests
+            response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
+            print(response.raise_for_status())
+            with open(template_path, "wb") as f:
+                f.write(response.content)
+            print(f"Downloaded tuned chat template to {template_path}")
+
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
@@ -580,7 +612,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
         if os.system(optimum_command):
-            raise ValueError("Failed to export image generation model model", source_model)   
+            raise ValueError("Failed to export image generation model", source_model)
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -649,6 +681,9 @@ elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',
         'target_device',
+        'resolution',
+        'num_images_per_prompt',
+        'guidance_scale',
         'max_resolution',
         'default_resolution',
         'max_num_images_per_prompt',

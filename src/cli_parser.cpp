@@ -34,6 +34,8 @@
 
 namespace ovms {
 
+constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
+
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
@@ -129,12 +131,42 @@ void CLIParser::parse(int argc, char** argv) {
             ("allowed_local_media_path",
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
-                "ALLOWED_LOCAL_MEDIA_PATH");
+                "ALLOWED_LOCAL_MEDIA_PATH")
+            ("allow_credentials",
+                "Flag enabling credentials on the API.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_CREDENTIALS")
+            ("allowed_origins",
+                "Comma separated list of origins that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_ORIGINS")
+            ("allowed_methods",
+                "Comma separated list of methods that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_METHODS")
+            ("allowed_headers",
+                "Comma separated list of headers that are allowed to access the API. Default: *.",
+                cxxopts::value<std::string>()->default_value("*"),
+                "ALLOWED_HEADERS");
 
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
                 cxxopts::value<std::string>(), "CONFIG_PATH");
+
+        options->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
+            ("list_models",
+                "Directive to show available servables in models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "LIST_MODELS")
+            ("add_to_config",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to",
+                cxxopts::value<std::string>(),
+                "ADD_TO_CONFIG")
+            ("remove_from_config",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from",
+                cxxopts::value<std::string>(),
+                "REMOVE_FROM_CONFIG");
 
         options->add_options("pull hf model")
             ("pull",
@@ -156,19 +188,7 @@ void CLIParser::parse(int argc, char** argv) {
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK")
-            ("list_models",
-                "Directive to show available servables in models repository",
-                cxxopts::value<bool>()->default_value("false"),
-                "LIST_MODELS")
-            ("add_to_config",
-                "Path to config file for ovms, where to add specific model",
-                cxxopts::value<std::string>()->default_value("config.json"),
-                "ADD_TO_CONFIG")
-            ("remove_from_config",
-                "Path to config file for ovms, to remove specific model from",
-                cxxopts::value<std::string>()->default_value("config.json"),
-                "REMOVE_FROM_CONFIG");
+                "TASK");
 
         options->add_options("single model")
             ("model_name",
@@ -285,6 +305,10 @@ void CLIParser::parse(int argc, char** argv) {
             std::cerr << std::endl;
             exit(OVMS_EX_USAGE);
         }
+        if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
+            std::cerr << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
 #pragma warning(push)
 #pragma warning(disable : 4129)
         if (result->count("version")) {
@@ -298,7 +322,7 @@ void CLIParser::parse(int argc, char** argv) {
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
+            std::cout << options->help({"", "multi model", "single model", "pull hf model", CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
@@ -386,6 +410,11 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     if (result->count("trace_path"))
         serverSettings.tracePath = result->operator[]("trace_path").as<std::string>();
 #endif
+
+    serverSettings.allowCredentials = result->operator[]("allow_credentials").as<bool>();
+    serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
+    serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
+    serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
 }
 
 void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {

@@ -128,4 +128,8 @@ class OvmsPythonModel:
             return [Tensor("pipeline_output", np.array([error_msg], dtype=object))]
 
     def finalize(self):
+<<<<<<< HEAD
         print("[finalize] Python node finalized", file=sys.stderr, flush=True)
+=======
+        print("[finalize] Python node finalized", file=sys.stderr, flush=True)
+>>>>>>> a783d99cf19173676d14303ce0ccb1299f8c6805

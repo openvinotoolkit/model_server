@@ -15,12 +15,47 @@
 //*****************************************************************************
 #include "pipelines.hpp"
 
+#include <vector>
+
+#include "../logging.hpp"
+#include "../stringutils.hpp"
+
 namespace ovms {
 
 ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& args) :
-    text2ImagePipeline(ov::genai::Text2ImagePipeline(args.modelsPath,
-        args.device.value_or("CPU"),
-        args.pluginConfig)),
-    args(args) {}
+    args(args) {
+    std::vector<std::string> device;
+    if (!args.device.size()) {
+        device.push_back("CPU");
+    } else {
+        device = args.device;
+    }
+
+    SPDLOG_DEBUG("Image Generation Pipelines weights loading from: {}", args.modelsPath);
+
+    text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(args.modelsPath);
+
+    if (args.staticReshapeSettings.has_value() && args.staticReshapeSettings.value().resolution.size() == 1) {
+        auto numImagesPerPrompt = args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt);
+        auto guidanceScale = args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale);
+
+        SPDLOG_DEBUG("Image Generation Pipelines will be reshaped to static {}x{} resolution, batch: {}, guidance scale: {}",
+            args.staticReshapeSettings.value().resolution[0].first, args.staticReshapeSettings.value().resolution[0].second, numImagesPerPrompt, guidanceScale);
+
+        text2ImagePipeline->reshape(
+            numImagesPerPrompt,
+            args.staticReshapeSettings.value().resolution[0].first,   // at this point it should be validated for existence
+            args.staticReshapeSettings.value().resolution[0].second,  // at this point it should be validated for existence
+            guidanceScale);
+    }
+
+    if (device.size() == 1) {
+        SPDLOG_DEBUG("Image Generation Pipelines compiling to devices: text_encode={} denoise={} vae={}", device[0], device[0], device[0]);
+        text2ImagePipeline->compile(device[0], args.pluginConfig);
+    } else {
+        SPDLOG_DEBUG("Image Generation Pipelines compiling to devices: text_encode={} denoise={} vae={}", device[0], device[1], device[2]);
+        text2ImagePipeline->compile(device[0], device[1], device[2], args.pluginConfig);
+    }
+}
 // TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
 }  // namespace ovms

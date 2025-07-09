@@ -15,47 +15,33 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+load("//:common_settings.bzl", "ovms_cc_library")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
-
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
-cc_library(
+ovms_cc_library(
     name = "llm_engine",  # in fact this is genai library, includes image gen, TODO: Change name?
     srcs = [],
     deps =  ["@llm_engine//:llm_engine"],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
-cc_library(
+ovms_cc_library(
     name = "pipelines",
     hdrs = ["pipelines.hpp"],
     srcs = ["pipelines.cpp"],
     deps = [
         "imagegenpipelineargs",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
-cc_library(
+ovms_cc_library(
     name = "imagegen_init",
     hdrs = ["imagegen_init.hpp"],
     srcs = ["imagegen_init.cpp"],
@@ -63,30 +49,25 @@ cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovmsfilesystem",
+        "//src:libovmsstring_utils",
         "imagegenutils",
         "imagegenpipelineargs",
         "image_gen_calculator_cc_proto",
     ],
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 
-cc_library(
+ovms_cc_library(
     name = "imagegenpipelineargs",
     hdrs = ["imagegenpipelineargs.hpp"],
     deps = [
         "//third_party:openvino",
     ],
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
 )
 
-cc_library(
+ovms_cc_library(
     name = "imagegenutils",
     srcs = ["imagegenutils.cpp"],
     hdrs = ["imagegenutils.hpp"],
@@ -103,12 +84,9 @@ cc_library(
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
 )
 
-cc_library(
+ovms_cc_library(
     name = "image_gen_calculator",
     srcs = ["http_image_gen_calculator.cc"],
     deps = [
@@ -124,9 +102,6 @@ cc_library(
         "//:not_genai_bin" : [":llm_engine"],
     }),
     visibility = ["//visibility:public"],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
     alwayslink = 1,
 )
 

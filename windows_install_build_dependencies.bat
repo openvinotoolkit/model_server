@@ -126,7 +126,7 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc3/openvino_genai_windows_2025.2.0.0rc3_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.2/windows/openvino_genai_windows_2025.2.0.0_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -185,7 +185,7 @@ echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
 set "opencl_ver=v2024.10.24"
-set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
+set "opencl_dir=%opt_install_dir%\opencl"
 
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
@@ -293,6 +293,24 @@ IF /I EXIST %opt_install_dir%\%go_dir% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git - check required version
+set "git_exe=C:\Program Files\Git\mingw64\bin\git.exe"
+set "git_ver_link=https://github.com/git-for-windows/git/releases/download/v2.50.0.windows.2/Git-2.50.0.2-64-bit.exe"
+set "required_ver=git version 2.50.0.windows.2"
+IF /I EXIST "%git_exe%" (
+    "%git_exe%" --version | findstr /c:"%required_ver%"
+    if %errorlevel% == 0 (
+    echo %required_ver% installed.
+    ) else (
+        echo Install git to %git_exe% from %git_ver_link%
+        exit /b 1
+    )
+) ELSE (
+    echo Install git to %git_exe% from %git_ver_link%
+    exit /b 1
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
 set "gitlfs_dir=git-lfs-main_9_6_2025"
 set "gitlfs_http=https://github.com/git-lfs/git-lfs"
@@ -338,7 +356,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.9"
+set "python_version=3.12.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -347,7 +365,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (

@@ -14,20 +14,9 @@
 # limitations under the License.
 #
 
-load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+load("//:common_settings.bzl", "ovms_cc_library")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
-
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
-cc_library(
+ovms_cc_library(
     name = "listmodels",
     hdrs = ["listmodels.hpp",],
     srcs = ["listmodels.cpp",],
@@ -37,11 +26,8 @@ cc_library(
         "//src:modelextensions",
     ],
     visibility = ["//visibility:public",],
-    local_defines = COMMON_LOCAL_DEFINES,
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
 )
-cc_library(
+ovms_cc_library(
     name = "servablesconfigmanagermodule",
     srcs = ["servablesconfigmanagermodule.cpp"],
     hdrs = ["servablesconfigmanagermodule.hpp"],
@@ -57,7 +43,4 @@ cc_library(
              "//src/config_export_module:config_export_types",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
 )

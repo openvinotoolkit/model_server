@@ -21,7 +21,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::
 
 :::{tab-item} On Baremetal Host
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 mkdir models
@@ -59,11 +59,11 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 ```
 ### On Baremetal Unix
 ```bash
-ovms --rest_port 8000 --config_path $(pwd)/models/config.json
+ovms --rest_port 8000 --config_path models/config.json
 ```
 ### Windows
 ```bat
-ovms --rest_port 8000 --config_path %cd%\models\config.json
+ovms --rest_port 8000 --config_path models\config.json
 ```
 
 ## Using RAG
