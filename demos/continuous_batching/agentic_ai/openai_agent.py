@@ -37,8 +37,15 @@ from agents import (
 )
 
 API_KEY = "not_used"
-env_proxy = {"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy")}
-RunConfig.tracing_disabled = True  # Disable tracing for this example
+env_proxy = {}
+http_proxy = os.environ.get("http_proxy")
+https_proxy = os.environ.get("https_proxy")
+if http_proxy:
+    env_proxy["http_proxy"] = http_proxy
+if https_proxy:
+    env_proxy["https_proxy"] = https_proxy
+
+RunConfig.tracing_disabled = False  # Disable tracing for this example
 
 async def run(query, agent, OVMS_MODEL_PROVIDER):
     await fs_server.connect()
@@ -60,7 +67,7 @@ if __name__ == "__main__":
         weather_server = MCPServerStdio(
             name="Weather MCP Server",
             client_session_timeout_seconds=300,
-            params={"command": "python", "args": ["-m", "mcp_weather_server"],"env":env_proxy},
+            params={"command": "python", "args": ["-m", "mcp_weather_server"],"env":env_proxy}
         )
     else:
         print("Using SSE weather MCP server")
@@ -71,7 +78,7 @@ if __name__ == "__main__":
     fs_server = MCPServerStdio(
             client_session_timeout_seconds=30,
             name="FS MCP Server",
-            params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy,}
+            params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy}
     )
     client = AsyncOpenAI(base_url=args.base_url, api_key=API_KEY)
 
@@ -86,9 +93,8 @@ if __name__ == "__main__":
         mcp_servers=[fs_server, weather_server],
         model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
     )
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER))
+
+
+

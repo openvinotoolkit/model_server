@@ -127,8 +127,8 @@ docker run -d -v $(pwd)/src/mcp_weather_server:/mcp_weather_server  -p 8080:8080
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/demo-corrections/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/demo-corrections/demos/continuous_batching/agentic_ai/requirements.txt
 ```
 
 Run the agentic application
