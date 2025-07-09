@@ -112,7 +112,3 @@ Inference predictions: [...]
 ```
 
 ---
-
-## 📄 License
-
-MIT License
