@@ -1,9 +1,19 @@
-commit aef9047d67d08027afe0417d6c681bfdc4666f5e
+commit 1259c7fa63c826a471813fdb1d73f2227b5c3307
 Author: rasapala <rafal.a.sapala@intel.com>
-Date:   Fri Mar 14 09:23:35 2025 +0100
+Date:   Thu Jul 3 15:31:05 2025 +0200
 
-    Lfs
+    Git-lfs support
 
+diff --git a/.gitignore b/.gitignore
+index 1b482f038..d0fe70060 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -5,4 +5,5 @@
+ /tags
+ CMakeSettings.json
+ .vs
++.vscode
+ .idea
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 31da49a88..d61c9735e 100644
 --- a/CMakeLists.txt
@@ -57,10 +67,66 @@ index c18cb28d4..286fa7153 100644
  	if (!checkout)
  		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
 diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
-index a7d3c7ca4..f78a25e35 100644
+index a7d3c7ca4..d9282166d 100644
 --- a/src/libgit2/CMakeLists.txt
 +++ b/src/libgit2/CMakeLists.txt
-@@ -69,8 +69,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+@@ -5,6 +5,7 @@ add_library(libgit2 OBJECT)
+ 
+ include(PkgBuildConfig)
+ include(CMakePackageConfigHelpers)
++include(CMakePrintHelpers)
+ 
+ set(LIBGIT2_INCLUDES
+ 	"${PROJECT_BINARY_DIR}/src/util"
+@@ -37,6 +38,11 @@ if(APPLE)
+ 	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+ endif()
+ 
++cmake_print_variables(CURL_DEPENDENCIES_DIR)
++list(APPEND LIBGIT2_SYSTEM_INCLUDES "${CURL_DEPENDENCIES_DIR}\\include")
++list(APPEND LIBGIT2_SYSTEM_LIBS "${CURL_DEPENDENCIES_DIR}\\bin\\libcurl-x64.lib")
++list(APPEND LIBGIT2_PC_LIBS "-lcurl")
++
+ ide_split_sources(libgit2)
+ list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
+ list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
+@@ -44,12 +50,35 @@ list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
+ target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
+ target_include_directories(libgit2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+ 
++cmake_print_variables(LIBGIT2_SYSTEM_INCLUDES)
++
+ set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
+ set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
+ set(LIBGIT2_DEPENDENCY_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES} PARENT_SCOPE)
+ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
+ set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
+ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
++cmake_print_variables(LIBGIT2_SYSTEM_INCLUDES)
++
++# libcurl
++#find_package(CURL REQUIRED PATHS "C:\\opt\\curl-8.14.1_1-win64-mingw")
++#if(CURL_FOUND)
++	#list(APPEND LIBGIT2_SYSTEM_INCLUDES ${CURL_INCLUDE_DIR})
++	#list(APPEND LIBGIT2_SYSTEM_LIBS ${CURL_LIBRARIES})
++	#list(APPEND LIBGIT2_PC_LIBS ${CURL_LIBRARIES})
++#else()
++	#message(FATAL_ERROR "Curl library and headers not found")
++#endif()
++
++#add_library(Curl SHARED IMPORTED)
++#set_target_properties(Curl PROPERTIES
++#    IMPORTED_LOCATION "${CURL_DEPENDENCIES_DIR}/bin/libcurl-x64.dll"
++#    IMPORTED_IMPLIB "${CURL_DEPENDENCIES_DIR}/bin/libcurl-x64.lib"
++#    INTERFACE_INCLUDE_DIRECTORIES "${CURL_DEPENDENCIES_DIR}/include"
++#)
++
++
++
+ 
+ #
+ # Compile and link libgit2
+@@ -69,8 +98,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
  ide_split_sources(libgit2package)
  
  if(SONAME)
@@ -81,6 +147,18 @@ index f4b1ea96f..d8d4dee35 100644
  	struct checkout_stream writer;
  	mode_t mode;
  	git_filter_list *fl = NULL;
+diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
+index 237efc0ba..d4af7d9b0 100644
+--- a/src/libgit2/clone.c
++++ b/src/libgit2/clone.c
+@@ -641,6 +641,7 @@ static int clone_repo(
+ 	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
+ 		return error;
+ 
++	repo->url = git__strdup(url);
+ 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
+ 		bool clone_local;
+ 
 diff --git a/src/libgit2/filter.c b/src/libgit2/filter.c
 index 9e0910c8c..a27b55340 100644
 --- a/src/libgit2/filter.c
@@ -129,10 +207,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..aac0d6dda
+index 000000000..c26182ef1
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,254 @@
+@@ -0,0 +1,435 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -149,26 +227,42 @@ index 000000000..aac0d6dda
 +/ limitations under the License.
 +*/
 +
++#include "array.h"
 +#include "common.h"
 +
++#include "curl/curl.h"
 +#include "git2/sys/filter.h"
 +#include "filter.h"
 +#include "str.h"
-+#include "process.h"
 +#include "repository.h"
-+
-+#ifndef GIT_WIN32
-+#include <signal.h>
-+#endif
++#include "regexp.h"
++#include "time.h"
 +
 +typedef struct lfs_attrs
 +{
 +	const char *path;
 +	const char* full_path;
 +	const char* workdir;
++	const char *lfs_oid;
++	const char *lfs_size;
++	const char *url;
 +} lfs_attrs;
 +
-+char *appendCharToBuffer(char *existingBuffer, char additionalChar)
++static size_t get_digit(const char *buffer)
++{
++	char *endptr;
++	size_t number = strtoul(buffer, &endptr, 10);
++
++	if (endptr == buffer) {
++		fprintf(stderr, "No digits were found\n");
++	} else if (*endptr != '\0') {
++		fprintf(stderr, "Additional characters after number: %s\n", endptr);
++	}
++
++	return number;
++}
++
++char *append_char_to_buffer(char *existingBuffer, char additionalChar)
 +{
 +	size_t existingLength = strlen(existingBuffer);
 +	char *newBuffer = (char *)malloc((existingLength + 2) * sizeof(char));
@@ -181,9 +275,55 @@ index 000000000..aac0d6dda
 +	return newBuffer;
 +}
 +
++int get_lfs_info_match(
++        const git_str *output,
++        const char *regexp)
++{
++	int result;
++	git_regexp preg = GIT_REGEX_INIT;
++	if ((result = git_regexp_compile(&preg, regexp, 0)) < 0) {
++		git_regexp_dispose(&preg);
++		return result;
++	}
++
++	size_t i;
++	git_regmatch pmatch[2];
++
++	if (!git_regexp_search(&preg, output->ptr, 2, pmatch)) {
++		/* use pmatch data to trim line data */
++		i = (pmatch[1].start >= 0) ? 1 : 0;
++		git_str_consume(output, git_str_cstr(output) + pmatch[i].start);
++		git_str_truncate(output, pmatch[i].end - pmatch[i].start);
++		git_str_rtrim(output);
++		git_regexp_dispose(&preg);
++		return 0;
++	}
++
++	git_regexp_dispose(&preg);
++	return -1;
++}
++
 +static int lfs_insert_id(
 +	git_str *to, const git_str *from, const git_filter_source *src, void** payload)
 +{
++	git_str lfs_oid = GIT_STR_INIT;
++	git_str lfs_size = GIT_STR_INIT;
++
++	lfs_oid.size = from->size;
++	lfs_oid.asize = from->asize;
++	lfs_oid.ptr = git__strdup(from->ptr);
++	lfs_size.size = from->size;
++	lfs_size.asize = from->asize;
++	lfs_size.ptr = git__strdup(from->ptr);
++
++	const char *obj_regexp = "\noid sha256:(.*)\n";
++	const char *size_regexp = "\nsize (.*)\n";
++	if (get_lfs_info_match(&lfs_oid, obj_regexp) < 0)
++		return -1;
++
++	if (get_lfs_info_match(&lfs_size, size_regexp) < 0)
++		return -1;
++
 +	git_repository *repo = git_filter_source_repo(src);
 +	const char *path = git_filter_source_path(src);
 +
@@ -194,7 +334,7 @@ index 000000000..aac0d6dda
 +	size_t workdir_size = strlen(git_repository_workdir(repo));
 +
 +	const char *workdir = git_repository_workdir(repo);
-+	struct lfs_attrs la = { path, full_path.ptr, workdir };
++	struct lfs_attrs la = { path, full_path.ptr, workdir, lfs_oid.ptr, lfs_size.ptr,  repo->url };
 +
 +	*payload = git__malloc(sizeof(la));
 +	GIT_ERROR_CHECK_ALLOC(*payload);
@@ -260,98 +400,212 @@ index 000000000..aac0d6dda
 +		self, lfs_apply, NULL, payload, src, next);
 +}
 +
++struct memory {
++	char *response;
++	size_t size;
++};
++
++struct FtpFile {
++	const char *filename;
++	FILE *stream;
++	size_t full_size;
++	size_t already_copied;
++	time_t lastCall;
++};
++
++void print_progress(size_t count, size_t max, bool first_run)
++{
++	float progress = (float)count / max ;
++	if (!first_run && progress < 0.01 && count > 0)
++		return;
++
++	const int bar_width = 50;
++	int bar_length = progress * bar_width;
++
++	printf("\rProgress: [");
++	for (int i = 0; i < bar_length; ++i) {
++		printf("#");
++	}
++	for (int i = bar_length; i < bar_width; ++i) {
++		printf(" ");
++	}
++	printf("] %.2f%%", progress * 100);
++	if (progress == 1.0)
++		printf("\n");
++	fflush(stdout);
++}
++
++static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
++{
++	struct FtpFile *out = (struct FtpFile *)stream;
++	if (!out->stream) {
++		/* open file for writing */
++		out->stream = fopen(out->filename, "wb");
++		if (!out->stream) {
++			fprintf(stderr, "failure, cannot open file to write: %s\n",
++			        out->filename);
++			return 0; /* failure, cannot open file to write */
++		}
++	}
++	bool first_run = false;
++	if (out->already_copied == 0)
++		first_run = true;
++
++	out->already_copied += size * nmemb;
++	time_t currentTime = time(NULL);
++	if (currentTime - out->lastCall >= 1 ||
++	    out->already_copied == out->full_size) {
++		print_progress(out->already_copied, out->full_size, first_run);
++		out->lastCall = currentTime;
++	}
++	
++	return fwrite(buffer, size, nmemb, out->stream);
++}
++
++static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userp)
++{
++	size_t realsize = size * nmemb;
++	struct memory *mem = (struct memory *)userp;
++
++	char *ptr_new = realloc(mem->response, mem->size + realsize + 1);
++	if (ptr_new == NULL) {
++		return 0; // out of memory!
++	}
++
++	mem->response = ptr_new;
++	memcpy(&(mem->response[mem->size]), ptr, realsize);
++	mem->size += realsize;
++	mem->response[mem->size] = 0;
++
++	return realsize;
++}
++
 +static void lfs_download(git_filter *self, void *payload)
 +{
 +	GIT_UNUSED(self);
++	if (!payload) {
++		fprintf(stderr, "lfs payload not initialized");
++		return;
++	}
 +	struct lfs_attrs *la = (struct lfs_attrs *)payload;
-+	char *tmp_out_file = appendCharToBuffer(la->full_path, '2');
++	char *tmp_out_file = append_char_to_buffer(la->full_path, '2');
 +
-+	git_process *process;
-+	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
-+	opts.cwd = la->workdir;
-+	git_process_result result = GIT_PROCESS_RESULT_INIT;
-+#if defined(GIT_WIN32)
-+	const char *args_array[] = { "C:\\Windows\\System32\\cmd.exe",
-+		                     "/c",
-+		                     "git-lfs.exe",
-+		                     "smudge",
-+		                     la->path,
-+		                     "<",
-+		                     la->full_path,
-+		                     ">",
-+		                     tmp_out_file };
-+	if (git_process_new(
-+	            &process, args_array, ARRAY_SIZE(args_array), NULL, 0,
-+	            &opts) < 0) {
-+		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || \
-+        defined(__MidnightBSD__) || defined(__DragonFly__)
-+	git_str cmd_line = GIT_STR_INIT;
++	CURL *info_curl,*dl_curl;
++	CURLcode res;
++	git_str res_str = GIT_STR_INIT;
++	/* get a curl handle */
++	info_curl = curl_easy_init();
++	if (info_curl) {
++		struct curl_slist *chunk = NULL;
++		git_str lfs_info_url = GIT_STR_INIT;
++		if (git_str_join(
++		            &lfs_info_url, '.',
++		            la->url,
++		            "git/info/lfs/objects/batch") < 0) {
++			fprintf(stderr, "failed to create url '%s'",
++			        la->full_path);
++			goto on_error;
++		}
 +
-+	if (git_str_printf(&cmd_line, "git-lfs smudge %s < %s > %s", la->path, la->full_path, tmp_out_file) < 0) {
-+		    fprintf(stderr,
-+			    "failed to create git-lfs command for '%s'\n",
-+			    la->full_path);
-+		    goto on_error;
-+	}
-+	if (git_process_new_from_cmdline(
-+	            &process, cmd_line.ptr, NULL, 0, &opts) < 0) {
-+		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+#else
-+	git_str cmd_line = GIT_STR_INIT;
-+	if (git_str_printf(
-+	            &cmd_line, "git-lfs smudge %s < %s > %s", la->path,
-+	            la->full_path, tmp_out_file) < 0) {
-+		fprintf(stderr, "failed to create git-lfs command for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+	if (git_process_new_from_cmdline(
-+	            &process, cmd_line.ptr, NULL, 0, &opts) < 0) {
-+		fprintf(stderr, "failed to create git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+#endif
-+	if (git_process_start(process) < 0) {
-+		fprintf(stderr, "failed to start git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+	if (git_process_wait(&result, process) < 0) {
-+		fprintf(stderr, "failed to wait for git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
++		/* Remove a header curl would otherwise add by itself */
++		chunk = curl_slist_append(chunk, "Accept: application/vnd.git-lfs+json");
++		/* Add a custom header */
++		chunk = curl_slist_append(chunk, "Content-type: application/json");
++		/* set our custom set of headers */
++		curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk);
++		/* First set the URL that is about to receive our POST. This URL
++		   can just as well be an https:// URL if that is what should
++		   receive the data. */
++		curl_easy_setopt(
++		        info_curl, CURLOPT_URL, lfs_info_url.ptr);
 +
-+	if (GIT_PROCESS_STATUS_NORMAL != result.status) {
-+		fprintf(stderr,
-+		        "abnormal process status for git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
++		git_str lfs_info_data = GIT_STR_INIT;
 +
-+	if (0 != result.exitcode) {
-+		fprintf(stderr,
-+		        "abnormal exitcode signal for git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
-+	}
-+	if (0 != result.signal) {
-+		fprintf(stderr,
-+		        "abnormal process signal for git-lfs process for '%s'\n",
-+		        la->full_path);
-+		goto on_error;
++		// "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a1f310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}"
++		if (git_str_join_n(
++		            &lfs_info_data, '"',5,
++		            "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":",
++			    la->lfs_oid,
++			    ",\"size\":",
++			    la->lfs_size,
++			    "}]}" ) < 0) {
++			fprintf(stderr, "failed to create url '%s'",
++			        la->full_path);
++			goto on_error;
++		}
++
++		/* Now specify the POST data */
++		curl_easy_setopt(
++		        info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr);
++		        
++
++
++		curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
++		curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L);
++
++		struct memory response = { 0 };
++		curl_easy_setopt(
++		        info_curl, CURLOPT_WRITEFUNCTION, write_callback);
++		curl_easy_setopt(
++		        info_curl, CURLOPT_WRITEDATA, (void *)&response);
++
++		/* Perform the request, res gets the return code */
++		res = curl_easy_perform(info_curl);
++		/* Check for errors */
++		if (res != CURLE_OK)
++			fprintf(stderr, "curl_easy_perform() failed: %s\n",
++			        curl_easy_strerror(res));
++
++		// Get response data
++		res_str.asize = response.size;
++		res_str.size = response.size;
++		res_str.ptr = git__strdup(response.response);
++		/* always cleanup */
++		curl_easy_cleanup(info_curl);
++		/* free the custom headers */
++		curl_slist_free_all(chunk);
 +	}
 +
-+	/* Remove lfs file and rename downloaded file to oryginal lfs filename
-+	 */
++	/* get a curl handle */
++	dl_curl = curl_easy_init();
++	if (dl_curl) {
++		struct FtpFile ftpfile = { tmp_out_file, NULL,
++					   get_digit(la->lfs_size), 0,
++			                   time(NULL) };
++
++		const char *href_regexp = "{\"href\":\"(.*)\"}}}]}";
++		if (get_lfs_info_match(&res_str, href_regexp) < 0)
++			return -1;
++		/* First set the URL that is about to receive our POST. This URL
++		   can just as well be an https:// URL if that is what should
++		   receive the data. */
++		curl_easy_setopt(
++		        dl_curl, CURLOPT_URL, res_str.ptr);
++
++		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
++		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
++		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
++
++		curl_easy_setopt(
++		        dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
++		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
++
++
++		printf("\nDownloading lfs file: %s\n", ftpfile.filename);
++		/* Perform the request, res gets the return code */
++		res = curl_easy_perform(dl_curl);
++		/* Check for errors */
++		if (res != CURLE_OK)
++			fprintf(stderr, "curl_easy_perform() failed: %s\n",
++			        curl_easy_strerror(res));
++
++		if (ftpfile.stream)
++			fclose(ftpfile.stream);
++		/* always cleanup */
++		curl_easy_cleanup(dl_curl);
++	}
++
++	/* Remove lfs file and rename downloaded file to oryginal lfs filename */ 
 +	if (p_unlink(la->full_path) < 0) {
 +		fprintf(stderr, "failed to delete file '%s'", la->full_path);
 +		goto on_error;
@@ -361,29 +615,58 @@ index 000000000..aac0d6dda
 +		fprintf(stderr, "failed to rename file to '%s'", la->full_path);
 +		goto on_error;
 +	}
-+
-+	git_process_free(process);
 +	git__free(payload);
 +	return;
 +
 +on_error:
-+	git_process_free(process);
 +	git__free(payload);
 +	return;
 +}
 +
++void git_lfs_filter_free(git_filter *filter)
++{
++	curl_global_cleanup();
++	git__free(filter);
++}
++
 +git_filter *git_lfs_filter_new(void)
 +{
++	/* In Windows, this inits the Winsock stuff */
++	curl_global_init(CURL_GLOBAL_ALL);
 +	git_filter *f = git__calloc(1, sizeof(git_filter));
 +	if (f == NULL)
 +		return NULL;
 +
 +	f->version = GIT_FILTER_VERSION;
 +	f->attributes = "lfs";
-+	f->shutdown = git_filter_free;
++	f->shutdown = git_lfs_filter_free;
 +	f->stream   = lfs_stream;
 +	f->check = lfs_check;
 +	f->cleanup = lfs_download;
 +
 +	return f;
 +}
+diff --git a/src/libgit2/repository.c b/src/libgit2/repository.c
+index 73876424a..6c267bc98 100644
+--- a/src/libgit2/repository.c
++++ b/src/libgit2/repository.c
+@@ -190,6 +190,7 @@ void git_repository_free(git_repository *repo)
+ 	git__free(repo->namespace);
+ 	git__free(repo->ident_name);
+ 	git__free(repo->ident_email);
++	git__free(repo->url);
+ 
+ 	git__memzero(repo, sizeof(*repo));
+ 	git__free(repo);
+diff --git a/src/libgit2/repository.h b/src/libgit2/repository.h
+index fbf143894..1890c61c1 100644
+--- a/src/libgit2/repository.h
++++ b/src/libgit2/repository.h
+@@ -168,6 +168,7 @@ struct git_repository {
+ 
+ 	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
+ 	git_submodule_cache *submodule_cache;
++	char *url;
+ };
+ 
+ GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
