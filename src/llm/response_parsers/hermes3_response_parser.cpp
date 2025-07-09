@@ -97,4 +97,10 @@ ParsedResponse Hermes3ResponseParser::parse(const std::vector<int64_t>& generate
     }
     return parsedResponse;
 }
+
+std::optional<rapidjson::Document> Hermes3ResponseParser::parseChunk(const std::string& chunk) {
+    // Not implemented
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Hermes3ResponseParser::parseChunk is not implemented");
+    return std::nullopt;
+}
 }  // namespace ovms

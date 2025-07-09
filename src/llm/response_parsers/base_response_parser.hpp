@@ -19,6 +19,13 @@
 #include <string>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
 namespace ovms {
 struct ToolCall {
     std::string id;
@@ -56,5 +63,6 @@ public:
         tokenizer(tokenizer) {}
     virtual ~BaseResponseParser() = default;
     virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
+    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;
 };
 }  // namespace ovms

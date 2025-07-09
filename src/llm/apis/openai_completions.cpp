@@ -997,9 +997,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     writer.Null();
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (responseParser != nullptr) {
-            rapidjson::Document delta = responseParser->parseChunk(chunkResponse);
-            ...
-            
+            auto delta = responseParser->parseChunk(chunkResponse);
         } else {
             writer.String("delta");
             writer.StartObject();  // {
@@ -1049,6 +1047,93 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
     writer.EndObject();  // }
+    return buffer.GetString();
+}
+
+std::string OpenAIChatCompletionsHandler::serializeStreamingChunkNew(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
+    OVMS_PROFILE_FUNCTION();
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
+
+    // choices: array of size N, where N is related to n request parameter
+    choices.SetArray();
+    choice.SetObject();
+    // finish_reason: string or null; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)/null
+    // "stop" => natural stop point due to stopping criteria
+    // "length" => due to reaching max_tokens parameter
+    // "content_filter" => when produced restricted output (not supported)
+    // "tool_calls" => generation stopped and waiting for tool output (not supported)
+    // "function_call" => deprecated
+    // null - natural scenario when the generation has not completed yet
+    switch (finishReason) {
+    case ov::genai::GenerationFinishReason::STOP:
+        choice.AddMember("finish_reason", "stop", allocator);
+        break;
+    case ov::genai::GenerationFinishReason::LENGTH:
+        choice.AddMember("finish_reason", "length", allocator);
+        break;
+    default:
+        choice.AddMember("finish_reason", Value(), allocator);
+    }
+    // index: integer; Choice index, only n=1 supported anyway
+    choice.AddMember("index", 0, allocator);
+    // logprobs: object/null; Log probability information for the choice. TODO
+    choice.AddMember("logprobs", Value(), allocator);
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        if (responseParser != nullptr) {
+            std::optional<Document> delta = responseParser->parseChunk(chunkResponse);
+            if (!delta.has_value()) {
+                return "";
+            }
+            if (delta->HasMember("delta")) {
+                // Deep copy the "delta" member value into the choice object
+                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
+            }
+            
+        } else {
+            Value delta(kObjectType);
+            delta.SetObject();
+            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
+            choice.AddMember("delta", delta, allocator);
+        }
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
+    }
+
+    choices.PushBack(choice, allocator);
+    doc.AddMember("choices", choices, allocator);
+
+    // created: integer; Unix timestamp (in seconds) when the MP graph was created.
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
+
+    // model: string; copied from the request
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
+
+    // object: string; defined that the type streamed chunk rather than complete response
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
+    } else if (endpoint == Endpoint::COMPLETIONS) {
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
+    }
+
+    if (request.streamOptions.includeUsage) {
+        doc.AddMember("usage", Value(), allocator);
+    }
+
+    // TODO
+    // id: string; A unique identifier for the chat completion. Each chunk has the same ID.
+
+    // TODO
+    // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
+    // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
+
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
     return buffer.GetString();
 }
 

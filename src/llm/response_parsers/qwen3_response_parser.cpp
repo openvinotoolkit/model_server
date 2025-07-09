@@ -122,64 +122,28 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
     return parsedResponse;
 }
 
-rapidjson::Document Qwen3ResponseParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::string& chunk) {
     if (chunk.empty()) {
-        // TODO: decide how to handle that
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ResponseParser");
-        return rapidjson::Document();
+        return std::nullopt;
     }
 
     rapidjson::Document doc;
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    std::string content, reasoningContent, toolCall;
+    /* 
+    Case 1: We are in CONTENT phase, from here we can switch to REASONING or TOOL_CALLS if we find starting tags.
+    If we switch phase, we return nullopt, so no message is streamed back in this call. Otherwise we stream content delta.
+    */
     if (processingPhase == ProcessingPhase::CONTENT) {
         if (chunk.find(reasoningStartTag) != std::string::npos) {
-            // If we find reasoning start tag, we switch to REASONING phase
             processingPhase = ProcessingPhase::REASONING;
-            size_t tagPos = chunk.find(reasoningStartTag);
-            content = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
-            reasoningContent = (tagPos != std::string::npos && tagPos + reasoningStartTag.length() < chunk.size())
-                ? chunk.substr(tagPos + reasoningStartTag.length())
-                : "";
-
-            writer.StartObject();
-            writer.String("delta");
-            writer.StartObject();
-            if (!content.empty()) {
-                writer.String("content");
-                writer.String(content.c_str());
-            }
-            if (!reasoningContent.empty()) {
-                writer.String("reasoning_content");
-                writer.String(reasoningContent.c_str());
-            }
-            writer.EndObject();
-            writer.EndObject();
-            doc.Parse(buffer.GetString());
-            return doc;
+            return std::nullopt;
         } else if (chunk.find(toolCallStartTag) != std::string::npos) {
-            // If we find tool call start tag, we switch to TOOL_CALLS phase
             processingPhase = ProcessingPhase::TOOL_CALLS;
-            size_t tagPos = chunk.find(toolCallStartTag);
-            content = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
-            toolCall = (tagPos != std::string::npos && tagPos + toolCallStartTag.length() < chunk.size())
-                ? chunk.substr(tagPos + toolCallStartTag.length())
-                : "";
-            toolCallBuffer += toolCall; // we are not processing tool calls in this step, but need to keep tool call content for later
-            jsonBuilder.partialParseToJson("{\"tool_calls\": ["); // initialize JSON builder for tool calls
-            writer.StartObject();
-            writer.String("delta");
-            writer.StartObject();
-            if (!content.empty()) {
-                writer.String("content");
-                writer.String(content.c_str());
-            }
-            writer.EndObject();
-            writer.EndObject();
-            doc.Parse(buffer.GetString());
-            return doc;
+            toolCallIndex++;
+            return std::nullopt;
         } else {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             writer.StartObject();
             writer.String("delta");
             writer.StartObject();
@@ -190,87 +154,145 @@ rapidjson::Document Qwen3ResponseParser::parseChunk(const std::string& chunk) {
             doc.Parse(buffer.GetString());
             return doc;
         }
+    /* 
+    Case 2: We are in REASONING phase, from here we can switch to CONTENT if we find ending tags.
+    If we switch phase, we return nullopt, so no message is streamed back in this call. Otherwise we stream reasoning_content delta (temporarily streaming content).
+    */
     } else if (processingPhase == ProcessingPhase::REASONING) {
         if (chunk.find(reasoningEndTag) != std::string::npos) {
-            // If we find reasoning end tag, we switch to CONTENT phase
             processingPhase = ProcessingPhase::CONTENT;
-            size_t tagPos = chunk.find(reasoningEndTag);
-            reasoningContent = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
-            std::string content;
-            if (tagPos != std::string::npos && tagPos + reasoningEndTag.length() < chunk.size()) {
-                content = chunk.substr(tagPos + reasoningEndTag.length());
-            }
-            writer.StartObject();
-            writer.String("delta");
-            writer.StartObject();
-            if (!reasoningContent.empty()) {
-                writer.String("reasoning_content");
-                writer.String(reasoningContent.c_str());
-            }
-            if (!content.empty()) {
-                writer.String("content");
-                writer.String(content.c_str());
-            }
-            writer.EndObject();
-            writer.EndObject();
-            doc.Parse(buffer.GetString());
-            return doc;
+            return std::nullopt;
         } else {
-            reasoningContent = chunk;
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             writer.StartObject();
             writer.String("delta");
             writer.StartObject();
-            writer.String("reasoning_content");
+            //writer.String("reasoning_content");
+            writer.String("content"); // temporarily using "content" to make it work with agentic client
             writer.String(chunk.c_str());
             writer.EndObject();
             writer.EndObject();
             doc.Parse(buffer.GetString());
             return doc;
         }
-    }
-
-    if (processingPhase == ProcessingPhase::TOOL_CALLS) {
+    /* 
+    Case 3: We are in TOOL_CALLS phase, which is the last phase of request processing.
+    Start and end tags in this phase modify state of the processing, but do not return any message.
+    Otherwise we collect data until we have full function name - that's when we return the first delta.
+    Every next delta contains next parts of the arguments. Qwen3 generates arguments as JSON, but OpenAI API expects them in a string format.
+    That's why once we reach 'arguments' key, we add double quote to force string type and escape all double quotes that come in next parts.
+    To know when we reach the end of the arguments string, we track the nesting level of arguments (it's supposed to be valid JSON).
+    When we reach the opening brace '{', we increase the nesting level, and when we reach the closing brace '}', we decrease it.
+    When we reach the closing brace '}' and nesting level is zero, we add a closing quote '"' right after it to complete the string and keep the main JSON valid.
+    */
+    } else if (processingPhase == ProcessingPhase::TOOL_CALLS) {
+        // Assuming streamer will provide start/end tag either alone in the chunk or with whitespaces that can be dropped.
         if (chunk.find(toolCallEndTag) != std::string::npos) {
-            // If we find tool call end tag, we process the tool call buffer
-            size_t tagPos = chunk.find(toolCallEndTag);
-            std::string toolCallContent = (tagPos > 0) ? chunk.substr(0, tagPos) : "";
-            if (!toolCallContent.empty()) {
-                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(toolCallContent);
-                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
-                doc.SetObject();
-                doc.AddMember("delta", delta, doc.GetAllocator());
-                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
-                return doc;
-            }
+            lastJson.Clear();
+            jsonBuilder.clear();
+            return std::nullopt;
         } else if (chunk.find(toolCallStartTag) != std::string::npos) {
-            // If we find another tool call start tag, we process the previous tool call buffer
-            size_t tagPos = chunk.find(toolCallStartTag);
-            std::string toolCallContent;
-            if (tagPos != std::string::npos && tagPos + toolCallStartTag.length() < chunk.size()) {
-                toolCallContent = chunk.substr(tagPos + toolCallStartTag.length());
-            } else {
-                toolCallContent = "";
+            toolCallIndex++;
+            argumentsNestingLevel = 0;
+            return std::nullopt;
+        } else {
+            std::string modifiedChunk = chunk;
+            // JSON already contains 'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
+            if (lastJson.HasMember("arguments")) {
+                // Escaping double quotes in the arguments string
+                for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
+                    modifiedChunk.insert(pos, "\\");
+                }
+                // Tracking nesting level and applying closure after arguments are complete
+                for (size_t i = 0; i < modifiedChunk.size(); ++i) {
+                    char c = modifiedChunk[i];
+                    if (c == '{') {
+                        argumentsNestingLevel++;
+                    } else if (c == '}') {
+                        argumentsNestingLevel--;
+                        if (argumentsNestingLevel == 0) {
+                            modifiedChunk.insert(i + 1, "\"");
+                            break;
+                        }
+                    }
+                }
             }
 
-            if (!toolCallContent.empty()) {
-                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(toolCallContent);
-                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
-                doc.SetObject();
-                doc.AddMember("delta", delta, doc.GetAllocator());
-                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
-                return doc;
+            // Push modified chunk to the JSON builder and collect new partial JSON
+            rapidjson::Document currentDoc;
+            try {
+                currentDoc = jsonBuilder.partialParseToJson(modifiedChunk);
+            } catch (const std::exception& e) {
+                std::cout << "Failed to parse tool call arguments: " << e.what() << std::endl;
+                return std::nullopt; // If parsing fails, we return nullopt
             }
-        } else {
-                rapidjson::Document currentDoc = jsonBuilder.partialParseToJson(chunk);
-                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
+
+
+            // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
+            if (currentDoc.HasMember("arguments") && !lastJson.HasMember("arguments")) {
+                // If 'arguments' is null we add double quote to force string data type.
+                if (currentDoc["arguments"].IsNull()) {
+                    jsonBuilder.partialParseToJson("\"");
+                }
                 doc.SetObject();
-                doc.AddMember("delta", delta, doc.GetAllocator());
-                lastJson.CopyFrom(currentDoc, doc.GetAllocator());
+                // Wrap delta in {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
+                // TODO: Consider extracting to separate function
+                rapidjson::Value toolCalls(rapidjson::kArrayType);
+                rapidjson::Value toolCallObj(rapidjson::kObjectType);
+                rapidjson::Value idValue(generateRandomId().c_str(), doc.GetAllocator());
+                toolCallObj.AddMember("id", idValue, doc.GetAllocator());
+                toolCallObj.AddMember("type", "function", doc.GetAllocator());
+                toolCallObj.AddMember("index", toolCallIndex, doc.GetAllocator());
+                rapidjson::Value functionObj(rapidjson::kObjectType);
+                rapidjson::Value nameValue(lastJson["name"].GetString(), doc.GetAllocator());
+                functionObj.AddMember("name", nameValue, doc.GetAllocator());
+
+                toolCallObj.AddMember("function", functionObj, doc.GetAllocator());
+                toolCalls.PushBack(toolCallObj, doc.GetAllocator());
+                rapidjson::Value deltaWrapper(rapidjson::kObjectType);
+                deltaWrapper.AddMember("tool_calls", toolCalls, doc.GetAllocator());
+                doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
+                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
                 return doc;
+            // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
+            } else if (lastJson.HasMember("arguments")) {
+                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
+                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
+                // If delta is empty or contains only null or empty string values, we don't stream anything.
+                if (delta.ObjectEmpty()) {
+                    return std::nullopt;
+                }
+                for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
+                    if (it->value.IsNull() || (it->value.IsString() && std::string(it->value.GetString()).empty())) {
+                        return std::nullopt;
+                    }
+                }
+
+                doc.SetObject();
+                // Wrap delta in {"tool_calls":[{"index":0,"function":<delta>}]}
+                // TODO: Consider extracting to separate function
+                rapidjson::Value toolCalls(rapidjson::kArrayType);
+                rapidjson::Value toolCallObj(rapidjson::kObjectType);
+                toolCallObj.AddMember("index", toolCallIndex, doc.GetAllocator());
+                rapidjson::Value functionObj(rapidjson::kObjectType);
+                for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
+                    rapidjson::Value key(it->name, doc.GetAllocator());
+                    rapidjson::Value value(it->value, doc.GetAllocator());
+                    functionObj.AddMember(key, value, doc.GetAllocator());
+                }
+                toolCallObj.AddMember("function", functionObj, doc.GetAllocator());
+                toolCalls.PushBack(toolCallObj, doc.GetAllocator());
+                rapidjson::Value deltaWrapper(rapidjson::kObjectType);
+                deltaWrapper.AddMember("tool_calls", toolCalls, doc.GetAllocator());
+                doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
+                return doc;
+            // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
+            } else {
+                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
+            }
         }
     }
-    // If none of the above conditions are met, return an empty document
-    // todo change type to optional
-    return rapidjson::Document();
+    return std::nullopt;
 }
 }  // namespace ovms

@@ -45,17 +45,19 @@ protected:
     int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
 
     ProcessingPhase processingPhase = CONTENT;
-    std::string toolCallBuffer;
     rapidjson::Document lastJson;
     JsonBuilder jsonBuilder;
     int toolCallIndex = -1; // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
-
+    bool processingArguments = false;
+    // Used to track the nesting level of arguments in tool calls. Since model generates JSON and we need to return string, 
+    // we need to track the nesting level to know when arguments are complete
+    size_t argumentsNestingLevel = 0;
 public:
     Qwen3ResponseParser() = delete;
     explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
         BaseResponseParser(tokenizer) {}
 
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
-    rapidjson::Document parseChunk(const std::string& chunk);
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms
