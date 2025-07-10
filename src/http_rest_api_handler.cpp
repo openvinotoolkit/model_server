@@ -459,7 +459,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     HttpResponseComponents& response_components,
     std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
     std::shared_ptr<MultiPartParser> multiPartParser) {
- 
+
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
         return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
@@ -592,14 +592,14 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     if (it != models.end())
         exist = true;
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    if(std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
+    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
         exist = true;
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    if(std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
+    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
         exist = true;
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    if(!exist){
+    if (!exist) {
         writer.StartObject();
         writer.String("error");
         writer.String("Model not found");
@@ -621,7 +621,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     response = buffer.GetString();
     return StatusCode::OK;
 }
-
 
 Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
