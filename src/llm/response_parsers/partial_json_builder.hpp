@@ -28,30 +28,30 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
+using namespace rapidjson;
 namespace ovms {
-
-enum class IteratorState {
-    BEGIN,
-    AWAITING_KEY,
-    PROCESSING_KEY,
-    AWAITING_COLON,
-    AWAITING_VALUE,
-    PROCESSING_NUMBER,
-    PROCESSING_KEYWORD,
-    PROCESSING_STRING,
-    PROCESSING_OBJECT,
-    PROCESSING_ARRAY,
-    AWAITING_ARRAY_ELEMENT,
-    END
-};
-
-struct LastSeparatorInfo {
-    size_t position;
-    IteratorState state;
-};
-
-class JsonBuilder {
+class PartialJsonBuilder {
 private:
+    enum class IteratorState {
+        BEGIN,
+        AWAITING_KEY,
+        PROCESSING_KEY,
+        AWAITING_COLON,
+        AWAITING_VALUE,
+        PROCESSING_NUMBER,
+        PROCESSING_KEYWORD,
+        PROCESSING_STRING,
+        PROCESSING_OBJECT,
+        PROCESSING_ARRAY,
+        AWAITING_ARRAY_ELEMENT,
+        END
+    };
+
+    struct LastSeparatorInfo {
+        size_t position;
+        IteratorState state;
+    };
+
     // Incrementally built JSON string
     std::string buffer = "";
     // Current position in the buffer
@@ -63,16 +63,14 @@ private:
     // Open/close stack to track nested structures and open quotes
     std::vector<std::pair<char, size_t>> openCloseStack;
 
-    rapidjson::Document jsonDocument;
-
 public:
-    JsonBuilder() = default;
+    PartialJsonBuilder() = default;
     // Clear the internal state of the parser
     void clear();
     // Add new chunk to the buffer return current parsed JSON document (incremental parsing)
-    rapidjson::Document partialParseToJson(const std::string& chunk);
-};
+    Document add(const std::string& chunk);
 
-rapidjson::Document computeDelta(const rapidjson::Document& previous, const rapidjson::Document& current);
+    static Document computeDelta(const Document& previous, const Document& current);
+};
 
 }  // namespace ovms

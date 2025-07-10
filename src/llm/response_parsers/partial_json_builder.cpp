@@ -24,30 +24,28 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "partial_json_parser.hpp"
+#include "partial_json_builder.hpp"
 
+using namespace rapidjson;
 namespace ovms {
 
-rapidjson::Document computeDelta(const rapidjson::Document& previous, const rapidjson::Document& current);
-
-// Overload for ConstObject
-rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, const rapidjson::Value::ConstObject& current) {
-    rapidjson::Document delta;
+Document computeDeltaImpl(const Value::ConstObject& previous, const Value::ConstObject& current) {
+    Document delta;
     delta.SetObject();
 
     for (const auto& m : current) {
         if (!previous.HasMember(m.name) || previous[m.name].IsNull()) {
-            rapidjson::Value copiedValue;
+            Value copiedValue;
             copiedValue.CopyFrom(m.value, delta.GetAllocator());
-            rapidjson::Value key;
+            Value key;
             key.CopyFrom(m.name, delta.GetAllocator());
             delta.AddMember(key, copiedValue, delta.GetAllocator());
         } else if (m.value.IsObject() && previous[m.name].IsObject()) {
-            rapidjson::Document nestedDelta = computeDelta(previous[m.name].GetObject(), m.value.GetObject());
+            Document nestedDelta = computeDeltaImpl(previous[m.name].GetObject(), m.value.GetObject());
             if (!nestedDelta.Empty()) {
-                rapidjson::Value nestedDeltaValue;
+                Value nestedDeltaValue;
                 nestedDeltaValue.CopyFrom(nestedDelta, delta.GetAllocator());
-                rapidjson::Value key;
+                Value key;
                 key.CopyFrom(m.name, delta.GetAllocator());
                 delta.AddMember(key, nestedDeltaValue, delta.GetAllocator());
             }
@@ -55,13 +53,13 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
             const auto& currArray = m.value.GetArray();
             const auto& prevArray = previous[m.name].GetArray();
             if (currArray.Size() > prevArray.Size()) {
-                rapidjson::Value diffArray(rapidjson::kArrayType);
-                for (rapidjson::SizeType i = prevArray.Size(); i < currArray.Size(); ++i) {
-                    rapidjson::Value copiedElement;
+                Value diffArray(kArrayType);
+                for (SizeType i = prevArray.Size(); i < currArray.Size(); ++i) {
+                    Value copiedElement;
                     copiedElement.CopyFrom(currArray[i], delta.GetAllocator());
                     diffArray.PushBack(copiedElement, delta.GetAllocator());
                 }
-                rapidjson::Value key;
+                Value key;
                 key.CopyFrom(m.name, delta.GetAllocator());
                 delta.AddMember(key, diffArray, delta.GetAllocator());
             }
@@ -71,9 +69,9 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
             std::string currStr = m.value.GetString();
             if (currStr.size() > prevStr.size()) {
                 std::string diffStr = currStr.substr(prevStr.size());
-                rapidjson::Value diffValue;
+                Value diffValue;
                 diffValue.SetString(diffStr.c_str(), diffStr.size(), delta.GetAllocator());
-                rapidjson::Value key;
+                Value key;
                 key.CopyFrom(m.name, delta.GetAllocator());
                 delta.AddMember(key, diffValue, delta.GetAllocator());
             }
@@ -82,12 +80,11 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
     return delta;
 }
 
-rapidjson::Document computeDelta(const rapidjson::Document& previous, const rapidjson::Document& current) {
-    return computeDelta(previous.GetObject(), current.GetObject());
+Document PartialJsonBuilder::computeDelta(const Document& previous, const Document& current) {
+    return computeDeltaImpl(previous.GetObject(), current.GetObject());
 }
 
-void JsonBuilder::clear() {
-    jsonDocument.Clear();
+void PartialJsonBuilder::clear() {
     buffer.clear();
     currentPosition = 0;
     state = IteratorState::BEGIN;
@@ -95,7 +92,7 @@ void JsonBuilder::clear() {
     openCloseStack.clear();
 }
 
-rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
+Document PartialJsonBuilder::add(const std::string& chunk) {
     bool finishedWithEscapeCharacter = false;
 
     // Adding chunk to buffer
@@ -197,7 +194,7 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
     }
 
     if (state == IteratorState::END && openCloseStack.empty()) {
-        rapidjson::Document doc;
+        Document doc;
         doc.Parse(buffer.c_str());
         if (doc.HasParseError()) {
             throw std::runtime_error("Internal error: Failed to parse partial JSON.");
@@ -239,7 +236,7 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
         }
     }
 
-    rapidjson::Document doc;
+    Document doc;
     if (closedInput.empty()) {
         doc.SetObject();
         return doc;
