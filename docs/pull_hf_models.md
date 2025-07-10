@@ -1,6 +1,28 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This documents describes how leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models from OpenVINO organization in HuggingFace (HF). This approach assumes that you are pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF. If the model is not from that organization, follow steps described in [this document](../demos/common/export_models/README.md).
+This documents describes how leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models from or outside of OpenVINO organization in HuggingFace (HF). When pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF no additional steps are required. However, when pulling models outside of the OpenVINO organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments.
+
+Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `2. Download the preconfigured models using ovms --pull option for models outside OpenVINO organization` in the [RAG demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/README.md)
+
+## Pulling models outside of OpenVINO organization
+### Build python docker image
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make python_image
+```
+Then use the docker commands described in `Pulling the models` section with `openvino/model_server:py` container instead of `openvino/model_server:latest`.
+
+### Install optimum-cli
+Install python on your baremetal system from `https://www.python.org/downloads/`
+```console
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -q -r requirements.txt
+```
+Then use the docker commands described in `Pulling the models` section
+
+### Ovms pull mode alterative
+You can use the `export_models.py` script described in [this document](../demos/common/export_models/README.md).
 
 ### Pulling the models
 

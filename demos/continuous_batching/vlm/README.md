@@ -62,6 +62,10 @@ ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repos
 ## Model preparation
 Use this step for models outside of OpenVINO organization.
 
+Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `## Pulling models outside of OpenVINO organization` in the [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
+
+Or you can use the python export_model.py script decribed below.
+
 Here, the original VLM model and its auxiliary models (tokenizer, vision encoder, embeddings model etc.) will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
 Execution parameters will be defined inside the `graph.pbtxt` file.

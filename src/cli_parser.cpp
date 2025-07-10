@@ -507,7 +507,6 @@ bool CLIParser::isHFPullOrPullAndStart(const std::unique_ptr<cxxopts::ParseResul
 void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
     // Ovms Pull models mode || pull and start models mode
     if (isHFPullOrPullAndStart(this->result)) {
-        std::cout << "isHFPullOrPullAndStart pull" <<std::endl;
         if (result->count("pull")) {
             serverSettings.serverMode = HF_PULL_MODE;
         } else {
@@ -520,7 +519,6 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
             if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
-                std::cout << "model" << serverSettings.hfSettings.sourceModel << std::endl;
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
@@ -531,7 +529,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
         }
-        std::cout << "validated pull" <<std::endl;
+
         if (result->count("precision"))
             hfSettings.precision = result->operator[]("precision").as<std::string>();
         if (result->count("extra_quantization_params"))
