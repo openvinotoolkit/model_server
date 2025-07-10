@@ -585,6 +585,14 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
             }
         }
+    // No pull nor pull and start mode
+    } else {
+        if (result->count("precision")) {
+            throw std::logic_error("--precision parameter unsupported for Openvino huggingface organization models.");
+        }
+        if (result->count("extra_quantization_params")) {
+            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+        }
     }
 }
 

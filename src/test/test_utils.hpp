@@ -1041,7 +1041,6 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizeAndEnsureFree(std::string& port);
 void randomizeAndEnsureFrees(std::string& port1, std::string& port2);
-std::string getOvmsTestExecutablePath();
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 

@@ -821,6 +821,34 @@ TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
     EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
 }
 
+TEST_F(OvmsConfigDeathTest, WrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--precision",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, WrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--extra_quantization_params",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
     char* n_argv[] = {
         "ovms",
