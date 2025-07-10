@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
 #include <vector>
 
 #pragma warning(push)
@@ -25,6 +26,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
+
+#include "partial_json_builder.hpp"
 
 namespace ovms {
 struct ToolCall {
@@ -56,6 +59,21 @@ enum ProcessingPhase {
 class BaseResponseParser {
 protected:
     ov::genai::Tokenizer tokenizer;
+    ProcessingPhase processingPhase = CONTENT;
+    rapidjson::Document lastJson;
+    PartialJsonBuilder jsonBuilder;
+    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    bool processingArguments = false;
+    // Used to track the nesting level of arguments in tool calls. Since model generates JSON and we need to return string,
+    // we need to track the nesting level to know when arguments are complete
+    size_t argumentsNestingLevel = 0;
+
+    // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
+    // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
+    rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);
+    // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
+    // {"tool_calls":[{"index":0,"function":<delta>}]}
+    rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
 
 public:
     BaseResponseParser() = delete;
@@ -63,6 +81,8 @@ public:
         tokenizer(tokenizer) {}
     virtual ~BaseResponseParser() = default;
     virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
+    // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
+    // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;
 };
 }  // namespace ovms

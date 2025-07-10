@@ -219,45 +219,29 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                 }
             }
 
+            rapidjson::Document newJson;
             // Push modified chunk to the JSON builder and collect new partial JSON
-            rapidjson::Document currentDoc;
             try {
-                currentDoc = jsonBuilder.partialParseToJson(modifiedChunk);
+                newJson = jsonBuilder.add(modifiedChunk);
             } catch (const std::exception& e) {
                 std::cout << "Failed to parse tool call arguments: " << e.what() << std::endl;
                 return std::nullopt;  // If parsing fails, we return nullopt
             }
 
             // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
-            if (currentDoc.HasMember("arguments") && !lastJson.HasMember("arguments")) {
+            if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
                 // If 'arguments' is null we add double quote to force string data type.
-                if (currentDoc["arguments"].IsNull()) {
-                    jsonBuilder.partialParseToJson("\"");
+                if (newJson["arguments"].IsNull()) {
+                    jsonBuilder.add("\"");
                 }
-                doc.SetObject();
-                // Wrap delta in {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
-                // TODO: Consider extracting to separate function
-                rapidjson::Value toolCalls(rapidjson::kArrayType);
-                rapidjson::Value toolCallObj(rapidjson::kObjectType);
-                rapidjson::Value idValue(generateRandomId().c_str(), doc.GetAllocator());
-                toolCallObj.AddMember("id", idValue, doc.GetAllocator());
-                toolCallObj.AddMember("type", "function", doc.GetAllocator());
-                toolCallObj.AddMember("index", toolCallIndex, doc.GetAllocator());
-                rapidjson::Value functionObj(rapidjson::kObjectType);
-                rapidjson::Value nameValue(lastJson["name"].GetString(), doc.GetAllocator());
-                functionObj.AddMember("name", nameValue, doc.GetAllocator());
-
-                toolCallObj.AddMember("function", functionObj, doc.GetAllocator());
-                toolCalls.PushBack(toolCallObj, doc.GetAllocator());
-                rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-                deltaWrapper.AddMember("tool_calls", toolCalls, doc.GetAllocator());
-                doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
-                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
+                // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":<delta>}]}
+                doc = wrapFirstDelta(lastJson["name"].GetString(), toolCallIndex);
+                lastJson.CopyFrom(newJson, lastJson.GetAllocator());
                 return doc;
                 // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
             } else if (lastJson.HasMember("arguments")) {
-                rapidjson::Document delta = computeDelta(lastJson, currentDoc);
-                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
+                rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
+                lastJson.CopyFrom(newJson, lastJson.GetAllocator());
                 // If delta is empty or contains only null or empty string values, we don't stream anything.
                 if (delta.ObjectEmpty()) {
                     return std::nullopt;
@@ -267,28 +251,12 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                         return std::nullopt;
                     }
                 }
-
-                doc.SetObject();
-                // Wrap delta in {"tool_calls":[{"index":0,"function":<delta>}]}
-                // TODO: Consider extracting to separate function
-                rapidjson::Value toolCalls(rapidjson::kArrayType);
-                rapidjson::Value toolCallObj(rapidjson::kObjectType);
-                toolCallObj.AddMember("index", toolCallIndex, doc.GetAllocator());
-                rapidjson::Value functionObj(rapidjson::kObjectType);
-                for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
-                    rapidjson::Value key(it->name, doc.GetAllocator());
-                    rapidjson::Value value(it->value, doc.GetAllocator());
-                    functionObj.AddMember(key, value, doc.GetAllocator());
-                }
-                toolCallObj.AddMember("function", functionObj, doc.GetAllocator());
-                toolCalls.PushBack(toolCallObj, doc.GetAllocator());
-                rapidjson::Value deltaWrapper(rapidjson::kObjectType);
-                deltaWrapper.AddMember("tool_calls", toolCalls, doc.GetAllocator());
-                doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
+                // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
+                doc = wrapDelta(delta, toolCallIndex);
                 return doc;
                 // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
             } else {
-                lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
+                lastJson.CopyFrom(newJson, lastJson.GetAllocator());
             }
         }
     }

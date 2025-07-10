@@ -42,11 +42,11 @@ API_KEY = "not_used"
 env_proxy = {"http_proxy": os.environ.get("http_proxy"), "https_proxy": os.environ.get("https_proxy")}
 RunConfig.tracing_disabled = True  # Disable tracing for this example
 
-async def run(query, agent, OVMS_MODEL_PROVIDER, streaming: bool = False):
+async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     await fs_server.connect()
     await weather_server.connect()
     print(f"\n\nRunning: {query}")
-    if streaming:
+    if stream:
         result = Runner.run_streamed(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print("=== Stream run starting ===")
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
     parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
     parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
-    parser.add_argument("--streaming", action="store_true", help="Enable streaming mode for the agent")
+    parser.add_argument("--stream", action="store_true", help="Stream output from the agent")
     args = parser.parse_args()
     weather_server = None
     if platform.system() == "Windows":
@@ -117,4 +117,4 @@ if __name__ == "__main__":
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.streaming))
+    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))

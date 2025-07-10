@@ -230,7 +230,6 @@ public:
     // VLMDecodedResults does not contain tokens that we can count, so we need to pass completionTokens in order to provide correct usage statistics
     std::string serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens);
     std::string serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
-    std::string serializeStreamingChunkNew(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason);
     std::string serializeStreamingUsageChunk();
 };
 }  // namespace ovms
