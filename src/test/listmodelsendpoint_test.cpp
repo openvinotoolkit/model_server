@@ -74,7 +74,6 @@ TEST_F(ListModelsEndpointTest, simplePositive) {
     ASSERT_EQ(
         handler->dispatchToProcessor(listModelsEndpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    std::cout << response;
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -98,7 +97,6 @@ TEST_F(ListModelsEndpointTest, positivev3v1) {
     ASSERT_EQ(
         handler->dispatchToProcessor(v3v1endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    std::cout << response;
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -122,7 +120,6 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModel) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    std::cout << response;
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -142,7 +139,6 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveGraph) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    std::cout << response;
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
@@ -162,7 +158,6 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModelv1v3) {
     ASSERT_EQ(
         handler->dispatchToProcessor(v3v1endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    std::cout << response;
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
     ASSERT_EQ(ok.Code(), 0);
