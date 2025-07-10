@@ -17,5 +17,6 @@
 #include <string>
 
 namespace ovms {
+// Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
 }  // namespace ovms

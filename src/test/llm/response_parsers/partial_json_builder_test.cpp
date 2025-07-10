@@ -186,8 +186,9 @@ TEST_F(PartialJsonBuilderTest, simpleJsonWithKeyWithoutValue) {
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
-    // The "age" key is incomplete, so it should not be present in the parsed JSON
-    ASSERT_FALSE(parsedJson.HasMember("age"));
+    // The "age" key exists but its value is null since it is incomplete
+    ASSERT_TRUE(parsedJson.HasMember("age"));
+    ASSERT_TRUE(parsedJson["age"].IsNull());
 }
 
 TEST_F(PartialJsonBuilderTest, simpleJsonWithIncompleteKey) {
@@ -364,7 +365,8 @@ TEST_F(PartialJsonBuilderTest, simpleJsonIncrementalParsing) {
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
-    ASSERT_EQ(parsedJson.MemberCount(), 1);  // Only "name" should be present
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsNull());
 
     builder.add("\"{");
     parsedJson = builder.add("\\\"location\\\": \\\"");
@@ -420,12 +422,82 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedMember) {
     current.Parse(currentJson);
 
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"arguments": "\""}
     ASSERT_TRUE(delta.IsObject());
     ASSERT_FALSE(delta.Empty());
     ASSERT_FALSE(delta.HasMember("name"));
     ASSERT_TRUE(delta.HasMember("arguments"));
     ASSERT_TRUE(delta["arguments"].IsString());
     ASSERT_EQ(delta["arguments"].GetString(), std::string("\""));
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedMember) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "object": {
+            "key": "value"
+        }
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "object": {
+            "key": "value",
+            "new_key": null
+        } 
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"object": {"new_key": null}}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("object"));
+    ASSERT_TRUE(delta["object"].IsObject());
+    ASSERT_EQ(delta["object"].MemberCount(), 1);
+    ASSERT_TRUE(delta["object"].HasMember("new_key"));
+    ASSERT_TRUE(delta["object"]["new_key"].IsNull());
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedArrayElement) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "objects": [
+            {
+                "key": "value1"
+            }
+        ]
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "objects": [
+            {
+                "key": "value1"
+            },
+            {
+                "key": "value2"
+            }
+        ]
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"objects": [{"key": "value2"}]}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("objects"));
+    ASSERT_TRUE(delta["objects"].IsArray());
+    ASSERT_EQ(delta["objects"].Size(), 1);
+    ASSERT_TRUE(delta["objects"][0].IsObject());
+    ASSERT_TRUE(delta["objects"][0].HasMember("key"));
+    ASSERT_EQ(delta["objects"][0]["key"].GetString(), std::string("value2"));
 }
 
 TEST_F(PartialJsonBuilderTest, computeDeltaWithModifiedStringMember) {
@@ -444,6 +516,7 @@ TEST_F(PartialJsonBuilderTest, computeDeltaWithModifiedStringMember) {
     current.Parse(currentJson);
 
     auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"arguments": ", \"date\": "}
     ASSERT_TRUE(delta.IsObject());
     ASSERT_FALSE(delta.Empty());
     ASSERT_TRUE(delta.HasMember("arguments"));

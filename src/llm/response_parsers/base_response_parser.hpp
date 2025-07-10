@@ -68,18 +68,19 @@ protected:
     // we need to track the nesting level to know when arguments are complete
     size_t argumentsNestingLevel = 0;
 
-    // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
-    // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
-    rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);
-    // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
-    // {"tool_calls":[{"index":0,"function":<delta>}]}
-    rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
-
 public:
     BaseResponseParser() = delete;
     explicit BaseResponseParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
     virtual ~BaseResponseParser() = default;
+
+    // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
+    // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
+    static rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);
+    // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
+    // {"tool_calls":[{"index":0,"function":<delta>}]}
+    static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
+
     virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
