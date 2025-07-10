@@ -21,7 +21,7 @@ pip3 install -q -r requirements.txt
 ```
 Then use the docker commands described in `Pulling the models` section
 
-### Ovms pull mode alterative
+### Ovms pull mode alternative
 You can use the `export_models.py` script described in [this document](../demos/common/export_models/README.md).
 
 ### Pulling the models
