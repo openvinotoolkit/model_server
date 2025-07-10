@@ -2493,6 +2493,7 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 # Tools support is limited to configuration with Python enabled
+                "test/llm/response_parsers/base_response_parser_test.cpp",
                 "test/llm/response_parsers/llama3_response_parser_test.cpp",
                 "test/llm/response_parsers/qwen3_response_parser_test.cpp",
                 "test/llm/response_parsers/hermes3_response_parser_test.cpp",
