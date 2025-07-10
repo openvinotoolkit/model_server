@@ -1093,7 +1093,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunkNew(const std::
                 // Deep copy the "delta" member value into the choice object
                 choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
             }
-            
+
         } else {
             Value delta(kObjectType);
             delta.SetObject();
