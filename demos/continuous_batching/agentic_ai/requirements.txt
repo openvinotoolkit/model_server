@@ -1,2 +1,2 @@
-openai-agents
-openai
+openai-agents==0.0.17
+openai==1.84.0
