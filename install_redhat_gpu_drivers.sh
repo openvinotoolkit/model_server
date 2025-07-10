@@ -47,12 +47,12 @@ case $INSTALL_DRIVER_VERSION in \
 ;; \
 "25.05.32567") \
 	$DNF_TOOL install --nodocs -y libedit libnl3; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-gmmlib-22.6.0-i1091.el9_5.x86_64.rpm ; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-core-2.7.11-1099.el9_5.x86_64.rpm ; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-igc-opencl-2.7.11-1099.el9_5.x86_64.rpm ; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-opencl-25.05.32567.19-1099.el9_5.x86_64.rpm ; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/i/intel-level-zero-gpu-1.6.32567.19-1099.el9_5.x86_64.rpm ; \
-	rpm -ivh https://repositories.intel.com/gpu/rhel/9.5/pool/l/level-zero-1.20.2.0-1098.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-gmmlib-22.6.0-i1091.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-igc-core-2.7.11-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-igc-opencl-2.7.11-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-opencl-25.05.32567.19-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/i/intel-level-zero-gpu-1.6.32567.19-1099.el9_5.x86_64.rpm ; \
+	rpm -ivh https://repositories.intel.com/gpu/rhel/9.6/pool/l/level-zero-1.20.2.0-1098.el9_5.x86_64.rpm ; \
 ;; \
 
         *) \

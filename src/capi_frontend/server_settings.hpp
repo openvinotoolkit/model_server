@@ -103,6 +103,7 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
+    std::optional<std::string> responseParser;
 };
 
 struct EmbeddingsGraphSettingsImpl {
@@ -126,12 +127,15 @@ struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
-    std::string pluginConfig;
+    std::optional<uint32_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
+    std::string pluginConfig;
 };
 
 struct HFSettingsImpl {
@@ -160,6 +164,10 @@ struct ServerSettingsImpl {
     std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool allowCredentials = false;
+    std::string allowedOrigins{"*"};
+    std::string allowedMethods{"*"};
+    std::string allowedHeaders{"*"};
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif

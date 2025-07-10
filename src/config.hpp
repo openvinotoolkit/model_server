@@ -319,6 +319,11 @@ public:
      */
     uint32_t resourcesCleanerPollWaitSeconds() const;
 
+    bool allowCredentials() const;
+    const std::string& allowedOrigins() const;
+    const std::string& allowedMethods() const;
+    const std::string& allowedHeaders() const;
+
     /**
          * @brief Model cache directory
          * 

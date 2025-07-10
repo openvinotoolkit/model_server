@@ -31,6 +31,8 @@ ovms_cc_library(
     srcs = ["pipelines.cpp"],
     deps = [
         "imagegenpipelineargs",
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
@@ -47,6 +49,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovmsfilesystem",
+        "//src:libovmsstring_utils",
         "imagegenutils",
         "imagegenpipelineargs",
         "image_gen_calculator_cc_proto",

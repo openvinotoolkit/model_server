@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.5
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 FROM $BASE_IMAGE as base_build
 SHELL ["/bin/bash", "-c"]
 RUN yum install -y xz git shadow-utils make gcc gcc-c++
@@ -29,7 +29,7 @@ RUN mkdir /licenses && ln -s /ovms/LICENSE /licenses && ln -s /ovms/thirdparty-l
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5 as release
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6 as release
 SHELL ["/bin/bash", "-c"]
 
 RUN microdnf upgrade -y

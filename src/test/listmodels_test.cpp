@@ -37,35 +37,6 @@ class ListModelsTest : public TestWithTempDir {
 using ovms::listServables;
 using ovms::ServableType_t;
 
-std::string dirTree(const std::string& path, const std::string& indent = "") {
-    if (!std::filesystem::exists(path)) {
-        SPDLOG_ERROR("Path does not exist: {}", path);
-        return "NON_EXISTENT_PATH";
-    }
-    std::stringstream tree;
-    // if is directory, add to stream its name followed by "/"
-    // if is file, add to stream its name
-
-    tree << indent;
-    if (!indent.empty()) {
-        tree << "|-- ";
-    }
-
-    tree << std::filesystem::path(path).filename().string();
-    if (std::filesystem::is_directory(path)) {
-        tree << "/";
-    }
-    tree << std::endl;
-    if (!std::filesystem::is_directory(path)) {
-        return tree.str();
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        std::string passDownIndent = indent.empty() ? "|   " : (indent + "    ");
-        tree << dirTree(entry.path().string(), passDownIndent);
-    }
-    return tree.str();
-}
-
 void logDirTree(const std::string& path) {
     SPDLOG_DEBUG("Directory tree:\n{}", dirTree(path));
 }

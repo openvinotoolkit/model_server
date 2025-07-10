@@ -341,6 +341,10 @@ const std::string& Config::grpcChannelArguments() const { return this->serverSet
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
+const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
+const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
+const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 
 }  // namespace ovms

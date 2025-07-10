@@ -142,7 +142,67 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
     SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(payload, key)); \
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(key, value);
 
+absl::Status ensureAcceptableForStatic(const ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    auto it = requestOptions.find("num_images_per_prompt");
+    if (it != requestOptions.end()) {
+        auto requestedNumImagesPerPrompt = it->second.as<int>();
+        if (requestedNumImagesPerPrompt != args.staticReshapeSettings.value().numImagesPerPrompt.value_or(ov::genai::ImageGenerationConfig().num_images_per_prompt)) {
+            return absl::InvalidArgumentError("NPU Image Generation requested num_images_per_prompt doesn't match underlying model shape");
+        }
+    }
+
+    it = requestOptions.find("guidance_scale");
+    if (it != requestOptions.end()) {
+        auto requestedGuidanceScale = it->second.as<float>();
+        if (requestedGuidanceScale != args.staticReshapeSettings.value().guidanceScale.value_or(ov::genai::ImageGenerationConfig().guidance_scale)) {
+            return absl::InvalidArgumentError("NPU Image Generation requested guidance_scale doesn't match underlying model shape");
+        }
+    }
+
+    std::optional<int64_t> requestedWidth;
+    std::optional<int64_t> requestedHeight;
+    it = requestOptions.find("width");
+    if (it != requestOptions.end()) {
+        requestedWidth = it->second.as<int64_t>();
+    }
+
+    it = requestOptions.find("height");
+    if (it != requestOptions.end()) {
+        requestedHeight = it->second.as<int64_t>();
+    }
+
+    if (!requestedWidth.has_value() && !requestedHeight.has_value()) {
+        return absl::OkStatus();
+    }
+
+    if (requestedWidth.has_value() && requestedHeight.has_value()) {
+        // Search for matching resolution in staticReshapeSettings
+        auto& resolutions = args.staticReshapeSettings.value().resolution;
+        auto itr = std::find_if(resolutions.begin(), resolutions.end(), [&](const resolution_t& res) {
+            return res.first == requestedWidth.value() && res.second == requestedHeight.value();
+        });
+        if (itr == resolutions.end()) {
+            return absl::InvalidArgumentError(absl::StrCat("NPU Image Generation requested resolution ", requestedWidth.value(), "x", requestedHeight.value(), " is not supported by static reshape settings"));
+        }
+    } else if (requestedWidth.has_value() && !requestedHeight.has_value()) {
+        return absl::InvalidArgumentError("NPU Image Generation requested width but height is missing");
+    } else if (!requestedWidth.has_value() && requestedHeight.has_value()) {
+        return absl::InvalidArgumentError("NPU Image Generation requested height but width is missing");
+    }
+
+    return absl::OkStatus();
+}
+
 absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    // validate for static
+    if (args.staticReshapeSettings.has_value()) {
+        SPDLOG_DEBUG("Validating request options for static reshape settings");
+        auto status = ensureAcceptableForStatic(requestOptions, args);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+
     // check if we have any unhandled parameters
     auto it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {

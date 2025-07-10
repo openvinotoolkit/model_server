@@ -59,11 +59,11 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_se
 ```
 ### On Baremetal Unix
 ```bash
-ovms --rest_port 8000 --config_path $(pwd)/models/config.json
+ovms --rest_port 8000 --config_path models/config.json
 ```
 ### Windows
 ```bat
-ovms --rest_port 8000 --config_path %cd%\models\config.json
+ovms --rest_port 8000 --config_path models\config.json
 ```
 
 ## Using RAG

@@ -2263,7 +2263,8 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
         "libovmsstatus",
-        "libhttp_status_code"
+        "libhttp_status_code",
+        "libovms_config"
     ],
     visibility = ["//visibility:public",],
 )
@@ -2505,6 +2506,7 @@ cc_test(
                 "test/llm/response_parsers/qwen3_response_parser_test.cpp",
                 "test/llm/response_parsers/hermes3_response_parser_test.cpp",
                 "test/llm/response_parsers/phi4_response_parser_test.cpp",
+                "test/llm/response_parsers/partial_json_parser_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
