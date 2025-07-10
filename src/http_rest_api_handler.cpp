@@ -459,7 +459,7 @@ Status HttpRestApiHandler::dispatchToProcessor(
     HttpResponseComponents& response_components,
     std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
     std::shared_ptr<MultiPartParser> multiPartParser) {
-
+ 
     auto handler = handlers.find(request_components.type);
     if (handler != handlers.end()) {
         return handler->second(uri, request_components, *response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
@@ -985,13 +985,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, v3_RetrieveModelRegex)) {
-            if(sm[1] == "v1/"){
-                requestComponents.model_name = urlDecode(sm[2]);
-            }
-            else
-            {
-                requestComponents.model_name = urlDecode(sm[1]);
-            }
+            requestComponents.model_name = urlDecode(sm[2]);
             requestComponents.type = V3_RetrieveModel;
             return StatusCode::OK;
         }
