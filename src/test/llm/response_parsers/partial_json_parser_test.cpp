@@ -419,7 +419,6 @@ TEST_F(PartialJsonParserTest, computeDeltaWithAddedMember) {
     rapidjson::Document current;
     current.Parse(currentJson);
 
-
     auto delta = computeDelta(previous, current);
     ASSERT_TRUE(delta.IsObject());
     ASSERT_FALSE(delta.Empty());

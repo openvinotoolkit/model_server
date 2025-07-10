@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <string>
 #include <vector>
 #include "base_response_parser.hpp"
 

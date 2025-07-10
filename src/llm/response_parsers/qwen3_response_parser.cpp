@@ -154,7 +154,7 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
             doc.Parse(buffer.GetString());
             return doc;
         }
-    /* 
+        /* 
     Case 2: We are in REASONING phase, from here we can switch to CONTENT if we find ending tags.
     If we switch phase, we return nullopt, so no message is streamed back in this call. Otherwise we stream reasoning_content delta (temporarily streaming content).
     */
@@ -168,15 +168,15 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
             writer.StartObject();
             writer.String("delta");
             writer.StartObject();
-            //writer.String("reasoning_content");
-            writer.String("content"); // temporarily using "content" to make it work with agentic client
+            // writer.String("reasoning_content");
+            writer.String("content");  // temporarily using "content" to make it work with agentic client
             writer.String(chunk.c_str());
             writer.EndObject();
             writer.EndObject();
             doc.Parse(buffer.GetString());
             return doc;
         }
-    /* 
+        /* 
     Case 3: We are in TOOL_CALLS phase, which is the last phase of request processing.
     Start and end tags in this phase modify state of the processing, but do not return any message.
     Otherwise we collect data until we have full function name - that's when we return the first delta.
@@ -225,9 +225,8 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                 currentDoc = jsonBuilder.partialParseToJson(modifiedChunk);
             } catch (const std::exception& e) {
                 std::cout << "Failed to parse tool call arguments: " << e.what() << std::endl;
-                return std::nullopt; // If parsing fails, we return nullopt
+                return std::nullopt;  // If parsing fails, we return nullopt
             }
-
 
             // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
             if (currentDoc.HasMember("arguments") && !lastJson.HasMember("arguments")) {
@@ -255,7 +254,7 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                 doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
                 lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
                 return doc;
-            // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
+                // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.
             } else if (lastJson.HasMember("arguments")) {
                 rapidjson::Document delta = computeDelta(lastJson, currentDoc);
                 lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
@@ -287,7 +286,7 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                 deltaWrapper.AddMember("tool_calls", toolCalls, doc.GetAllocator());
                 doc.AddMember("delta", deltaWrapper, doc.GetAllocator());
                 return doc;
-            // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
+                // Case 3: No 'arguments' exists or just appeared, so we keep building up until we have complete function name
             } else {
                 lastJson.CopyFrom(currentDoc, lastJson.GetAllocator());
             }

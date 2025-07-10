@@ -166,7 +166,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
-                std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunkNew(lastTextChunk, finishReason);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunkNew(lastTextChunk, finishReason);
             if (!serializedChunk.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);

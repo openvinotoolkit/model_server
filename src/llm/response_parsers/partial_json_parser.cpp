@@ -28,7 +28,6 @@
 
 namespace ovms {
 
-
 rapidjson::Document computeDelta(const rapidjson::Document& previous, const rapidjson::Document& current);
 
 // Overload for ConstObject
@@ -66,17 +65,17 @@ rapidjson::Document computeDelta(const rapidjson::Value::ConstObject& previous, 
                 key.CopyFrom(m.name, delta.GetAllocator());
                 delta.AddMember(key, diffArray, delta.GetAllocator());
             }
-        // Supporting modifications only for string values
+            // Supporting modifications only for string values
         } else if (previous[m.name] != m.value && (m.value.IsString() && previous[m.name].IsString())) {
             std::string prevStr = previous[m.name].GetString();
             std::string currStr = m.value.GetString();
             if (currStr.size() > prevStr.size()) {
                 std::string diffStr = currStr.substr(prevStr.size());
-                    rapidjson::Value diffValue;
-                    diffValue.SetString(diffStr.c_str(), diffStr.size(), delta.GetAllocator());
-                    rapidjson::Value key;
-                    key.CopyFrom(m.name, delta.GetAllocator());
-                    delta.AddMember(key, diffValue, delta.GetAllocator());
+                rapidjson::Value diffValue;
+                diffValue.SetString(diffStr.c_str(), diffStr.size(), delta.GetAllocator());
+                rapidjson::Value key;
+                key.CopyFrom(m.name, delta.GetAllocator());
+                delta.AddMember(key, diffValue, delta.GetAllocator());
             }
         }
     }
@@ -210,9 +209,9 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
     std::string closedInput = buffer;
 
     if (state == IteratorState::AWAITING_VALUE) {
-            closedInput += "null";
+        closedInput += "null";
     } else if (state == IteratorState::AWAITING_KEY || state == IteratorState::PROCESSING_KEY || state == IteratorState::AWAITING_COLON ||
-        state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_KEYWORD) {
+               state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_KEYWORD) {
         if (lastSeparator.position != std::string::npos && lastSeparator.position < closedInput.size()) {
             while (!openCloseStack.empty() && openCloseStack.back().second >= lastSeparator.position) {
                 openCloseStack.pop_back();
@@ -222,8 +221,8 @@ rapidjson::Document JsonBuilder::partialParseToJson(const std::string& chunk) {
             currentPosition = lastSeparator.position;
             state = lastSeparator.state;
         }
-    } else if ((state == IteratorState::PROCESSING_STRING && finishedWithEscapeCharacter) || 
-        (state == IteratorState::PROCESSING_NUMBER && closedInput.back() == '.')) {
+    } else if ((state == IteratorState::PROCESSING_STRING && finishedWithEscapeCharacter) ||
+               (state == IteratorState::PROCESSING_NUMBER && closedInput.back() == '.')) {
         // If we are processing a string value and we finished with an escape character, we need to remove, so we can close the string properly
         // also if we are processing a number and the last character is a dot, we need to remove it so as we close JSON the entire object is valid
         // (e.g. we are processing a float value and we finished with a dot)

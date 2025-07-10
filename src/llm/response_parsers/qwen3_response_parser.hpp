@@ -47,11 +47,12 @@ protected:
     ProcessingPhase processingPhase = CONTENT;
     rapidjson::Document lastJson;
     JsonBuilder jsonBuilder;
-    int toolCallIndex = -1; // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
     bool processingArguments = false;
-    // Used to track the nesting level of arguments in tool calls. Since model generates JSON and we need to return string, 
+    // Used to track the nesting level of arguments in tool calls. Since model generates JSON and we need to return string,
     // we need to track the nesting level to know when arguments are complete
     size_t argumentsNestingLevel = 0;
+
 public:
     Qwen3ResponseParser() = delete;
     explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
