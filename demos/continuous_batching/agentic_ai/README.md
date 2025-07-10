@@ -127,10 +127,10 @@ docker run -d -v $(pwd)/src/mcp_weather_server:/mcp_weather_server  -p 8080:8080
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/demo-corrections/openai_agent.py -o openai_agent.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/demo-corrections/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/demo-corrections/demos/continuous_batching/agentic_ai/requirements.txt
 ```
-Make sure nodejs and npx are installed. On ubuntu it would required `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. 
+Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. 
 
 Run the agentic application
 ```console
