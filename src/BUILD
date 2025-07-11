@@ -2464,6 +2464,7 @@ cc_test(
         + select({
             "//:not_disable_mediapipe": [
                 "test/embeddingsnode_test.cpp",
+                "test/listmodelsendpoint_test.cpp",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/reranknode_test.cpp",
@@ -2647,7 +2648,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
-            ":listmodels_test",
+            ":listdirectorymodels_test",
             ":graph_export_test",
             ":config_export_test",
             ] + select({
@@ -2772,8 +2773,8 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
-    name = "listmodels_test",
-    srcs = ["test/listmodels_test.cpp"],
+    name = "listdirectorymodels_test",
+    srcs = ["test/listdirectorymodels_test.cpp"],
     alwayslink = True,
     linkopts = [],
     deps = [
@@ -2786,6 +2787,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
+
 cc_library(
     name = "graph_export_test",
     linkstatic = 1,
