@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG  IMAGE_NAME=openvino/model_server:latest
+ARG IMAGE_NAME=openvino/model_server:latest
 FROM ${IMAGE_NAME}
 USER root
 ENV LD_LIBRARY_PATH=/ovms/lib

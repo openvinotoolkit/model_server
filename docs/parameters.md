@@ -85,6 +85,15 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).  Default: `text_generation` |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 
+## Pull Mode Options for optimum-cli mode
+
+When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set two additional parameters for this mode.
+| Option                       | Value format | Description                                                                                                   |
+|------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
+| `--extra_quantization_params`| ` `          | Add advanced quantization parameters. Check optimum-intel documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
+| `--precision`            | `string`      | Model precision used in optimum-cli export with conversion. Default `int8`.                |
+                        
+
 There are also additional environment variables that may change the behavior of pulling:
 
 ### Basic Environment Variables for Pull Mode

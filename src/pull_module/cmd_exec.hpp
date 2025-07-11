@@ -18,5 +18,5 @@
 #include <string>
 
 namespace ovms {
-std::string exec_cmd(const std::string& command);
+std::string exec_cmd(const std::string& command, int& returnCode);
 }  // namespace ovms

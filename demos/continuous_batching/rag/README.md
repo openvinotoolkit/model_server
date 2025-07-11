@@ -36,8 +36,46 @@ ovms.exe --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov 
 :::
 ::::
 
+### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub.
+::::{tab-set}
 
-### 2.  Export models from HuggingFace Hub including conversion to OpenVINO format
+:::{tab-item} With Docker
+**Required:** Docker Engine installed
+```bash
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
+make python_image
+mkdir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
+```
+:::
+
+:::{tab-item} On Baremetal Host
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
+
+```bat
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -q -r requirements.txt
+mkdir models
+ovms.exe --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+ovms.exe --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
+ovms.exe --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
+
+ovms.exe --add_to_config models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
+ovms.exe --add_to_config models --model_nameAlibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
+ovms.exe --add_to_config models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
+```
+:::
+::::
+
+
+### 3.  Export models from HuggingFace Hub including conversion to OpenVINO format using the python script
 
 Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
