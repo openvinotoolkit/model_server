@@ -169,27 +169,3 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModelv1v3) {
     ASSERT_TRUE(d["data"][0]["created"].IsInt());
     ASSERT_EQ(d["data"][0]["owned_by"], "OVMS");
 }
-
-// TEST_F(ListModelsEndpointTest, positivevRetrieveModel3v1) {
-//     std::string requestBody = "";
-//     std::string v3v1endpoint = "/v3/v1/models";
-//     ASSERT_EQ(handler->parseRequestComponents(comp, "GET", v3v1endpoint, headers), ovms::StatusCode::OK);
-//     ASSERT_EQ(
-//         handler->dispatchToProcessor(v3v1endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-//         ovms::StatusCode::OK);
-//     std::cout<<response;
-//     rapidjson::Document d;
-//     rapidjson::ParseResult ok = d.Parse(response.c_str());
-//     ASSERT_EQ(ok.Code(), 0);
-//     ASSERT_EQ(d["object"], "list");
-//     ASSERT_TRUE(d["data"].IsArray());
-//     ASSERT_EQ(d["data"].Size(), 2);
-//     ASSERT_EQ(d["data"][0]["object"], "model");
-//     ASSERT_EQ(d["data"][0]["id"], "add");
-//     ASSERT_TRUE(d["data"][0]["created"].IsInt());
-//     ASSERT_EQ(d["data"][0]["owned_by"], "OVMS");
-//     ASSERT_EQ(d["data"][1]["object"], "model");
-//     ASSERT_EQ(d["data"][1]["id"], "my_graph");
-//     ASSERT_TRUE(d["data"][1]["created"].IsInt());
-//     ASSERT_EQ(d["data"][1]["owned_by"], "OVMS");
-// }
