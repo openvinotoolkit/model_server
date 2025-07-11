@@ -21,7 +21,7 @@ mkdir models
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
 python demos/common/export_models/export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
 python demos/common/export_models/export_model.py text_generation --source_model OpenGVLab/InternVL2_5-8B --weight-format fp16 --config_file_path models/config.json --model_repository_path models
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --model_name openvino-qwen3-8b-int8 --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --enable_prefix_caching
+python demos/common/export_models/export_model.py text_generation --source_model Qwen/Qwen3-8B --model_name openvino-qwen3-8b-int8 --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --enable_prefix_caching
 ```
 
 ## Starting the model server
