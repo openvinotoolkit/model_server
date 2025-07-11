@@ -33,7 +33,6 @@ class ResponseParser {
 public:
     ResponseParser() = delete;
     explicit ResponseParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
-        // Parser name is read from tokenizer_config.json, "response_parser_name" field.
         if (parserName == "llama3") {
             parser_impl = std::make_unique<Llama3ResponseParser>(tokenizer);
         } else if (parserName == "qwen3") {
