@@ -594,9 +594,11 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
     if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
         exist = true;
+#if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
     if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
         exist = true;
+#endif
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     if (!exist) {
@@ -640,10 +642,12 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     for (auto const& pipelineName : pipelinesNames) {
         parseModel(writer, pipelineName, timestamp);
     }
+#if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
     for (auto const& graphName : mediapipes) {
         parseModel(writer, graphName, timestamp);
     }
+#endif
     writer.EndArray();
     writer.String("object");
     writer.String("list");
