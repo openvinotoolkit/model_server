@@ -91,7 +91,7 @@ There are also additional environment variables that may change the behavior of 
 
 | Variable        | Value format | Description                                                                                                              |
 |-----------------|--------------|--------------------------------------------------------------------------------------------------------------------------|
-| `HF_ENDPOINT`   | `string`     | Default: `huggingface.co`. For users in China, set to `https://hf-mirror.com` if needed.                                 |
+| `HF_ENDPOINT`   | `string`     | Default: `https://huggingface.co`. For users in China, set to `https://www.modelscope.cn/models` or `https://hf-mirror.com` if needed.                                 |
 | `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
 | `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
 
