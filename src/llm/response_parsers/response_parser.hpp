@@ -49,5 +49,8 @@ public:
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) {
         return parser_impl->parse(generatedTokens);
     }
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) {
+        return parser_impl->parseChunk(chunkResponse);
+    }
 };
 }  // namespace ovms

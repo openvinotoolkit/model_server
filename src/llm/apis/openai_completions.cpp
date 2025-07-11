@@ -963,14 +963,16 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    writer.StartObject();
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
 
     // choices: array of size N, where N is related to n request parameter
-    writer.String("choices");
-    writer.StartArray();   // [
-    writer.StartObject();  // {
+    choices.SetArray();
+    choice.SetObject();
     // finish_reason: string or null; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)/null
     // "stop" => natural stop point due to stopping criteria
     // "length" => due to reaching max_tokens parameter
@@ -978,61 +980,59 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // "tool_calls" => generation stopped and waiting for tool output (not supported)
     // "function_call" => deprecated
     // null - natural scenario when the generation has not completed yet
-    writer.String("finish_reason");
     switch (finishReason) {
     case ov::genai::GenerationFinishReason::STOP:
-        writer.String("stop");
+        choice.AddMember("finish_reason", "stop", allocator);
         break;
     case ov::genai::GenerationFinishReason::LENGTH:
-        writer.String("length");
+        choice.AddMember("finish_reason", "length", allocator);
         break;
     default:
-        writer.Null();
+        choice.AddMember("finish_reason", Value(), allocator);
     }
     // index: integer; Choice index, only n=1 supported anyway
-    writer.String("index");
-    writer.Int(0);
+    choice.AddMember("index", 0, allocator);
     // logprobs: object/null; Log probability information for the choice. TODO
-    writer.String("logprobs");
-    writer.Null();
+    choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("delta");
-        writer.StartObject();  // {
-        writer.String("content");
-        // writer.String("role");
-        // writer.String("assistant");
-        // role: string; Role of the text producer
-        writer.String(chunkResponse.c_str());
-        writer.EndObject();  // }
+        if (responseParser != nullptr) {
+            std::optional<Document> delta = responseParser->parseChunk(chunkResponse);
+            if (!delta.has_value()) {
+                return "";
+            }
+            if (delta->HasMember("delta")) {
+                // Deep copy the "delta" member value into the choice object
+                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
+            }
+
+        } else {
+            Value delta(kObjectType);
+            delta.SetObject();
+            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
+            choice.AddMember("delta", delta, allocator);
+        }
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("text");
-        writer.String(chunkResponse.c_str());
+        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
     }
-    // TODO: tools_call
-    // TODO: function_call (deprecated)
-    writer.EndObject();  // }
-    writer.EndArray();   // ]
+
+    choices.PushBack(choice, allocator);
+    doc.AddMember("choices", choices, allocator);
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
 
     // model: string; copied from the request
-    writer.String("model");
-    writer.String(request.model.c_str());
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
 
     // object: string; defined that the type streamed chunk rather than complete response
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("object");
-        writer.String("chat.completion.chunk");
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("object");
-        writer.String("text_completion.chunk");
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
     }
 
     if (request.streamOptions.includeUsage) {
-        writer.String("usage");
-        writer.Null();
+        doc.AddMember("usage", Value(), allocator);
     }
 
     // TODO
@@ -1042,7 +1042,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    writer.EndObject();  // }
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
     return buffer.GetString();
 }
 
