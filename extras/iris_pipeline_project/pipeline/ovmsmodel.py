@@ -52,7 +52,14 @@ class OvmsPythonModel:
                 X = df.drop(columns=[LABEL_COLUMN]).values.astype(np.float32)
                 y = df[LABEL_COLUMN].values
 
-                model = LogisticRegression(max_iter=200)
+                params = payload.get("params", {})
+                print(f"[TRAIN] Using hyperparameters: {params}", file=sys.stderr)
+
+                try:
+                    model = LogisticRegression(max_iter=200, **params)
+                except Exception as e:
+                    raise ValueError(f"Invalid training hyperparameters: {e}")
+
                 model.fit(X, y)
 
                 os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
@@ -67,6 +74,7 @@ class OvmsPythonModel:
                 rec = recall_score(y, y_pred, average='weighted', zero_division=0)
                 f1 = f1_score(y, y_pred, average='weighted', zero_division=0)
                 report = classification_report(y, y_pred)
+
                 print(f"[METRICS][train] accuracy={acc}, precision={prec}, recall={rec}, f1={f1}", file=sys.stderr)
                 print(f"[METRICS][train] classification_report:\n{report}", file=sys.stderr, flush=True)
 
