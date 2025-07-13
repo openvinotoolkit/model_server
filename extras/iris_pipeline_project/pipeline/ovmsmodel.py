@@ -3,6 +3,8 @@ import sys
 import json
 import numpy as np
 import pandas as pd
+from sklearnex import patch_sklearn
+patch_sklearn()
 from sklearn.linear_model import LogisticRegression
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
