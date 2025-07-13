@@ -6,7 +6,7 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PYTHONPATH=/ovms/lib/python
 
 RUN apt-get update && apt-get install -y python3-pip
-RUN pip install --break-system-packages pandas numpy scikit-learn joblib skl2onnx onnx onnxruntime
+RUN pip install --break-system-packages pandas numpy scikit-learn==1.3.2 joblib skl2onnx onnx onnxruntime scikit-learn-intelex==2024.0.0
 
 
 WORKDIR /workspace
