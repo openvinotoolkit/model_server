@@ -119,6 +119,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--dynamic_split_fuse`        | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                           |
 | `--max_prompt_len`            | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                         |
 | `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
+| `--response_parser`           | `string`     | Type of parser to use for tool calls and reasoning in model output. Currently supported: [qwen3, llama3, hermes3, phi4] |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
