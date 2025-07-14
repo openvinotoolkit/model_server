@@ -20,6 +20,7 @@ import jinja2
 import json
 import shutil
 import tempfile
+from pathlib import Path
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -347,6 +348,7 @@ def get_models_max_context(tmpdirname, config_filename):
         return None
 
 def add_servable_to_config(config_path, mediapipe_name, base_path):
+    base_path = Path(base_path).as_posix()
     print(config_path, mediapipe_name, base_path)
     if not os.path.isfile(config_path):
         print("Creating new config file")
@@ -395,10 +397,10 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 task_parameters['extra_quantization_params'] = ""
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
-                raise ValueError("Failed to export llm model", source_model)    
-    ### Export draft model for speculative decoding 
+                raise ValueError("Failed to export llm model", source_model)
+    ### Export draft model for speculative decoding
     draft_source_model = task_parameters.get("draft_source_model", None)
-    draft_model_dir_name = None   
+    draft_model_dir_name = None
     if draft_source_model:
         draft_model_dir_name = draft_source_model.replace("/", "-") # flatten the name so we don't create nested directory structure
         draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
@@ -409,7 +411,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
             hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(model_repository_path, model_name))
             if os.system(hugging_face_cmd):
-                raise ValueError("Failed to download llm model", source_model)    
+                raise ValueError("Failed to download llm model", source_model)
         else: # assume HF model name or local pytorch model folder
             print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
@@ -432,7 +434,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
 
     if task_parameters['prompt_lookup_decoding']:
         plugin_config['prompt_lookup'] = True
-    
+
     # Additional plugin properties for HETERO
     if "HETERO" in task_parameters['target_device']:
         if task_parameters['pipeline_type'] is None:
@@ -443,7 +445,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
-    
+
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
     print("task_parameters", task_parameters)
@@ -481,7 +483,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
         shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
         shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
         shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
-    else: # assume HF model 
+    else: # assume HF model
         set_max_context_length = ""
         with tempfile.TemporaryDirectory() as tmpdirname:
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
@@ -502,7 +504,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             print("Exporting tokenizer to ", tokenizer_path)
             if not os.path.isdir(tokenizer_path) or args['overwrite_models']:
                 from openvino_tokenizers import convert_tokenizer
-                convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length) 
+                convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(tmpdirname, source_model, set_max_context_length)
                 if (os.system(convert_tokenizer_command)):
                     raise ValueError("Failed to export tokenizer model", source_model)
                 set_rt_info(tmpdirname, 'openvino_tokenizer.xml', 'tokenizer_config.json')
@@ -534,7 +536,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
             if max_context_length is not None:
                 set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
-        convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
+        convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length)
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
@@ -620,7 +622,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
         plugin_config['NUM_STREAMS'] = num_streams
     if 'ov_cache_dir' in task_parameters and task_parameters['ov_cache_dir'] is not None:
         plugin_config['CACHE_DIR'] = task_parameters['ov_cache_dir']
-    
+
     if len(plugin_config) > 0:
         task_parameters['plugin_config_str'] = json.dumps(plugin_config)
 
