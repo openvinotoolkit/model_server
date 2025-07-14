@@ -90,7 +90,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set two additional parameters for this mode.
 | Option                       | Value format | Description                                                                                                   |
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
-| `--extra_quantization_params`| ` `          | Add advanced quantization parameters. Check optimum-intel documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
+| `--extra_quantization_params`| ` `          | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
 | `--precision`            | `string`      | Model precision used in optimum-cli export with conversion. Default `int8`.                |
                         
 
@@ -106,12 +106,14 @@ There are also additional environment variables that may change the behavior of 
 
 ### Advanced Environment Variables for Pull Mode
 | Variable                            | Format  | Description                                                                                                |
+|-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
 
 ### Advanced Environment Variables for Pull Mode in 2025.2 release
 | Variable                       | Format  | Description                                                                                                |
+|--------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_SERVER_CONNECT_TIMEOUT_MS`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system sesttings          |
 

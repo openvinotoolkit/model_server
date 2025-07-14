@@ -73,12 +73,11 @@ The required Model Server parameters are listed below. For additional configurat
 - In the command above, port 9000 is exposed for gRPC and port 8000 is exposed for REST API calls.
 - Add model_name for the client gRPC/REST API calls.
 
-### Starting the GenAI model from Hugging Face outside OpenVINO organization
-Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `## Pulling models outside of OpenVINO organization` in the [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
+### Starting the GenAI model from Hugging Face directly
 
-### Starting the GenAI model from Hugging Face OpenVINO organization directly
+For models outside of OpenVINO organization follow the additional prerequisites described here: [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
 
-In case you do not want to prepare model repository before starting the server and you want to serve model from HuggingFace [OpenVINO organization](https://huggingface.co/OpenVINO) you can just run OVMS with:
+In case you do not want to prepare model repository before starting the server and you want to serve model from [HuggingFace] (https://huggingface.co/) you can just run OVMS with:
 
 ::::{tab-set}
 :::{tab-item} With Docker

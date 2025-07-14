@@ -25,13 +25,13 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 
 ```bat
 mkdir models
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
-ovms.exe --add_to_config models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-ovms.exe --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-ovms.exe --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+ovms --add_to_config models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+ovms --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
 ::::
@@ -63,13 +63,13 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 pip3 install -q -r requirements.txt
 mkdir models
-ovms.exe --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
-ovms.exe --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
-ovms.exe --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
+ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
+ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
 
-ovms.exe --add_to_config models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-ovms.exe --add_to_config models --model_nameAlibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
-ovms.exe --add_to_config models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
+ovms --add_to_config models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
+ovms --add_to_config models --model_nameAlibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
+ovms --add_to_config models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
 ```
 :::
 ::::
