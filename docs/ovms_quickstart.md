@@ -134,17 +134,3 @@ or [PaddlePaddle model demo](../demos/classification_using_paddlepaddle_model/py
 
 Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../demos/README.md) or explore more [features](features.md) to create your application.
 Check also how to write the client code using [TFS API](./clients_tfs.md) and [KServe API](./clients_kfs.md)
-
-Please review the following environment variables in case of downloading models timeout:
-### Advanced Environment Variables for Pull Mode
-| Variable                            | Format  | Description                                                                                                |
-|-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
-| `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
-| `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
-| `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
-
-### Advanced Environment Variables for Pull Mode in 2025.2 release
-| Variable                       | Format  | Description                                                                                                |
-|--------------------------------|---------|------------------------------------------------------------------------------------------------------------|
-| `GIT_SERVER_CONNECT_TIMEOUT_MS`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
-| `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system sesttings          |

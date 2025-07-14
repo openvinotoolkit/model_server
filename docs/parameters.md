@@ -106,7 +106,7 @@ There are also additional environment variables that may change the behavior of 
 | Variable                       | Format  | Description                                                                                                |
 |--------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_SERVER_CONNECT_TIMEOUT_MS`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
-| `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system sesttings          |
+| `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system settings          |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
