@@ -68,6 +68,8 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/pyt
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then echo $'#!/bin/bash\npython3 -m openvino_tokenizers.cli "$@"' > /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
+if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /openvino_tokenizers/python/openvino_tokenizers/ /ovms_release/lib/python/openvino_tokenizers ; fi
+
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -v {} /ovms_release/lib/ \;
 if [ -d /opt/intel/openvino/runtime/3rdparty ] ; then find /opt/intel/openvino/runtime/3rdparty/ -iname '*libtbb.so*' -exec cp -vP {} /ovms_release/lib/ \;; fi
