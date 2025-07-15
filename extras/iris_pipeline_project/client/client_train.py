@@ -42,7 +42,6 @@ def main():
             sys.exit(1)
         print("Training mode detected. Preparing data for training...")
 
-    # Optional hyperparameter dictionary
     params = {}
     if params_path:
         try:
@@ -57,7 +56,7 @@ def main():
     input_dict = {
         "mode": mode,
         "data": csv_str,
-        "params": params  # Include params in the JSON
+        "params": params  
     }
 
     input_bytes = json.dumps(input_dict).encode()
