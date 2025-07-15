@@ -9,7 +9,7 @@ if len(sys.argv) < 2:
 
 output_dir = sys.argv[1]
 
-os.makedirs(output_dir, exist_ok=True)
+#os.makedirs(output_dir, exist_ok=True)
 
 columns = ["SepalLength", "SepalWidth", "PetalLength", "PetalWidth", "Species"]
 
