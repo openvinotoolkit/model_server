@@ -30,8 +30,8 @@ class OvmsPythonModel:
             inp_bytes = bytes(input_tensor.data) 
 
             print("input_data preview:", inp_bytes[:40], file=sys.stderr)
-            if inp_bytes[:1] != b'{' and inp_bytes.find(b'{') > 0:
-                first_brace = inp_bytes.find(b'{')
+            first_brace = inp_bytes.find(b'{')
+            if first_brace > 0:
                 inp_bytes = inp_bytes[first_brace:]
             print("RAW BYTES:", inp_bytes[:100], file=sys.stderr)
             payload = json.loads(inp_bytes.decode("utf-8"))
