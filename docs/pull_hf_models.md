@@ -1,6 +1,9 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF no additional steps are required. However, when pulling models outside of the OpenVINO organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments.
+This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF no additional steps are required. However, when pulling models outside of the OpenVINO organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments. In summary you have 2 options:
+
+- pulling preconfigured models in IR format from OpenVINO organization
+- pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace
 
 Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `2. Download the preconfigured models using ovms --pull option for models outside OpenVINO organization` in the [RAG demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/README.md)
 
@@ -12,6 +15,11 @@ cd model_server
 make python_image
 ```
 Then use the docker commands described in `Pulling the models` section with `openvino/model_server:py` container instead of `openvino/model_server:latest`.
+Example pull command with optimum model cache directory sharing.
+
+```bash
+docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v /opt/home/user/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+```
 
 ### Install optimum-cli
 Install python on your baremetal system from `https://www.python.org/downloads/` and run the commands:
@@ -20,9 +28,6 @@ pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/r
 pip3 install -q -r requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
-
-### Ovms pull mode alternative
-You can use the `export_models.py` script described in [this document](../demos/common/export_models/README.md).
 
 ### Pulling the models
 
