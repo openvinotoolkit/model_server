@@ -107,9 +107,23 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         char c = *it;
 
         if (state != IteratorState::PROCESSING_STRING && state != IteratorState::PROCESSING_KEY) {
+            // Ignore whitespace characters outside of strings and keys
             if (std::isspace(static_cast<unsigned char>(c))) {
                 continue;
             }
+
+            // Check for valid characters based on the current state
+            if (state == IteratorState::BEGIN && c != '{' && c != '[') {
+                throw std::runtime_error("Invalid JSON: Expected '{' or '[' at the beginning.");
+            } else if (state == IteratorState::AWAITING_KEY && c != '"' && c != '}') {
+                throw std::runtime_error("Invalid JSON: Expected key to start with a quote or a proper object closure.");
+            } else if (state == IteratorState::AWAITING_COLON && c != ':') {
+                throw std::runtime_error("Invalid JSON: Expected ':' after key.");
+            } else if (state == IteratorState::AWAITING_VALUE && c != '{' && c != '[' && c != '"' && !std::isdigit(static_cast<unsigned char>(c)) &&
+                       c != 't' && c != 'f' && c != 'n') {
+                throw std::runtime_error("Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'.");
+            }
+
             if (state == IteratorState::AWAITING_VALUE || state == IteratorState::AWAITING_ARRAY_ELEMENT || state == IteratorState::PROCESSING_ARRAY) {
                 // We either start a dict value, start a new array or continue processing an array
                 if (c == 't' || c == 'f' || c == 'n') {
@@ -197,7 +211,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         Document doc;
         doc.Parse(buffer.c_str());
         if (doc.HasParseError()) {
-            throw std::runtime_error("Internal error: Failed to parse partial JSON.");
+            throw std::runtime_error("Invalid JSON.");
         }
         return doc;
     }
@@ -243,7 +257,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     }
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
-        throw std::runtime_error("Internal error: Failed to parse partial JSON.");
+        throw std::runtime_error("Invalid JSON.");
     }
     return doc;
 }

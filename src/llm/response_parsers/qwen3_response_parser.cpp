@@ -188,54 +188,84 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
     */
     } else if (processingPhase == ProcessingPhase::TOOL_CALLS) {
         // Assuming streamer will provide start/end tag either alone in the chunk or with whitespaces that can be dropped.
-        if (chunk.find(toolCallEndTag) != std::string::npos) {
+        if (chunk.find(toolCallStartTag) != std::string::npos) {
             lastJson.Clear();
             jsonBuilder.clear();
-            return std::nullopt;
-        } else if (chunk.find(toolCallStartTag) != std::string::npos) {
             toolCallIndex++;
-            argumentsNestingLevel = 0;
+            argumentsDelayWindow[0].clear();
+            argumentsDelayWindow[1].clear();
             return std::nullopt;
         } else {
-            std::string modifiedChunk = chunk;
             // JSON already contains 'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
             if (lastJson.HasMember("arguments")) {
+                std::string modifiedChunk = chunk;
                 // Escaping double quotes in the arguments string
                 for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
                     modifiedChunk.insert(pos, "\\");
                 }
-                // Tracking nesting level and applying closure after arguments are complete
-                for (size_t i = 0; i < modifiedChunk.size(); ++i) {
-                    char c = modifiedChunk[i];
-                    if (c == '{') {
-                        argumentsNestingLevel++;
-                    } else if (c == '}') {
-                        argumentsNestingLevel--;
-                        if (argumentsNestingLevel == 0) {
-                            modifiedChunk.insert(i + 1, "\"");
-                            break;
-                        }
+
+                // Handle the case when we are starting to collect arguments.
+                // Force arguments string type and fill first element of the delay array.
+                if (argumentsDelayWindow[0].empty()) {
+                    // If we are starting to collect arguments, we add opening quote before the first non-whitespace character
+                    size_t firstNonWhitespaceCharacter = modifiedChunk.find_first_not_of(" \t\n\r\f\v");
+                    if (firstNonWhitespaceCharacter != std::string::npos) {
+                        modifiedChunk.insert(firstNonWhitespaceCharacter, "\"");
+                    } else {
+                        // If the chunk is all whitespace, just insert at the end
+                        modifiedChunk.append("\"");
                     }
+                    argumentsDelayWindow[0] = modifiedChunk;
+                    return std::nullopt;  // We don't return anything yet, we need to collect next chunk
+                }
+
+                if (!argumentsDelayWindow[1].empty()) {
+                    // We already have two chunks, so we can move delay window forward
+                    argumentsDelayWindow[0] = argumentsDelayWindow[1];
+                }
+
+                // If we are closing the tool call, we need to add closing quote after the last closing brace that we assume is present in the chunk processed in the last call.
+                // Otherwise we just store the chunk in the second element of the delay array to be handled in the next call.
+                if (modifiedChunk.find(toolCallEndTag) != std::string::npos) {
+                    size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
+                    if (lastClosingBrace != std::string::npos) {
+                        argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
+                    }
+                } else {
+                    argumentsDelayWindow[1] = modifiedChunk;
                 }
             }
 
             rapidjson::Document newJson;
-            // Push modified chunk to the JSON builder and collect new partial JSON
+            // Push delayed chunk to the JSON builder
             try {
-                newJson = jsonBuilder.add(modifiedChunk);
+                if (!argumentsDelayWindow[0].empty()) {
+                    // Push delayed chunk to the JSON builder if we are processing arguments
+                    newJson = jsonBuilder.add(argumentsDelayWindow[0]);
+                } else {
+                    // Otherwise just push the current chunk
+                    newJson = jsonBuilder.add(chunk);
+                }
             } catch (const std::exception& e) {
-                std::cout << "Failed to parse tool call arguments: " << e.what() << std::endl;
-                return std::nullopt;  // If parsing fails, we return nullopt
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+                // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
+                throw std::runtime_error("Generated tool call structure is not valid");
             }
 
             // Case 1: 'arguments' has just appeared in the current chunk. If so, we return first delta.
             if (newJson.HasMember("arguments") && !lastJson.HasMember("arguments")) {
-                // If 'arguments' is null we add double quote to force string data type.
-                if (newJson["arguments"].IsNull()) {
-                    jsonBuilder.add("\"");
+                std::string functionName;
+                if (lastJson.HasMember("name") && lastJson["name"].IsString()) {
+                    functionName = lastJson["name"].GetString();
+                } else if (newJson.HasMember("name") && newJson["name"].IsString()) {
+                    // We received big chunk with both full function name and arguments, so we get function name from the new JSON
+                    functionName = newJson["name"].GetString();
+                } else {
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call name has not been generated and arguments already started");
+                    throw std::runtime_error("Tool call name is missing in generated output");
                 }
-                // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":<delta>}]}
-                doc = wrapFirstDelta(lastJson["name"].GetString(), toolCallIndex);
+                // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
+                doc = wrapFirstDelta(functionName, toolCallIndex);
                 lastJson.CopyFrom(newJson, lastJson.GetAllocator());
                 return doc;
                 // Case 2: 'arguments' already exists in the last JSON, we compute delta and return it.

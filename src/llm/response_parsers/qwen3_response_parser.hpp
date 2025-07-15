@@ -42,6 +42,12 @@ protected:
     int64_t reasoningStartTokenId = 151667;  // This is the token ID for <think> in Qwen3 tokenizer
     std::string reasoningEndTag = "</think>";
     int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
+
+    // Storing last two chunks of arguments to return delta with delay.
+    // We do this to properly close arguments when tool call end tag is received.
+    // With support for more models this could be moved to the base class.
+    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+
 public:
     Qwen3ResponseParser() = delete;
     explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :

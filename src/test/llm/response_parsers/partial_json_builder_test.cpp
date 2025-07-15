@@ -397,6 +397,39 @@ TEST_F(PartialJsonBuilderTest, simpleJsonIncrementalParsing) {
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
 }
 
+TEST_F(PartialJsonBuilderTest, NegativeCases) {
+    std::vector<std::pair<std::string, std::string>> negativeCases = {
+        {R"(a)", "Invalid JSON: Expected '{' or '[' at the beginning."},
+        {R"({"name",)", "Invalid JSON: Expected ':' after key."},
+        {R"({"object": {"string":"1", "string",)", "Invalid JSON: Expected ':' after key."},
+        {R"({"name": "get_weather",  1)", "Invalid JSON: Expected key to start with a quote or a proper object closure."},
+        {R"({"name": a)", "Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'."},
+        {R"({"numbers": []])", "Invalid JSON."},         // invalid closure
+        {R"({"numbers": [1, 2, 3})", "Invalid JSON."},   // invalid closure
+        {R"({"numbers": [1, 2, 3b)", "Invalid JSON."},   // invalid value
+        {R"({"numbers": [1, 2, 3")", "Invalid JSON."},   // invalid value
+        {R"({"string": "string\""1)", "Invalid JSON."},  // invalid value
+        {R"({"bool": tak,)", "Invalid JSON."},           // invalid special value
+    };
+
+    for (const auto& [json, expectedError] : negativeCases) {
+        PartialJsonBuilder builder;
+        for (size_t i = 0; i < json.size(); ++i) {
+            std::string s(1, json[i]);
+            if (i == json.size() - 1) {
+                try {
+                    builder.add(s);
+                    FAIL() << "Expected exception not thrown";
+                } catch (const std::exception& ex) {
+                    EXPECT_EQ(std::string(ex.what()), expectedError);
+                }
+            } else {
+                builder.add(s);
+            }
+        }
+    }
+}
+
 TEST_F(PartialJsonBuilderTest, computeDeltaWithEmptyJson) {
     rapidjson::Document previous;
     previous.SetObject();
