@@ -51,13 +51,13 @@ model_config.json
 ### 4.1. Training
 
 ```bash
-python client/client_train.py train data/iris_train.csv
+python client/client_train.py train <path_to_training_dataset>
 ```
 
 ### 4.2. Inference
 
 ```bash
-python client/client_inference.py infer data/iris_test.csv
+python client/client_inference.py infer <path_to_test_dataset>
 ```
 
 ---
