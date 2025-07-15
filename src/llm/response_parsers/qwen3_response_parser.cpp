@@ -247,6 +247,7 @@ std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::st
                     newJson = jsonBuilder.add(chunk);
                 }
             } catch (const std::exception& e) {
+                (void)e;  // Suppress unused variable warning on Windows
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
                 // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
                 throw std::runtime_error("Generated tool call structure is not valid");
