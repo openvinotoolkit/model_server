@@ -44,12 +44,6 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-for
 ```
 :::
 
-:::{tab-item} NPU
-```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --target_device NPU
-```
-:::
-
 ::::
 
 You can use similar commands for different models. Change the source_model and the tools_model_type (note that as of today the following types as available: `[phi4, llama3, qwen3, hermes3]`).
@@ -84,14 +78,6 @@ docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /de
 --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
-:::{tab-item} NPU
-
-Running this command starts the container with NPU enabled:
-```bash
-docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
--p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:2025.2-gpu --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
-```
-:::
 
 ::::
 
@@ -104,7 +90,7 @@ Assuming you have unpacked model server package with python enabled version, mak
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU, GPU or NPU (it's defined in `graph.pbtxt`). If you run on GPU or NPU, make sure to have appropriate drivers installed, so the device is accessible for the model server.
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU, make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
 ovms --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
@@ -127,9 +113,10 @@ docker run -d -v $(pwd)/src/mcp_weather_server:/mcp_weather_server  -p 8080:8080
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/agentic-demo/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/2/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/2/demos/continuous_batching/agentic_ai/requirements.txt
 ```
+Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. 
 
 Run the agentic application
 ```console
