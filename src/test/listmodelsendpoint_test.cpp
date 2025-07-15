@@ -139,6 +139,7 @@ TEST_F(ListModelsEndpointTest, retrieveNonExisitingModel) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MODEL_NOT_LOADED);
+    EXPECT_STREQ(response.c_str(), "{\"error\":\"Model not found\"}");
 }
 
 TEST_F(ListModelsEndpointTest, retrieveModelEmptyName) {
