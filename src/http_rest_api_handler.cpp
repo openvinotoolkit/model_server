@@ -117,7 +117,7 @@ const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
 const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
     R"(/v3/(v1/)?models)";
 const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
-    R"(/v3/(v1/)?models/([^:]+))";
+    R"(/v3/(v1/)?models/(.+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
     R"(/v3/.*?(/|$))";
 
@@ -579,7 +579,7 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
     writer.String("object");
     writer.String("model");
     writer.String("created");
-    writer.Int(timestamp);
+    writer.Int64(timestamp);
     writer.String("owned_by");
     writer.String("OVMS");
     writer.EndObject();
@@ -606,6 +606,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
         writer.String("error");
         writer.String("Model not found");
         writer.EndObject();
+        response = buffer.GetString();
         return StatusCode::MODEL_NOT_LOADED;
     }
     time_t timestamp;
@@ -617,8 +618,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     writer.StartArray();
     parseModel(writer, name, timestamp);
     writer.EndArray();
-    writer.String("object");
-    writer.String("list");
     writer.EndObject();
     response = buffer.GetString();
     return StatusCode::OK;

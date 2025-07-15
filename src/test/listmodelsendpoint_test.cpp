@@ -141,6 +141,12 @@ TEST_F(ListModelsEndpointTest, retrieveNonExisitingModel) {
         ovms::StatusCode::MODEL_NOT_LOADED);
 }
 
+TEST_F(ListModelsEndpointTest, retrieveModelEmptyName) {
+    std::string requestBody = "";
+    std::string endpoint = listModelsEndpoint + "/";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::REST_INVALID_URL);
+}
+
 TEST_F(ListModelsEndpointTest, simplePositiveRetrieveGraph) {
     std::string requestBody = "";
     std::string endpoint = listModelsEndpoint + "/my/graph";
