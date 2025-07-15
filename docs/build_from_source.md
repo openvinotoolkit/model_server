@@ -5,7 +5,7 @@ This document gives information how to build docker images and the binary packag
 ## Prerequisites
 
 1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.5 host
+1. Ubuntu 22.04, Ubuntu 24.04 or RedHat 9.6 host
 1. make
 1. bash
 
@@ -30,7 +30,7 @@ To build the image with non default configuration, add parameters described belo
 Select base OS:
 - `ubuntu22` for Ubuntu 22.04 (default)
 - `ubuntu24` for Ubuntu 24.04
-- `redhat` for Red Hat UBI 8.10
+- `redhat` for Red Hat UBI 9.6
 
 ```bash
 make release_image BASE_OS=redhat
