@@ -104,6 +104,7 @@ cc_shared_library(
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
+        "@libgit2_engine//::__subpackages__"
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
