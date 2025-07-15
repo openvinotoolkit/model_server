@@ -188,10 +188,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
                 cxxopts::value<std::string>()->default_value("text_generation"),
                 "TASK")
-            ("precision",
+            ("weight-format",
                 "Model precision used in optimum-cli export with conversion",
                 cxxopts::value<std::string>()->default_value("int8"),
-                "PRECISION")
+                "WEIGHT_FORMAT")
             ("extra_quantization_params",
                 "Model quantization parameters used in optimum-cli export with conversion for text generation models",
                 cxxopts::value<std::string>(),
@@ -523,15 +523,15 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             }
         }
 
-        if (result->count("precision") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--precision parameter unsupported for Openvino huggingface organization models.");
+        if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
+            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }
         if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
         }
 
-        if (result->count("precision"))
-            hfSettings.precision = result->operator[]("precision").as<std::string>();
+        if (result->count("weight-format"))
+            hfSettings.precision = result->operator[]("weight-format").as<std::string>();
         if (result->count("extra_quantization_params"))
             hfSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("model_repository_path"))
@@ -585,8 +585,8 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
     // No pull nor pull and start mode
     } else {
-        if (result->count("precision")) {
-            throw std::logic_error("--precision parameter unsupported for Openvino huggingface organization models.");
+        if (result->count("weight-format")) {
+            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }
         if (result->count("extra_quantization_params")) {
             throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
