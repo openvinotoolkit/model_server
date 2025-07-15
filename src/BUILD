@@ -104,7 +104,6 @@ cc_shared_library(
         "@azure//:__subpackages__",
         "@cpprest//:__subpackages__",
         "//third_party:opencv//:__subpackages__",
-        "@libgit2_engine//::__subpackages__"
     ] + select({
         "//:not_disable_mediapipe": [
             "@mediapipe//:__subpackages__",
@@ -135,6 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
+        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine",
     ],
 )
 
