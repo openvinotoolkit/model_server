@@ -71,7 +71,7 @@ curl -o iris.csv https://archive.ics.uci.edu/ml/machine-learning-databases/iris/
 Run the following file to prepare the data and split it into data for training and for inferencing.
 
 ```bash
-python data_preprocess.py <output_dir>
+python data_preprocess.py <path to output_dir>
 ```
 
 ## Input Format
