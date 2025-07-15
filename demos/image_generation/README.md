@@ -37,7 +37,7 @@ mkdir -p models
 
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:2025.2 \
+  openvino/model_server:2025.2.1 \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
@@ -81,7 +81,7 @@ mkdir -p models
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
   --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:2025.2-gpu \
+  openvino/model_server:2025.2.1-gpu \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
@@ -114,7 +114,7 @@ Here, the original models in `safetensors` format and the tokenizers will be con
 Quantization ensures faster initialization time, better performance and lower memory consumption.
 Image generation pipeline parameters will be defined inside the `graph.pbtxt` file.
 
-Download export script (2025.2 and later), install it's dependencies and create directory for the models:
+Download export script (2025.2.0 and later), install it's dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
@@ -172,7 +172,7 @@ Running this command starts the container with CPU only target device:
 Start docker container:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
-  openvino/model_server:2025.2 \
+  openvino/model_server:2025.2.1 \
     --rest_port 8000 \
     --model_name OpenVINO/FLUX.1-schnell-int4-ov \
     --model_path /models/black-forest-labs/FLUX.1-schnell
@@ -211,7 +211,7 @@ It can be applied using the commands below:
 ```bash
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  openvino/model_server:2025.2-gpu \
+  openvino/model_server:2025.2.1-gpu \
     --rest_port 8000 \
     --model_name OpenVINO/FLUX.1-schnell-int4-ov \
     --model_path /models/black-forest-labs/FLUX.1-schnell

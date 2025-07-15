@@ -64,7 +64,7 @@ Select deployment option depending on how you prepared models in the previous st
 
 Running this command starts the container with CPU only target device:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:2025.2 --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:2025.2.1 --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
 
@@ -74,7 +74,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:ro openvino/model_server:2025.2-gpu \
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:ro openvino/model_server:2025.2.1-gpu \
 --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
