@@ -6,6 +6,7 @@ You have to use docker image with optimum-cli or install additional python depen
 
 Pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace.
 
+Note: Pulling the models from HuggingFace Hub can automate conversion and compression. It might however increase memory usage during the model conversion and requires downloading the original model.
 
 ## OVMS building and installation for optimum-cli integration
 ### Build python docker image
@@ -24,8 +25,14 @@ docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(
 ### Install optimum-cli
 Install python on your baremetal system from `https://www.python.org/downloads/` and run the commands:
 ```console
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
-pip3 install -q -r requirements.txt
+pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+```
+
+or use the python binary from the ovms.zip or ovms.tar.gz package - see [deployment instructions](deploying_server_baremetal.md) for details.
+and run:
+```console
+ovms\python\python -m pip install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+
 ```
 Then use the ovms cli commands described in `Pulling the models` section
 
@@ -45,7 +52,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
 ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_PARAMETERS]
@@ -70,7 +77,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --task text_generation 

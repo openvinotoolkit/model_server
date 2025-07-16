@@ -21,7 +21,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
 ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_PARAMETERS]
@@ -46,7 +46,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
 ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --task text_generation 
