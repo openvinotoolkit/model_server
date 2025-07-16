@@ -187,7 +187,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "MODEL_REPOSITORY_PATH")
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
-                cxxopts::value<std::string>()->default_value("text_generation"),
+                cxxopts::value<std::string>(),
                 "TASK");
 
         options->add_options("single model")
