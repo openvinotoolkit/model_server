@@ -2,7 +2,7 @@
 
 This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models when pulling outside of [OpenVINO organization](https://huggingface.co/OpenVINO) from HF.
 
-You have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments.
+You have to use docker image with optimum-cli or install additional python dependencies to the baremetal package. Follow the steps described below.
 
 Pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace.
 
