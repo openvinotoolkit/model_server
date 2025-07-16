@@ -25,13 +25,13 @@ BASE_OS ?= ubuntu24
 
 ifeq ($(BASE_OS),ubuntu24)
   BASE_OS_TAG_UBUNTU ?= 24.04
-  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_ubuntu24.tar.gz"
+  PACKAGE_URL ?="https://github.com/openvinotoolkit/model_server/releases/download/v2025.2.1/ovms_ubuntu24.tar.gz"
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG_UBUNTU)
   DIST_OS=ubuntu
 endif
 ifeq ($(BASE_OS),redhat)
   BASE_OS_TAG_REDHAT ?= 9.5
-  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_redhat.tar.gz"
+  PACKAGE_URL ="https://github.com/openvinotoolkit/model_server/releases/download/v2025.2.1/ovms_redhat.tar.gz"
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
 endif
