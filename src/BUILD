@@ -134,6 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
+        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine",
     ],
 )
 
