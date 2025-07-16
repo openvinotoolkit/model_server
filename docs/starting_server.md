@@ -75,7 +75,7 @@ The required Model Server parameters are listed below. For additional configurat
 
 ### Starting the GenAI model from Hugging Face directly
 
-For models outside of OpenVINO organization follow the additional prerequisites described here: [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
+For models outside of OpenVINO organization follow the additional prerequisites described here: [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
 
 In case you do not want to prepare model repository before starting the server and you want to serve model from [HuggingFace] (https://huggingface.co/) you can just run OVMS with:
 
