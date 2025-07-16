@@ -30,7 +30,7 @@ pip3 install -q -r requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
 
-### Pulling the models
+## Pulling the models
 
 Using `--pull` parameter, we can use OVMS to download the model, quantize and compress to required format. The model will be prepared to the deployment in the configured `--model_repository_path`. Without `--pull` parameter, OVMS will start serving immediately after the model is prepared.
 
