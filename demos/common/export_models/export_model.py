@@ -388,11 +388,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if precision != 'int4':
                     print("NPU target device requires int4 precision. Changing to int4")
                     precision = 'int4'
-                if task_parameters['extra_quantization_params'] is None:
+                if task_parameters['extra_quantization_params'] == "":
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
-            if task_parameters['extra_quantization_params'] is None:
-                task_parameters['extra_quantization_params'] = ""
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
@@ -487,7 +485,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
             print("Exporting embeddings model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -526,7 +524,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         if truncate:
@@ -548,7 +546,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -574,7 +572,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export rerank model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -610,8 +608,6 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     if os.path.isfile(model_index_path):
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
-        if task_parameters['extra_quantization_params'] is None:
-            task_parameters['extra_quantization_params'] = ""
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
         print(f'optimum cli command: {optimum_command}')
         if os.system(optimum_command):
@@ -665,6 +661,8 @@ if args['task'] == 'text_generation':
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
 print("template params:", template_parameters)
 
+if template_parameters['extra_quantization_params'] is None:
+    template_parameters['extra_quantization_params'] = ""
 if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
