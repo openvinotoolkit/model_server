@@ -178,6 +178,8 @@ Run `export_model.py` script to download and quantize the model:
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
+> **Note:** The `--extra_quantization_params` parameter is used to pass additional parameters to the optimum-cli. It may be required to set the `--group-size` parameter when quantizing the model when encountering errors like: `Channel size 64 should be divisible by size of group 128.`
+
 ### Export model for CPU
 ```console
 python export_model.py image_generation \
@@ -185,6 +187,7 @@ python export_model.py image_generation \
   --weight-format int4 \
   --config_file_path models/config.json \
   --model_repository_path models \
+  --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
 
@@ -196,6 +199,7 @@ python export_model.py image_generation \
   --target_device GPU \
   --config_file_path models/config.json \
   --model_repository_path models \
+  --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
 
