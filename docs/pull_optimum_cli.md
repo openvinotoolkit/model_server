@@ -82,7 +82,6 @@ ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --mod
 
 It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
-In case you want to setup model and start server in one step follow instructions on [this page](./starting_server.md).
 
 *Note:*
 When using pull mode you need both read and write access rights to models repository.
