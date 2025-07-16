@@ -32,7 +32,7 @@ Then use the ovms cli commands described in `Pulling the models` section
 
 ### Pulling the models
 
-There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
+Using `--pull` parameter, we can use OVMS to download the model, quantize and compress to required format. The model will be prepared to the deployment in the configured `--model_repository_path`. Without `--pull` parameter, OVMS will start serving immediately after the model is prepared.
 
 ::::{tab-set}
 :::{tab-item} With Docker
