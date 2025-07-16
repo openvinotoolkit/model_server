@@ -8,7 +8,7 @@ Pulling models with automatic conversion and quantization (requires optimum-cli)
 
 Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `2. Download the preconfigured models using ovms --pull option for models outside OpenVINO organization` in the [RAG demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/README.md)
 
-## Pulling models outside of OpenVINO organization
+## OVMS building and installation for optimum-cli integration
 ### Build python docker image
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
