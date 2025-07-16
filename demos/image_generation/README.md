@@ -127,6 +127,8 @@ Run `export_model.py` script to download and quantize the model:
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
+> **Note:** The `--extra_quantization_params` parameter is used to pass additional parameters to the optimum-cli. It may be required to set the `--group-size` parameter when quantizing the model when encountering errors like: `Channel size 64 should be divisible by size of group 128.`
+
 ### Export model for CPU
 ```console
 python export_model.py image_generation \
@@ -134,6 +136,7 @@ python export_model.py image_generation \
   --weight-format int4 \
   --config_file_path models/config.json \
   --model_repository_path models \
+  --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
 
@@ -145,6 +148,7 @@ python export_model.py image_generation \
   --target_device GPU \
   --config_file_path models/config.json \
   --model_repository_path models \
+  --extra_quantization_params "--group-size 64" \
   --overwrite_models
 ```
 
@@ -209,7 +213,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/workspace:ro \
+docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:2025.2-gpu \
     --rest_port 8000 \
@@ -232,7 +236,6 @@ ovms --rest_port 8000 ^
 :::
 
 ::::
-
 
 ## Readiness Check
 
