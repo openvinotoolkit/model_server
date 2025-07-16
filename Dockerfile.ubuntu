@@ -373,6 +373,8 @@ ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
 COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
+RUN if [ "$FUZZER_BUILD" == "1" ]; then --from=capi-build /ovms_release/lib/libopenvino_genai.so* /ovms_release/lib/; fi;
+RUN if [ "$FUZZER_BUILD" == "1" ]; then --from=capi-build /ovms_release/lib/libgit2.so /ovms_release/lib/; fi;
 COPY create_package.sh /
 RUN ./create_package.sh
 
