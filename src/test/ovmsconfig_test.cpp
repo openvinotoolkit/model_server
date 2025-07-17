@@ -813,6 +813,8 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"VLM",
         (char*)"--max_num_seqs",
@@ -831,7 +833,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"/draft/model/source",
     };
 
-    int arg_count = 22;
+    int arg_count = 24;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -863,6 +865,8 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"VLM",
         (char*)"--max_num_seqs",
@@ -871,7 +875,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"NPU",
     };
 
-    int arg_count = 13;
+    int arg_count = 15;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -939,9 +943,11 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",   
     };
 
-    int arg_count = 6;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -971,11 +977,13 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--port",
         (char*)"8080",
     };
 
-    int arg_count = 7;
+    int arg_count = 9;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -1007,11 +1015,13 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--target_device",
         (char*)"HETERO",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -1029,11 +1039,13 @@ TEST(OvmsGraphConfigTest, negativePipelineType) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "pipeline_type: INVALID is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO");
 }
 
@@ -1047,11 +1059,13 @@ TEST(OvmsGraphConfigTest, negativeTargetDevice) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--target_device",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "target_device: INVALID is not allowed. Supported devices: CPU, GPU, NPU, HETERO");
 }
 
@@ -1065,11 +1079,13 @@ TEST(OvmsGraphConfigTest, negativeEnablePrefixCaching) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--enable_prefix_caching",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "enable_prefix_caching: INVALID is not allowed. Supported values: true, false");
 }
 
@@ -1083,11 +1099,13 @@ TEST(OvmsGraphConfigTest, negativeDynamicSplitFuse) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--dynamic_split_fuse",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "dynamic_split_fuse: INVALID is not allowed. Supported values: true, false");
 }
 
@@ -1101,9 +1119,11 @@ TEST(OvmsGraphConfigTest, negativeSourceModel) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 6;
+    int arg_count = 8;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
 }
 

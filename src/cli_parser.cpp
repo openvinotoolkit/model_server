@@ -282,11 +282,8 @@ void CLIParser::parse(int argc, char** argv) {
                     }
                 }
             } else {
-                // Default task is text_generation
-                task = TEXT_GENERATION_GRAPH;
-                GraphCLIParser cliParser;
-                unmatchedOptions = cliParser.parse(result->unmatched());
-                this->graphOptionsParser = std::move(cliParser);
+                std::cerr << "error parsing options - --task parameter wasn't passed";
+                exit(OVMS_EX_USAGE);
             }
 
             if (unmatchedOptions.size()) {
