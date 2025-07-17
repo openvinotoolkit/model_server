@@ -356,6 +356,19 @@ TEST_F(OvmsConfigDeathTest, hfWrongTask) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter unsupported value: bad_task");
 }
 
+TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 6;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter wasn't passed");
+}
+
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
     char* n_argv[] = {
         "ovms",
@@ -364,10 +377,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--max_allowed_chunks",
         "1400",
     };
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --max_allowed_chunks, 1400,");
 }
 
@@ -550,10 +565,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameterName) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--min_num_batched_tokens",
         "145",
     };
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --min_num_batched_tokens, 145,");
 }
 
@@ -631,10 +648,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphNoPull) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--normalizes",
         "true",
     };
-    int arg_count = 7;
+    int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --normalizes, true,");
 }
 
@@ -797,8 +816,10 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
         "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
         "--model_repository_path",
         "/models",
+        "--task",
+        "text_generation",
         "--list_models"};
-    int arg_count = 7;
+    int arg_count = 9;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
