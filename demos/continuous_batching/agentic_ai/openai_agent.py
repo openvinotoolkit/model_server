@@ -27,6 +27,7 @@ from agents.mcp import MCPServerSse, MCPServerStdio
 from agents.model_settings import ModelSettings
 import argparse
 
+from openai.types.responses import ResponseTextDeltaEvent
 from agents import (
     Agent,
     Model,
@@ -34,6 +35,7 @@ from agents import (
     OpenAIChatCompletionsModel,
     RunConfig,
     Runner,
+    ItemHelpers,
 )
 
 API_KEY = "not_used"
@@ -47,12 +49,35 @@ if https_proxy:
 
 RunConfig.tracing_disabled = False  # Disable tracing for this example
 
-async def run(query, agent, OVMS_MODEL_PROVIDER):
+async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
     await fs_server.connect()
     await weather_server.connect()
     print(f"\n\nRunning: {query}")
-    result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
-    print(result.final_output)
+    if stream:
+        result = Runner.run_streamed(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
+        print("=== Stream run starting ===")
+
+        async for event in result.stream_events():
+            # Print text deltas as they come in
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                print(event.data.delta, end="", flush=True)
+            # When the agent updates, print that
+            elif event.type == "agent_updated_stream_event":
+                print(f"Agent updated: {event.new_agent.name}")
+                continue
+            # When tool events occur, print details
+            elif event.type == "run_item_stream_event":
+                if event.item.type == "tool_call_item":
+                    print(f"\n-- Tool '{event.item.raw_item.name}' was called with arguments: {event.item.raw_item.arguments}. Call id: {event.item.raw_item.call_id}")
+                elif event.item.type == "tool_call_output_item":
+                    print(f"\n-- Tool output:\n {event.item.raw_item}\n\n")
+                else:
+                    pass  # Ignore other event types
+
+        print("\n=== Stream run complete ===")
+    else: 
+        result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
+        print(result.final_output)
 
 
 if __name__ == "__main__":
@@ -61,6 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-8B", help="Model name to use")
     parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
     parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
+    parser.add_argument("--stream", action="store_true", help="Stream output from the agent")
     args = parser.parse_args()
     weather_server = None
     if platform.system() == "Windows":
@@ -95,4 +121,3 @@ if __name__ == "__main__":
     )
     loop = asyncio.new_event_loop()
     loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER))
-
