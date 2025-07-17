@@ -11,9 +11,9 @@ cd model_server/demos/image_classification/go
 
 ## Get the model
 
-To run end to end flow and get correct results, please download `resnet-50` model in IR format.
+To run end to end flow and get correct results, please download `resnet50-v1-12` model from ONNX repository.
 
-Place downloaded model files (XML and BIN) under the following path: `<PATH_TO_MODELS>/1`
+Place downloaded model file (.onnx) under the following path: `<PATH_TO_MODELS>/1`
 
 Where `PATH_TO_MODELS` is the path to the directory with models on the host filesystem.
 
