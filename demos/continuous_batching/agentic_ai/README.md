@@ -158,3 +158,8 @@ The directory `/root` is not accessible as it's outside the allowed directories.
 ```
 
 > **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 
+
+For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script. For example:
+```console
+python openai_agent.py --query "What is the weather now in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --stream
+```
