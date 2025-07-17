@@ -184,6 +184,7 @@ class OpenAIChatCompletionsHandler {
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
     // Response parser is used to parse chat completions response for specific models
     std::unique_ptr<ResponseParser> responseParser = nullptr;
+    std::map<std::string, std::string> toolNameSchemaMap;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);

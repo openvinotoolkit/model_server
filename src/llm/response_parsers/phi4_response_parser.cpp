@@ -79,4 +79,51 @@ ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTo
     }
     return parsedResponse;
 }
+ov::genai::StructuredOutputConfig Phi4ResponseParser::prepareStructuredOutputConfig(const std::map<std::string, std::string>& toolNameSchemaMap) {
+    ov::genai::StructuralTagsConfig structuralTagsConfig;
+    std::string beginOfToolsString = "functools";
+    structuralTagsConfig.triggers.push_back(beginOfToolsString);
+    ov::genai::StructuralTagItem tagItem;
+    tagItem.begin = beginOfToolsString;
+
+    // Build the "anyOf" array for each tool
+    std::string anyOfArray = "[";
+    bool first = true;
+    std::cout << "tools size: " << toolNameSchemaMap.size() << std::endl;
+    for (const auto& [toolName, toolSchema] : toolNameSchemaMap) {
+        if (!first) {
+            anyOfArray += ",";
+        }
+        first = false;
+        anyOfArray += R"({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "enum": [")" + toolName + R"("]
+                },
+                "arguments": )" + toolSchema + R"(
+            },
+            "required": [
+                "name",
+                "arguments"
+            ]
+        })";
+    }
+    anyOfArray += "]";
+
+    tagItem.schema = R"({
+        "type": "array",
+        "items": {
+            "anyOf": )" + anyOfArray + R"(
+        }
+    })";
+
+    std::cout << "Created schema: " << tagItem.schema << std::endl;
+    structuralTagsConfig.structural_tags.push_back(tagItem);
+
+    ov::genai::StructuredOutputConfig structuredOutputConfig;
+    structuredOutputConfig.structural_tags_config = structuralTagsConfig;
+    return structuredOutputConfig;
+}
 }  // namespace ovms

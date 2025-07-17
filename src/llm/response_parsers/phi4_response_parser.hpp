@@ -16,7 +16,9 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/generation_config.hpp>
 #include <vector>
+#include <string>
 #include "base_response_parser.hpp"
 
 namespace ovms {
@@ -27,5 +29,7 @@ public:
         BaseResponseParser(tokenizer) {}
 
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+
+    static ov::genai::StructuredOutputConfig prepareStructuredOutputConfig(const std::map<std::string, std::string>& toolNameSchemaMap);
 };
 }  // namespace ovms

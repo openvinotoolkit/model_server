@@ -302,6 +302,32 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         }
     }
 
+    // TODO: extract to function - enable proper use for different tool choices
+    auto it = doc.FindMember("tools");
+    if (it != doc.MemberEnd() && !it->value.IsNull() && it->value.IsArray()) {
+        // std::cout << "Found tools" << std::endl;
+        for (auto& tool : it->value.GetArray()) {
+            // std::cout << "Inside tool" << std::endl;
+            if (tool.IsObject()) {
+                auto functionIt = tool.FindMember("function");
+                if (functionIt != tool.MemberEnd() && functionIt->value.IsObject()) {
+                    auto nameIt = functionIt->value.GetObject().FindMember("name");
+                    auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
+                    if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString() &&
+                        parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                        // Dump parameters object to string
+                        rapidjson::StringBuffer buffer;
+                        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                        parametersIt->value.Accept(writer);
+                        std::string parametersStr = buffer.GetString();
+                        toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                        // std::cout << "Added tool: " << nameIt->value.GetString() << " with schema: " << parametersStr << std::endl;
+                    }
+                }
+            }
+        }
+    }
+
     bool jsonChanged = false;
     if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
         return absl::OkStatus();
@@ -310,7 +336,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         doc.RemoveMember("tools");
         jsonChanged = true;
     }
-    auto it = doc.FindMember("tools");
+    it = doc.FindMember("tools");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
@@ -338,6 +364,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             // Add new tool to tools list - TBD
         }
     }
+
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -672,7 +699,10 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
 }
 
 ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(const ov::genai::GenerationConfig& base) const {
-    return request.createGenerationConfig(base);
+    ov::genai::GenerationConfig config = request.createGenerationConfig(base);
+    config.structured_output_config = Phi4ResponseParser::prepareStructuredOutputConfig(toolNameSchemaMap);
+    // std::cout << "------------------ Adding structural tags to generation config ------------------" << std::endl;
+    return config;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
