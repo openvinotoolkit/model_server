@@ -101,7 +101,7 @@ const std::string expectedFullPluginGraphContents = R"(
     }
 )";
 
-const std::string expectedGraphContentsWithOutputParser = R"(
+const std::string expectedGraphContentsWithResponseParser = R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
     node: {
@@ -451,7 +451,7 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ASSERT_EQ(expectedFullPluginGraphContents, graphContents) << graphContents;
 }
 
-TEST_F(GraphCreationTest, positiveWithOutputParser) {
+TEST_F(GraphCreationTest, positiveWithResponseParser) {
     ovms::HFSettingsImpl hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.responseParser = "RESPONSE_PARSER";
@@ -464,7 +464,7 @@ TEST_F(GraphCreationTest, positiveWithOutputParser) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContentsWithOutputParser, graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContentsWithResponseParser, graphContents) << graphContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {

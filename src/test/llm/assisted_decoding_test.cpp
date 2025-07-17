@@ -63,7 +63,7 @@ public:
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
-    rapidjson::Document parsedOutput;
+    rapidjson::Document parsedResponse;
     ovms::HttpResponseComponents responseComponents;
     static std::shared_ptr<ov::genai::ContinuousBatchingPipeline> cbPipe;
     static std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
@@ -180,10 +180,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    auto& choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
     // TODO: awaiting OV/GenAI fix, uncomment when fixed
     // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
@@ -203,10 +203,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
     // TODO: awaiting OV/GenAI fix, uncomment when fixed
     // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
@@ -239,10 +239,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    auto& choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -270,10 +270,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDec
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
@@ -336,10 +336,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    auto& choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["text"].IsString());
     // TODO: awaiting OV/GenAI fix, uncomment when fixed
     // EXPECT_STREQ(choice["text"].GetString(), expectedMessages[0].c_str());
@@ -372,10 +372,10 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDe
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedOutput.Parse(response.c_str());
-    ASSERT_TRUE(parsedOutput["choices"].IsArray());
-    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
-    auto& choice = parsedOutput["choices"].GetArray()[0];
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    auto& choice = parsedResponse["choices"].GetArray()[0];
     ASSERT_TRUE(choice["message"].IsObject());
     ASSERT_TRUE(choice["message"]["content"].IsString());
     ASSERT_TRUE(choice["finish_reason"].IsString());
