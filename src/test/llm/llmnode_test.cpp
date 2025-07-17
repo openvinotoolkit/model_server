@@ -74,7 +74,7 @@ public:
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
-    rapidjson::Document parsedResponse;
+    rapidjson::Document parsedOutput;
     ovms::HttpResponseComponents responseComponents;
     static std::shared_ptr<ov::genai::ContinuousBatchingPipeline> cbPipe;
     static std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
@@ -214,11 +214,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
             ovms::StatusCode::OK);
-        parsedResponse.Parse(response.c_str());
-        ASSERT_TRUE(parsedResponse["choices"].IsArray());
-        ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+        parsedOutput.Parse(response.c_str());
+        ASSERT_TRUE(parsedOutput["choices"].IsArray());
+        ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
         int i = 0;
-        for (auto& choice : parsedResponse["choices"].GetArray()) {
+        for (auto& choice : parsedOutput["choices"].GetArray()) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             ASSERT_FALSE(choice["logprobs"].IsObject());
             ASSERT_TRUE(choice["text"].IsString());
@@ -228,13 +228,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
             ASSERT_EQ(choice["index"], i++);
         }
 
-        ASSERT_TRUE(parsedResponse["usage"].IsObject());
-        ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-        ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-        ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-        ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-        EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-        EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+        ASSERT_TRUE(parsedOutput["usage"].IsObject());
+        ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+        ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+        ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+        ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+        EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+        EXPECT_STREQ(parsedOutput["object"].GetString(), "text_completion");
     } else {  // Completions endpoint not supported for VLM servable
         ASSERT_EQ(
             handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
@@ -274,11 +274,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
         }
@@ -294,13 +294,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoWithCompletion) {
         ASSERT_EQ(choice["index"], i++);
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "text_completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoWithCompletion) {
@@ -384,11 +384,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -413,16 +413,16 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonEchoOnly) {
         ASSERT_EQ(choice["index"], i++);
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 0 /* max_tokens */);
     if (params.checkLogprobs) {
-        ASSERT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), parsedResponse["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
+        ASSERT_EQ(parsedOutput["usage"].GetObject()["prompt_tokens"].GetInt(), parsedOutput["choices"].GetArray()[0]["logprobs"].GetObject()["token_logprobs"].Size());
     }
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "text_completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamCompletionsEchoOnly) {
@@ -517,11 +517,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         if (params.checkFinishReason) {
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -532,8 +532,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonFinishReasonLength) {
         }
         ASSERT_TRUE(choice["text"].IsString());
     }
-    ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
-    ASSERT_EQ(parsedResponse["object"], "text_completion");
+    ASSERT_EQ(parsedOutput["model"], params.modelName.c_str());
+    ASSERT_EQ(parsedOutput["object"], "text_completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
@@ -558,11 +558,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         if (params.checkFinishReason) {
             EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
@@ -575,8 +575,8 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSingleStopString) {
         auto text_size = std::string(choice["text"].GetString()).size();
         ASSERT_EQ(choice["text"].GetString()[text_size - 1], '.');
     }
-    ASSERT_EQ(parsedResponse["model"], params.modelName.c_str());
-    ASSERT_EQ(parsedResponse["object"], "text_completion");
+    ASSERT_EQ(parsedOutput["model"], params.modelName.c_str());
+    ASSERT_EQ(parsedOutput["object"], "text_completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
@@ -601,13 +601,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonSpaceStopString) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse.HasMember("choices"));
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Size(), 1);
-    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0].HasMember("text"));
-    ASSERT_TRUE(parsedResponse["choices"].GetArray()[0]["text"].IsString());
-    ASSERT_EQ(parsedResponse["choices"].GetArray()[0]["text"].GetString(), std::string{""});
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput.HasMember("choices"));
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Size(), 1);
+    ASSERT_TRUE(parsedOutput["choices"].GetArray()[0].HasMember("text"));
+    ASSERT_TRUE(parsedOutput["choices"].GetArray()[0]["text"].IsString());
+    ASSERT_EQ(parsedOutput["choices"].GetArray()[0]["text"].GetString(), std::string{""});
 }
 
 TEST_P(LLMFlowHttpTestParameterized, defaultRoutingInvalidJson) {
@@ -682,11 +682,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 8);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 8);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         if (params.checkFinishReason) {
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -700,13 +700,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonN) {
         }
         ASSERT_EQ(choice["index"], i++);
     }
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "text_completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
@@ -766,11 +766,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 8);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 8);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         ASSERT_TRUE(choice["finish_reason"].IsString());
         if (params.checkFinishReason) {
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -787,13 +787,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 8 * 5 /* n * max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, KFSApiRequestToChatCompletionsGraph) {
@@ -837,11 +837,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -855,13 +855,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
@@ -886,11 +886,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -904,13 +904,13 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArray) {
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), params.modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonContentArrayWithImage) {
@@ -968,11 +968,11 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopString
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 4);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 4);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkFinishReason) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "stop");
@@ -1013,9 +1013,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonLogprobs) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkLogprobs) {
             ASSERT_TRUE(choice["logprobs"].IsObject());
             ASSERT_TRUE(choice["logprobs"]["content"].IsArray());
@@ -1052,9 +1052,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (params.checkLogprobs) {
             ASSERT_TRUE(choice["logprobs"].IsObject());
             ASSERT_TRUE(choice["logprobs"]["text_offset"].IsArray());
@@ -1336,12 +1336,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    // parsedResponse.Parse(response.c_str());
-    // ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    // ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    // EXPECT_EQ(parsedResponse["usage"].GetObject()["prompt_tokens"].GetInt(), 2047);
-    // ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    // EXPECT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 1); // TODO check why those check are failing sporadically
+    // parsedOutput.Parse(response.c_str());
+    // ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    // ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    // EXPECT_EQ(parsedOutput["usage"].GetObject()["prompt_tokens"].GetInt(), 2047);
+    // ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    // EXPECT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 1); // TODO check why those check are failing sporadically
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsStopStringEmpty) {

@@ -52,7 +52,7 @@ public:
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
-    rapidjson::Document parsedResponse;
+    rapidjson::Document parsedOutput;
     ovms::HttpResponseComponents responseComponents;
     static void SetUpTestSuite() {
         std::string port = "9173";
@@ -145,11 +145,11 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasic) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (modelName.find("legacy") == std::string::npos) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -161,13 +161,13 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasic) {
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 // Only image input is accepted, but expected output can't be predicted
@@ -183,11 +183,11 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasicOnlyImage) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (modelName.find("legacy") == std::string::npos) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -199,13 +199,13 @@ TEST_P(VLMServableExecutionTestParameterized, unaryBasicOnlyImage) {
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 // Images are accepted, but expected output can't be predicted
@@ -221,11 +221,11 @@ TEST_P(VLMServableExecutionTestParameterized, unaryMultipleImageTagOrderPasses) 
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    parsedResponse.Parse(response.c_str());
-    ASSERT_TRUE(parsedResponse["choices"].IsArray());
-    ASSERT_EQ(parsedResponse["choices"].Capacity(), 1);
+    parsedOutput.Parse(response.c_str());
+    ASSERT_TRUE(parsedOutput["choices"].IsArray());
+    ASSERT_EQ(parsedOutput["choices"].Capacity(), 1);
     int i = 0;
-    for (auto& choice : parsedResponse["choices"].GetArray()) {
+    for (auto& choice : parsedOutput["choices"].GetArray()) {
         if (modelName.find("legacy") == std::string::npos) {
             ASSERT_TRUE(choice["finish_reason"].IsString());
             EXPECT_STREQ(choice["finish_reason"].GetString(), "length");
@@ -237,13 +237,13 @@ TEST_P(VLMServableExecutionTestParameterized, unaryMultipleImageTagOrderPasses) 
         EXPECT_STREQ(choice["message"]["role"].GetString(), "assistant");
     }
 
-    ASSERT_TRUE(parsedResponse["usage"].IsObject());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["prompt_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
-    ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
-    ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
-    EXPECT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
-    EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
+    ASSERT_TRUE(parsedOutput["usage"].IsObject());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["prompt_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["completion_tokens"].IsInt());
+    ASSERT_TRUE(parsedOutput["usage"].GetObject()["total_tokens"].IsInt());
+    ASSERT_EQ(parsedOutput["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    EXPECT_STREQ(parsedOutput["model"].GetString(), modelName.c_str());
+    EXPECT_STREQ(parsedOutput["object"].GetString(), "chat.completion");
 }
 
 TEST_P(VLMServableExecutionTestParameterized, UnaryRestrictedTagUsed) {
