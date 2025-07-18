@@ -2,8 +2,7 @@
 
 Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
 It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct) quantized to INT4 precision and converted to IR format.
-You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and 
-hardware configuration.
+You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and hardware configuration.
 
 ## Requirements
 - Linux or Windows 11
@@ -11,7 +10,7 @@ hardware configuration.
 - Intel iGPU or ARC GPU
 
 ## Deployment Steps
- 
+
 ### 1. Deploy the Model
 ::::{tab-set}
 
