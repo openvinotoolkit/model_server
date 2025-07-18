@@ -110,66 +110,6 @@ func printPredictionFromResponse(responseProto *framework.TensorProto){
 	fmt.Printf("Predicted class: %s\nClassification confidence: %f%%\n", label, maxVal*100)
 }
 
-func run_binary_input(servingAddress string, imgPath string) {
-	// Read the image in binary form
-	imgBytes, err := ioutil.ReadFile(imgPath)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// Create Predict Request to OVMS
-	predictRequest := &pb.PredictRequest{
-		ModelSpec: &pb.ModelSpec{
-			Name:          MODEL_NAME,
-			SignatureName: "serving_default",
-			VersionChoice: &pb.ModelSpec_Version{
-				Version: &google_protobuf.Int64Value{
-					Value: int64(0),
-				},
-			},
-		},
-		Inputs: map[string]*framework.TensorProto{
-			INPUT_NAME: &framework.TensorProto{
-				Dtype: framework.DataType_DT_STRING,
-				TensorShape: &framework.TensorShapeProto{
-					Dim: []*framework.TensorShapeProto_Dim{
-						&framework.TensorShapeProto_Dim{
-							Size: int64(1),
-						},
-					},
-				},
-				StringVal: [][]byte{imgBytes},
-			},
-		},
-	}
-
-	// Setup connection with the model server via gRPC
-	conn, err := grpc.Dial(servingAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Cannot connect to the grpc server: %v\n", err)
-	}
-	defer conn.Close()
-
-	// Create client instance to prediction service
-	client := pb.NewPredictionServiceClient(conn)
-
-	// Send predict request and receive response
-	predictResponse, err := client.Predict(context.Background(), predictRequest)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	log.Println("Request sent successfully")
-
-	// Read prediction results
-	responseProto, ok := predictResponse.Outputs[OUTPUT_NAME]
-	if !ok {
-		log.Fatalf("Expected output: %s does not exist in the response", OUTPUT_NAME)
-	}
-	
-	printPredictionFromResponse(responseProto)
-}
-
 func run_with_conversion(servingAddress string, imgPath string) {
 	file, err := os.Open(imgPath)
 	if err != nil {
@@ -286,7 +226,6 @@ func run_with_conversion(servingAddress string, imgPath string) {
 
 func main() {
 	servingAddress := flag.String("serving-address", "localhost:8500", "The tensorflow serving address")
-	binaryInput := flag.Bool("binary-input", false, "Send JPG/PNG raw bytes")
 	flag.Parse()
 
 	if flag.NArg() > 2 {
@@ -300,9 +239,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *binaryInput {
-		run_binary_input(*servingAddress, imgPath)
-	} else {
-		run_with_conversion(*servingAddress, imgPath)
-	}
+	run_with_conversion(*servingAddress, imgPath)
 }
