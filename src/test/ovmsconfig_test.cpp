@@ -965,7 +965,7 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--task",
-        (char*)"text_generation",   
+        (char*)"text_generation",
     };
 
     int arg_count = 8;
