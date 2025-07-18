@@ -67,12 +67,16 @@ void SetEnvironmentVar(const std::string& var, const std::string& val);
 void UnSetEnvironmentVar(const std::string& var);
 const std::string GetEnvVar(const std::string& var);
 
+std::string dirTree(const std::string& path, const std::string& indent = "");
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
 
+#ifdef _WIN32
+const std::string getWindowsRepoRootPath();
+#endif
 void adjustConfigForTargetPlatform(std::string& input);
 const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
 std::string adjustConfigForTargetPlatformCStr(const char* input);
@@ -728,8 +732,12 @@ public:
         models.clear();
         spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
     }
+    /*
+     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
+     */
     ovms::Status loadConfig(const std::string& jsonFilename) {
-        return ModelManager::loadConfig(jsonFilename);
+        this->configFilename = jsonFilename;
+        return ModelManager::loadConfig();
     }
 
     /**
@@ -804,6 +812,7 @@ protected:
     }
 
     void TearDown() override {
+        SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
         std::filesystem::remove_all(directoryPath);
     }
 
@@ -1031,6 +1040,7 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizeAndEnsureFree(std::string& port);
 void randomizeAndEnsureFrees(std::string& port1, std::string& port2);
+std::string getOvmsTestExecutablePath();
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
@@ -1078,8 +1088,8 @@ public:
     std::string inputConfig;
 #if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
-        auto it = this->pythonNodeResourcesMap.find(nodeName);
-        if (it == std::end(pythonNodeResourcesMap)) {
+        auto it = this->sidePacketMaps.pythonNodeResourcesMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.pythonNodeResourcesMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1088,8 +1098,8 @@ public:
 #endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
-        auto it = this->genAiServableMap.find(nodeName);
-        if (it == std::end(genAiServableMap)) {
+        auto it = this->sidePacketMaps.genAiServableMap.find(nodeName);
+        if (it == std::end(this->sidePacketMaps.genAiServableMap)) {
             return nullptr;
         } else {
             return it->second.get();
@@ -1100,7 +1110,7 @@ public:
         return this->validateForConfigLoadableness();
     }
 
-    ovms::GenAiServableMap& getGenAiServableMap() { return this->genAiServableMap; }
+    ovms::GenAiServableMap& getGenAiServableMap() { return this->sidePacketMaps.genAiServableMap; }
 
     DummyMediapipeGraphDefinition(const std::string name,
         const ovms::MediapipeGraphConfig& config,

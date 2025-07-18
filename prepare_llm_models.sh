@@ -29,8 +29,9 @@ VLM_MODEL="OpenGVLab/InternVL2-1B"
 QWEN3_MODEL="Qwen/Qwen3-8B"
 LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
+PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 
-MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$EMBEDDING_MODEL/ov")
+MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$PHI4_MODEL" "$EMBEDDING_MODEL/ov" "$RERANK_MODEL/ov")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -83,13 +84,19 @@ fi
 if [ -d "$1/$EMBEDDING_MODEL/ov" ]; then
   echo "Models directory "$1/$EMBEDDING_MODEL/ov" exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
 fi
 
 if [ -d "$1/$RERANK_MODEL" ]; then
   echo "Models directory $1/$RERANK_MODEL exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
+fi
+
+if [ -d "$1/$RERANK_MODEL/ov" ]; then
+  echo "Models directory $1/$RERANK_MODEL/ov exists. Skipping downloading models."
+else
+  python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --model_name $RERANK_MODEL/ov
 fi
 
 if [ -d "$1/$QWEN3_MODEL" ]; then
@@ -111,4 +118,11 @@ if [ -d "$1/$HERMES3_MODEL" ]; then
 else
   mkdir -p $1/$HERMES3_MODEL
   convert_tokenizer $HERMES3_MODEL --with_detokenizer -o $1/$HERMES3_MODEL
+fi
+
+if [ -d "$1/$PHI4_MODEL" ]; then
+  echo "Models directory $1/$PHI4_MODEL exists. Skipping downloading models."
+else
+  mkdir -p $1/$PHI4_MODEL
+  convert_tokenizer $PHI4_MODEL --with_detokenizer -o $1/$PHI4_MODEL
 fi

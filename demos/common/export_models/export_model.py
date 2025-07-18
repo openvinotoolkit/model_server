@@ -30,6 +30,7 @@ def add_common_arguments(parser):
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
     parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
     parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
+    parser.add_argument('--extra_quantization_params', required=False, help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
@@ -38,7 +39,6 @@ parser_text = subparsers.add_parser('text_generation', help='export model for ch
 add_common_arguments(parser_text)
 parser_text.add_argument('--pipeline_type', default=None, choices=["LM", "LM_CB", "VLM", "VLM_CB", "AUTO"], help='Type of the pipeline to be used. AUTO is used by default', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
-parser_text.add_argument('--extra_quantization_params', help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -51,32 +51,41 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
+parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes3","qwen3"], help='Set the type of model chat template and output parser', dest='tools_model_type')
 
-parser_embeddings = subparsers.add_parser('embeddings', help='export model for embeddings endpoint')
+parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
 parser_embeddings.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_embeddings.add_argument('--version', default=1, type=int, help='version of the model', dest='version')
 
-parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint')
+parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
 parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 
-parser_rerank = subparsers.add_parser('rerank', help='export model for rerank endpoint')
+parser_rerank = subparsers.add_parser('rerank', help='[deprecated] export model for rerank endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_rerank)
 parser_rerank.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 parser_rerank.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
 parser_rerank.add_argument('--version', default="1", help='version of the model', dest='version')
 
+parser_rerank_ov = subparsers.add_parser('rerank_ov', help='export model for rerank endpoint with directory structure aligned with OpenVINO tools')
+add_common_arguments(parser_rerank_ov)
+parser_rerank_ov.add_argument('--num_streams', default="1", help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
+parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help='Maximum length of input documents in tokens', dest='max_doc_length')
+
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_image_generation.add_argument('--resolution', default="", help='Selection of allowed resolutions in a format of WxH; W=width H=height, space separated. If only one is selected, the pipeline will be reshaped to static.', dest='resolution')
+parser_image_generation.add_argument('--guidance_scale', default="", help='Static guidance scale for the image generation requests. If not specified, default 7.5f is used.', dest='guidance_scale')
+parser_image_generation.add_argument('--num_images_per_prompt', default="", help='Static number of images to be generated per the image generation request. If not specified, default 1 is used.', dest='num_images_per_prompt')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
-parser_image_generation.add_argument('--max_number_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_number_images_per_prompt')
+parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
 args = vars(parser.parse_args())
@@ -128,6 +137,25 @@ node {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
       models_path: "{{model_path}}",
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
+      target_device: "{{target_device|default("CPU", true)}}"
+    }
+  }
+}
+"""
+
+rerank_graph_ov_template = """
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+  name: "RerankExecutor"
+  input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
+  calculator: "RerankCalculatorOV"
+  input_stream: "REQUEST_PAYLOAD:input"
+  output_stream: "RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+      models_path: "{{model_path}}",
+      target_device: "{{target_device|default("CPU", true)}}"
     }
   }
 }
@@ -194,6 +222,8 @@ node: {
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
+          {%- if tools_model_type %}
+          response_parser: "{{tools_model_type}}",{% endif %}
       }
   }
   input_stream_handler {
@@ -261,12 +291,18 @@ node: {
       {%- if plugin_config_str %}
       plugin_config: '{{plugin_config_str}}',{% endif %}
       device: "{{target_device|default("CPU", true)}}",
+      {%- if resolution %}
+      resolution: "{{resolution}}",{% endif %}
+      {%- if num_images_per_prompt %}
+      num_images_per_prompt: {{num_images_per_prompt}},{% endif %}
+      {%- if guidance_scale %}
+      guidance_scale: {{guidance_scale}},{% endif %}
       {%- if max_resolution %}
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
       default_resolution: '{{default_resolution}}',{% endif %}
-      {%- if max_number_images_per_prompt > 0 %}
-      max_number_images_per_prompt: {{max_number_images_per_prompt}},{% endif %}
+      {%- if max_num_images_per_prompt > 0 %}
+      max_num_images_per_prompt: {{max_num_images_per_prompt}},{% endif %}
       {%- if default_num_inference_steps > 0 %}
       default_num_inference_steps: {{default_num_inference_steps}},{% endif %}
       {%- if max_num_inference_steps > 0 %}
@@ -352,11 +388,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if precision != 'int4':
                     print("NPU target device requires int4 precision. Changing to int4")
                     precision = 'int4'
-                if task_parameters['extra_quantization_params'] is None:
+                if task_parameters['extra_quantization_params'] == "":
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
-            if task_parameters['extra_quantization_params'] is None:
-                task_parameters['extra_quantization_params'] = ""
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
@@ -404,36 +438,54 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
             raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
-    ### 
 
     plugin_config_str = json.dumps(plugin_config)
     task_parameters['plugin_config'] = plugin_config_str
     
     os.makedirs(os.path.join(model_repository_path, model_name), exist_ok=True)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(text_generation_graph_template)
-    graph_content = gtemplate.render(tokenizer_model="{}_tokenizer_model".format(model_name), embeddings_model="{}_embeddings_model".format(model_name), 
-                                     model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
+    print("task_parameters", task_parameters)
+    graph_content = gtemplate.render(model_path=model_path, draft_model_dir_name=draft_model_dir_name, **task_parameters)
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+
+    if template_parameters.get("tools_model_type") is not None:
+        print("Adding tuned chat template")
+        template_mapping = {
+            "phi4": "tool_chat_template_phi4_mini.jinja",
+            "llama3": "tool_chat_template_llama3.1_json.jinja",
+            "hermes3": "tool_chat_template_hermes.jinja",
+            "qwen3": None
+            }
+        template_name = template_mapping[task_parameters.get("tools_model_type")]
+        if template_name is not None:
+            template_path = os.path.join(model_repository_path, model_name, "template.jinja")
+            import requests
+            response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
+            print(response.raise_for_status())
+            with open(template_path, "wb") as f:
+                f.write(response.content)
+            print(f"Downloaded tuned chat template to {template_path}")
+
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'embeddings', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'embeddings', version, 'model.bin'))
     else: # assume HF model 
         set_max_context_length = ""
         with tempfile.TemporaryDirectory() as tmpdirname:
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
             print("Exporting embeddings model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -469,10 +521,10 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
 
 def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
     set_max_context_length = ""
-    destination_path = os.path.join(model_repository_path, model_name, "ov")
+    destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         if truncate:
@@ -480,32 +532,47 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
             if max_context_length is not None:
                 set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
-        from openvino_tokenizers import convert_tokenizer
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)
     graph_content = gtemplate.render(model_path="./", **task_parameters)
-    with open(os.path.join(model_repository_path, model_name, "ov", 'graph.pbtxt'), 'w') as f:
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name + "_ov", os.path.relpath(os.path.join(model_repository_path, model_name, "ov"), os.path.dirname(config_file_path)))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting rerank model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export rerank model", source_model)
+        print("Exporting tokenizer to ", destination_path)
+        export_rerank_tokenizer(source_model, destination_path, max_doc_length)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(rerank_graph_ov_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_rerank_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, max_doc_length):
-    if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')):
+    if os.path.isfile(os.path.join(model_name, 'openvino_model.xml')):
         print("OV model is source folder. Skipping conversion.")
         os.makedirs(os.path.join(model_repository_path, model_name, 'rerank', version), exist_ok=True)
         os.makedirs(os.path.join(model_repository_path, model_name, 'tokenizer', version), exist_ok=True)
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
-        shutil.move(os.path.join(source_model, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
-        shutil.move(os.path.join(source_model, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.xml'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_tokenizer.bin'), os.path.join(model_repository_path, model_name, 'tokenizer', version, 'model.bin'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.xml'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.xml'))
+        shutil.move(os.path.join(model_repository_path, model_name, 'openvino_model.bin'), os.path.join(model_repository_path, model_name, 'rerank', version, 'model.bin'))
     else: # assume HF model name
         with tempfile.TemporaryDirectory() as tmpdirname:
-            embeddings_path = os.path.join(model_repository_path, model_name,'rerank', version)
+            embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export rerank model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -541,9 +608,10 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     if os.path.isfile(model_index_path):
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
+        print(f'optimum cli command: {optimum_command}')
         if os.system(optimum_command):
-            raise ValueError("Failed to export image generation model model", source_model)   
+            raise ValueError("Failed to export image generation model", source_model)
 
     plugin_config = {}
     assert num_streams >= 0, "num_streams should be a non-negative integer"
@@ -593,6 +661,8 @@ if args['task'] == 'text_generation':
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
 print("template params:", template_parameters)
 
+if template_parameters['extra_quantization_params'] is None:
+    template_parameters['extra_quantization_params'] = ""
 if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
@@ -605,14 +675,21 @@ elif args['task'] == 'embeddings_ov':
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
 
+elif args['task'] == 'rerank_ov':
+    export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
+
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',
         'target_device',
+        'resolution',
+        'num_images_per_prompt',
+        'guidance_scale',
         'max_resolution',
         'default_resolution',
-        'max_number_images_per_prompt',
+        'max_num_images_per_prompt',
         'default_num_inference_steps',
         'max_num_inference_steps',
+        'extra_quantization_params'
     ]}
     export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "graph_export.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -39,9 +40,16 @@
 #include "../schema.hpp"
 #include "graph_export_types.hpp"
 
+#if (MEDIAPIPE_DISABLE == 0)
+#pragma warning(push)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/calculator_graph.h"
-
+#pragma GCC diagnostic pop
+#pragma warning(pop)
+#endif
 namespace ovms {
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
@@ -84,6 +92,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             max_num_batched_tokens: )" << graphSettings.maxNumBatchedTokens.value() << R"(,)";
     }
+    if (graphSettings.responseParser.has_value()) {
+        oss << R"(
+            response_parser: ")" << graphSettings.responseParser.value() << R"(",)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
@@ -108,195 +120,106 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         }
     }
     })";
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
-static Status validateSubconfigSchema(const std::string& subconfig, const std::string& type) {
-    rapidjson::Document subconfigJson;
-    rapidjson::ParseResult parseResult = subconfigJson.Parse(subconfig.c_str());
-    if (parseResult.Code()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Created {} subconfig file is not a valid JSON file. Error: {}", type, rapidjson::GetParseError_En(parseResult.Code()));
-        return StatusCode::JSON_INVALID;
-    }
-    if (validateJsonAgainstSchema(subconfigJson, MEDIAPIPE_SUBCONFIG_SCHEMA.c_str()) != StatusCode::OK) {
-        SPDLOG_ERROR("Created {} subconfig file is not in valid configuration format", type);
-        return StatusCode::JSON_INVALID;
-    }
-    return StatusCode::OK;
-}
-
-static Status createRerankSubconfigTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                    "base_path": "tokenizer"
-                }
-            },
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_rerank_model",
-                    "base_path": "rerank",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                }
-            }
-        ]
-    })";
-    auto status = validateSubconfigSchema(oss.str(), "rerank");
-    if (!status.ok()){
-        return status;
-    }
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
-}
-
-static Status createEmbeddingsSubconfigTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
-    // clang-format off
-    oss << R"(
-    {
-        "model_config_list": [
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_tokenizer_model",
-                    "base_path": "tokenizer"
-                }
-            },
-            { "config":
-                {
-                    "name": ")" << graphSettings.modelName << R"(_embeddings_model",
-                    "base_path": "embeddings",
-                    "target_device": ")" << graphSettings.targetDevice << R"(",
-                    "plugin_config": { "NUM_STREAMS": ")" << graphSettings.numStreams << R"(" }
-                }
-            }
-        ]
-    })";
-    auto status = validateSubconfigSchema(oss.str(), "embeddings");
-    if (!status.ok()){
-        return status;
-    }
-    // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "subconfig.json"});
-    return FileSystem::createFileOverwrite(fullPath, oss.str());
-}
-
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
     // clang-format off
     oss << R"(
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "RerankCalculatorOV"
+    input_side_packet: "RERANK_NODE_RESOURCES:rerank_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:tokenizer"
     node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_tokenizer_model"
+        [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
+            models_path: ")"
+            << graphOkPath << R"(",
+            max_allowed_chunks: )"
+            << graphSettings.maxAllowedChunks << R"(,
+            target_device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
     }
-    }
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:rerank"
-    node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_rerank_model"
-        }
-    }
-    }
-    node {
-        input_side_packet: "TOKENIZER_SESSION:tokenizer"
-        input_side_packet: "RERANK_SESSION:rerank"
-        calculator: "RerankCalculator"
-        input_stream: "REQUEST_PAYLOAD:input"
-        output_stream: "RESPONSE_PAYLOAD:output"
-    })";
+})";
 
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created rerank graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
-    if (!status.ok())
-        return status;
-
-    return createRerankSubconfigTemplate(directoryPath, graphSettings);
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
+
     // clang-format off
     oss << R"(
+input_stream: "REQUEST_PAYLOAD:input"
+output_stream: "RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "EmbeddingsCalculatorOV"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:tokenizer"
     node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_tokenizer_model"
-        }
-    }
-    }
-    node {
-    calculator: "OpenVINOModelServerSessionCalculator"
-    output_side_packet: "SESSION:embeddings"
-    node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-        servable_name: ")"
-        << graphSettings.modelName << R"(_embeddings_model"
-        }
-    }
-    }
-    node {
-        input_side_packet: "TOKENIZER_SESSION:tokenizer"
-        input_side_packet: "EMBEDDINGS_SESSION:embeddings"
-        calculator: "EmbeddingsCalculator"
-        input_stream: "REQUEST_PAYLOAD:input"
-        output_stream: "RESPONSE_PAYLOAD:output"
-        node_options: {
-            [type.googleapis.com / mediapipe.EmbeddingsCalculatorOptions]: {
+        [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
+            models_path: ")"
+            << graphOkPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
+            mean_pooling: )"
+            << graphSettings.meanPooling << R"(,
+            target_device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
     }
-    })";
+})";
 
+#if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
     if (!success) {
         SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+#endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    auto status = FileSystem::createFileOverwrite(fullPath, oss.str());
-    if (!status.ok())
-        return status;
-
-    return createEmbeddingsSubconfigTemplate(directoryPath, graphSettings);
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
@@ -315,11 +238,26 @@ node: {
   node_options: {
       [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
           models_path: ")" << graphSettings.modelPath << R"("
-          target_device: ")" << graphSettings.targetDevice << R"(")";
+          device: ")" << graphSettings.targetDevice << R"(")";
 
     if (graphSettings.pluginConfig.size()) {
         oss << R"(
           plugin_config: ')" << graphSettings.pluginConfig << R"(')";
+    }
+
+    if (graphSettings.resolution.size()) {
+        oss << R"(
+          resolution: ")" << graphSettings.resolution << R"(")";
+    }
+
+    if (graphSettings.numImagesPerPrompt.has_value()) {
+        oss << R"(
+          num_images_per_prompt: )" << graphSettings.numImagesPerPrompt.value();
+    }
+
+    if (graphSettings.guidanceScale.has_value()) {
+        oss << R"(
+          guidance_scale: )" << graphSettings.guidanceScale.value();
     }
 
     if (graphSettings.maxResolution.size()) {
@@ -334,7 +272,7 @@ node: {
 
     if (graphSettings.maxNumberImagesPerPrompt.has_value()) {
         oss << R"(
-          max_number_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
+          max_num_images_per_prompt: )" << graphSettings.maxNumberImagesPerPrompt.value();
     }
 
     if (graphSettings.defaultNumInferenceSteps.has_value()) {
@@ -414,6 +352,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
     }
+    return StatusCode::INTERNAL_ERROR;
 }
 
 std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {

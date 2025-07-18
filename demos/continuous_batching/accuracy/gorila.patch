@@ -1,0 +1,105 @@
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
+index db41f84..9200637 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
+@@ -863,7 +863,7 @@ api_inference_model_map = {
+         input_price=None,
+         output_price=None,
+         is_fc_model=True,
+-        underscore_to_dot=True,
++        underscore_to_dot=True, 
+     ),
+     "qwen3-0.6b": ModelConfig(
+         model_name="qwen3-0.6b",
+@@ -1930,6 +1930,78 @@ third_party_inference_model_map = {
+         is_fc_model=False,
+         underscore_to_dot=False,
+     ),
++    "openvino-qwen3-8b-int8-FC": ModelConfig(
++        model_name="openvino-qwen3-8b-int8-FC",
++        display_name="openvino-qwen3-8b-int8-FC",
++        url="https://huggingface.co/Qwen/Qwen3-8B",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "openvino-qwen3-8b-int4-FC": ModelConfig(
++        model_name="ovms-qwen3-8b-int4-FC",
++        display_name="ovms-qwen3-8b-int4-FC",
++        url="https://huggingface.co/Qwen/Qwen3-8B",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "openvino-qwen3-4b-int8-FC": ModelConfig(
++        model_name="openvino-qwen3-4b-int8-FC",
++        display_name="openvino-qwen3-4b-int8-FC",
++        url="https://huggingface.co/Qwen/Qwen3-4B",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "openvino-qwen3-4b-int4-FC": ModelConfig(
++        model_name="openvino-qwen3-4b-int4-FC",
++        display_name="openvino-qwen3-4b-int4-FC",
++        url="https://huggingface.co/Qwen/Qwen3-4B",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "openvino-phi-4-mini-instruct-int8-FC": ModelConfig(
++        model_name="openvino-phi-4-mini-instruct-int8-FC",
++        display_name="openvino-phi-4-mini-instruct-int8-FC",
++        url="https://huggingface.co/microsoft/phi4-mini-instruct",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "openvino-phi-4-mini-instruct-int4-FC": ModelConfig(
++        model_name="openvino-phi-4-mini-instruct-int4-FC",
++        display_name="openvino-phi-4-mini-instruct-int4-FC",
++        url="https://huggingface.co/microsoft/phi4-mini-instruct",
++        org="OpenAI",
++        license="apache-2.0",
++        model_handler=OpenAIHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
+ }
+ 
+ 
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai.py
+index 656efc2..a1345a1 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai.py
+@@ -22,7 +22,7 @@ class OpenAIHandler(BaseHandler):
+     def __init__(self, model_name, temperature) -> None:
+         super().__init__(model_name, temperature)
+         self.model_style = ModelStyle.OpenAI
+-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
++        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY","unused"), base_url=os.getenv("OPENAI_BASE_URL","http://localhost:8000"))
+ 
+     def decode_ast(self, result, language="Python"):
+         if "FC" in self.model_name or self.is_fc_model:

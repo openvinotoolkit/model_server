@@ -67,7 +67,11 @@ void GraphCLIParser::createOptions() {
         ("dynamic_split_fuse",
             "Dynamic split fuse algorithm enabled. Default true.",
             cxxopts::value<std::string>()->default_value("true"),
-            "DYNAMIC_SPLIT_FUSE");
+            "DYNAMIC_SPLIT_FUSE")
+        ("response_parser",
+            "Response parser",
+            cxxopts::value<std::string>(),
+            "RESPONSE_PARSER");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -101,7 +105,7 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
     return  result->unmatched();
 }
 
-void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
     graphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
@@ -109,10 +113,6 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         graphSettings.modelName = modelName;
     } else {
         graphSettings.modelName = hfSettings.sourceModel;
-    }
-    // Set model path
-    if (modelPath != "") {
-        graphSettings.modelPath = modelPath;
     }
 
     if (nullptr == result) {
@@ -133,6 +133,10 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         }
         if (result->count("max_num_batched_tokens")) {
             graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
+        }
+
+        if (result->count("response_parser")) {
+            graphSettings.responseParser = result->operator[]("response_parser").as<std::string>();
         }
 
         // Plugin configuration

@@ -41,7 +41,7 @@ struct PluginConfigSettingsImpl {
 };
 
 struct TextGenGraphSettingsImpl {
-    std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelPath = "./";
     std::string modelName = "";
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
@@ -52,30 +52,35 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
+    std::optional<std::string> responseParser;
 };
 
 struct EmbeddingsGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
-    std::string normalize = "false";
+    std::string normalize = "true";
+    std::string meanPooling = "false";
 };
 
 struct RerankGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
-    uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint64_t maxAllowedChunks = 10000;
 };
 
 struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
+    std::optional<uint32_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
@@ -105,6 +110,10 @@ struct ServerSettingsImpl {
     std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool allowCredentials = false;
+    std::string allowedOrigins{"*"};
+    std::string allowedMethods{"*"};
+    std::string allowedHeaders{"*"};
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif

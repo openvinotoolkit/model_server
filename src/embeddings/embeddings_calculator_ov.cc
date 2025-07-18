@@ -40,7 +40,7 @@
 #include "../model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "embeddings_servable.hpp"
+#include "../sidepacket_servable.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -63,7 +63,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
 
 protected:
-    std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
+    std::shared_ptr<ovms::SidepacketServable> embeddings_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -117,8 +117,8 @@ public:
         size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
         ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
-        auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getEmbeddingsInferRequestsQueue(), unused);
-        ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+        ov::genai::TokenizedInputs tokens;
+        ov::Tensor typeIds;
         if (embeddings_session->getMaxModelLength().has_value()) {
             max_context_length = embeddings_session->getMaxModelLength().value();
         } else {
@@ -128,19 +128,16 @@ public:
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 received_batch_size = strings->size();
-                auto tokens = embeddings_session->getTokenizer().encode(*strings);
+                tokens = embeddings_session->getTokenizer().encode(*strings);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
                 size_t input_ids_size = tokens.input_ids.get_shape()[1];
                 if (input_ids_size > max_context_length) {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
-                inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
-                inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
-                if (inferRequest.get_compiled_model().inputs().size() == 3) {
-                    ov::Tensor typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
+                if (embeddings_session->getNumberOfModelInputs() == 3) {
+                    typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
                     std::fill_n(typeIds.data<int64_t>(), tokens.input_ids.get_size(), 0);
-                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
                 }
                 size_t attendedTokens = 0;
                 if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i64) {
@@ -159,31 +156,31 @@ public:
                 handler.setPromptTokensUsage(attendedTokens);
             } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
                 received_batch_size = tokenized_documents->size();
-                size_t tokens = 0;
+                size_t numberOfTokens = 0;
                 size_t token_count_of_longest_document = 0;
                 for (const auto& document_tokens : *tokenized_documents) {
                     token_count_of_longest_document = std::max(token_count_of_longest_document, document_tokens.size());
-                    tokens += document_tokens.size();
+                    numberOfTokens += document_tokens.size();
                 }
-                handler.setPromptTokensUsage(tokens);
-                auto inputsIds = ov::Tensor{
+                handler.setPromptTokensUsage(numberOfTokens);
+                tokens.input_ids = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
-                size_t input_ids_size = inputsIds.get_shape()[1];
+                size_t input_ids_size = tokens.input_ids.get_shape()[1];
                 if (input_ids_size > max_context_length) {
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
-                auto attentionMask = ov::Tensor{
+                tokens.attention_mask = ov::Tensor{
                     ov::element::i64,
                     ov::Shape{received_batch_size, token_count_of_longest_document}};
                 try {
                     for (size_t i = 0; i < received_batch_size; i++) {
-                        int64_t* input_ids_start = reinterpret_cast<int64_t*>(inputsIds.data()) + i * token_count_of_longest_document;
+                        int64_t* input_ids_start = reinterpret_cast<int64_t*>(tokens.input_ids.data()) + i * token_count_of_longest_document;
                         std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, embeddings_session->getPadToken());
                         std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
 
-                        int64_t* attention_mask_start = reinterpret_cast<int64_t*>(attentionMask.data()) + i * token_count_of_longest_document;
+                        int64_t* attention_mask_start = reinterpret_cast<int64_t*>(tokens.attention_mask.data()) + i * token_count_of_longest_document;
                         std::fill(attention_mask_start, attention_mask_start + token_count_of_longest_document, 0);
                         std::fill(attention_mask_start, attention_mask_start + tokenized_documents->at(i).size(), 1);
                     }
@@ -192,16 +189,21 @@ public:
                 } catch (std::exception& e) {
                     SPDLOG_DEBUG("Caught generic exception from preparing embeddings inputs: {}", e.what());
                 }
-                ov::Tensor typeIds;
-                if (inferRequest.get_compiled_model().inputs().size() == 3) {
+                if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds = ov::Tensor{ov::element::i64, ov::Shape{received_batch_size, token_count_of_longest_document}};
                     int64_t* token_type_ids_start = reinterpret_cast<int64_t*>(typeIds.data());
                     std::fill(token_type_ids_start, token_type_ids_start + received_batch_size * token_count_of_longest_document, 1);
-                    inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
                 }
-
-                inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, inputsIds);
-                inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, attentionMask);
+            } else {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings input is of not supported type");
+                return absl::InvalidArgumentError("Input should be string, array of strings or array of integers");
+            }
+            auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
+            ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
+            inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
+            inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
+            if (embeddings_session->getNumberOfModelInputs() == 3) {
+                inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
             }
             inferRequest.start_async();
             inferRequest.wait();

@@ -213,6 +213,9 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
     });
+    registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processOptions(request_components, response, request_body);
+    });
 }
 
 Status HttpRestApiHandler::processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
@@ -623,6 +626,11 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
     return StatusCode::OK;
 }
 
+Status HttpRestApiHandler::processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    // Options are returned from within drogon PreSendingAdvice
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
     ::KFSGetModelStatusRequest grpc_request;
     ::KFSGetModelStatusResponse grpc_response;
@@ -749,7 +757,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     const std::unordered_map<std::string, std::string>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
-    if (http_method != "POST" && http_method != "GET") {
+    if (http_method != "POST" && http_method != "GET" && http_method != "OPTIONS") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
@@ -883,6 +891,10 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                    std::regex_match(request_path, sm, configReloadRegex))
                    ? StatusCode::REST_UNSUPPORTED_METHOD
                    : StatusCode::REST_INVALID_URL;
+    }
+    if (http_method == "OPTIONS") {
+        requestComponents.type = Options;
+        return StatusCode::OK;
     }
     return StatusCode::REST_INVALID_URL;
 }
@@ -1140,10 +1152,8 @@ inline static std::string createErrorJsonWithMessage(std::string message) {
 Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, ModelManager& manager) {
     SPDLOG_DEBUG("Processing config reload request started.");
     Status status;
-    auto& config = ovms::Config::instance();
-
     bool reloadNeeded = false;
-    if (manager.getConfigFilename() != "") {
+    if (manager.isStartedWithConfigFile()) {
         status = manager.configFileReloadNeeded(reloadNeeded);
         if (!reloadNeeded) {
             if (status == StatusCode::CONFIG_FILE_TIMESTAMP_READING_FAILED) {
@@ -1154,14 +1164,14 @@ Status HttpRestApiHandler::processConfigReloadRequest(std::string& response, Mod
     }
 
     if (reloadNeeded) {
-        status = manager.loadConfig(config.configPath());
+        status = manager.loadConfig();
         if (!status.ok()) {
             response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
             return status;
         }
     } else {
         if (!status.ok()) {
-            status = manager.loadConfig(config.configPath());
+            status = manager.loadConfig();
             if (!status.ok()) {
                 response = createErrorJsonWithMessage("Reloading config file failed. Check server logs for more info.");
                 return status;

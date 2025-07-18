@@ -27,6 +27,7 @@
 #include "src/servables_config_manager_module/listmodels.hpp"
 #include "src/modelextensions.hpp"
 
+#include "../module.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "src/stringutils.hpp"
@@ -146,6 +147,7 @@ const std::string expectedGraphContents = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
+    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -168,6 +170,17 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
     this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
 }
 
 class TestHfDownloader : public ovms::HfDownloader {
@@ -197,8 +210,8 @@ TEST(HfDownloaderClassTest, Methods) {
 
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
-    ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
@@ -206,6 +219,31 @@ TEST(HfDownloaderClassTest, Methods) {
 #endif
     ASSERT_EQ(hfDownloader->getGraphDirectory(downloadPath, modelName), expectedPath);
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
+}
+
+TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    hfEndpoint = "https://www.new_hf.com/";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    hfEndpoint = "www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "http://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "git://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "ssh://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "what_ever_is_here://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
 }
 
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
@@ -249,7 +287,7 @@ TEST_F(HfDownloaderHfEnvTest, Methods) {
 
     std::string endpoint = "www.new_hf.com";
     this->guard.unset(endpoint_env);
-    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "huggingface.co/");
+    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "https://huggingface.co/");
     this->guard.set(endpoint_env, endpoint);
 
     std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();
@@ -331,4 +369,97 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     }
 
     git_libgit2_shutdown();
+}
+
+class DefaultEmptyValuesConfig : public ovms::Config {
+public:
+    DefaultEmptyValuesConfig() :
+        Config() {
+        std::string port{"9000"};
+        randomizeAndEnsureFree(port);
+        this->serverSettings.grpcPort = std::stoul(port);
+    }
+
+    ovms::ServerSettingsImpl& getServerSettings() {
+        return this->serverSettings;
+    }
+
+    ovms::ModelsSettingsImpl& getModelSettings() {
+        return this->modelsSettings;
+    }
+};
+
+class ServerShutdownGuard {
+    ovms::Server& ovmsServer;
+
+public:
+    ServerShutdownGuard(ovms::Server& ovmsServer) :
+        ovmsServer(ovmsServer) {}
+    ~ServerShutdownGuard() {
+        ovmsServer.shutdownModules();
+    }
+};
+
+TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::LIST_MODELS_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][listmodels.cpp:121] Path is not a directory:
+    EXPECT_TRUE(retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::GRPC_SERVER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::MODIFY_CONFIG_MODE;
+    auto retCode = server.startModules(config);
+    // Empty modelSettings.configPath
+    // [error][config_export.cpp:197] Directory path empty:
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }

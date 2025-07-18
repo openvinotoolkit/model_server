@@ -19,7 +19,7 @@
 #include "openvino/runtime/core.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/op/multiply.hpp"
-#include "../ovinferrequestsqueue.hpp"
+#include "ovinferrequestsqueue.hpp"
 
 #include <memory>
 #include <string>
@@ -33,48 +33,49 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "src/embeddings/embeddings_calculator_ov.pb.h"
-
 #include <openvino/genai/tokenizer.hpp>
 
 namespace ovms {
 
-class EmbeddingsModel {
+struct SidepacketServable {
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
     std::shared_ptr<ov::Model> model;
     ov::CompiledModel compiledModel;
     std::unique_ptr<OVInferRequestsQueue> inferRequestsQueue;
-
-public:
-    void prepareInferenceRequestsQueue(const uint32_t& numberOfParallelInferRequests);
-    OVInferRequestsQueue& getInferRequestsQueue() {
-        return *inferRequestsQueue;
-    }
-    EmbeddingsModel(const std::filesystem::path& model_dir,
-        const std::string& target_device,
-        const ov::AnyMap& properties);
-};
-
-class EmbeddingsServable {
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer;
-    std::shared_ptr<EmbeddingsModel> embeddings;
-    int64_t pad_token;
+    int64_t pad_token = 0;
+    int64_t eos_token = 0;
+    int64_t bos_token = 0;
+    int64_t sep_token = 0;
     std::optional<uint32_t> maxModelLength;
 
 public:
-    EmbeddingsServable(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
-    OVInferRequestsQueue& getEmbeddingsInferRequestsQueue() {
-        return embeddings->getInferRequestsQueue();
+    SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
+    OVInferRequestsQueue& getInferRequestsQueue() {
+        return *inferRequestsQueue;
     }
     ov::genai::Tokenizer& getTokenizer() {
         return *tokenizer;
     }
-    int64_t& getPadToken() {
+    const int64_t getPadToken() {
         return pad_token;
     }
-    std::optional<uint32_t>& getMaxModelLength() {
+    const int64_t getEosToken() {
+        return eos_token;
+    }
+    const int64_t getBosToken() {
+        return bos_token;
+    }
+    const int64_t getSepToken() {
+        return sep_token;
+    }
+    const std::optional<uint32_t> getMaxModelLength() {
         return maxModelLength;
+    }
+    const size_t getNumberOfModelInputs() {
+        return compiledModel.inputs().size();
     }
 };
 
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 }  // namespace ovms

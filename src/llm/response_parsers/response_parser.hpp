@@ -24,6 +24,7 @@
 #include "llama3_response_parser.hpp"
 #include "qwen3_response_parser.hpp"
 #include "hermes3_response_parser.hpp"
+#include "phi4_response_parser.hpp"
 
 namespace ovms {
 class ResponseParser {
@@ -32,19 +33,23 @@ class ResponseParser {
 public:
     ResponseParser() = delete;
     explicit ResponseParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
-        // Parser name is read from tokenizer_config.json, "response_parser_name" field.
         if (parserName == "llama3") {
             parser_impl = std::make_unique<Llama3ResponseParser>(tokenizer);
         } else if (parserName == "qwen3") {
             parser_impl = std::make_unique<Qwen3ResponseParser>(tokenizer);
         } else if (parserName == "hermes3") {
             parser_impl = std::make_unique<Hermes3ResponseParser>(tokenizer);
+        } else if (parserName == "phi4") {
+            parser_impl = std::make_unique<Phi4ResponseParser>(tokenizer);
         } else {
             throw std::invalid_argument("Unsupported response parser: " + parserName);
         }
     }
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) {
         return parser_impl->parse(generatedTokens);
+    }
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) {
+        return parser_impl->parseChunk(chunkResponse);
     }
 };
 }  // namespace ovms

@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -126,6 +126,42 @@ pip3 install requests
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ![zebra](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg)
+
+:::{dropdown} **Unary call with curl using image from local filesystem**
+
+Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](parameters.md) section) when starting docker container: 
+```bash
+docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+-p 8000:8000 -v $(pwd)/models:/workspace:ro -v $(pwd):/images:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json --allowed_local_media_path /images
+```
+
+```bash
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"microsoft/Phi-3.5-vision-instruct\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+```
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "message": {
+        "content": "The picture features a zebra standing in a grassy plain. Zebras are known for their distinctive black and white striped patterns, which help them blend in for camouflage purposes. The zebra pictured is standing on a green field with patches of grass, indicating it may be in its natural habitat. Zebras are typically social animals and are often found in savannahs and grasslands.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1741731554,
+  "model": "microsoft/Phi-3.5-vision-instruct",
+  "object": "chat.completion",
+  "usage": {
+    "prompt_tokens": 19,
+    "completion_tokens": 83,
+    "total_tokens": 102
+  }
+}
+```
+:::
 
 :::{dropdown} **Unary call with python requests library**
 

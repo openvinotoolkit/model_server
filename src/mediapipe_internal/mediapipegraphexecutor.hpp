@@ -80,9 +80,7 @@ class MediapipeGraphExecutor {
     const std::vector<std::string> inputNames;
     const std::vector<std::string> outputNames;
 
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap llmNodeResourcesMap;
-    EmbeddingsServableMap embeddingsResourcesMap;
+    GraphSidePackets sidePacketMaps;
     PythonBackend* pythonBackend;
 
     ::mediapipe::Timestamp currentStreamTimestamp;
@@ -92,7 +90,9 @@ class MediapipeGraphExecutor {
 public:
     static const std::string PYTHON_SESSION_SIDE_PACKET_TAG;
     static const std::string LLM_SESSION_SIDE_PACKET_TAG;
+    static const std::string IMAGE_GEN_SESSION_SIDE_PACKET_TAG;
     static const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG;
+    static const std::string RERANK_SESSION_SIDE_PACKET_TAG;
     static const ::mediapipe::Timestamp STARTING_TIMESTAMP;
 
     MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
@@ -101,7 +101,15 @@ public:
         std::vector<std::string> inputNames, std::vector<std::string> outputNames,
         const PythonNodeResourcesMap& pythonNodeResourcesMap,
         const GenAiServableMap& llmNodeResourcesMap,
-        const EmbeddingsServableMap& embeddingsResourcesMap,
+        const EmbeddingsServableMap& embeddingsServableMap,
+        const RerankServableMap& rerankServableMap,
+        PythonBackend* pythonBackend,
+        MediapipeServableMetricReporter* mediapipeServableMetricReporter);
+    MediapipeGraphExecutor(const std::string& name, const std::string& version, const ::mediapipe::CalculatorGraphConfig& config,
+        stream_types_mapping_t inputTypes,
+        stream_types_mapping_t outputTypes,
+        std::vector<std::string> inputNames, std::vector<std::string> outputNames,
+        const GraphSidePackets& sidePacketMaps,
         PythonBackend* pythonBackend,
         MediapipeServableMetricReporter* mediapipeServableMetricReporter);
 
@@ -136,11 +144,13 @@ public:
         std::map<std::string, mediapipe::Packet> inputSidePackets;
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
 #if (PYTHON_DISABLE == 0)
-        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->sidePacketMaps.pythonNodeResourcesMap).At(STARTING_TIMESTAMP);
 #endif
-        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(this->sidePacketMaps.imageGenPipelinesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
 
-        inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->embeddingsResourcesMap).At(STARTING_TIMESTAMP);
+        inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(this->sidePacketMaps.rerankServableMap).At(STARTING_TIMESTAMP);
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
@@ -281,12 +291,12 @@ public:
                 OVMS_PROFILE_SCOPE("Mediapipe graph creating input side packets");
                 OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
 #if (PYTHON_DISABLE == 0)
-                inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->pythonNodeResourcesMap)
+                inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(this->sidePacketMaps.pythonNodeResourcesMap)
                                                                        .At(STARTING_TIMESTAMP);
 #endif
-                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->llmNodeResourcesMap).At(STARTING_TIMESTAMP);
-
-                inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->embeddingsResourcesMap).At(STARTING_TIMESTAMP);
+                inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(this->sidePacketMaps.genAiServableMap).At(STARTING_TIMESTAMP);
+                inputSidePackets[EMBEDDINGS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<EmbeddingsServableMap>(this->sidePacketMaps.embeddingsServableMap).At(STARTING_TIMESTAMP);
+                // Add image generation side packet in case image generation allow for streaming
             }
 
             {

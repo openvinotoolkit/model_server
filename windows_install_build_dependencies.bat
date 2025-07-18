@@ -124,9 +124,17 @@ IF /I EXIST %bash_path% (
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.2.0.0rc2_x86_64"
-set "genai_ver=openvino_genai_windows_2025.2.0.0rc2_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc2/"
+:: Set default GENAI_PACKAGE_URL if not set
+if "%GENAI_PACKAGE_URL%"=="" (
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250715/openvino_genai_windows_2025.3.0.0.dev20250715_x86_64.zip"
+)
+
+:: Extract genai_ver from GENAI_PACKAGE_URL (filename)
+for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
+
+:: Extract genai_dir from genai_ver (filename without extension)
+for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
+
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
@@ -137,12 +145,12 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
@@ -179,7 +187,7 @@ echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
 set "opencl_ver=v2024.10.24"
-set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
+set "opencl_dir=%opt_install_dir%\opencl"
 
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
@@ -249,55 +257,95 @@ IF /I EXIST %bazel_path% (
 )
 echo [INFO] Bazel installed: %bazel_file%
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install go ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+echo [INFO] Installing go ...
+
+set "go_dir=go"
+set "go_ver=go1.24.4.windows-amd64.zip"
+set "go_http=https://go.dev/dl/"
+
+set "go_zip=%opt_install_dir%\%go_ver%"
+
+:: Download curl
+IF /I EXIST %go_zip% (
+    if %expunge% EQU 1 (
+        del /S /Q %go_zip%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] file exists %go_zip% )
+    
+) ELSE (
+    %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Extract go
+IF /I EXIST %opt_install_dir%\%go_dir% (
+     if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\%go_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else ( echo [INFO] directory exists %opt_install_dir%\%go_dir% )
+    
+) ELSE (
+    C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git - check required version
+set "git_exe=C:\Program Files\Git\mingw64\bin\git.exe"
+set "git_ver_link=https://github.com/git-for-windows/git/releases/download/v2.50.0.windows.2/Git-2.50.0.2-64-bit.exe"
+set "required_ver=git version 2.50.0.windows.2"
+IF /I EXIST "%git_exe%" (
+    "%git_exe%" --version | findstr /c:"%required_ver%"
+    if %errorlevel% == 0 (
+    echo %required_ver% installed.
+    ) else (
+        echo Install git to %git_exe% from %git_ver_link%
+        exit /b 1
+    )
+) ELSE (
+    echo Install git to %git_exe% from %git_ver_link%
+    exit /b 1
+)
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: git-lfs - reinstalled per worker
-set "gitlfs_dir=git-lfs-3.6.1"
-set "gitlfs_short_dir="
-set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
-set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
-
-set "gitlfs_zip=%opt_install_dir%\%gitlfs_ver%"
+set "gitlfs_dir=git-lfs-main_9_6_2025"
+set "gitlfs_http=https://github.com/git-lfs/git-lfs"
+set "gitlfs_repo=%opt_install_dir%\git-lfs-repo"
 
 echo [INFO] Installing git-lfs: %gitlfs_dir% ...
 :: Download git-lfs
-IF /I EXIST %gitlfs_zip% (
+IF /I EXIST %gitlfs_repo% (
     if %expunge% EQU 1 (
-        del /S /Q %gitlfs_zip%
+        rmdir /S /Q %gitlfs_repo%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+        git clone %gitlfs_http% %gitlfs_repo%
         if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %gitlfs_zip% )
+        
+    ) else ( echo [INFO] directory exists %gitlfs_repo% )
     
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
+    git clone %gitlfs_http% %gitlfs_repo%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-:: Extract git-lfs
-IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%gitlfs_dir% )
-    
+:: Build git-lfs
+IF /I EXIST %gitlfs_repo%\git-lfs.exe (
+    echo [INFO] git-lfs exists %gitlfs_repo%\git-lfs.exe
 ) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    for /f %%i in ('cd') do set IN_PWD=%%i
     if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:: Check git-lfs.exe
-IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %opt_install_dir%\%gitlfs_dir%\git-lfs.exe )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
+    cd %gitlfs_repo%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    "C:\opt\go\bin\go.exe" build .
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    cd !IN_PWD!
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
@@ -305,12 +353,12 @@ IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
 IF /I EXIST %opt_install_dir%\git-lfs.exe (
     del /Q %opt_install_dir%\git-lfs.exe
 )
-mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
+mklink %opt_install_dir%\git-lfs.exe %gitlfs_repo%\git-lfs.exe
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.9"
+set "python_version=3.12.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -319,7 +367,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
@@ -423,13 +471,13 @@ exit /b 0
 :::::::::::::::::::::: Uninstall function end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install curl
+::::::::::::::::::::::: Install curl ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.13.0_1-win64-mingw"
-set "curl_ver=curl-8.13.0_1-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.13.0_1/"
+set "curl_dir=curl-8.14.1_1-win64-mingw"
+set "curl_ver=curl-8.14.1_1-win64-mingw.zip"
+set "curl_http=https://curl.se/windows/dl-8.14.1_1/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
 

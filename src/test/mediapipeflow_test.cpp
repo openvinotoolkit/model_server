@@ -234,6 +234,35 @@ protected:
     }
 };
 
+class MediapipeFlowTestRelativePaths : public MediapipeFlowTest {
+protected:
+    std::string destinationDirectory;
+    int serverStartTimeout = 5;
+    void SetUpServer(const char* configPath) {
+        ::SetUpServer(this->t, this->server, this->port, configPath, serverStartTimeout);
+    }
+
+    void SetUpFilesForRelativePathsTest(const char* filesToCopyPath) {
+        std::string separator = std::string(1, std::filesystem::path::preferred_separator);
+        destinationDirectory = std::filesystem::current_path().string() + separator + "test";
+        std::cout << "Copying files from: " << filesToCopyPath << " to executable path: " << destinationDirectory << std::endl;
+        try {
+            std::filesystem::copy(filesToCopyPath, destinationDirectory, std::filesystem::copy_options::recursive);
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+            ASSERT_EQ(1, 0);
+        }
+    }
+
+    void TearDown() override {
+        server.setShutdownRequest(1);
+        if (t)
+            t->join();
+        server.setShutdownRequest(0);
+        std::filesystem::remove_all(this->destinationDirectory);
+    }
+};
+
 class MediapipeFlowAddTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -624,6 +653,14 @@ class MediapipeFlowDummyOnlyGraphNameSpecifiedInModelConfigNoBaseMeshCase : publ
 public:
     void SetUp() {
         SetUpServer("/ovms/src/test/graph_mesh_case/config_mediapipe_dummy_adapter_full_only_name_specified_in_model_config_no_base.json");
+    }
+};
+
+class MediapipeFlowDummyRelativeConfigRelativeGraphPath : public MediapipeFlowTestRelativePaths {
+public:
+    void SetUp() {
+        SetUpFilesForRelativePathsTest(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/relative_paths/graph_only_name/").c_str());
+        SetUpServer("test/relative_config_and_relative_base_path_in_model_config.json");
     }
 };
 
@@ -1028,6 +1065,16 @@ TEST_F(MediapipeFlowDummySubconfigTest, Infer) {
     ::KFSRequest request;
     ::KFSResponse response;
     const std::string modelName = "mediaDummy";
+    performMediapipeInfer(server, request, response, precision, modelName);
+
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
+}
+
+TEST_F(MediapipeFlowDummyRelativeConfigRelativeGraphPath, Infer) {
+    ::KFSRequest request;
+    ::KFSResponse response;
+    const std::string modelName = "graphdummy";
     performMediapipeInfer(server, request, response, precision, modelName);
 
     std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
@@ -2632,7 +2679,7 @@ class MediapipeSerialization : public ::testing::Test {
             std::vector<std::string> inputNames, std::vector<std::string> outputNames,
             const PythonNodeResourcesMap& pythonNodeResourcesMap,
             MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
-            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, {}, nullptr, mediapipeServableMetricReporter) {}
+            MediapipeGraphExecutor(name, version, config, inputTypes, outputTypes, inputNames, outputNames, pythonNodeResourcesMap, {}, {}, {}, nullptr, mediapipeServableMetricReporter) {}
     };
 
 protected:
@@ -3748,6 +3795,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "EmbeddingsCalculator",
         "EmbeddingsCalculatorOV",
         "RerankCalculator",
+        "RerankCalculatorOV",
         "EmptyLabelCalculator",
         "EmptyLabelClassificationCalculator",
         "EmptyLabelDetectionCalculator",
@@ -3801,6 +3849,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "ImageToTensorCalculator",
         "ImageTransformationCalculator",
         "ImmediateMuxCalculator",
+        "ImageGenCalculator",
         "InferenceCalculatorCpu",
         "InputSidePacketUserTestCalc",
         "InstanceSegmentationCalculator",

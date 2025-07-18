@@ -104,6 +104,16 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
     }
 }
 
+std::string getOvmsTestExecutablePath() {
+#ifdef __linux__
+    return std::filesystem::canonical("/proc/self/exe").string();
+#elif _WIN32
+    char buffer[2000];
+    GetModuleFileNameA(NULL, buffer, 2000);
+    return std::filesystem::path(buffer).parent_path().string();
+#endif
+}
+
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
@@ -640,13 +650,13 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
 
 std::string GetFileContents(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
-        std::cout << "File does not exist:" << filePath << std::endl;
+        std::cout << "File does not exist: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
     std::ifstream file(filePath, std::ios::in | std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "File could not be opened:" << filePath << std::endl;
+        std::cout << "File could not be opened: " << filePath << std::endl;
         throw std::runtime_error("Failed to open file: " + filePath);
     }
 
@@ -741,12 +751,14 @@ void randomizeAndEnsureFrees(std::string& port1, std::string& port2) {
     }
 }
 
-const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 15;
+const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS = 60;
 
 void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds) {
     auto start = std::chrono::high_resolution_clock::now();
+    int timestepMs = 20;
     while ((server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME) != ovms::ModuleState::INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < timeoutSeconds)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(timestepMs));
     }
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED) << "OVMS did not fully load until allowed time:" << timeoutSeconds << "s. Check machine load";
 }
@@ -774,7 +786,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 
     int argc = 8;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
-        ASSERT_EQ(expected_code, server.start(argc, argv));
+        EXPECT_EQ(expected_code, server.start(argc, argv));
     }));
 
     EnsureServerModelDownloadFinishedWithTimeout(server, timeoutSeconds);
@@ -796,7 +808,7 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
 
     int argc = 9;
     t.reset(new std::thread([&argc, &argv, &server]() {
-        ASSERT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
     }));
 
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
@@ -1022,4 +1034,32 @@ void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfi
     modelConfig.setPluginConfig(ovms::plugin_config_t({{"ENABLE_MMAP", "NO"}}));
 #endif
     // on linux we can remove files from disk even if mmap is enabled
+}
+std::string dirTree(const std::string& path, const std::string& indent) {
+    if (!std::filesystem::exists(path)) {
+        SPDLOG_ERROR("Path does not exist: {}", path);
+        return "NON_EXISTENT_PATH";
+    }
+    std::stringstream tree;
+    // if is directory, add to stream its name followed by "/"
+    // if is file, add to stream its name
+
+    tree << indent;
+    if (!indent.empty()) {
+        tree << "|-- ";
+    }
+
+    tree << std::filesystem::path(path).filename().string();
+    if (std::filesystem::is_directory(path)) {
+        tree << "/";
+    }
+    tree << std::endl;
+    if (!std::filesystem::is_directory(path)) {
+        return tree.str();
+    }
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        std::string passDownIndent = indent.empty() ? "|   " : (indent + "    ");
+        tree << dirTree(entry.path().string(), passDownIndent);
+    }
+    return tree.str();
 }

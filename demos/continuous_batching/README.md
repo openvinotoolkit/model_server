@@ -33,8 +33,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -111,7 +111,7 @@ Assuming you have unpacked model server package, make sure to:
 
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `graph.pbtxt`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 
 ```bat
 ovms --rest_port 8000 --config_path ./models/config.json
@@ -397,6 +397,10 @@ Check the [guide for speculative decoding](./speculative_decoding/README.md)
 ## Check how to use text generation with visual language models
 
 Check the demo [text generation with visual model](./vlm/README.md)
+
+## Check how to use AI agents with MCP servers and language models
+
+Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
 
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)

@@ -3,17 +3,24 @@
 It is possible to deploy Model Server outside of container.
 To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
 
+You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
+
+- Deploying [Python nodes](./python_support/reference.md) is not available.
+- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax functions for flow control or input processing might not render all parts of the prompt correctly.
+- System message is not included in the prompt.
+- Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible.
+
 ::::{tab-set}
 :::{tab-item} Ubuntu 22.04
 :sync: ubuntu-22-04
 Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_ubuntu22.tar.gz
 tar -xzvf ovms_ubuntu22.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu22_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_ubuntu22_python_on.tar.gz
 tar -xzvf ovms_ubuntu22_python_on.tar.gz
 ```
 Install required libraries:
@@ -36,12 +43,12 @@ pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 :sync: ubuntu-24-04
 Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_ubuntu24.tar.gz
 tar -xzvf ovms_ubuntu24.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_ubuntu24_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_ubuntu24_python_on.tar.gz
 tar -xzvf ovms_ubuntu24_python_on.tar.gz
 ```
 Install required libraries:
@@ -60,16 +67,16 @@ sudo apt -y install libpython3.12
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
 :::
-:::{tab-item} RHEL 9.5
-:sync: rhel-9.5
+:::{tab-item} RHEL 9.6
+:sync: rhel-9.6
 Download precompiled package (without python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_redhat.tar.gz
 tar -xzvf ovms_redhat.tar.gz
 ```
 or precompiled package (with python):
 ```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_redhat_python_on.tar.gz
+wget https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_redhat_python_on.tar.gz
 tar -xzvf ovms_redhat_python_on.tar.gz
 ```
 Install required libraries:
@@ -92,10 +99,17 @@ pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 :sync: windows
 Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/VC_redist.x64.exe) installed before moving forward.
 
-Download and unpack model server archive for Windows:
+Download and unpack model server archive for Windows(with python):
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.1/ovms_windows.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows_python_on.zip -o ovms.zip
+tar -xf ovms.zip
+```
+
+or archive without python:
+
+```bat
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows_python_off.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 

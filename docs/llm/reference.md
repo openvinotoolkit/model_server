@@ -105,8 +105,9 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
+-    `optional string response_parser` - name of the response parser to use for processing model output before creating a response;
 
-
+### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
 You can track the actual usage of the cache in the server logs. You can observe in the logs output like below:
 ```
@@ -136,19 +137,43 @@ Learn more about the algorithm and above parameters from [GenAI docs](https://gi
 Example of cache eviction config in the node options:
 `cache_eviction_config: {start_size: 32, recent_size: 128, max_cache_size: 672}`
 
-`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. When it is disabled, there should be set also the parameter `max_num_batched_tokens` to match the model max context length.
+### Scheduling settings
+In different use cases and load specification, requests and tokens scheduling might play a role when it comes to performance.
+
+`dynamic_split_fuse` [algorithm](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen#b-dynamic-splitfuse-) is enabled by default to boost the throughput by splitting the tokens to even chunks. In some conditions like with very low concurrency or with very short prompts, it might be beneficial to disable this algorithm. 
+
+Since `max_num_batched_tokens` defines how many tokens can a pipeline process in one step, when `dynamic_split_fuse` is disabled, `max_num_batched_tokens` should be set to match the model max context length since the prompt is not split and must get processed fully in one step.
+
+Setting `max_num_seqs` might also be useful in providing certain level of generation speed of requests already in the pipeline. This value should not be higher than `max_num_batched_tokens`.
+
+
+**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
+
+### Response parsing settings
+
+When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `response_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
+
+- `hermes3`
+- `llama3`
+- `phi4`
+- `qwen3`
+
+Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
+
+Note that using `tools` might require a chat template other than the original. 
+We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
+
+### OpenVINO runtime settings
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size `{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}`. It also holds additional options that are described below.
 
 The LLM calculator config can also restrict the range of sampling parameters in the client requests. If needed change the default values for `best_of_limit` or set `max_tokens_limit`. It is meant to avoid the result of memory overconsumption by invalid requests.
 
-**Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
-
-### Additional configuration in plugin_config
+### Additional settings in plugin_config
 
 As mentioned above, in LLM pipelines, `plugin_config` map holds not only OpenVINO device plugin options, but also additional pipeline configuration. Those additional options are:
 
-- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`
+- `prompt_lookup` - if set to `true`, pipeline will use [prompt lookup decoding](https://github.com/apoorvumang/prompt-lookup-decoding) technique for sampling new tokens. Example: `plugin_config: '{"prompt_lookup": true}'`. With prompt lookup enabled it is recommended to disable `dynamic_split_fuse` and set `max_num_batched_tokens` to be higher than model context length.
 - `MAX_PROMPT_LEN` (**important for NPU users**) - NPU plugin sets a limitation on prompt (1024 tokens by default), this options allows modifying this value. Example: `plugin_config: '{"MAX_PROMPT_LEN": 2048}'`
 
 
@@ -182,7 +207,8 @@ In node configuration we set `models_path` indicating location of the directory 
 ├── template.jinja
 ```
 
-Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing.
+Main model as well as tokenizer and detokenizer are loaded from `.xml` and `.bin` files and all of them are required. `tokenizer_config.json` and `template.jinja` are loaded to read information required for chat template processing. Model directory may also contain `generation_config.json` which specifies recommended generation parameters.
+If such file exists, model server will use it to load default generation configuration for processing request to that model.
 
 Additionally, Visual Language Models have encoder and decoder models for text and vision and potentially other auxiliary models.
 
@@ -220,28 +246,39 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
 
+## Output processing
+
+Support for more diverse response structure requires processing model output for the purpose of extracting specific parts of the output and placing them in specific fields in the final response.
+
+When using `tools`, we need to distil `tool_calls` from model output and for reasoning - `reasoning_content`. In order to receive such response, you need to specify `response_parser` as stated in [response parsing settings](#response-parsing-settings).
+
 ## Limitations
 
 There are several known limitations which are expected to be addressed in the coming releases:
 
 - Metrics related to text generation are not exposed via `metrics` endpoint. Key metrics from LLM calculators are included in the server logs with information about active requests, scheduled for text generation and KV Cache usage. It is possible to track in the metrics the number of active generation requests using metric called `ovms_current_graphs`. Also tracking statistics for request and responses is possible. [Learn more](../metrics.md)
-- `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens.
-- Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version.
+- `logprobs` parameter is not supported currently in streaming mode. It includes only a single logprob and do not include values for input tokens
+- Server logs might sporadically include a message "PCRE2 substitution failed with error code -55" - this message can be safely ignored. It will be removed in next version
+- using `tools` is supported only for Hermes3, Llama3, Phi4 and Qwen3 models
+- using `tools` is not supported in streaming mode
+- using `tools` is not supported in configuration without Python
 
 Some servable types introduce additional limitations:
 
 ### Stateful servable limitations
 - `finish_reason` not supported (always set to `stop`),
 - `logprobs` not supported,
-- sequential request processing (only one request is handled at a time)
+- sequential request processing (only one request is handled at a time),
 - only a single response can be returned. Parameter `n` is not supported.
+- prompt lookup decoding is not supported
+- `usage` is not supported in streaming mode
 - **[NPU only]** beam_search algorithm is not supported with NPU. Greedy search and multinomial algorithms are supported.
 - **[NPU only]** models must be exported with INT4 precision and `--sym --ratio 1.0 --group-size -1` params. This is enforced in the export_model.py script when the target_device in NPU.
 
 ### Visual Language servable limitations
 - works only on `/chat/completions` endpoint,
-- `image_url` input supports only base64 encoded image, not an actual URL
-- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected
+- does not work with `tools`,
+- **[NPU only]** requests MUST include one and only one image in the messages context. Other request will be rejected.
 
 ## References
 - [Chat Completions API](../model_server_rest_api_chat.md)

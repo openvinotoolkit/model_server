@@ -35,7 +35,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
-            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
@@ -44,12 +43,28 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             patch \
             pkg-config \
             wget \
-            zlib1g-dev \
-            git-lfs && \
+            zlib1g-dev && \
             update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9 && \
             update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+            
+# Need to upgrade git for ubuntu22-24 git vulnerability fix
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common gpg-agent ; \
+        add-apt-repository ppa:git-core/ppa -y ; \
+        apt-get update && apt-get install --no-install-recommends -y git ; \
+        apt-get clean ; \
+        rm -rf /var/lib/apt/lists/* ;
+
+WORKDIR /
+# hadolint ignore=DL3003
+RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+git clone https://github.com/git-lfs/git-lfs && \
+    cd git-lfs && \
+    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
+    /usr/local/go/bin/go build . && \
+    cp git-lfs /usr/bin/git-lfs
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -159,7 +174,6 @@ ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/ex
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_source_org/openvino.git /openvino && cd /openvino && git checkout $ov_source_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
@@ -202,6 +216,17 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 
 # OpenVINO Tokenizers extension
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
+ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
+WORKDIR /openvino_tokenizers/
+# Install the openvino_tokenizers python bindings and use a symlink to point
+# to the shared object in it's final location.
+RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
+    cp -r python/* /opt/intel/openvino/python/ ; \
+    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.3\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.3.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info/METADATA ; \
+    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
@@ -260,12 +285,12 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make && cp libcustom_relu_cpu_extension.so /opt
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.2' > /opt/intel/openvino/python/openvino-2025.2.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.3.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.3' > /opt/intel/openvino/python/openvino-2025.3.dist-info/METADATA
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.2"
+ARG PROJECT_VERSION="2025.3.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
@@ -380,7 +405,7 @@ ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
     if [ "$GPU" == "1" ] ; then \
 	/tmp/install_gpu_drivers.sh ; \
     fi ; \
@@ -388,15 +413,15 @@ RUN apt-get update ; \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-driver-compiler-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-fw-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-level-zero-npu_1.17.0.20250508-14912879441_ubuntu22.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.21.9/level-zero_1.21.9+u22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-driver-compiler-npu_1.19.0.20250707-16111289554_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-fw-npu_1.19.0.20250707-16111289554_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-level-zero-npu_1.19.0.20250707-16111289554_ubuntu22.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u22.04_amd64.deb ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-driver-compiler-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \	
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-fw-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.17.0/intel-level-zero-npu_1.17.0.20250508-14912879441_ubuntu24.04_amd64.deb ; \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.21.9/level-zero_1.21.9+u24.04_amd64.deb ; \ 
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-driver-compiler-npu_1.19.0.20250707-16111289554_ubuntu24.04_amd64.deb ; \	
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-fw-npu_1.19.0.20250707-16111289554_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.19.0/intel-level-zero-npu_1.19.0.20250707-16111289554_ubuntu24.04_amd64.deb ; \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u24.04_amd64.deb ; \ 
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
@@ -422,6 +447,7 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
 ENV LD_LIBRARY_PATH=/ovms/lib
+ENV PATH="$PATH:/ovms/bin"
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

@@ -358,6 +358,23 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
+TEST(EmbeddingsDeserialization, emptyInputArray) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [  ],
+            "encoding_format": "float"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input array should not be empty");
+}
+
 TEST(EmbeddingsSerialization, simplePositive) {
     bool normalieEmbeddings = false;
     rapidjson::StringBuffer buffer;

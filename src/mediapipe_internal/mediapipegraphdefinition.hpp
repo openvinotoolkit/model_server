@@ -43,7 +43,7 @@
 #include "mediapipegraphconfig.hpp"
 #include "packettypes.hpp"
 
-#include "../embeddings/embeddings_servable.hpp"
+#include "../sidepacket_servable.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -56,9 +56,34 @@ class Status;
 class PythonBackend;
 class PythonNodeResources;
 class GenAiServable;
+struct ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
+
+struct GraphSidePackets {
+    PythonNodeResourcesMap pythonNodeResourcesMap;
+    GenAiServableMap genAiServableMap;
+    ImageGenerationPipelinesMap imageGenPipelinesMap;
+    EmbeddingsServableMap embeddingsServableMap;
+    RerankServableMap rerankServableMap;
+    void clear() {
+        pythonNodeResourcesMap.clear();
+        genAiServableMap.clear();
+        imageGenPipelinesMap.clear();
+        embeddingsServableMap.clear();
+        rerankServableMap.clear();
+    }
+    bool empty() {
+        return (pythonNodeResourcesMap.empty() &&
+                genAiServableMap.empty() &&
+                imageGenPipelinesMap.empty() &&
+                embeddingsServableMap.empty() &&
+                rerankServableMap.empty());
+    }
+};
 
 class MediapipeGraphDefinition {
     friend MediapipeGraphDefinitionUnloadGuard;
@@ -94,16 +119,16 @@ public:
     static const std::string SCHEDULER_CLASS_NAME;
     static const std::string PYTHON_NODE_CALCULATOR_NAME;
     static const std::string LLM_NODE_CALCULATOR_NAME;
+    static const std::string IMAGE_GEN_CALCULATOR_NAME;
     static const std::string EMBEDDINGS_NODE_CALCULATOR_NAME;
+    static const std::string RERANK_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.
     static constexpr model_version_t VERSION = 1;
 
 protected:
-    PythonNodeResourcesMap pythonNodeResourcesMap;
-    GenAiServableMap genAiServableMap;
-    EmbeddingsServableMap embeddingsServableMap;
+    GraphSidePackets sidePacketMaps;
 
     struct ValidationResultNotifier {
         ValidationResultNotifier(PipelineDefinitionStatus& status, std::condition_variable& loadedNotify) :

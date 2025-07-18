@@ -342,5 +342,10 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
+    {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
+    {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},
+    {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
+    {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
+    {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
 };
 }  // namespace ovms

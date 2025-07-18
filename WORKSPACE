@@ -138,7 +138,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.13.0_1-win64-mingw",
+    path = "C:\\opt\\curl-8.14.1_1-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -620,7 +620,7 @@ new_git_repository(
     build_file_content = """
 cc_library(
     name = "image",
-    hdrs = ["stb_image.h"],
+    hdrs = ["stb_image.h", "stb_image_write.h"],
     visibility = ["//visibility:public"],
     local_defines = [
     ],
