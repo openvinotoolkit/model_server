@@ -26,12 +26,12 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "base_response_parser.hpp"
+#include "base_output_parser.hpp"
 #include "utils.hpp"
 
 namespace ovms {
 
-rapidjson::Document BaseResponseParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
+rapidjson::Document BaseOutputParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();
     rapidjson::Value toolCalls(rapidjson::kArrayType);
@@ -52,7 +52,7 @@ rapidjson::Document BaseResponseParser::wrapFirstDelta(const std::string& functi
     return wrappedDelta;
 }
 
-rapidjson::Document BaseResponseParser::wrapDelta(const rapidjson::Document& delta, int toolCallIndex) {
+rapidjson::Document BaseOutputParser::wrapDelta(const rapidjson::Document& delta, int toolCallIndex) {
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();
     rapidjson::Value toolCalls(rapidjson::kArrayType);

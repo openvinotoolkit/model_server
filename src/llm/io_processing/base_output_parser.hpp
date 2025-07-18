@@ -38,7 +38,7 @@ struct ToolCall {
 
 using ToolCalls = std::vector<ToolCall>;
 
-struct ParsedResponse {
+struct ParsedOutput {
     // Content without tool calls and reasoning
     std::string content;
     // Tool calls extracted from the response
@@ -56,7 +56,7 @@ enum ProcessingPhase {
     TOOL_CALLS
 };
 
-class BaseResponseParser {
+class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
     ProcessingPhase processingPhase = CONTENT;
@@ -64,10 +64,10 @@ protected:
     PartialJsonBuilder jsonBuilder;
     int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
 public:
-    BaseResponseParser() = delete;
-    explicit BaseResponseParser(ov::genai::Tokenizer& tokenizer) :
+    BaseOutputParser() = delete;
+    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
-    virtual ~BaseResponseParser() = default;
+    virtual ~BaseOutputParser() = default;
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
@@ -76,7 +76,7 @@ public:
     // {"tool_calls":[{"index":0,"function":<delta>}]}
     static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
 
-    virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
+    virtual ParsedOutput parse(const std::vector<int64_t>& generatedTokens) = 0;
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;

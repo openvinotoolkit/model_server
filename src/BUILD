@@ -2494,12 +2494,12 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 # Tools support is limited to configuration with Python enabled
-                "test/llm/response_parsers/base_response_parser_test.cpp",
-                "test/llm/response_parsers/llama3_response_parser_test.cpp",
-                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
-                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
-                "test/llm/response_parsers/phi4_response_parser_test.cpp",
-                "test/llm/response_parsers/partial_json_builder_test.cpp",
+                "test/llm/output_parsers/base_output_parser_test.cpp",
+                "test/llm/output_parsers/llama3_output_parser_test.cpp",
+                "test/llm/output_parsers/qwen3_output_parser_test.cpp",
+                "test/llm/output_parsers/hermes3_output_parser_test.cpp",
+                "test/llm/output_parsers/phi4_output_parser_test.cpp",
+                "test/llm/output_parsers/partial_json_builder_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2663,7 +2663,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:response_parsers",
+                "//src/llm:io_processing",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",

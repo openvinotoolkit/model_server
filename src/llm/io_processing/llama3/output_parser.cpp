@@ -25,19 +25,19 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../../logging.hpp"
-#include "llama3_response_parser.hpp"
-#include "utils.hpp"
+#include "../../../logging.hpp"
+#include "output_parser.hpp"
+#include "../utils.hpp"
 
 namespace ovms {
-ParsedResponse Llama3ResponseParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedResponse parsedResponse;
+ParsedOutput Llama3OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
+    ParsedOutput parsedOutput;
     // Find botTokenId in generated_ids
     auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
     if (botTokenIt != generatedTokens.end()) {
         // Decode the content before botTokenId
         std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
-        parsedResponse.content = tokenizer.decode(contentTokens);
+        parsedOutput.content = tokenizer.decode(contentTokens);
         // Tokens after botTokenId
         auto afterBotTokenIt = botTokenIt + 1;
         if (afterBotTokenIt != generatedTokens.end()) {
@@ -80,19 +80,19 @@ ParsedResponse Llama3ResponseParser::parse(const std::vector<int64_t>& generated
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
                     continue;
                 }
-                parsedResponse.toolCalls.push_back(toolCall);
+                parsedOutput.toolCalls.push_back(toolCall);
             }
         }
     } else {
         // If botTokenId is not found, decode the entire output as content
-        parsedResponse.content = tokenizer.decode(generatedTokens);
+        parsedOutput.content = tokenizer.decode(generatedTokens);
     }
-    return parsedResponse;
+    return parsedOutput;
 }
 
-std::optional<rapidjson::Document> Llama3ResponseParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Llama3OutputParser::parseChunk(const std::string& chunk) {
     // Not implemented
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3ResponseParser::parseChunk is not implemented");
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3OutputParser::parseChunk is not implemented");
     return std::nullopt;
 }
 

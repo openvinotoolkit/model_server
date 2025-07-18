@@ -150,17 +150,17 @@ public:
         return true;
     }
 
-    bool MessageObject(const ParsedResponse& parsedResponse) {
+    bool MessageObject(const ParsedOutput& parsedOutput) {
         StartObject("message");
-        String("content", parsedResponse.content);
+        String("content", parsedOutput.content);
 
-        if (!parsedResponse.reasoning.empty()) {
-            String("reasoning_content", parsedResponse.reasoning);
+        if (!parsedOutput.reasoning.empty()) {
+            String("reasoning_content", parsedOutput.reasoning);
         }
         String("role", "assistant");
 
         StartArray("tool_calls");
-        for (const ToolCall& toolCall : parsedResponse.toolCalls) {
+        for (const ToolCall& toolCall : parsedOutput.toolCalls) {
             StartObject();
             String("id", toolCall.id);
             String("type", "function");
@@ -177,8 +177,8 @@ public:
         return true;
     }
 
-    bool Text(const ParsedResponse& parsedResponse) {
-        String("text", parsedResponse.content);
+    bool Text(const ParsedOutput& parsedOutput) {
+        String("text", parsedOutput.content);
         return true;
     }
 

@@ -15,7 +15,7 @@
 //*****************************************************************************
 
 #include <string>
-#include "../../../llm/response_parsers/partial_json_builder.hpp"
+#include "../../../llm/io_processing/partial_json_builder.hpp"
 
 #include <gtest/gtest.h>
 

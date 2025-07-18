@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
 #include <vector>
 
 #pragma warning(push)
@@ -26,34 +27,23 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "base_response_parser.hpp"
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-
-class Qwen3ResponseParser : public BaseResponseParser {
+class Hermes3OutputParser : public BaseOutputParser {
 protected:
     // Tool calls are wrapped in <tool_call> and </tool_call> tags
     std::string toolCallStartTag = "<tool_call>";
-    int64_t toolCallStartTokenId = 151657;  // This is the token ID for <tool_call> in Qwen3 tokenizer
+    int64_t toolCallStartTokenId = 128002;  // This is the token ID for <tool_call> in Hermes3 tokenizer
     std::string toolCallEndTag = "</tool_call>";
-    int64_t toolCallEndTokenId = 151658;  // This is the token ID for </tool_call> in Qwen3 tokenizer
-
-    std::string reasoningStartTag = "<think>";
-    int64_t reasoningStartTokenId = 151667;  // This is the token ID for <think> in Qwen3 tokenizer
-    std::string reasoningEndTag = "</think>";
-    int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
-
-    // Storing last two chunks of arguments to return delta with delay.
-    // We do this to properly close arguments when tool call end tag is received.
-    // With support for more models this could be moved to the base class.
-    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+    int64_t toolCallEndTokenId = 128013;  // This is the token ID for </tool_call> in Hermes3 tokenizer
 
 public:
-    Qwen3ResponseParser() = delete;
-    explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
+    Hermes3OutputParser() = delete;
+    explicit Hermes3OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms

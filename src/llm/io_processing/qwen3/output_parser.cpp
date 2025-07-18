@@ -25,13 +25,13 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../../logging.hpp"
-#include "qwen3_response_parser.hpp"
-#include "utils.hpp"
+#include "../../../logging.hpp"
+#include "output_parser.hpp"
+#include "../utils.hpp"
 
 namespace ovms {
-ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedResponse parsedResponse;
+ParsedOutput Qwen3OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
+    ParsedOutput parsedOutput;
 
     auto reasoningStartIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningStartTokenId);
     auto reasoningEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), reasoningEndTokenId);
@@ -39,11 +39,11 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
     if (reasoningStartIt != generatedTokens.end() && reasoningEndIt != generatedTokens.end() && reasoningStartIt < reasoningEndIt) {
         // Tokens between <think> and </think>, exclusive
         std::vector<int64_t> reasoningTokens(reasoningStartIt + 1, reasoningEndIt);
-        parsedResponse.reasoning = tokenizer.decode(reasoningTokens);
-        parsedResponse.reasoningTokenCount = reasoningTokens.size();
+        parsedOutput.reasoning = tokenizer.decode(reasoningTokens);
+        parsedOutput.reasoningTokenCount = reasoningTokens.size();
     } else {
-        parsedResponse.reasoning.clear();
-        parsedResponse.reasoningTokenCount = 0;
+        parsedOutput.reasoning.clear();
+        parsedOutput.reasoningTokenCount = 0;
     }
 
     // If reasoning happened, we assume that the content starts after the reasoning end tag,
@@ -54,22 +54,22 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
 
     if (contentStartIt == contentEndIt) {
         // If tool call tag starts immediately after reasoning or at the beginning, we assume no content
-        parsedResponse.content.clear();
+        parsedOutput.content.clear();
     } else if (contentStartIt != generatedTokens.end() && contentEndIt != generatedTokens.end() && contentStartIt < contentEndIt) {
         // Tokens between start or reasoning end and the first <tool_call> tag, exclusive
-        parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, contentEndIt));
+        parsedOutput.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, contentEndIt));
     } else {
         // If no tool call tags are found, we assume the content is the rest of the generated tokens
-        parsedResponse.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, generatedTokens.end()));
+        parsedOutput.content = tokenizer.decode(std::vector<int64_t>(contentStartIt, generatedTokens.end()));
     }
 
     // Remove all leading whitespace from the content only if reasoning is present since they are separate reasoning part from the actual content
-    if (parsedResponse.reasoningTokenCount > 0 && !parsedResponse.content.empty()) {
-        size_t first_non_ws = parsedResponse.content.find_first_not_of(" \t\n\r\f\v");
+    if (parsedOutput.reasoningTokenCount > 0 && !parsedOutput.content.empty()) {
+        size_t first_non_ws = parsedOutput.content.find_first_not_of(" \t\n\r\f\v");
         if (first_non_ws != std::string::npos) {
-            parsedResponse.content = parsedResponse.content.substr(first_non_ws);
+            parsedOutput.content = parsedOutput.content.substr(first_non_ws);
         } else {
-            parsedResponse.content.clear();
+            parsedOutput.content.clear();
         }
     }
 
@@ -117,14 +117,14 @@ ParsedResponse Qwen3ResponseParser::parse(const std::vector<int64_t>& generatedT
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
             continue;
         }
-        parsedResponse.toolCalls.push_back(toolCall);
+        parsedOutput.toolCalls.push_back(toolCall);
     }
-    return parsedResponse;
+    return parsedOutput;
 }
 
-std::optional<rapidjson::Document> Qwen3ResponseParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Qwen3OutputParser::parseChunk(const std::string& chunk) {
     if (chunk.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ResponseParser");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3OutputParser");
         return std::nullopt;
     }
 
