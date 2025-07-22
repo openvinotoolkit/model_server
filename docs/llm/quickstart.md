@@ -20,7 +20,7 @@ hardware configuration.
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 
@@ -28,7 +28,7 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
+ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --task text_generation --target_device GPU --cache_size 2
 ```
 :::
 ::::
