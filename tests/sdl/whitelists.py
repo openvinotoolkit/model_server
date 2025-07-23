@@ -164,6 +164,7 @@ libraries = {
         'openvino_tensorflow_frontend.dll',
         'openvino_tensorflow_lite_frontend.dll',
         'openvino_tokenizers.dll',
+        'sqlite3.dll',
         'tbb12.dll',
         'zlib1.dll',
     },
@@ -271,7 +272,6 @@ packages = {
         'libkrb5-3',
         'libgssapi-krb5-2',
         'nginx',
-        'nginx-common',
     },
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: {
