@@ -27,16 +27,16 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "base_response_parser.hpp"
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-class Phi4ResponseParser : public BaseResponseParser {
+class Phi4OutputParser : public BaseOutputParser {
 public:
-    Phi4ResponseParser() = delete;
-    explicit Phi4ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
+    Phi4OutputParser() = delete;
+    explicit Phi4OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms
