@@ -11,12 +11,14 @@ from skl2onnx.common.data_types import FloatTensorType
 import onnxruntime as ort
 from pyovms import Tensor
 from io import StringIO
+from sklearn.preprocessing import LabelEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import joblib
 
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
-
-MODEL_PATH = "/workspace/model/iris_logreg/1/model.onnx"
-LABEL_COLUMN = "Species"
-DROP_COLUMNS = ["Id"]
+MODEL_PATH = "/workspace/model/generic_model/1/model.onnx"
+ENCODER_PATH = "/workspace/model/generic_model/1/label_encoder.joblib"
+META_PATH = "/workspace/model/generic_model/1/meta.json"
 
 class OvmsPythonModel:
     def initialize(self, kwargs):
@@ -26,116 +28,123 @@ class OvmsPythonModel:
         print("==== [execute] Python node called ====", file=sys.stderr, flush=True)
         try:
             input_tensor = inputs[0]
-            input_data = input_tensor.data
-            inp_bytes = bytes(input_tensor.data) 
-
-            print("input_data preview:", inp_bytes[:40], file=sys.stderr)
+            inp_bytes = bytes(input_tensor.data)
             first_brace = inp_bytes.find(b'{')
             if first_brace > 0:
                 inp_bytes = inp_bytes[first_brace:]
-            print("RAW BYTES:", inp_bytes[:100], file=sys.stderr)
+
             payload = json.loads(inp_bytes.decode("utf-8"))
             mode = payload.get("mode")
             csv_str = payload.get("data")
+            target_column = payload.get("target_column")  
+            print("Received payload:", csv_str)
+
             if not isinstance(csv_str, str):
                 raise ValueError("Missing or invalid 'data' field")
 
             df = pd.read_csv(StringIO(csv_str))
 
-            if "Id" in df.columns:
-                df = df.drop(columns=DROP_COLUMNS)
-
             if mode == "train":
-                if LABEL_COLUMN not in df.columns:
-                    raise ValueError(f"Missing label column '{LABEL_COLUMN}' in input data")
+                if target_column not in df.columns:
+                    raise ValueError(f"Label column '{target_column}' not found")
 
-                X = df.drop(columns=[LABEL_COLUMN]).values.astype(np.float32)
-                y = df[LABEL_COLUMN].values
+                X_df = df.drop(columns=[target_column])
+                y = df[target_column].values
+                feature_names = list(X_df.columns)
 
-                params = payload.get("params", {})
-                print(f"[TRAIN] Using hyperparameters: {params}", file=sys.stderr)
+                print("Handling missing values...")
+                imp = SimpleImputer(strategy='mean')
+                X = imp.fit_transform(X_df).astype(np.float32)
 
-                try:
-                    model = LogisticRegression(max_iter=200, **params)
-                except Exception as e:
-                    raise ValueError(f"Invalid training hyperparameters: {e}")
+                le = LabelEncoder()
+                y_enc = le.fit_transform(y)
+                class_names = list(le.classes_)
 
-                model.fit(X, y)
+                os.makedirs(os.path.dirname(ENCODER_PATH), exist_ok=True)
+                joblib.dump(le, ENCODER_PATH)
+                meta = {
+                    "target_column": target_column,
+                    "feature_names": feature_names,
+                    "class_names": class_names
+                }
+                with open(META_PATH, "w") as f:
+                    json.dump(meta, f)
 
-                os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+                model = LogisticRegression(**payload.get("params", {}))
+                model.fit(X, y_enc)
+                print("Intercept:", model.intercept_)
+                print("Coefficients:", model.coef_)
+
                 initial_type = [('float_input', FloatTensorType([None, X.shape[1]]))]
                 onnx_model = convert_sklearn(model, initial_types=initial_type)
+                os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
                 with open(MODEL_PATH, "wb") as f:
                     f.write(onnx_model.SerializeToString())
+                print("[DEBUG] Training complete. Saved model to:", MODEL_PATH)
 
                 y_pred = model.predict(X)
-                acc = accuracy_score(y, y_pred)
-                prec = precision_score(y, y_pred, average='weighted', zero_division=0)
-                rec = recall_score(y, y_pred, average='weighted', zero_division=0)
-                f1 = f1_score(y, y_pred, average='weighted', zero_division=0)
-                report = classification_report(y, y_pred)
+                acc = accuracy_score(y_enc, y_pred)
+                prec = precision_score(y_enc, y_pred, average='weighted', zero_division=0)
+                rec = recall_score(y_enc, y_pred, average='weighted', zero_division=0)
+                f1 = f1_score(y_enc, y_pred, average='weighted', zero_division=0)
 
-                print(f"[METRICS][train] accuracy={acc}, precision={prec}, recall={rec}, f1={f1}", file=sys.stderr)
-                print(f"[METRICS][train] classification_report:\n{report}", file=sys.stderr, flush=True)
-
-                metrics_str = f"acc={acc:.4f}, prec={prec:.4f}, rec={rec:.4f}, f1={f1:.4f}"
+                print(f"[TRAIN METRICS] acc={acc}, prec={prec}, rec={rec}, f1={f1}", file=sys.stderr)
                 result = np.array([1.0, acc, prec, rec, f1], dtype=np.float32)
                 return [Tensor("pipeline_output", result)]
 
             elif mode == "infer":
                 if not os.path.exists(MODEL_PATH):
-                    raise FileNotFoundError("Model not trained yet")
+                    raise FileNotFoundError("Trained model not found")
+                if not os.path.exists(META_PATH):
+                    raise FileNotFoundError("Metadata file missing")
+                
+                with open(META_PATH, "r") as f:
+                    meta = json.load(f)
+                feature_names = meta["feature_names"]
+                class_names = meta.get("class_names", [])
 
-                y_true = None
-                if LABEL_COLUMN in df.columns:
-                    y_true = df[LABEL_COLUMN].values
-                    df = df.drop(columns=[LABEL_COLUMN])
+                if any(f not in df.columns for f in feature_names):
+                    missing = [f for f in feature_names if f not in df.columns]
+                    raise ValueError(f"Missing required feature(s): {missing}")
 
-                X = df.values.astype(np.float32)
+                X_df = df[feature_names]
+                imp = SimpleImputer(strategy='mean')
+                X = imp.fit_transform(X_df).astype(np.float32)
+
                 sess = ort.InferenceSession(MODEL_PATH)
                 input_name = sess.get_inputs()[0].name
-                preds = sess.run(None, {input_name: X})[0]
+                output_names = [output.name for output in sess.get_outputs()]
+                outputs = sess.run(output_names, {input_name: X})
+                print("[DEBUG] Model inference outputs:", output_names)
 
-                if preds.ndim > 1 and preds.shape[1] == 1:
-                    preds = preds.ravel()
-
-                label_map = {
-                    "Iris-setosa": 0,
-                    "Iris-versicolor": 1,
-                    "Iris-virginica": 2
-                }
-                if isinstance(preds, str):
-                    preds = np.array([preds])
-                if preds.dtype.type is np.str_ or preds.dtype.type is np.object_:
-                    res_int = np.vectorize(label_map.get)(preds)
-                else:
-                    res_int = preds
-
-                result = res_int.astype(np.float32)
-
-                if y_true is not None:
-                    if y_true.dtype.type is np.str_ or y_true.dtype.type is np.object_:
-                        y_true_mapped = np.vectorize(label_map.get)(y_true)
+                if len(outputs) == 2:
+                    label_indices, probs = outputs
+                    label_indices = label_indices.ravel().astype(int)
+                    if os.path.exists(ENCODER_PATH):
+                        le = joblib.load(ENCODER_PATH)
+                        labels = le.inverse_transform(label_indices)
                     else:
-                        y_true_mapped = y_true
+                        labels = label_indices
+                    response = []
+                    for label, prob in zip(labels, probs):
+                        label_prob_dict = {class_names[i]: float(p) for i, p in enumerate(prob)}
+                        response.append({"label": label, "probabilities": label_prob_dict})
+                    
+                    encoded_response = [json.dumps(item).encode("utf-8") for item in response]
+                    return [Tensor("pipeline_output", np.array(encoded_response, dtype=object))]
+                    
+                else:
+                    raise RuntimeError("Unexpected ONNX model output structure.")
 
-                    acc = accuracy_score(y_true_mapped, res_int)
-                    prec = precision_score(y_true_mapped, res_int, average='weighted', zero_division=0)
-                    rec = recall_score(y_true_mapped, res_int, average='weighted', zero_division=0)
-                    f1 = f1_score(y_true_mapped, res_int, average='weighted', zero_division=0)
-                    report = classification_report(y_true_mapped, res_int)
-                    print(f"[METRICS][infer] accuracy={acc}, precision={prec}, recall={rec}, f1={f1}", file=sys.stderr)
-                    print(f"[METRICS][infer] classification_report:\n{report}", file=sys.stderr, flush=True)
-
-                return [Tensor("pipeline_output", result)]
             else:
                 raise ValueError(f"Unknown mode '{mode}'")
+
         except Exception as e:
-            print(f"[ERROR] Exception in execute: {e}", file=sys.stderr)
+            print(f"[ERROR] {e}", file=sys.stderr)
             import traceback
             traceback.print_exc(file=sys.stderr)
-            error_msg = f"ERROR: {str(e)}".encode()
-            return [Tensor("pipeline_output", np.array([error_msg], dtype=object))]
+            err = f"ERROR: {str(e)}".encode()
+            return [Tensor("pipeline_output", np.array([err], dtype=object))]
 
     def finalize(self):
         print("[finalize] Python node finalized", file=sys.stderr, flush=True)
