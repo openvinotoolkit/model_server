@@ -1,3 +1,4 @@
+
 import os
 import sys
 import json
@@ -9,21 +10,27 @@ def main():
     SERVER_URL = "localhost:9000"
     MODEL_NAME = "pipeline"
 
-    if len(sys.argv) < 3 or sys.argv[1] not in ("train", "infer"):
-        print("Usage: python client_train.py <train|infer> <path_to_csv> [--params <path_to_params_json>]")
+    if len(sys.argv) < 4 or sys.argv[1] not in ("train", "infer"):
+        print("Usage: python client_train.py <train|infer> <path_to_csv> <target_column> "
+              "[--params <path_to_params_json>] [--encode <col1,col2,...>]")
         sys.exit(1)
 
     mode = sys.argv[1]
     csv_path = sys.argv[2]
+    target_column = sys.argv[3]
+
     params_path = None
+    encode_cols = []
 
     if "--params" in sys.argv:
-        params_index = sys.argv.index("--params")
-        if params_index + 1 < len(sys.argv):
-            params_path = sys.argv[params_index + 1]
-        else:
-            print("ERROR: '--params' specified but no file given.")
-            sys.exit(1)
+        idx = sys.argv.index("--params")
+        if idx + 1 < len(sys.argv):
+            params_path = sys.argv[idx + 1]
+
+    if "--encode" in sys.argv:
+        idx = sys.argv.index("--encode")
+        if idx + 1 < len(sys.argv):
+            encode_cols = sys.argv[idx + 1].split(",")
 
     if not os.path.isfile(csv_path):
         print(f"ERROR: Could not find CSV file: {csv_path}")
@@ -37,17 +44,14 @@ def main():
         sys.exit(1)
 
     if mode == "train":
-        if "Species" not in df.columns:
-            print("ERROR: Training CSV must contain a 'Species' column as the label.")
-            sys.exit(1)
-        print("Training mode detected. Preparing data for training...")
+        print(" Training mode detected. Preparing dataset...")
 
     params = {}
     if params_path:
         try:
             with open(params_path, "r") as f:
                 params = json.load(f)
-            print(f"Loaded training hyperparameters: {params}")
+            print(f" Loaded hyperparameters: {params}")
         except Exception as e:
             print(f"ERROR: Could not read params JSON: {e}")
             sys.exit(1)
@@ -56,7 +60,9 @@ def main():
     input_dict = {
         "mode": mode,
         "data": csv_str,
-        "params": params  
+        "params": params,
+        "target_column": target_column,
+        "encode_columns": encode_cols
     }
 
     input_bytes = json.dumps(input_dict).encode()
@@ -80,16 +86,12 @@ def main():
         result = response.as_numpy("pipeline_output")
 
         if isinstance(result, np.ndarray) and result.dtype == object:
-            print("Server response decoded obj:", result[0].decode())
-        elif isinstance(result, np.ndarray) and result.dtype == np.uint8:
-            print("Server response decoded int8:", bytes(result).decode())
-        elif isinstance(result, (bytes, bytearray)):
-            print("Server response decoded bytarray:", result.decode())
+            print("Server response:", result[0].decode())
         else:
-            print("Server response decoded: string - ", str(result))
-            print("The output string formatted as: [<1 - Model trained successfully | 0 - Otherwise>   <Accuracy>  <Precision>  <Recall>  <f1-score>]")
+            print("Server response (raw):", str(result))
+
     except Exception as e:
-        print(f"ERROR: Inference call failed or output decoding failed: {e}")
+        print(f"ERROR: Inference call failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
