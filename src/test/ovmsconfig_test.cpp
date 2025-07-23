@@ -1124,7 +1124,7 @@ TEST(OvmsGraphConfigTest, negativeSourceModelPullAndStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-         (char*)"--task",
+        (char*)"--task",
         (char*)"text_generation",
     };
 
