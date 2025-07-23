@@ -60,14 +60,15 @@ Configuration options for the server are defined only via command-line options a
 ## Config management mode options
 
 Configuration options for the config management mode, which is used to manage config file in the model repository.
-| Option  | Value format  | Description  |
-|---|---|---|
-| `model_repository_path` | `string` | Path to the model repository. This path is prefixed to the relative model path. Use|
-| `list_models`| `NA` | List all models paths in the model repository. |
-| `model_name` | `string` | Name of the model as visible in serving. If ```--model_path``` is not provided, path is deduced from name. |
-| `model_path` | `string` | Optional. Path to the model repository. If path is relative then it is prefixed with ```--model_repository_path```. |
-| `add_to_config` | `string` |  Path to config file directory for OVMS, where to add the model. |
-| `remove_from_config` | `string` |  Path to config file directory for OVMS, where to remove the model. |
+
+| Option                  | Value format | Description                                                                                                                                         |
+|-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `model_repository_path` | `string`     | Path to the model repository. This path is prefixed to the relative model path.                                                                     |
+| `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
+| `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
+| `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
+| `add_to_config`         | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to.                        |
+| `remove_from_config`    | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from.                   |
 
 ## Pull mode configuration options
 
@@ -91,20 +92,16 @@ There are also additional environment variables that may change the behavior of 
 
 | Variable        | Value format | Description                                                                                                              |
 |-----------------|--------------|--------------------------------------------------------------------------------------------------------------------------|
-| `HF_ENDPOINT`   | `string`     | Default: `huggingface.co`. For users in China, set to `https://hf-mirror.com` if needed.                                 |
+| `HF_ENDPOINT`   | `string`     | Default: `https://huggingface.co`. For users in China, set to `https://www.modelscope.cn/models` or `https://hf-mirror.com` if needed.                                 |
 | `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
 | `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
 
 ### Advanced Environment Variables for Pull Mode
 | Variable                            | Format  | Description                                                                                                |
+|-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
-
-### Advanced Environment Variables for Pull Mode in 2025.2 release
-| Variable                       | Format  | Description                                                                                                |
-| `GIT_SERVER_CONNECT_TIMEOUT_MS`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
-| `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system sesttings          |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
@@ -120,13 +117,17 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--dynamic_split_fuse`        | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                           |
 | `--max_prompt_len`            | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                         |
 | `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
+| `--response_parser`           | `string`     | Type of parser to use for tool calls and reasoning in model output. Currently supported: [qwen3, llama3, hermes3, phi4] |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
 |-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------|
+| `--resolution`                | `string`     | Allowed resolutions in a format list of `WxH`; `W`=width `H`=height - space separated. If not specified, inherited from model. If only one is specified, the pipeline will be reshaped to static. Static shape is required for NPU device. |
 | `--max_resolution`                | `string`     | Maximum allowed resolution in the format `WxH` (W = width, H = height). If not specified, inherited from the model. |
 | `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. If not specified, inherited from the model.|
 | `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request. In 2025.2 release only 1 image generation per request is supported. |
+| `--num_images_per_prompt`                | `integer`     | Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (1). For dynamic pipelines, by default only `max_num_images_per_prompt` limits the batch size.  |
+| `--guidance_scale`                | `integer`     | Guidance scale used for static pipeline reshape. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5)  |
 | `--default_num_inference_steps`   | `integer`    | Default number of inference steps when not specified by the client.                                                 |
 | `--max_num_inference_steps`       | `integer`    | Maximum number of inference steps a client can request for a given model.                                           |
 | `--num_streams`                   | `integer`    | Number of parallel execution streams for image generation models. Use at least 2 on 2-socket CPU systems.           |

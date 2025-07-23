@@ -33,7 +33,6 @@ class ResponseParser {
 public:
     ResponseParser() = delete;
     explicit ResponseParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
-        // Parser name is read from tokenizer_config.json, "response_parser_name" field.
         if (parserName == "llama3") {
             parser_impl = std::make_unique<Llama3ResponseParser>(tokenizer);
         } else if (parserName == "qwen3") {
@@ -48,6 +47,9 @@ public:
     }
     ParsedResponse parse(const std::vector<int64_t>& generatedTokens) {
         return parser_impl->parse(generatedTokens);
+    }
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) {
+        return parser_impl->parseChunk(chunkResponse);
     }
 };
 }  // namespace ovms
