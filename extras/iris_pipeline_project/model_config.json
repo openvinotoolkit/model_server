@@ -1,5 +1,12 @@
 {
-  "model_config_list": [],
+  "model_config_list": [
+        {
+            "config": {
+                "name": "infer_pipeline",
+                "base_path": "/workspace/model/generic_model"
+            }
+        }
+    ], 
   "mediapipe_config_list": [
     {
       "name": "pipeline",
