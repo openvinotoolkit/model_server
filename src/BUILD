@@ -134,7 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
-        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine",
+        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
     ],
 )
 
