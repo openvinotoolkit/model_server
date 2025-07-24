@@ -47,6 +47,7 @@ struct SidepacketServable {
     int64_t bos_token = 0;
     int64_t sep_token = 0;
     std::optional<uint32_t> maxModelLength;
+    std::filesystem::path parsedModelsPath;
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
@@ -76,6 +77,5 @@ public:
     }
 };
 
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 }  // namespace ovms
