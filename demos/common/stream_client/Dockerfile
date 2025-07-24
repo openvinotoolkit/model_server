@@ -81,7 +81,7 @@ RUN cp _vplinstall/lib/libvpl.so.2.9 /lib/libvpl.so
 RUN ln -s /lib/libvpl.so /lib/libvpl.so.2
 RUN git clone https://github.com/FFmpeg/FFmpeg.git /ffmpeg && \
     cd ffmpeg && \
-    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --enable-libx264 --enable-libx265 --incdir=/usr/include && \
+    ./configure --enable-libvpl --toolchain=gcc-tsan --enable-gpl --enable-libvpx --enable-zlib  --prefix=/usr --libdir=/usr/lib64 --pkgconfigdir=/usr/lib64/pkgconfig --enable-libx264 --enable-libx265 --enable-cross-compile --incdir=/usr/include && \
     make -j $JOBS && \
     make install
 RUN git clone https://github.com/opencv/opencv.git /opencv --branch 4.8.1 && \
