@@ -17,37 +17,26 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../base_output_parser.hpp"
+
 namespace ovms {
-struct ToolCall {
-    std::string id;
-    std::string name;
-    std::string arguments;
-};
-
-using ToolCalls = std::vector<ToolCall>;
-
-struct ParsedResponse {
-    // Content without tool calls and reasoning
-    std::string content;
-    // Tool calls extracted from the response
-    ToolCalls toolCalls;
-    // Decoded reasoning from the response
-    std::string reasoning;
-    // Number of reasoning tokens in the response
-    size_t reasoningTokenCount = 0;
-};
-
-class BaseResponseParser {
-protected:
-    ov::genai::Tokenizer tokenizer;
-
+class Phi4OutputParser : public BaseOutputParser {
 public:
-    BaseResponseParser() = delete;
-    explicit BaseResponseParser(ov::genai::Tokenizer& tokenizer) :
-        tokenizer(tokenizer) {}
-    virtual ~BaseResponseParser() = default;
-    virtual ParsedResponse parse(const std::vector<int64_t>& generatedTokens) = 0;
+    Phi4OutputParser() = delete;
+    explicit Phi4OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
+
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms

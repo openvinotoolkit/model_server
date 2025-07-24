@@ -14,18 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-
-#include <openvino/genai/tokenizer.hpp>
-#include <vector>
-#include "base_response_parser.hpp"
+#include <string>
 
 namespace ovms {
-class Phi4ResponseParser : public BaseResponseParser {
-public:
-    Phi4ResponseParser() = delete;
-    explicit Phi4ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
-
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
-};
+// Generates random alphanumeric string of length 9 for tool call ID
+std::string generateRandomId();
 }  // namespace ovms

@@ -2465,6 +2465,7 @@ cc_test(
         + select({
             "//:not_disable_mediapipe": [
                 "test/embeddingsnode_test.cpp",
+                "test/listmodelsendpoint_test.cpp",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/reranknode_test.cpp",
@@ -2494,11 +2495,12 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 # Tools support is limited to configuration with Python enabled
-                "test/llm/response_parsers/llama3_response_parser_test.cpp",
-                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
-                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
-                "test/llm/response_parsers/phi4_response_parser_test.cpp",
-                "test/llm/response_parsers/partial_json_parser_test.cpp",
+                "test/llm/output_parsers/base_output_parser_test.cpp",
+                "test/llm/output_parsers/llama3_output_parser_test.cpp",
+                "test/llm/output_parsers/qwen3_output_parser_test.cpp",
+                "test/llm/output_parsers/hermes3_output_parser_test.cpp",
+                "test/llm/output_parsers/phi4_output_parser_test.cpp",
+                "test/llm/output_parsers/partial_json_builder_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2648,7 +2650,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
-            ":listmodels_test",
+            ":listdirectorymodels_test",
             ":graph_export_test",
             ":config_export_test",
             ] + select({
@@ -2662,7 +2664,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:response_parsers",
+                "//src/llm:io_processing",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -2773,8 +2775,8 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
-    name = "listmodels_test",
-    srcs = ["test/listmodels_test.cpp"],
+    name = "listdirectorymodels_test",
+    srcs = ["test/listdirectorymodels_test.cpp"],
     alwayslink = True,
     linkopts = [],
     deps = [
@@ -2787,6 +2789,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
+
 cc_library(
     name = "graph_export_test",
     linkstatic = 1,

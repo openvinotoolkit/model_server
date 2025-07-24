@@ -20,33 +20,36 @@
 #include <string>
 #include <vector>
 
-#include "base_response_parser.hpp"
-#include "llama3_response_parser.hpp"
-#include "qwen3_response_parser.hpp"
-#include "hermes3_response_parser.hpp"
-#include "phi4_response_parser.hpp"
+#include "base_output_parser.hpp"
+#include "llama3/output_parser.hpp"
+#include "qwen3/output_parser.hpp"
+#include "hermes3/output_parser.hpp"
+#include "phi4/output_parser.hpp"
 
 namespace ovms {
-class ResponseParser {
-    std::unique_ptr<BaseResponseParser> parser_impl;
+class OutputParser {
+    std::unique_ptr<BaseOutputParser> parser_impl;
 
 public:
-    ResponseParser() = delete;
-    explicit ResponseParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
+    OutputParser() = delete;
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
         if (parserName == "llama3") {
-            parser_impl = std::make_unique<Llama3ResponseParser>(tokenizer);
+            parser_impl = std::make_unique<Llama3OutputParser>(tokenizer);
         } else if (parserName == "qwen3") {
-            parser_impl = std::make_unique<Qwen3ResponseParser>(tokenizer);
+            parser_impl = std::make_unique<Qwen3OutputParser>(tokenizer);
         } else if (parserName == "hermes3") {
-            parser_impl = std::make_unique<Hermes3ResponseParser>(tokenizer);
+            parser_impl = std::make_unique<Hermes3OutputParser>(tokenizer);
         } else if (parserName == "phi4") {
-            parser_impl = std::make_unique<Phi4ResponseParser>(tokenizer);
+            parser_impl = std::make_unique<Phi4OutputParser>(tokenizer);
         } else {
             throw std::invalid_argument("Unsupported response parser: " + parserName);
         }
     }
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) {
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) {
         return parser_impl->parse(generatedTokens);
+    }
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) {
+        return parser_impl->parseChunk(chunkResponse);
     }
 };
 }  // namespace ovms

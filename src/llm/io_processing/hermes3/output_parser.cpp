@@ -25,22 +25,22 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../../logging.hpp"
-#include "hermes3_response_parser.hpp"
-#include "utils.hpp"
+#include "../../../logging.hpp"
+#include "output_parser.hpp"
+#include "../utils.hpp"
 
 namespace ovms {
 
-ParsedResponse Hermes3ResponseParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedResponse parsedResponse;
+ParsedOutput Hermes3OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
+    ParsedOutput parsedOutput;
 
     // Assuming content ends when tool calls start, so we find the first occurrence of <tool_call> after the content start
     auto contentEndIt = std::find(generatedTokens.begin(), generatedTokens.end(), toolCallStartTokenId);
 
     if (contentEndIt != generatedTokens.end()) {
-        parsedResponse.content = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin(), contentEndIt));
+        parsedOutput.content = tokenizer.decode(std::vector<int64_t>(generatedTokens.begin(), contentEndIt));
     } else {
-        parsedResponse.content = tokenizer.decode(generatedTokens);
+        parsedOutput.content = tokenizer.decode(generatedTokens);
     }
 
     // Assuming tool calls are the last part of the output
@@ -93,8 +93,14 @@ ParsedResponse Hermes3ResponseParser::parse(const std::vector<int64_t>& generate
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
             continue;
         }
-        parsedResponse.toolCalls.push_back(toolCall);
+        parsedOutput.toolCalls.push_back(toolCall);
     }
-    return parsedResponse;
+    return parsedOutput;
+}
+
+std::optional<rapidjson::Document> Hermes3OutputParser::parseChunk(const std::string& chunk) {
+    // Not implemented
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Hermes3OutputParser::parseChunk is not implemented");
+    return std::nullopt;
 }
 }  // namespace ovms

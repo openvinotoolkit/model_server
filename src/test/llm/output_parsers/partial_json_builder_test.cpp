@@ -15,25 +15,25 @@
 //*****************************************************************************
 
 #include <string>
-#include "../../../llm/response_parsers/partial_json_parser.hpp"
+#include "../../../llm/io_processing/partial_json_builder.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace ovms;
 
-class PartialJsonParserTest : public ::testing::Test {};
+class PartialJsonBuilderTest : public ::testing::Test {};
 
-TEST_F(PartialJsonParserTest, simpleCompleteJsonWithStringValue) {
+TEST_F(PartialJsonBuilderTest, simpleCompleteJsonWithStringValue) {
     std::string input = "{\"name\": \"OpenVINO\"}";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
 }
 
-TEST_F(PartialJsonParserTest, complexCompleteJsonWithDifferentValueTypes) {
+TEST_F(PartialJsonBuilderTest, complexCompleteJsonWithDifferentValueTypes) {
     std::string input = R"({
         "user": {
             "name": "OpenVINO",
@@ -44,8 +44,8 @@ TEST_F(PartialJsonParserTest, complexCompleteJsonWithDifferentValueTypes) {
         },
         "numbers": [1, 2, 3]
     })";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("user"));
     ASSERT_TRUE(parsedJson["user"].IsObject());
@@ -71,40 +71,40 @@ TEST_F(PartialJsonParserTest, complexCompleteJsonWithDifferentValueTypes) {
     ASSERT_EQ(parsedJson["numbers"][2].GetInt(), 3);
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValue) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithStringValue) {
     std::string input = "{\"name\": \"Open";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("Open"));
 }
 
-TEST_F(PartialJsonParserTest, simpleCompleteJsonWithNumberValue) {
+TEST_F(PartialJsonBuilderTest, simpleCompleteJsonWithNumberValue) {
     std::string input = "{\"age\": 5}";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("age"));
     ASSERT_TRUE(parsedJson["age"].IsInt());
     ASSERT_EQ(parsedJson["age"].GetInt(), 5);
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValue) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithNumberValue) {
     std::string input = "{\"age\": 5";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("age"));
     ASSERT_TRUE(parsedJson["age"].IsInt());
     ASSERT_EQ(parsedJson["age"].GetInt(), 5);
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValueTwoKeys) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithNumberValueTwoKeys) {
     std::string input = "{\"age\": 5, \"height\": 180";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("age"));
     ASSERT_TRUE(parsedJson.HasMember("height"));
@@ -114,23 +114,23 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithNumberValueTwoKeys) {
     ASSERT_EQ(parsedJson["height"].GetInt(), 180);
 }
 
-TEST_F(PartialJsonParserTest, simpleCompleteJsonWithArrayValue) {
+TEST_F(PartialJsonBuilderTest, simpleCompleteJsonWithArrayValue) {
     std::string input = "{\"numbers\": [1, 2, 3]}";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("numbers"));
     ASSERT_TRUE(parsedJson["numbers"].IsArray());
     ASSERT_EQ(parsedJson["numbers"].Size(), 3);
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValue) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithArrayValue) {
     auto inputs = {"{\"numbers\": [1, 2, 3",
         "{\"numbers\": [1, 2, 3, "};
 
     for (const auto& input : inputs) {
-        JsonBuilder builder;
-        auto parsedJson = builder.partialParseToJson(input);
+        PartialJsonBuilder builder;
+        auto parsedJson = builder.add(input);
         ASSERT_TRUE(parsedJson.IsObject());
         ASSERT_TRUE(parsedJson.HasMember("numbers"));
         ASSERT_TRUE(parsedJson["numbers"].IsArray());
@@ -138,13 +138,13 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValue) {
     }
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValueMultipleNesting) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithArrayValueMultipleNesting) {
     auto inputs = {"{\"numbers\": [[[1,2,3], [4,5,6",
         "{\"numbers\": [[[1,2,3], [4,5,6,"};
 
     for (const auto& input : inputs) {
-        JsonBuilder builder;
-        auto parsedJson = builder.partialParseToJson(input);
+        PartialJsonBuilder builder;
+        auto parsedJson = builder.add(input);
         ASSERT_TRUE(parsedJson.IsObject());
         ASSERT_TRUE(parsedJson.HasMember("numbers"));
         ASSERT_TRUE(parsedJson["numbers"].IsArray());
@@ -168,35 +168,36 @@ TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithArrayValueMultipleNesting)
     }
 }
 
-TEST_F(PartialJsonParserTest, simpleUncompleteJsonWithStringValueWithExtraCharacters) {
+TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithStringValueWithExtraCharacters) {
     std::string input = "{\"arguments\": \"{\\\"location\\\": \\\"Tokyo, ";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
     ASSERT_TRUE(parsedJson["arguments"].IsString());
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo, "));
 }
 
-TEST_F(PartialJsonParserTest, simpleJsonWithKeyWithoutValue) {
+TEST_F(PartialJsonBuilderTest, simpleJsonWithKeyWithoutValue) {
     std::string input = "{\"name\": \"OpenVINO\", \"age\": ";
-    JsonBuilder builder;
-    auto parsedJson = builder.partialParseToJson(input);
+    PartialJsonBuilder builder;
+    auto parsedJson = builder.add(input);
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("OpenVINO"));
-    // The "age" key is incomplete, so it should not be present in the parsed JSON
-    ASSERT_FALSE(parsedJson.HasMember("age"));
+    // The "age" key exists but its value is null since it is incomplete
+    ASSERT_TRUE(parsedJson.HasMember("age"));
+    ASSERT_TRUE(parsedJson["age"].IsNull());
 }
 
-TEST_F(PartialJsonParserTest, simpleJsonWithIncompleteKey) {
+TEST_F(PartialJsonBuilderTest, simpleJsonWithIncompleteKey) {
     auto inputs = {"{\"name\": \"OpenVINO\", \"ag",
         "{\"name\": \"OpenVINO\",",
         "{\"name\": \"OpenVINO\""};
     for (const auto& input : inputs) {
-        JsonBuilder builder;
-        auto parsedJson = builder.partialParseToJson(input);
+        PartialJsonBuilder builder;
+        auto parsedJson = builder.add(input);
         ASSERT_TRUE(parsedJson.IsObject());
         EXPECT_EQ(parsedJson.MemberCount(), 1);
         ASSERT_TRUE(parsedJson.HasMember("name"));
@@ -205,14 +206,14 @@ TEST_F(PartialJsonParserTest, simpleJsonWithIncompleteKey) {
     }
 }
 
-TEST_F(PartialJsonParserTest, complexJsonWithIncompleteKey) {
+TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
     // Nested object of objects with incomplete key
     auto inputs = {"{\"tool\": {\"name\": \"OpenVINO\", \"ag",
         "{\"tool\": {\"name\": \"OpenVINO\",",
         "{\"tool\": {\"name\": \"OpenVINO\""};
     for (const auto& input : inputs) {
-        JsonBuilder builder;
-        auto parsedJson = builder.partialParseToJson(input);
+        PartialJsonBuilder builder;
+        auto parsedJson = builder.add(input);
         ASSERT_TRUE(parsedJson.IsObject());
         EXPECT_EQ(parsedJson.MemberCount(), 1);
         ASSERT_TRUE(parsedJson.HasMember("tool"));
@@ -229,8 +230,8 @@ TEST_F(PartialJsonParserTest, complexJsonWithIncompleteKey) {
         "{\"tools\": [{\"name\": \"OpenVINO\"}"};
 
     for (const auto& input : inputsArray) {
-        JsonBuilder builder;
-        auto parsedJson = builder.partialParseToJson(input);
+        PartialJsonBuilder builder;
+        auto parsedJson = builder.add(input);
         ASSERT_TRUE(parsedJson.IsObject());
         EXPECT_EQ(parsedJson.MemberCount(), 1);
         ASSERT_TRUE(parsedJson.HasMember("tools"));
@@ -244,13 +245,15 @@ TEST_F(PartialJsonParserTest, complexJsonWithIncompleteKey) {
     }
 }
 
-TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
+TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
     std::string targetJson = R"({
         "major_object": {
             "string": "OpenVINO",
             "minor_object": {
                 "number": 5,
                 "number_array": [1, 2, 3],
+                "float": 3.14,
+                "float_array": [1.1, 2.2, 3.3],
                 "string_array": ["C++", "Python", "\"Java\"", "AI"]
             }
         },
@@ -260,11 +263,11 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
         "null_array": [null, null, null],
         "empty_object": {}
     })";
-    JsonBuilder builder;
+    PartialJsonBuilder builder;
     rapidjson::Document parsedJson;
     for (size_t i = 0; i < targetJson.size(); ++i) {
         std::string partialInput(1, targetJson[i]);
-        parsedJson = builder.partialParseToJson(partialInput);
+        parsedJson = builder.add(partialInput);
     }
 
     ASSERT_TRUE(parsedJson.IsObject());
@@ -286,6 +289,16 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][0].GetInt(), 1);
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][1].GetInt(), 2);
     ASSERT_EQ(parsedJson["major_object"]["minor_object"]["number_array"][2].GetInt(), 3);
+
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("float"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["float"].IsDouble());
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float"].GetDouble(), 3.14);
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("float_array"));
+    ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["float_array"].IsArray());
+    ASSERT_EQ(parsedJson["major_object"]["minor_object"]["float_array"].Size(), 3);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][0].GetDouble(), 1.1);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][1].GetDouble(), 2.2);
+    ASSERT_DOUBLE_EQ(parsedJson["major_object"]["minor_object"]["float_array"][2].GetDouble(), 3.3);
 
     ASSERT_TRUE(parsedJson["major_object"]["minor_object"].HasMember("string_array"));
     ASSERT_TRUE(parsedJson["major_object"]["minor_object"]["string_array"].IsArray());
@@ -324,55 +337,56 @@ TEST_F(PartialJsonParserTest, complexJsonIncrementalParsingSanityCheck) {
     ASSERT_EQ(parsedJson["empty_object"].MemberCount(), 0);
 }
 
-TEST_F(PartialJsonParserTest, simpleJsonIncrementalParsing) {
+TEST_F(PartialJsonBuilderTest, simpleJsonIncrementalParsing) {
     std::string targetJson = R"({
         "name": "get_weather",
         "arguments": "{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"
     })";
-    JsonBuilder builder;
+    PartialJsonBuilder builder;
     rapidjson::Document parsedJson;
-    builder.partialParseToJson("{");
-    builder.partialParseToJson("\"");
-    parsedJson = builder.partialParseToJson("name");
+    builder.add("{");
+    builder.add("\"");
+    parsedJson = builder.add("name");
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_EQ(parsedJson.MemberCount(), 0);  // Should not be complete yet
 
-    builder.partialParseToJson("\": \"");
-    builder.partialParseToJson("get");
-    parsedJson = builder.partialParseToJson("_");
+    builder.add("\": \"");
+    builder.add("get");
+    parsedJson = builder.add("_");
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_"));
 
-    builder.partialParseToJson("weather");
-    builder.partialParseToJson("\", ");
-    parsedJson = builder.partialParseToJson("\"arguments\":");
+    builder.add("weather");
+    builder.add("\", ");
+    parsedJson = builder.add("\"arguments\":");
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
     ASSERT_TRUE(parsedJson["name"].IsString());
     ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
-    ASSERT_EQ(parsedJson.MemberCount(), 1);  // Only "name" should be present
+    ASSERT_TRUE(parsedJson.HasMember("arguments"));
+    ASSERT_TRUE(parsedJson["arguments"].IsNull());
 
-    builder.partialParseToJson("\"{");
-    parsedJson = builder.partialParseToJson("\\\"location\\\": \\\"");
+    builder.add("\"{");
+    parsedJson = builder.add("\\\"location\\\": \\\"");
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
     ASSERT_TRUE(parsedJson["arguments"].IsString());
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \""));
 
-    builder.partialParseToJson("Tokyo");
-    builder.partialParseToJson("\\\", \\\"");
-    parsedJson = builder.partialParseToJson("date");
+    builder.add("Tokyo");
+    builder.add("\\\", \\\"");
+    parsedJson = builder.add("date");
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
     ASSERT_TRUE(parsedJson["arguments"].IsString());
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date"));
 
-    builder.partialParseToJson("\\\": \\\"");
-    builder.partialParseToJson("2025-01-01");
-    builder.partialParseToJson("\\\"}\"");
-    parsedJson = builder.partialParseToJson("}");
+    builder.add("\\\": \\\"");
+    builder.add("2025-01-01");
+    builder.add("\\\"}\"");
+    parsedJson = builder.add("}");
 
     ASSERT_TRUE(parsedJson.IsObject());
     ASSERT_TRUE(parsedJson.HasMember("name"));
@@ -381,4 +395,165 @@ TEST_F(PartialJsonParserTest, simpleJsonIncrementalParsing) {
     ASSERT_TRUE(parsedJson.HasMember("arguments"));
     ASSERT_TRUE(parsedJson["arguments"].IsString());
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
+}
+
+TEST_F(PartialJsonBuilderTest, NegativeCases) {
+    std::vector<std::pair<std::string, std::string>> negativeCases = {
+        {R"(a)", "Invalid JSON: Expected '{' or '[' at the beginning."},
+        {R"({"name",)", "Invalid JSON: Expected ':' after key."},
+        {R"({"object": {"string":"1", "string",)", "Invalid JSON: Expected ':' after key."},
+        {R"({"name": "get_weather",  1)", "Invalid JSON: Expected key to start with a quote or a proper object closure."},
+        {R"({"name": a)", "Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'."},
+        {R"({"numbers": []])", "Invalid JSON."},         // invalid closure
+        {R"({"numbers": [1, 2, 3})", "Invalid JSON."},   // invalid closure
+        {R"({"numbers": [1, 2, 3b)", "Invalid JSON."},   // invalid value
+        {R"({"numbers": [1, 2, 3")", "Invalid JSON."},   // invalid value
+        {R"({"string": "string\""1)", "Invalid JSON."},  // invalid value
+        {R"({"bool": tak,)", "Invalid JSON."},           // invalid special value
+    };
+
+    for (const auto& [json, expectedError] : negativeCases) {
+        PartialJsonBuilder builder;
+        for (size_t i = 0; i < json.size(); ++i) {
+            std::string s(1, json[i]);
+            if (i == json.size() - 1) {
+                try {
+                    builder.add(s);
+                    FAIL() << "Expected exception not thrown";
+                } catch (const std::exception& ex) {
+                    EXPECT_EQ(std::string(ex.what()), expectedError);
+                }
+            } else {
+                builder.add(s);
+            }
+        }
+    }
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithEmptyJson) {
+    rapidjson::Document previous;
+    previous.SetObject();
+    rapidjson::Document current;
+    current.SetObject();
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_TRUE(delta.Empty());
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedMember) {
+    const char* previousJson = R"({
+        "name": "get_weather"
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "arguments": "\""
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"arguments": "\""}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_FALSE(delta.HasMember("name"));
+    ASSERT_TRUE(delta.HasMember("arguments"));
+    ASSERT_TRUE(delta["arguments"].IsString());
+    ASSERT_EQ(delta["arguments"].GetString(), std::string("\""));
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedMember) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "object": {
+            "key": "value"
+        }
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "object": {
+            "key": "value",
+            "new_key": null
+        } 
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"object": {"new_key": null}}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("object"));
+    ASSERT_TRUE(delta["object"].IsObject());
+    ASSERT_EQ(delta["object"].MemberCount(), 1);
+    ASSERT_TRUE(delta["object"].HasMember("new_key"));
+    ASSERT_TRUE(delta["object"]["new_key"].IsNull());
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithAddedNestedArrayElement) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "objects": [
+            {
+                "key": "value1"
+            }
+        ]
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "objects": [
+            {
+                "key": "value1"
+            },
+            {
+                "key": "value2"
+            }
+        ]
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"objects": [{"key": "value2"}]}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("objects"));
+    ASSERT_TRUE(delta["objects"].IsArray());
+    ASSERT_EQ(delta["objects"].Size(), 1);
+    ASSERT_TRUE(delta["objects"][0].IsObject());
+    ASSERT_TRUE(delta["objects"][0].HasMember("key"));
+    ASSERT_EQ(delta["objects"][0]["key"].GetString(), std::string("value2"));
+}
+
+TEST_F(PartialJsonBuilderTest, computeDeltaWithModifiedStringMember) {
+    const char* previousJson = R"({
+        "name": "get_weather",
+        "arguments": "{\"location\": \"Tokyo\""
+    })";
+    rapidjson::Document previous;
+    previous.Parse(previousJson);
+
+    const char* currentJson = R"({
+        "name": "get_weather",
+        "arguments": "{\"location\": \"Tokyo\", \"date\":"
+    })";
+    rapidjson::Document current;
+    current.Parse(currentJson);
+
+    auto delta = PartialJsonBuilder::computeDelta(previous, current);
+    // Expecting delta {"arguments": ", \"date\": "}
+    ASSERT_TRUE(delta.IsObject());
+    ASSERT_FALSE(delta.Empty());
+    ASSERT_TRUE(delta.HasMember("arguments"));
+    ASSERT_TRUE(delta["arguments"].IsString());
+    // Only the new part should be present in arguments
+    ASSERT_EQ(delta["arguments"].GetString(), std::string(", \"date\":"));
 }
