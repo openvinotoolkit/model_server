@@ -856,7 +856,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"parserName",
     };
 
-    int arg_count = 24;
+    int arg_count = 26;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
