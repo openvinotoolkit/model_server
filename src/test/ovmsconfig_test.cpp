@@ -658,7 +658,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPort) {
     char* n_argv[] = {
         "ovms",
         "--source_model",
-        "some/model",
+        "OpenVINO/model",
         "--model_repository_path",
         "/some/path",
         "--task",
