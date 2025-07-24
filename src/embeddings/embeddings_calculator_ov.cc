@@ -40,7 +40,7 @@
 #include "../model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "../sidepacket_servable.hpp"
+#include "embeddings_servable.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -63,7 +63,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
 
 protected:
-    std::shared_ptr<ovms::SidepacketServable> embeddings_session{nullptr};
+    std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -241,7 +241,7 @@ public:
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings());
+        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), embeddings_session->getPoolingMode(), tokens.attention_mask);
         if (!status.ok()) {
             return status;
         }
