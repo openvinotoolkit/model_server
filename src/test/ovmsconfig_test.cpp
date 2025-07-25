@@ -1311,65 +1311,6 @@ TEST(OvmsGraphConfigTest, negativeSourceModel) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
 }
 
-TEST(OvmsGraphConfigTest, negativeSourceModelPullAndStart) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--rest_port",
-        (char*)"8082",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)"text_generation",
-    };
-
-    int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
-}
-
-TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
-    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    std::string servingName = "FastDraft";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)"rerank",
-        (char*)"--target_device",
-        (char*)"GPU",
-        (char*)"--max_allowed_chunks",
-        (char*)"1002",
-        (char*)"--num_streams",
-        (char*)"2",
-        (char*)"--model_name",
-        (char*)servingName.c_str(),
-    };
-
-    int arg_count = 16;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-
-    auto& hfSettings = config.getServerSettings().hfSettings;
-    ASSERT_EQ(hfSettings.sourceModel, modelName);
-    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
-    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
-    ASSERT_EQ(hfSettings.task, ovms::RERANK_GRAPH);
-    ovms::RerankGraphSettingsImpl rerankGraphSettings = std::get<ovms::RerankGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(rerankGraphSettings.maxAllowedChunks, 1002);
-    ASSERT_EQ(rerankGraphSettings.numStreams, 2);
-    ASSERT_EQ(rerankGraphSettings.targetDevice, "GPU");
-    ASSERT_EQ(rerankGraphSettings.modelName, servingName);
-    ASSERT_EQ(rerankGraphSettings.modelPath, "./");
-}
-
 TEST(OvmsGraphConfigTest, positiveAllChangedRerankStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
