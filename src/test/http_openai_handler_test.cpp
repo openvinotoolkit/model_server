@@ -776,7 +776,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingMessagesEmptyContentArrayFails) {
     EXPECT_EQ(apiHandler->parseMessages(), absl::InvalidArgumentError("Invalid message structure - content array is empty"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefualtToMaxTokensLimit) {
+TEST_F(HttpOpenAIHandlerParsingTest, maxTokensValueDefaultToMaxTokensLimit) {
     std::string json = R"({
     "model": "llama",
     "messages": [

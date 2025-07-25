@@ -162,7 +162,7 @@ void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
 
 #pragma warning(push)
 #pragma warning(disable : 4267)
-absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings) {
+absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode, const std::optional<ov::Tensor>& attentionMask) {
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
 
@@ -179,7 +179,33 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     }
     size_t batchSize = outputShape[0];
     for (size_t batchIterator = 0; batchIterator < batchSize; batchIterator++) {
-        size_t stride = batchIterator * outputShape[1] * outputShape[2];
+        size_t stride;
+        if (poolingMode == PoolingMode::LAST_TOKEN) {
+            size_t attendedTokens = 0;
+            if (!attentionMask.has_value()) {
+                return absl::InvalidArgumentError("Last token pooling mode requires attention mask");
+            }
+            auto maxNumberOfTokens = attentionMask->get_shape()[1];
+            if (attentionMask->get_element_type() == ov::element::Type_t::i64) {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<int64_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            } else if (attentionMask->get_element_type() == ov::element::Type_t::i32) {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<int32_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            } else {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<uint8_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            }
+            if (!(attendedTokens <= outputShape[1])) {
+                return absl::InternalError("Embeddings output and attention mask shape mismatch");
+            }
+            stride = batchIterator * outputShape[1] * outputShape[2] + (attendedTokens - 1) * outputShape[2];
+        } else {
+            stride = batchIterator * outputShape[1] * outputShape[2];
+        }
         size_t size = outputShape[2];
         float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
         float* dataPtrEnd = dataPtr + size;

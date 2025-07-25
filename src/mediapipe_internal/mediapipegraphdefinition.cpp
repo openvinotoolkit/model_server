@@ -528,8 +528,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<SidepacketServable> servable = std::make_shared<SidepacketServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-            embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<SidepacketServable>>(nodeName, std::move(servable)));
+            std::shared_ptr<EmbeddingsServable> servable = std::make_shared<EmbeddingsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(servable)));
             embeddingsServablesCleaningGuard.disableCleaning();
         }
         if (endsWith(config.node(i).calculator(), RERANK_NODE_CALCULATOR_NAME)) {

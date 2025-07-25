@@ -29,6 +29,15 @@ ovms_cc_library(
     alwayslink = 1,
 )
 
+ovms_cc_library(
+    name = "embeddings_servable",
+    hdrs = ["embeddings_servable.hpp"],
+#    srcs = ["embeddings_api.cpp"],
+    deps = ["//src:sidepacket_servable",],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
 mediapipe_proto_library(
     name = "embeddings_calculator_proto", # embeddings_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["embeddings_calculator.proto"],
@@ -81,11 +90,12 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovmsprofiler",
         "embeddings_calculator_ov_cc_proto",
-        ":embeddings_api",
+        ":embeddings_servable",
         "//src:sidepacket_servable",
         "//src:model_metric_reporter",
         "//src:executingstreamidguard",
         "//src:libovms_execution_context",
+        ":embeddings_api",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
