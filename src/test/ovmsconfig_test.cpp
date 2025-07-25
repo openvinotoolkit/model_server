@@ -26,8 +26,6 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
-#include "../graph_export/graph_export_types.hpp"
-#include "../config_export_module/config_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -808,6 +806,68 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
 }
 
+TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--weight-format",
+        "int4",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--extra_quantization_params",
+        "int4",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, WrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--weight-format",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, WrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--extra_quantization_params",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
     char* n_argv[] = {
         "ovms",
@@ -956,6 +1016,103 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
     ASSERT_EQ(graphSettings.responseParser.has_value(), false);
+}
+
+TEST(OvmsExportHfSettingsTest, positiveDefault) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+    };
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "int8");
+    ASSERT_EQ(hfSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChanged) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--weight-format",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+    };
+
+    int arg_count = 13;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--rest_port",
+        (char*)"8080",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--weight-format",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+    };
+
+    int arg_count = 14;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {

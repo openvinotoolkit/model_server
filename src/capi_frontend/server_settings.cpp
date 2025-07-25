@@ -13,31 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
 #include <map>
 #include <string>
-#pragma once
+
+#include "server_settings.hpp"
+
 namespace ovms {
-enum ConfigExportType : int {
-    ENABLE_MODEL,
-    DISABLE_MODEL,
-    DELETE_MODEL,
-    UNKNOWN_MODEL
-};
 
-const std::map<ConfigExportType, std::string> configExportTypeToString = {
-    {ENABLE_MODEL, "ENABLE_MODEL"},
-    {DISABLE_MODEL, "DISABLE_MODEL"},
-    {DELETE_MODEL, "DELETE_MODEL"},
-    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
+std::string enumToString(ConfigExportType type) {
+    auto it = configExportTypeToString.find(type);
+    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
+}
 
-const std::map<std::string, ConfigExportType> stringToConfigExportType = {
-    {"ENABLE_MODEL", ENABLE_MODEL},
-    {"DISABLE_MODEL", DISABLE_MODEL},
-    {"DELETE_MODEL", DELETE_MODEL},
-    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
+ConfigExportType stringToConfigExportEnum(const std::string& inString) {
+    auto it = stringToConfigExportType.find(inString);
+    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
+}
 
-std::string enumToString(ConfigExportType type);
-ConfigExportType stringToConfigExportEnum(std::string inString);
+std::string enumToString(GraphExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown_graph";
+}
+
+GraphExportType stringToEnum(const std::string& inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
+}
 
 }  // namespace ovms

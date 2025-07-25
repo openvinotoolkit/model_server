@@ -179,9 +179,8 @@ cc_library(
 ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
-    srcs = [],
-    deps = ["//src/config_export_module:config_export_types",
-            "//src/graph_export:graph_export_types",],
+    srcs = ["capi_frontend/server_settings.cpp"],
+    deps = [],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2319,10 +2318,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [
-        "//src/graph_export:graph_export_types",
-        "//src/config_export_module:config_export_types",
-    ],
+    deps = [],
     visibility = ["//visibility:public"],
 )
 
@@ -2345,6 +2341,19 @@ cc_binary(
         "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
+)
+
+
+
+cc_binary(
+    name = "optimum-cli",
+    srcs = [
+        "test/optimum_cli_mock.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [],
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_binary(
@@ -2636,6 +2645,7 @@ cc_test(
         "//src:libcustom_node_horizontal_ocr.so",
     ],
     deps = [
+            "optimum-cli",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp

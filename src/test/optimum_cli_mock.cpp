@@ -14,19 +14,25 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
-#include <map>
-#include <string>
 
-#include "config_export_types.hpp"
-namespace ovms {
+int main(int argc, char** argv) {
+    if (argc < 2)
+        return -1;
 
-std::string enumToString(ConfigExportType type) {
-    auto it = configExportTypeToString.find(type);
-    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
+    std::cout << "Number of arguments: " << argc << std::endl;
+    for (int i = 0; i < argc; ++i) {
+        std::cout << "Argument " << i << ": " << argv[i] << std::endl;
+    }
+    for (int i = 0; i < argc; ++i) {
+        if (i == 1 && argv[i][0] == '-') {
+            std::cout << "usage: optimum-cli" << std::endl;
+            return 0;
+        }
+        if (i == 1 && argv[i][0] == 'e') {
+            std::cout << "Applying Weight Compression" << std::endl;
+            return 0;
+        }
+    }
+
+    return 0;
 }
-
-ConfigExportType stringToConfigExportEnum(std::string inString) {
-    auto it = stringToConfigExportType.find(inString);
-    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
-}
-}  // namespace ovms
