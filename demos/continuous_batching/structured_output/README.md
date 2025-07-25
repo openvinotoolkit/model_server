@@ -1,10 +1,12 @@
-# Structured response in LLM models
+# Structured response in LLM models {#ovms_structured_output}
 
 OpenVINO Model Server can enforce the LLM models to generated the output according to a specific json schema.
 That functionality can be applied in automation tasks where json content needs to be created based on the text passed in the request.
 Json format is a standard for a communication and data exchange between applications and microservices.
 
 Below is an example how this capability can be used with an testing procedure to show accuracy gain.
+
+<b>Requirements: OVMS version 2025.3 built from main branch </b>
 
 ## Deploy LLM model
 
@@ -176,11 +178,16 @@ It will be executed with the response_format request field including the schema 
 
 ```console
 pip install dataset
-python accuracy_test.py --base_url http://ov-spr-28.sclab.intel.com:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --pass_response_format True --concurrency 100
+python accuracy_test.py --base_url http://localhost:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
+```
+```
+Requests: 1000, Successful responses: 1000, Exact matches: 135, Schema matches: 435 Invalid inputs: 0
 ```
 
 ```console
-python accuracy_test.py --base_url http://ov-spr-28.sclab.intel.com:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --pass_response_format False --concurrency 100
+python accuracy_test.py --base_url http://localhost:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
 ```
-
+```
+Requests: 1000, Successful responses: 1000, Exact matches: 217, Schema matches: 828 Invalid inputs: 0
+```
 Generally the quality of the responses depend on the model size and topology. The results above proves that the accuracy can be increased even without changing the model via adding the mechanism of guided generation and using the field `response_format`

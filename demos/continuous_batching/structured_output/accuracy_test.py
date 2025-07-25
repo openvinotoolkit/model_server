@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,33 +24,35 @@ from jsonschema import validate, ValidationError
 import logging
 import ast
 import httpx
+import argparse
+from tqdm.asyncio import tqdm
+from typing import Optional
 
-dataset = load_dataset('isaiahbjork/json-mode-agentic', split='train')
-dataset = dataset.select(range(1000))
-
-model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
-base_url = os.getenv("BASE_URL", "http://ov-spr-28.sclab.intel.com:9001/v3")
-openai_client = AsyncOpenAI(base_url=base_url, api_key="unused", timeout=httpx.Timeout(600, connect=3.0, read=20.0, write=2.0))
+dataset = None
+model_name = None
+base_url = None
+openai_client = None
+concurrency = None
+enable_response_format = None
 logging.basicConfig(filename='responses.log', level=logging.INFO, format='%(asctime)s %(message)s')
-print(dataset)
-
+pbar: Optional[tqdm] = None
 
 async def get_response(input, instruction, schema, openai_client, model_name=""):
-    # try:
-        
+    
     schema_dict = ast.literal_eval(schema)
-    #     name, schema_object = next(iter(schema_dict.items()))
-    # except Exception as e:
-    #     return None
 
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "schema": schema_dict,
-            "name": "schema_name",
-            "strict": True
+    if enable_response_format:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "schema": schema_dict,
+                "name": "schema_name",
+                "strict": True
+            }
         }
-    }
+    else:
+        response_format = None
+
     response = await openai_client.chat.completions.create(
         model=model_name,
         messages=[
@@ -59,23 +61,20 @@ async def get_response(input, instruction, schema, openai_client, model_name="")
         ],
         temperature=0,
         response_format=response_format,
-        max_tokens=1000,
+        max_tokens=1000, # limit just in case of endless loop
     )
+    pbar.update(1)
     return response.choices[0].message.content
 
 def evaluate_response(response, schema, expected_output):
     try:
         response_json = json.loads(response)
         expected_json = json.loads(expected_output)
-        # _, expected_object = next(iter(expected_json.items()))
 
         a, b = json.dumps(response_json, sort_keys=True), json.dumps(expected_json, sort_keys=True)
         exact_match = a == b
-        if exact_match is False:
-            print(f"Response JSON: {response_json}\nExpected JSON: {expected_json}")
 
     except json.JSONDecodeError as e:
-        print(f"Response JSON: {response_json}\nExpected JSON: {expected_json} \nError: {e}")
         return False, False
     try:
         schema_json = ast.literal_eval(schema)
@@ -98,7 +97,6 @@ async def main():
 
         instruction = item.get('instruction')
         schema_match = re.search(r"<schema>(.*?)</schema>", instruction, re.DOTALL)
-        print(schema_match.group(1))
         if schema_match:
             try:
                 schema_match_str = schema_match.group(1)
@@ -108,27 +106,9 @@ async def main():
                 schema_match_str = None
         else:
             schema_match_str = None
-        
-        # if schema_match_json is None:
-        #     logging.info(f"Invalid schema match for item: {item}")
-        #     invalid_inputs += 1
-        #     return  # Skip this item if schema match is invalid
-        
-        # If schema_match_json doesn't have 'type' element, skip this item
-        # if 'type' not in schema_match_json and 'properties' not in schema_match_json:
-        #     name, schema_object = next(iter(schema_match_json.items()))
-        #     if 'type' not in schema_object and 'properties' not in schema_object:
-        #         invalid_inputs += 1
-        #         return
-        # else:
-        #     name = "schema unknown"
-        #     schema_object = schema_match_json
 
         input_text = item.get('input')
         output = item.get('output')
-        print("instruction:", instruction)
-        print("schema_substring:", schema_match_str)
-        print("input_text:", input_text)
         requests += 1
         try:
             response = await get_response(input_text, instruction, schema_match_str, openai_client, model_name=model_name)
@@ -137,20 +117,19 @@ async def main():
                 response = json_match.group(1).strip()
 
             successes += 1
-            a, b = evaluate_response(response, schema_match_str, output)
-            print("Response:", response)
-            print("Output:", output)
-            
-            if a:
+            exact_match, schema_match = evaluate_response(response, schema_match_str, output)
+            if exact_match:
                 exact_matches += 1
-            if b:
+            if schema_match:
                 schema_matches += 1
+            if not exact_match or not schema_match:
+                logging.info(f"Exact match: {exact_match}; schema_match {schema_match}\nInput: {input_text}\nInstruction: {instruction}\nSchema: {schema_match_str}\nResponse: {response}\nExpected Output: {output}\n\n\n")
+
         except Exception as e:
-            logging.info(f"Failed response for input: {input_text}\nSchema: {schema_match_str}\nExpected Output: {output}\nError: {e}\n")
-        print(f"Requests: {requests}, Successes: {successes}, Exact matches: {exact_matches}, Schema matches: {schema_matches}", "Invalid inputs:", invalid_inputs)
+            logging.error(f"Failed response for input: {input_text}\nSchema: {schema_match_str}\nExpected Output: {output}\nError: {e}\n")
 
     # Run all items concurrently, but limit concurrency to avoid overloading the server
-    semaphore = asyncio.Semaphore(50)  # adjust concurrency as needed
+    semaphore = asyncio.Semaphore(concurrency)  # adjust concurrency as needed
 
     async def sem_task(item):
         async with semaphore:
@@ -158,7 +137,30 @@ async def main():
 
     await asyncio.gather(*(sem_task(item) for item in dataset))
 
+    pbar.close()
+    print(f"Requests: {requests}, Successful responses: {successes}, Exact matches: {exact_matches}, Schema matches: {schema_matches}", "Invalid inputs:", invalid_inputs)
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Structured Output Accuracy Test")
+    parser.add_argument("--base_url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
+    parser.add_argument("--model", type=str, default="OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov", help="Model name to use")
+    parser.add_argument("--concurrency", type=int, default=10, help="Number of concurrent requests")
+    parser.add_argument("--enable_response_format", action="store_true", help="Enable response_format in requests")
+    parser.add_argument("--limit", type=int, default=None, help="Limit the number of requests to process")
+    args = parser.parse_args()
+
+    base_url = args.base_url
+    model_name = args.model
+    concurrency = args.concurrency
+    enable_response_format = args.enable_response_format
+    limit = args.limit
+    dataset = load_dataset('isaiahbjork/json-mode-agentic', split='train')
+    dataset = dataset.select(range(limit)) if limit else dataset
+    print(dataset)
+    pbar = tqdm(total=len(dataset), desc="Processing items")
+
+    openai_client = AsyncOpenAI(base_url=base_url, api_key="unused", timeout=httpx.Timeout(600))
+
     asyncio.run(main())
 
 
