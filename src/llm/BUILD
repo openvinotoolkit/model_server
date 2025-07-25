@@ -82,7 +82,8 @@ cc_library(
         "//src:image_conversion",
         "//src:libovmsfilesystem",
         "@stb//:image",
-        ":io_processing",
+        ":openai_request",
+        ":output_parsers",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
@@ -94,8 +95,22 @@ cc_library(
 )
 
 cc_library(
-    name = "io_processing",
-    hdrs = ["io_processing/base_output_parser.hpp", 
+    name = "openai_request",
+    hdrs = ["apis/openai_request.hpp"],
+    srcs = [],
+    deps = select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "output_parsers",
+    hdrs = ["io_processing/base_output_parser.hpp",
             "io_processing/hermes3/output_parser.hpp",
             "io_processing/llama3/output_parser.hpp",
             "io_processing/phi4/output_parser.hpp",
@@ -112,6 +127,30 @@ cc_library(
             "io_processing/utils.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src:libovmslogging",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+    copts = COPTS_ADJUSTED,
+    linkopts = LINKOPTS_ADJUSTED,
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "generation_config_builders",
+    hdrs = ["io_processing/base_generation_config_builder.hpp",
+            "io_processing/phi4/generation_config_builder.hpp",
+            "io_processing/llama3/generation_config_builder.hpp",
+            "io_processing/hermes3/generation_config_builder.hpp",
+            "io_processing/generation_config_builder.hpp"],
+    srcs = ["io_processing/base_generation_config_builder.cpp",
+            "io_processing/phi4/generation_config_builder.cpp",
+            "io_processing/llama3/generation_config_builder.cpp",
+            "io_processing/hermes3/generation_config_builder.cpp"],
+    deps = [
+        ":openai_request",
         "//src:libovmslogging",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
@@ -161,6 +200,7 @@ cc_library(
         "//src:libovmsfilesystem",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
+        ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
     ] + select({
