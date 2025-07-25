@@ -13,30 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#pragma once
-
-#include <openvino/genai/tokenizer.hpp>
+#include <map>
 #include <string>
-#include <optional>
-#include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
-
-#include "base_response_parser.hpp"
+#include "server_settings.hpp"
 
 namespace ovms {
-class Phi4ResponseParser : public BaseResponseParser {
-public:
-    Phi4ResponseParser() = delete;
-    explicit Phi4ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
-};
+std::string enumToString(ConfigExportType type) {
+    auto it = configExportTypeToString.find(type);
+    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
+}
+
+ConfigExportType stringToConfigExportEnum(const std::string& inString) {
+    auto it = stringToConfigExportType.find(inString);
+    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
+}
+
+std::string enumToString(GraphExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown_graph";
+}
+
+GraphExportType stringToEnum(const std::string& inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
+}
+
 }  // namespace ovms
