@@ -23,6 +23,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
+#include <set>
 
 #include "openai_json_response.hpp"
 
@@ -303,8 +304,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     }
 
     bool jsonChanged = false;
-    if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
-        return absl::OkStatus();
     if (tool_choice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
@@ -323,11 +322,23 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 auto nameIt = functionIt->value.GetObject().FindMember("name");
                 if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                     std::string functionName = nameIt->value.GetString();
-                    if (tool_choice != functionName) {
+                    // If tool_choice is set to "auto", we keep all tools
+                    // If tool_choice is set to a specific function name, we keep only that tool
+                    if (tool_choice != "auto" && tool_choice != functionName) {
                         it->value.Erase(&obj);
                         jsonChanged = true;
                     } else {
                         i++;
+                        // If we keep the tool, add tool name and schema to the request
+                        auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
+                        if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // Dump parameters object to string since this is the schema format expected by GenAI
+                            rapidjson::StringBuffer buffer;
+                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                            parametersIt->value.Accept(writer);
+                            std::string parametersStr = buffer.GetString();
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                        }
                     }
                 } else {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
@@ -335,7 +346,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             } else {
                 return absl::InvalidArgumentError("Function is not a valid JSON object");
             }
-            // Add new tool to tools list - TBD
         }
     }
     if (jsonChanged) {
@@ -345,6 +355,10 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         request.processedJson = buffer.GetString();
     }
     return absl::OkStatus();
+}
+
+const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
+    return request;
 }
 
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
@@ -712,10 +726,6 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
     processedTokens += numTokens;
     if (!request.echo || processedTokens > usage.promptTokens)
         usage.completionTokens += numTokens;
-}
-
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(const ov::genai::GenerationConfig& base) const {
-    return request.createGenerationConfig(base);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {

@@ -114,6 +114,8 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
+    properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();
+
     return StatusCode::OK;
 }
 

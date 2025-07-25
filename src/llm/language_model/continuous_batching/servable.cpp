@@ -61,7 +61,7 @@ absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<Co
     }
     executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         executionContext->inputIds,
-        executionContext->apiHandler->createGenerationConfig(properties->baseGenerationConfig));
+        executionContext->generationConfigBuilder->getConfig());
     return absl::OkStatus();
 }
 
