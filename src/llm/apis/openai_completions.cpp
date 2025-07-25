@@ -418,11 +418,11 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             if (std::string(typeIt->value.GetString()) != "json_schema") {
                 return absl::InvalidArgumentError("response_format.type can be only json_schema");
             } else {
-                auto jsonschemaIt = responseFormat.FindMember("json_schema");
-                if (jsonschemaIt != responseFormat.MemberEnd()) {
-                    if (!jsonschemaIt->value.IsObject())
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd()) {
+                    if (!jsonSchemaIt->value.IsObject())
                         return absl::InvalidArgumentError("response_format.json_schema is not an object");
-                    auto jsonSchema = jsonschemaIt->value.GetObject();
+                    auto jsonSchema = jsonSchemaIt->value.GetObject();
                     auto schemaIt = jsonSchema.FindMember("schema");
                     if (schemaIt == jsonSchema.MemberEnd())
                         return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
@@ -437,6 +437,8 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
                     return absl::InvalidArgumentError("response_format.json_schema is missing");
                 }
             }
+        } else {
+            return absl::InvalidArgumentError("response_format.type is missing");
         }
     }
 
