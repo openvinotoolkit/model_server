@@ -60,6 +60,11 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 default_num_inference_steps` - default number of inference steps used for generation, if not specified by the request [default = 50];
 -    `optional uint64 max_num_inference_steps` - maximum number of inference steps allowed for generation. Requests exceeding this value will be rejected. [default = 100];
 
+Static model resolution settings:
+-    `optional string resolution` - enforces static resolution for all requests. When specified, underlying models are reshaped to this resolution.
+-    `optional uint64 num_images_per_prompt` - used together with max_resolution, to define batch size in static model shape.
+-    `optional float guidance_scale` - used together with max_resolution
+
 
 ## Models Directory
 
