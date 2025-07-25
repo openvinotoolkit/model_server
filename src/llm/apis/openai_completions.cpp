@@ -739,15 +739,15 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
         usage.completionTokens -= usage.promptTokens;
 }
 
-ParsedResponse OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
+ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
-    ParsedResponse parsedResponse;
+    ParsedOutput parsedOutput;
     if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParser == nullptr) {
-        parsedResponse.content = tokenizer.decode(generatedIds);
+        parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
-        parsedResponse = responseParser->parse(generatedIds);
+        parsedOutput = responseParser->parse(generatedIds);
     }
-    return parsedResponse;
+    return parsedOutput;
 }
 
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
@@ -763,7 +763,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
 
         updateUsage(usage, generationOutput.generated_ids, request.echo);
-        ParsedResponse parsedResponse = parseOutputIfNeeded(generationOutput.generated_ids);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(generationOutput.generated_ids);
 
         jsonResponse.StartObject();
         // finish_reason: string;
@@ -843,9 +843,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
         }
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.MessageObject(parsedResponse);
+            jsonResponse.MessageObject(parsedOutput);
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.Text(parsedResponse);
+            jsonResponse.Text(parsedOutput);
         }
 
         // finish message object
@@ -894,7 +894,7 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
         updateUsage(usage, tokens, request.echo);
-        ParsedResponse parsedResponse = parseOutputIfNeeded(tokens);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
         jsonResponse.StartObject();
         // finish_reason: string; always "stop" for this method
         jsonResponse.FinishReason("stop");
@@ -902,9 +902,9 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
         jsonResponse.Index(index++);
 
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            jsonResponse.MessageObject(parsedResponse);
+            jsonResponse.MessageObject(parsedOutput);
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            jsonResponse.Text(parsedResponse);
+            jsonResponse.Text(parsedOutput);
         }
 
         // finish message object

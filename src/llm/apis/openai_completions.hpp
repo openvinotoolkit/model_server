@@ -40,7 +40,7 @@
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/status/status.h"
 #pragma warning(pop)
-#include "../response_parsers/response_parser.hpp"
+#include "../io_processing/output_parser.hpp"
 
 using namespace rapidjson;
 
@@ -189,13 +189,13 @@ class OpenAIChatCompletionsHandler {
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
     // Response parser is used to parse chat completions response for specific models
-    std::unique_ptr<ResponseParser> responseParser = nullptr;
+    std::unique_ptr<OutputParser> responseParser = nullptr;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
-    ParsedResponse parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+    ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -205,7 +205,7 @@ public:
         created(creationTime),
         tokenizer(tokenizer) {
         if (!responseParserName.empty()) {
-            responseParser = std::make_unique<ResponseParser>(tokenizer, responseParserName);
+            responseParser = std::make_unique<OutputParser>(tokenizer, responseParserName);
         }
     }
 

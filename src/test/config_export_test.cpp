@@ -477,11 +477,11 @@ TEST_F(ConfigCreationTest, positiveEndToEndEnableDisable) {
     }));
 
     start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
+    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::NOT_INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 3)) {
     }
 
-    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::SHUTDOWN);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
     server.setShutdownRequest(1);
     t->join();

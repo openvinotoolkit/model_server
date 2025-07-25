@@ -53,9 +53,9 @@ Configuration options for the server are defined only via command-line options a
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 | `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |
-| `allow_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
-| `allow_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
-| `allow_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
+| `allowed_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
+| `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
+| `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 
 ## Config management mode options
 
@@ -78,13 +78,22 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
-| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.  |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                |
+| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--target_device` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).  Default: `text_generation` |
+| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
+
+## Pull Mode Options for optimum-cli mode
+
+When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set two additional parameters for this mode.
+| Option                       | Value format | Description                                                                                                   |
+|------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
+| `--extra_quantization_params`| ` `          | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
+| `--weight-format`            | `string`      | Model precision used in optimum-cli export with conversion. Default `int8`.                |
+                        
 
 There are also additional environment variables that may change the behavior of pulling:
 
