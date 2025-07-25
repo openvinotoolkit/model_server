@@ -125,7 +125,7 @@ payload = {
 }
 
 headers = {"Content-Type": "application/json", "Authorization": "not used"}
-response = requests.post("http://ov-spr-28.sclab.intel.com:8000/v3/chat/completions", json=payload, headers=headers)
+response = requests.post("http://localhost:8000/v3/chat/completions", json=payload, headers=headers)
 json_response = response.json()
 
 print(json_response["choices"][0]["message"]["content"])
@@ -144,7 +144,7 @@ pip install openai
 ```python
 from openai import OpenAI
 from pydantic import BaseModel
-base_url = "http://ov-spr-28.sclab.intel.com:8000/v3"
+base_url = "http://localhost:8000/v3"
 model_name = "OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov"
 client = OpenAI(base_url=base_url, api_key="unused")
 class CalendarEvent(BaseModel):
