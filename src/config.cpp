@@ -115,7 +115,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 }
 
 bool Config::validate() {
-    if (this->serverSettings.serverMode == HF_PULL_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
         if (!serverSettings.hfSettings.sourceModel.size()) {
             std::cerr << "source_model parameter is required for pull mode";
             return false;
@@ -175,7 +175,10 @@ bool Config::validate() {
                 return false;
             }
         }
-        return true;
+        // No more validation needed
+        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+            return true;
+        }
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
