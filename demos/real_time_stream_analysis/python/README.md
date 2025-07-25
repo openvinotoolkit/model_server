@@ -128,7 +128,7 @@ The parameter `--input_stream 0 ` indicates the camera ID `0`.
 
 ```console
 curl -L "https://www.pexels.com/download/video/3044127/?fps=24.0&h=1080&w=1920" -o video.mp4 
-python client.py --grpc_address localhost:9000 --input_stream 'video.mp4' --output_stream 'output.mp4'
+python client.py --grpc_address localhost:9000 --input_stream video.mp4 --output_stream output.mp4
 ```
 
 
