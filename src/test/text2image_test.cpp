@@ -30,20 +30,23 @@
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
 
+#include "src/image_conversion.hpp"
+
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
 
 // clang-format off
 ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     std::string("/ovms/src/test/dummy"),
-    std::nullopt,
+    {},
     ov::AnyMap(),
     {4096, 4096},  // maxResolution
     std::nullopt,  // defaultResolution
     std::nullopt,  // seed
-    10,
-    10,
-    100};
+    10,  // maxNumImagesPerPrompt
+    10,  // defaultNumInferenceSteps
+    10,  // maxNumInferenceSteps
+    std::nullopt};  // staticReshapeSettings
 
 TEST(Text2ImageTest, testGetDimensions) {
     ovms::HttpPayload payload;
@@ -80,7 +83,6 @@ void testNegativeDimensions(const std::string& dims) {
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
-    std::variant<absl::Status, std::pair<int64_t, int64_t>> dimensions;
 
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"51:512"})");
@@ -274,12 +276,13 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledGenAIFields) {
         "num_images_per_prompt": 4,
         "num_inference_steps": 7,
         "max_sequence_length": 256,
-        "strength": 0.75
+        "strength": 0.75,
+        "response_format": "b64_json"
     })");
     auto requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
     auto& options = std::get<ov::AnyMap>(requestOptions);
-    EXPECT_EQ(options.size(), 13);
+    ASSERT_EQ(options.size(), 13);
     for (auto& [key, value] : options) {
         SPDLOG_DEBUG("key: {}, value: {}", key, value.as<std::string>());
     }
@@ -407,8 +410,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
         "prompt": "test prompt",
         "image": "base64_image",
         "n": 4,
-        "size": "512x1024",
-        "response_format": "test response format"
+        "response_format": "test response format",
+        "size": "512x1024"
     })");
     requestOptions = ovms::getImageGenerationRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
@@ -443,13 +446,13 @@ TEST(Image2ImageTest, getImageEditGenerationRequestOptionsAllHandledOpenAIFields
         "image": "base64_image",
         "n": 4,
         "size": "512x1024",
-        "model": "test model"
+        "model": "test model",
+        "response_format": "b64_json"
     })");
     /*
         "background": "transparent",
         "mask": "base64_mask",
         "quality": "high",
-        "response_format": "url",
         "user"
     */
     auto requestOptions = ovms::getImageEditRequestOptions(payload, DEFAULTIMAGE_GEN_ARGS);
@@ -505,8 +508,8 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_TRUE(imageGenArgs.device.has_value());
-    ASSERT_EQ(imageGenArgs.device.value(), "GPU");
+    ASSERT_EQ(imageGenArgs.device.size(), 1);
+    ASSERT_EQ(imageGenArgs.device[0], "GPU");
     ASSERT_EQ(imageGenArgs.pluginConfig.size(), 1);
     ASSERT_EQ(imageGenArgs.pluginConfig["NUM_STREAMS"].as<int>(), 2);
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(512, 256));
@@ -515,6 +518,91 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
     ASSERT_EQ(imageGenArgs.maxNumImagesPerPrompt, 4);
     ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 10);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 50);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings, std::nullopt);
+}
+TEST(ImageGenCalculatorOptionsTest, MultiDevices) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    <<  dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            device: "  GPU.0   MULTI:GPU.0,GPU.1   AUTO  ",
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
+    ASSERT_EQ(imageGenArgs.device.size(), 3);
+    ASSERT_EQ(imageGenArgs.device[0], "GPU.0");
+    ASSERT_EQ(imageGenArgs.device[1], "MULTI:GPU.0,GPU.1");
+    ASSERT_EQ(imageGenArgs.device[2], "AUTO");
+}
+TEST(ImageGenCalculatorOptionsTest, MultiStaticResolutions) {
+#ifdef _WIN32
+    const std::string dummyLocation = dummy_model_location;
+#else
+    const std::string dummyLocation = "/ovms/src/test/dummy";
+#endif
+    std::ostringstream oss;
+    oss << R"pb(
+            name: "ImageGenExecutor"
+            calculator: "ImageGenCalculator"
+            input_stream: "HTTP_REQUEST_PAYLOAD:input"
+            input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+            output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+            node_options: {
+                  [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+                    models_path: ")pb"
+    <<  dummyLocation;
+    oss << R"(")";
+    oss << R"pb(
+            resolution: "  128x256  128x300 512x1024        1000x1000  ",
+          }
+                    }
+)pb";
+    auto nodePbtxt = oss.str();
+    SPDLOG_DEBUG("Node pbtxt: {}", nodePbtxt);
+    auto node = mediapipe::ParseTextProtoOrDie<CalculatorGraphConfig::Node>(nodePbtxt);
+    const std::string graphPath = "";
+    auto nodeOptions = node.node_options(0);
+    auto imageGenArgsOrStatus = prepareImageGenPipelineArgs(nodeOptions, graphPath);
+    ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
+    auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
+    ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
+    ASSERT_TRUE(imageGenArgs.staticReshapeSettings.has_value());
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution.size(), 4);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[0].first, 128);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[0].second, 256);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[1].first, 128);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[1].second, 300);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[2].first, 512);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[2].second, 1024);
+
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[3].first, 1000);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings.value().resolution[3].second, 1000);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
 #ifdef _WIN32
@@ -543,7 +631,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_FALSE(imageGenArgs.device.has_value());
+    ASSERT_EQ(imageGenArgs.device.size(), 0);
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
     ASSERT_EQ(imageGenArgs.maxResolution, resolution_t(4096, 4096));
     ASSERT_FALSE(imageGenArgs.defaultResolution.has_value());
@@ -551,6 +639,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveAllRequiredFields) {
     ASSERT_FALSE(imageGenArgs.seed.has_value());
     ASSERT_EQ(imageGenArgs.defaultNumInferenceSteps, 50);
     ASSERT_EQ(imageGenArgs.maxNumInferenceSteps, 100);
+    ASSERT_EQ(imageGenArgs.staticReshapeSettings, std::nullopt);
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
 #ifdef _WIN32
@@ -584,7 +673,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveEmptyPluginConfig) {
     ASSERT_TRUE(std::holds_alternative<ImageGenPipelineArgs>(imageGenArgsOrStatus));
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
     ASSERT_EQ(imageGenArgs.modelsPath, dummyLocation);
-    ASSERT_FALSE(imageGenArgs.device.has_value());
+    ASSERT_EQ(imageGenArgs.device.size(), 0);
     ASSERT_TRUE(imageGenArgs.pluginConfig.empty());
 }
 TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
@@ -687,12 +776,92 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(getExistingModelsPath() +
                             R"pb(
                 max_resolution: "high_resolution")pb",
-            ovms::StatusCode::SHAPE_WRONG_FORMAT)));
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "auto")pb",
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                guidance_scale: -1.0)pb",
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),  // reshape to guidance_scale requested, however no resolution specified
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                num_images_per_prompt: -1)pb",
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),  // reshape to batch size requested, however no resolution specified
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                max_resolution: "1024x1024")pb",  // there is no point in using max_resolution when static resolutions are defined
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                default_resolution: "256x256")pb",  // resolution is not among the ones allowed
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                device: "NPU")pb",  // resolution is not static, but device is set to NPU
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                device: "NPU")pb",  // resolution is not static, but device is set to NPU
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                device: " GPU MULTI:GPU.0,GPU.1 NPU ")pb",  // resolution is not static, but one of devices include NPU
+            ovms::StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x10x24")pb",  // one of the resolutions on the list invalid
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 100x100 512x512")pb",  // duplicate resolutions
+            ovms::StatusCode::SHAPE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                device: "GPU CPU")pb",  // only 1 or 3 devices supported
+            ovms::StatusCode::DEVICE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                device: "GPU CPU GPU CPU")pb",  // only 1 or 3 devices supported
+            ovms::StatusCode::DEVICE_WRONG_FORMAT),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                guidance_scale: 7.2)pb",  // resolution is not static, but guidance_scale is used
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                guidance_scale: 7.2)pb",  // resolution is not static, but guidance_scale is used
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512 1024x1024"
+                num_images_per_prompt: 7)pb",  // resolution is not static, but num_images_per_prompt is used
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                num_images_per_prompt: 7)pb",  // resolution is not static, but num_images_per_prompt is used
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512"
+                max_num_images_per_prompt: 7)pb",  // there is no point, there needs to be static set
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE),
+        std::make_tuple(getExistingModelsPath() +
+                            R"pb(
+                resolution: "512x512"
+                max_resolution: "512x512")pb",  // there is no point, there needs to be static set
+            ovms::StatusCode::STATIC_RESOLUTION_MISUSE)));
 
 TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     ImageGenPipelineArgs args;
     args.modelsPath = "/ovms/src/test/dummy";
-    args.device = "GPU";
+    args.device.push_back("GPU");
     args.maxNumImagesPerPrompt = 4;
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 100;
@@ -701,11 +870,13 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
         {"exceeded_num_images_per_prompt", R"({"prompt": "test prompt", "image": "base64_image", "n": 101, "model": "test model"})"},
         {"exceeded_num_inference_steps", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "num_inference_steps": 101})"},
         {"exceeded_strength", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": 1.5})"},
-        {"strength_below_0", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": -0.5})"}};
+        {"strength_below_0", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "strength": -0.5})"},
+        {"response_format_unsupported", R"({"prompt": "test prompt", "image": "base64_image", "model": "test model", "response_format": "unsupported"})"}};
     for (auto& [key, value] : payloadMap) {
         ovms::HttpPayload payload;
         payload.parsedJson = std::make_shared<rapidjson::Document>();
         payload.parsedJson->Parse(value.c_str());
+        ASSERT_FALSE(payload.parsedJson->HasParseError());
         auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
         bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
         ASSERT_TRUE(holdsStatus) << "scenario: " << key << " body: " << value;
@@ -714,6 +885,178 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
             EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << "scenario: " << key << " body: " << value;
         }
     }
+}
+TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
+    ImageGenPipelineArgs args;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.device.push_back("NPU");
+    args.defaultNumInferenceSteps = 10;
+    args.maxNumInferenceSteps = 50;
+    args.maxNumImagesPerPrompt = 10;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}, {2048, 1024}});
+
+    std::string value = R"({"prompt": "test prompt", "size": "1024x512", "n": 1, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+    auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
+    bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
+    ASSERT_FALSE(holdsStatus) << std::get<absl::Status>(requestOptions).ToString();
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
+    ImageGenPipelineArgs args;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.device.push_back("NPU");
+    args.defaultNumInferenceSteps = 10;
+    args.maxNumInferenceSteps = 50;
+    args.maxNumImagesPerPrompt = 10;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}, {2048, 1024}});
+
+    // size is 5x5, but static reshape settings requires 512x256, 1024x512 or 2048x1024
+    std::string value = R"({"prompt": "test prompt", "size": "5x5", "n": 1, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+    auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
+    bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
+    ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequested5NumImagesPerPrompt) {
+    ImageGenPipelineArgs args;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.device.push_back("NPU");
+    args.defaultNumInferenceSteps = 10;
+    args.maxNumInferenceSteps = 50;
+    args.maxNumImagesPerPrompt = 10;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}}, 4);
+
+    // num_images_per_prompt is 5, but static reshape settings requires 4
+    std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 5, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+    auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
+    bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
+    ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
+}
+
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) {
+    ImageGenPipelineArgs args;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.device.push_back("NPU");
+    args.defaultNumInferenceSteps = 10;
+    args.maxNumInferenceSteps = 50;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}}, std::nullopt, 7.1f);
+
+    // Guidance scale is 7.3, but static reshape settings requires 7.1
+    std::string value = R"({"prompt": "test prompt", "size": "512x256", "n": 1, "guidance_scale": 7.3, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+    auto requestOptions = ovms::getImageGenerationRequestOptions(payload, args);
+    bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
+    ASSERT_TRUE(holdsStatus);
+    ASSERT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument)
+        << std::get<absl::Status>(requestOptions).message();
+}
+void printNHWCOVTensor(const ov::Tensor& tensor) {
+    const auto& tensorShape = tensor.get_shape();
+    ASSERT_EQ(tensorShape.size(), 4);
+    ASSERT_EQ(tensorShape[1], 4);
+    ASSERT_EQ(tensorShape[2], 4);
+    ASSERT_EQ(tensorShape[3], 3);
+    auto* dataR = tensor.data();
+    uint8_t* data = static_cast<uint8_t*>(dataR);
+    std::ostringstream oss;
+    // print shape
+    oss << "Tensor shape: (";
+    for (size_t i = 0; i < tensorShape.size(); ++i) {
+        oss << tensorShape[i];
+        if (i < tensorShape.size() - 1) {
+            oss << ", ";
+        }
+    }
+    oss << ")\n";
+    for (size_t b = 0; b < tensorShape[0]; ++b) {
+        oss << "image " << b << ": \n";
+    for (size_t c = 0; c < tensorShape[3]; ++c) {
+        oss << "\nChannel " << c << ": \n";
+        for (size_t h = 0; h < tensorShape[1]; ++h) {
+            for (size_t w = 0; w < tensorShape[2]; ++w) {
+                size_t index = (h * tensorShape[2] + w) * tensorShape[3] + c + b * tensorShape[1] * tensorShape[2] * tensorShape[3];
+                oss << std::setw(3) << static_cast<int>(data[index]) << " ";
+            }
+            oss << "\n";
+        }
+    }
+    }
+    SPDLOG_DEBUG("\n{}", oss.str());
+}
+void testResponseFromOvTensor(size_t n) {
+    ov::Tensor tensor(ov::element::u8, ov::Shape{n, 4, 4, 3});
+    auto* dataR = tensor.data();
+    uint8_t* originalData = static_cast<uint8_t*>(dataR);
+    // fill first channel with multiplies of 2
+    // fill second channel with multiplies of 3
+    // fill third channel with multiplies of 5
+    for (size_t i = 0; i < tensor.get_size(); ++i) {
+        if (i % 3 == 0) {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 2);  // first channel
+        } else if (i % 3 == 1) {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 3);  // second channel
+        } else {
+            originalData[i] = static_cast<uint8_t>(((i / 3) + 1) * 5);  // third channel
+        }
+    }
+    printNHWCOVTensor(tensor);
+    auto responseOrStatus = ovms::generateJSONResponseFromOvTensor(tensor);
+    ASSERT_FALSE(std::holds_alternative<absl::Status>(responseOrStatus));
+    auto response = std::move(std::get<std::unique_ptr<std::string>>(responseOrStatus));
+    SPDLOG_TRACE("Response: {}", *response);
+    rapidjson::Document document;
+    document.Parse(response->c_str());
+    ASSERT_TRUE(document.IsObject());
+    ASSERT_TRUE(document.HasMember("data"));
+    ASSERT_TRUE(document["data"].IsArray());
+    const auto& dataArray = document["data"].GetArray();
+    ASSERT_EQ(dataArray.Size(), n) << "Expected " << n << " images in response, got " << dataArray.Size();
+
+    for (size_t i = 0; i < n; ++i) {
+        const auto& imageB64PngString = dataArray[i].GetObject()["b64_json"].GetString();
+        SPDLOG_TRACE("Image base64 string: {}", imageB64PngString);
+        std::string decodedImage;
+        ASSERT_TRUE(absl::Base64Unescape(imageB64PngString, &decodedImage)) << "Failed to decode base64 image";
+        auto tensorFromImage = ovms::loadImageStbiFromMemory(decodedImage);
+        printNHWCOVTensor(tensorFromImage);
+        ASSERT_EQ(tensorFromImage.get_element_type(), tensor.get_element_type());
+        ASSERT_EQ(tensorFromImage.get_shape().size(), 4);
+        ASSERT_EQ(tensorFromImage.get_byte_size(), tensor.get_byte_size() / n);
+        ASSERT_EQ(tensorFromImage.get_shape()[0], 1);
+        ASSERT_EQ(tensorFromImage.get_shape()[1], tensor.get_shape()[1]);
+        ASSERT_EQ(tensorFromImage.get_shape()[2], tensor.get_shape()[2]);
+        ASSERT_EQ(tensorFromImage.get_shape()[3], tensor.get_shape()[3]);
+        EXPECT_EQ(0, std::memcmp(tensorFromImage.data(), (char*)tensor.data() + i * (tensor.get_byte_size() / n), tensorFromImage.get_byte_size()))
+            << "Data mismatch for image " << i;
+    }
+}
+TEST(Text2ImageTest, ResponseFromOvTensorBatch1) {
+    uint16_t n = 1;
+    testResponseFromOvTensor(n);
+}
+TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
+    uint16_t n = 3;
+    testResponseFromOvTensor(n);
 }
 // TODO:
 // -> test for all unhandled OpenAI fields define what to do - ignore/error imageEdit

@@ -178,6 +178,7 @@ libraries = {
         'python3.dll',
         'python312.dll',
         'pythonw.exe',
+        'sqlite3.dll',
         't32.exe',
         't64.exe',
         't64-arm.exe',
@@ -271,7 +272,6 @@ packages = {
         'libkrb5-3',
         'libgssapi-krb5-2',
         'nginx',
-        'nginx-common',
     },
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: {

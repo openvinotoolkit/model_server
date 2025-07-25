@@ -71,7 +71,8 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     legacyExecutionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*legacyExecutionContext->payload.parsedJson,
         legacyExecutionContext->endpoint,
         std::chrono::system_clock::now(),
-        getProperties()->tokenizer);
+        getProperties()->tokenizer,
+        getProperties()->responseParserName);
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
     if (!status.ok()) {
@@ -132,7 +133,7 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
     }
-    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results, getProperties()->responseParserName);
+    executionContext->response = executionContext->apiHandler->serializeUnaryResponse(legacyExecutionContext->results);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
     return absl::OkStatus();
 }
@@ -165,8 +166,11 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
     }
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
-            executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE));
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            }
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
@@ -176,9 +180,13 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty())
+        if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-        executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP));
+        }
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        if (!serializedChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+        }
         // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");

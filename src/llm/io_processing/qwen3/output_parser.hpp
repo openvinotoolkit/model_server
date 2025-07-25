@@ -18,10 +18,19 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
-#include "base_response_parser.hpp"
+
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-class Qwen3ResponseParser : public BaseResponseParser {
+
+class Qwen3OutputParser : public BaseOutputParser {
 protected:
     // Tool calls are wrapped in <tool_call> and </tool_call> tags
     std::string toolCallStartTag = "<tool_call>";
@@ -34,11 +43,17 @@ protected:
     std::string reasoningEndTag = "</think>";
     int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
 
-public:
-    Qwen3ResponseParser() = delete;
-    explicit Qwen3ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
+    // Storing last two chunks of arguments to return delta with delay.
+    // We do this to properly close arguments when tool call end tag is received.
+    // With support for more models this could be moved to the base class.
+    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+public:
+    Qwen3OutputParser() = delete;
+    explicit Qwen3OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
+
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms

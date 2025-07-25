@@ -24,6 +24,7 @@
 #include "../module_names.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
+#include "../stringutils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../config_export_module/config_export.hpp"
 
@@ -129,6 +130,68 @@ protected:
         TestWithTempDir::TearDown();
     }
 };
+
+TEST_F(ConfigCreationTest, positiveAddWithDirectConfigFilePathNotExisting) {
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "config.json";
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    std::string configFile = this->modelsSettings.configPath;
+    std::string configContents = GetFileContents(configFile);
+    ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+}
+TEST_F(ConfigCreationTest, positiveAddWithDirectConfigFilePathExisting) {
+    std::string configContents = expectedEmptyConfigContents;
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "config.json";
+    createConfigFileWithContent(configContents, this->modelsSettings.configPath);
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    std::string configFile = this->modelsSettings.configPath;
+    std::string configContentsRead = GetFileContents(configFile);
+    std::string expectedContent = expectedConfigContents;
+    ovms::erase_spaces(expectedContent);
+    ovms::erase_spaces(configContentsRead);
+    ASSERT_EQ(expectedContent, configContentsRead) << configContents;
+}
+TEST_F(ConfigCreationTest, positiveRemoveModelWithDirectConfigFilePathExisting) {
+    std::string configContents = R"(
+{
+  "model_config_list": [
+    {
+      "config": {
+        "name": "model1",
+        "base_path": "/models/resnet-50-tf",
+        "batch_size": 1,
+        "target_device": "CPU"
+      }
+    }
+  ],
+  "pipeline_config_list": [],
+  "custom_loader_config_list": []
+})";
+
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "config.json";
+    createConfigFileWithContent(configContents, this->modelsSettings.configPath);
+
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << configContents;
+
+    std::string expectedConfigContents = R"({
+    "model_config_list": [],
+    "pipeline_config_list": [],
+    "custom_loader_config_list": []
+}
+)";
+
+    configContents = GetFileContents(this->modelsSettings.configPath);
+    ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+}
+TEST_F(ConfigCreationTest, negativeRemoveModelWithDirectConfigFilePathNotExisting) {
+    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->modelsSettings.configPath) + "SOME_NONEXISTING_FILE.json";
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID) << status.string();
+}
 
 TEST_F(ConfigCreationTest, positiveAddModel) {
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
@@ -293,11 +356,6 @@ TEST_F(ConfigCreationTest, negativeWrongPathsEnable) {
     this->modelsSettings.configPath = "";
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
-
-    this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "some.file";
-    createConfigFileWithContent(expectedConfigContents, this->modelsSettings.configPath);
-    status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
-    ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
 
 TEST_F(ConfigCreationTest, negativeWrongPathsDisable) {
@@ -306,7 +364,6 @@ TEST_F(ConfigCreationTest, negativeWrongPathsDisable) {
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 
     this->modelsSettings.configPath = ovms::FileSystem::appendSlash(this->directoryPath) + "some.file";
-    createConfigFileWithContent(expectedConfigContents, this->modelsSettings.configPath);
     status = ovms::updateConfig(this->modelsSettings, ovms::DISABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::PATH_INVALID);
 }
@@ -420,11 +477,11 @@ TEST_F(ConfigCreationTest, positiveEndToEndEnableDisable) {
     }));
 
     start = std::chrono::high_resolution_clock::now();
-    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::SHUTDOWN) &&
+    while ((server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != ovms::ModuleState::NOT_INITIALIZED) &&
            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < 3)) {
     }
 
-    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::SHUTDOWN);
+    ASSERT_EQ(server.getModuleState(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::NOT_INITIALIZED);
     server.setShutdownRequest(1);
     t->join();

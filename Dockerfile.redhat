@@ -17,7 +17,7 @@
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.5
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.6
 
 FROM $BASE_IMAGE as base_build
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.6
@@ -139,7 +139,7 @@ git clone https://github.com/git-lfs/git-lfs && \
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.52.32224"
 # GPU testing in build img & remote tensors dependencies
 WORKDIR /usr/lib64/
 RUN ln -s libOpenCL.so.1 libOpenCL.so
@@ -167,7 +167,7 @@ RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download
 
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
-ARG ov_source_branch=master
+ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
 ARG ov_contrib_branch=master
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
@@ -230,7 +230,7 @@ ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/intel/openvino/runtime/lib/intel64/:/opt/opencv/lib/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
 
-ARG ov_tokenizers_branch=master
+ARG ov_tokenizers_branch=85be884a69f10270703f81f970a5ee596a4c8df7
 # hadolint ignore=DL3003
 RUN git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 WORKDIR /openvino_tokenizers/build
@@ -243,8 +243,8 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.2\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.2.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info/METADATA ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.3\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.3.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 # Build OpenVINO Model Server
@@ -284,13 +284,13 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.2' > /opt/intel/openvino/python/openvino-2025.2.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.3.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.3' > /opt/intel/openvino/python/openvino-2025.3.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.2"
+ARG PROJECT_VERSION="2025.3.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
@@ -379,13 +379,13 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2025.2"
+LABEL "version"="2025.3.0"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 LABEL "maintainer"="dariusz.trawinski@intel.com"
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="24.52.32224"
 ARG GPU=0
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}

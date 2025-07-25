@@ -26,40 +26,30 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../../logging.hpp"
-#include "phi4_response_parser.hpp"
-#include "utils.hpp"
+#include "../../../logging.hpp"
+#include "output_parser.hpp"
+#include "../utils.hpp"
 
 namespace ovms {
 
-ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedResponse parsedResponse;
+ParsedOutput Phi4OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
+    ParsedOutput parsedOutput;
     std::vector<std::string> tools;
 
     // Phi4 with vLLM template produces tool calls in the format:
     // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
     std::string decoded = tokenizer.decode(generatedTokens);
-    std::regex toolRegex(R"(functools\[(.*?)\])");
-    std::sregex_iterator begin(decoded.begin(), decoded.end(), toolRegex);
-    std::sregex_iterator end;
-    size_t matchCount = std::distance(begin, end);
-
-    if (matchCount == 0) {
-        parsedResponse.content = decoded;
-    } else if (matchCount == 1) {
-        std::smatch match = *begin;
-        // Put everything, but functools[...] part into the response content
-        parsedResponse.content = decoded.substr(0, match.position()) +
-                                 decoded.substr(match.position() + match.length());
-
-        std::string toolsStr = match[1].str();
-        std::string toolsJson = "{\"functools\": [" + toolsStr + "]}";  // Wrap in JSON array
-
+    std::string toolsStartString = "functools";
+    size_t toolsStartPos = decoded.find(toolsStartString);
+    if (toolsStartPos != std::string::npos) {
+        // Extract the content before the tools part
+        parsedOutput.content = decoded.substr(0, toolsStartPos);
+        // Extract the tools part, assuming it's all the remaining content after "functools"
+        std::string toolsString = decoded.substr(toolsStartPos + toolsStartString.length());
         rapidjson::Document toolsDoc;
-        toolsDoc.Parse(toolsJson.c_str());
-        if (!toolsDoc.HasParseError() && toolsDoc.IsObject() && toolsDoc.HasMember("functools") && toolsDoc["functools"].IsArray()) {
-            const rapidjson::Value& toolsArray = toolsDoc["functools"];
-            for (auto& toolVal : toolsArray.GetArray()) {
+        toolsDoc.Parse(toolsString.c_str());
+        if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
+            for (auto& toolVal : toolsDoc.GetArray()) {
                 if (!toolVal.IsObject()) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
                     continue;
@@ -78,14 +68,21 @@ ParsedResponse Phi4ResponseParser::parse(const std::vector<int64_t>& generatedTo
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
                     continue;
                 }
-                parsedResponse.toolCalls.push_back(toolCall);
+                parsedOutput.toolCalls.push_back(toolCall);
             }
         } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse toolsJson or extract tools array");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
+            parsedOutput.content = decoded;  // If parsing fails, return the whole decoded content
         }
     } else {
-        throw std::runtime_error("Multiple 'functools[...]' matches found in the response.");
+        parsedOutput.content = decoded;
     }
-    return parsedResponse;
+    return parsedOutput;
+}
+
+std::optional<rapidjson::Document> Phi4OutputParser::parseChunk(const std::string& chunk) {
+    // Not implemented
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Phi4OutputParser::parseChunk is not implemented");
+    return std::nullopt;
 }
 }  // namespace ovms

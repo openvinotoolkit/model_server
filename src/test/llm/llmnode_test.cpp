@@ -169,6 +169,8 @@ std::unique_ptr<std::thread> LLMFlowHttpTest::t;
 
 // --------------------------------------- OVMS LLM nodes tests
 
+/* 
+// TODO: Move this test to OpenAiJsonResponse tests
 TEST(OpenAiApiHandlerTest, writeLogprobs) {
     // TODO: remove that skip
     GTEST_SKIP();
@@ -182,6 +184,7 @@ TEST(OpenAiApiHandlerTest, writeLogprobs) {
         buffer.Clear();
     }
 }
+*/
 
 class LLMFlowHttpTestParameterized : public LLMFlowHttpTest, public ::testing::WithParamInterface<TestParameters> {};
 

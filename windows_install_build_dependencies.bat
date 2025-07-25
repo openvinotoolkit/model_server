@@ -126,7 +126,7 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.2/windows/openvino_genai_windows_2025.2.0.0_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250718/openvino_genai_windows_2025.3.0.0.dev20250718_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -290,6 +290,24 @@ IF /I EXIST %opt_install_dir%\%go_dir% (
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: git - check required version
+set "git_exe=C:\Program Files\Git\mingw64\bin\git.exe"
+set "git_ver_link=https://github.com/git-for-windows/git/releases/download/v2.50.0.windows.2/Git-2.50.0.2-64-bit.exe"
+set "required_ver=git version 2.50.0.windows.2"
+IF /I EXIST "%git_exe%" (
+    "%git_exe%" --version | findstr /c:"%required_ver%"
+    if %errorlevel% == 0 (
+    echo %required_ver% installed.
+    ) else (
+        echo Install git to %git_exe% from %git_ver_link%
+        exit /b 1
+    )
+) ELSE (
+    echo Install git to %git_exe% from %git_ver_link%
+    exit /b 1
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

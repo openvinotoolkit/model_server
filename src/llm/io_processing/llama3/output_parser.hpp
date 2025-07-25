@@ -17,11 +17,20 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
 #include <vector>
-#include "base_response_parser.hpp"
+
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-class Llama3ResponseParser : public BaseResponseParser {
+class Llama3OutputParser : public BaseOutputParser {
 protected:
     // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
     int64_t botTokenId = 128010;
@@ -29,10 +38,11 @@ protected:
     std::string separator = ";";
 
 public:
-    Llama3ResponseParser() = delete;
-    explicit Llama3ResponseParser(ov::genai::Tokenizer& tokenizer) :
-        BaseResponseParser(tokenizer) {}
+    Llama3OutputParser() = delete;
+    explicit Llama3OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
-    ParsedResponse parse(const std::vector<int64_t>& generatedTokens) override;
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
 };
 }  // namespace ovms

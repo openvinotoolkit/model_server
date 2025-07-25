@@ -510,6 +510,104 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComparePythonAndGenAiProcessors) {
     ASSERT_EQ(pythonProcessorOutput, genAiProcessorOutput);
 }
 
+std::string CreatePayloadBodyWithChatTemplateKwargs(const std::string& chat_template_kwargs) {
+    std::string base = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}]
+    )";
+    if (!chat_template_kwargs.empty()) {
+        base += R"(,)";
+        base += R"("chat_template_kwargs": )";
+        base += chat_template_kwargs;
+    }
+    base += R"(})";
+    return base;
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateKwargsPositive) {
+    std::string tokenizerJson = R"({
+    "chat_template": "{% if enable_thinking %}Thinking is on{% else %}Thinking is off{% endif %}"
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->getProperties()->modelsPath = directoryPath;
+    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+
+    std::string finalPrompt = "";
+    std::string payloadBody;
+    std::string expectedOutput;
+
+    // Explicitly setting enable_thinking to true
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": true})");
+    expectedOutput = "Thinking is on";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Explicitly setting enable_thinking to false
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": false})");
+    expectedOutput = "Thinking is off";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Setting chat_template_kwargs to empty object
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({})");
+    expectedOutput = "Thinking is off";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Explicitly setting chat_template_kwargs to null
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs("null");
+    expectedOutput = "Thinking is off";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Setting chat_template_kwargs with multiple values including enable_thinking
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"enable_thinking": true, "another_param": "value"})");
+    expectedOutput = "Thinking is on";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Setting chat_template_kwargs with multiple values but without enable_thinking
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"another_param": "value", "yet_another_param": [1,2,3]})");
+    expectedOutput = "Thinking is off";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // Default setting
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs("");
+    expectedOutput = "Thinking is off";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), true);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateKwargsNegative) {
+    std::string tokenizerJson = R"({
+    "chat_template": "{% if enable_thinking %}Thinking is on{% else %}Thinking is off{% endif %}"
+    })";
+    ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
+    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
+
+    servable->getProperties()->modelsPath = directoryPath;
+    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+
+    // chat_template_kwargs must be an object
+    // This is a negative test case to ensure that the template processor correctly handles invalid chat_template
+    std::string finalPrompt = "";
+    std::string payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"("string, not_an_object")");
+    std::string expectedOutput = "chat_template_kwargs must be an object";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+
+    // chat_template_kwargs cannot contain keys that are natively provided to the template
+    payloadBody = CreatePayloadBodyWithChatTemplateKwargs(R"({"messages": [{"role": "user", "content": "hello"}]})");
+    expectedOutput = "jinja2.environment.Template.render() got multiple values for keyword argument 'messages'";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), false);
+    ASSERT_EQ(finalPrompt, expectedOutput);
+}
+
 std::string configTemplate = R"(
         {
             "model_config_list": [],
