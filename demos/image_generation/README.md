@@ -474,7 +474,32 @@ Output file (`output2.png`):
 ![output2](./output2.png)
 
 
-## Measuring performance
+## Measuring throughput
+To increase throughput in image generation scenarios, it is worth changing plugin config and increase NUM_STREAMS. Additionally, set up static shape for the model to avoid dynamic shape overhead. This can be done by setting `resolution` parameter in the request.
+
+Edit graph.pbtxt and restart the server:
+```
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "CPU"
+          num_images_per_prompt: 4  # 4 images per inference request
+          resolution: "512x512"     # reshape to static value
+          plugin_config: '{"PERFORMANCE_HINT":"THROUGHPUT","NUM_STREAMS":8}'
+      }
+  }
+}
+```
+
 Prepare example request `input_data.json`:
 ```
 {
@@ -484,7 +509,7 @@ Prepare example request `input_data.json`:
         {
           "model": "OpenVINO/stable-diffusion-v1-5-int8-ov",
           "prompt": "dog",
-          "num_inference_steps": 2
+          "num_inference_steps": 50
         }
       ]
     }
@@ -503,50 +528,8 @@ docker run --rm -it --net=host -v $(pwd):/work:rw nvcr.io/nvidia/tritonserver:24
     --endpoint=v3/images/generations \
     --async \
     -u localhost:8000 \
-    --request-count 8 \
-    --concurrency-range 8
-```
-
-MCLX23
-```
-*** Measurement Settings ***
-  Service Kind: OPENAI
-  Sending 8 benchmark requests
-  Using asynchronous calls for inference
-
-Request concurrency: 8
-  Client: 
-    Request count: 8
-    Throughput: 0.210501 infer/sec
-    Avg latency: 29514881 usec (standard deviation 1509943 usec)
-    p50 latency: 31140977 usec
-    p90 latency: 36002018 usec
-    p95 latency: 37274567 usec
-    p99 latency: 37274567 usec
-    Avg HTTP time: 29514870 usec (send/recv 3558 usec + response wait 29511312 usec)
-Inferences/Second vs. Client Average Batch Latency
-Concurrency: 8, throughput: 0.210501 infer/sec, latency 29514881 usec
-```
-
-SPR36
-```
-*** Measurement Settings ***
-  Service Kind: OPENAI
-  Sending 8 benchmark requests
-  Using asynchronous calls for inference
-
-Request concurrency: 8
-  Client: 
-    Request count: 8
-    Throughput: 1.14268 infer/sec
-    Avg latency: 5124694 usec (standard deviation 695195 usec)
-    p50 latency: 5252478 usec
-    p90 latency: 5922719 usec
-    p95 latency: 6080321 usec
-    p99 latency: 6080321 usec
-    Avg HTTP time: 5124684 usec (send/recv 15272 usec + response wait 5109412 usec)
-Inferences/Second vs. Client Average Batch Latency
-Concurrency: 8, throughput: 1.14268 infer/sec, latency 5124694 usec
+    --request-count 16 \
+    --concurrency-range 16
 ```
 
 ```
@@ -556,18 +539,21 @@ Concurrency: 8, throughput: 1.14268 infer/sec, latency 5124694 usec
   Using asynchronous calls for inference
 
 Request concurrency: 16
-  Client: 
+  Client:
     Request count: 16
-    Throughput: 1.33317 infer/sec
-    Avg latency: 8945421 usec (standard deviation 929729 usec)
-    p50 latency: 9395319 usec
-    p90 latency: 11657659 usec
-    p95 latency: 11657659 usec
-    p99 latency: 11659369 usec
-    Avg HTTP time: 8945411 usec (send/recv 491743 usec + response wait 8453668 usec)
+    Throughput: 0.0999919 infer/sec
+    Avg latency: 156783666 usec (standard deviation 1087845 usec)
+    p50 latency: 157110315 usec
+    p90 latency: 158720060 usec
+    p95 latency: 158720060 usec
+    p99 latency: 159494095 usec
+    Avg HTTP time: 156783654 usec (send/recv 8717 usec + response wait 156774937 usec)
 Inferences/Second vs. Client Average Batch Latency
-Concurrency: 16, throughput: 1.33317 infer/sec, latency 8945421 usec
+Concurrency: 16, throughput: 0.0999919 infer/sec, latency 156783666 usec
 ```
+
+0.0999919 infer/sec meaning 0.4 images per second considering 4 images per prompt.
+
 
 ## References
 - [Image Generation API](../../docs/model_server_rest_api_image_generation.md)
