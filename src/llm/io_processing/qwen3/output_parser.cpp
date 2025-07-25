@@ -182,9 +182,8 @@ std::optional<rapidjson::Document> Qwen3OutputParser::parseChunk(const std::stri
     Otherwise we collect data until we have full function name - that's when we return the first delta.
     Every next delta contains next parts of the arguments. Qwen3 generates arguments as JSON, but OpenAI API expects them in a string format.
     That's why once we reach 'arguments' key, we add double quote to force string type and escape all double quotes that come in next parts.
-    To know when we reach the end of the arguments string, we track the nesting level of arguments (it's supposed to be valid JSON).
-    When we reach the opening brace '{', we increase the nesting level, and when we reach the closing brace '}', we decrease it.
-    When we reach the closing brace '}' and nesting level is zero, we add a closing quote '"' right after it to complete the string and keep the main JSON valid.
+    To know when we reach the end of the arguments string, we return delta with a one chunk delay. This way, when we reach end of tool call, we modify previous chunk to close
+    arguments string properly and return such modified chunk. 
     */
     } else if (processingPhase == ProcessingPhase::TOOL_CALLS) {
         // Assuming streamer will provide start/end tag either alone in the chunk or with whitespaces that can be dropped.
