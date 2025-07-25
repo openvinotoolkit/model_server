@@ -186,7 +186,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "MODEL_REPOSITORY_PATH")
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
-                cxxopts::value<std::string>()->default_value("text_generation"),
+                cxxopts::value<std::string>(),
                 "TASK")
             ("weight-format",
                 "Model precision used in optimum-cli export with conversion",
@@ -289,11 +289,8 @@ void CLIParser::parse(int argc, char** argv) {
                     }
                 }
             } else {
-                // Default task is text_generation
-                task = TEXT_GENERATION_GRAPH;
-                GraphCLIParser cliParser;
-                unmatchedOptions = cliParser.parse(result->unmatched());
-                this->graphOptionsParser = std::move(cliParser);
+                std::cerr << "error parsing options - --task parameter wasn't passed";
+                exit(OVMS_EX_USAGE);
             }
 
             if (unmatchedOptions.size()) {

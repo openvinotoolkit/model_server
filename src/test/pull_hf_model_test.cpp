@@ -442,9 +442,11 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         nullptr};
 
-    int arg_count = 6;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     {
         EnvGuard eGuard;
