@@ -20,6 +20,7 @@ import jinja2
 import json
 import shutil
 import tempfile
+from pathlib import Path
 
 def add_common_arguments(parser):
     parser.add_argument('--model_repository_path', required=False, default='models', help='Where the model should be exported to', dest='model_repository_path')
@@ -347,6 +348,7 @@ def get_models_max_context(tmpdirname, config_filename):
         return None
 
 def add_servable_to_config(config_path, mediapipe_name, base_path):
+    base_path = Path(base_path).as_posix()
     print(config_path, mediapipe_name, base_path)
     if not os.path.isfile(config_path):
         print("Creating new config file")
