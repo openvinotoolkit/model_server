@@ -91,13 +91,12 @@ class OvmsPythonModel:
                 print(f"[TRAIN METRICS] acc={acc}, prec={prec}, rec={rec}, f1={f1}", file=sys.stderr)
                 result = np.array([1.0, acc, prec, rec, f1], dtype=np.float32)
                 return [Tensor("pipeline_output", result)]
-
             elif mode == "infer":
                 if not os.path.exists(MODEL_PATH):
                     raise FileNotFoundError("Trained model not found")
                 if not os.path.exists(META_PATH):
                     raise FileNotFoundError("Metadata file missing")
-                
+
                 with open(META_PATH, "r") as f:
                     meta = json.load(f)
                 feature_names = meta["feature_names"]
@@ -116,25 +115,28 @@ class OvmsPythonModel:
                 output_names = [output.name for output in sess.get_outputs()]
                 outputs = sess.run(output_names, {input_name: X})
                 print("[DEBUG] Model inference outputs:", output_names)
+                print("outputs: ", outputs)
 
                 if len(outputs) == 2:
                     label_indices, probs = outputs
-                    label_indices = label_indices.ravel().astype(int)
-                    if os.path.exists(ENCODER_PATH):
-                        le = joblib.load(ENCODER_PATH)
-                        labels = le.inverse_transform(label_indices)
-                    else:
-                        labels = label_indices
-                    response = []
-                    for label, prob in zip(labels, probs):
-                        label_prob_dict = {class_names[i]: float(p) for i, p in enumerate(prob)}
-                        response.append({"label": label, "probabilities": label_prob_dict})
-                    
-                    encoded_response = [json.dumps(item).encode("utf-8") for item in response]
-                    return [Tensor("pipeline_output", np.array(encoded_response, dtype=object))]
-                    
-                else:
-                    raise RuntimeError("Unexpected ONNX model output structure.")
+                    result_array = []
+
+                    for i in range(len(label_indices)):
+                        pred_index = int(label_indices[i])
+
+                        prob_dict = probs[i]
+
+                        confidence = float(prob_dict[pred_index])
+
+                        result_array.append([1.0, pred_index, confidence])
+
+                        label_name = class_names[pred_index] if class_names else str(pred_index)
+                        print(f"Sample {i} => Predicted Label: {label_name} (index: {pred_index}), Confidence: {confidence}", file=sys.stderr)
+
+                    return [Tensor("pipeline_output", np.array(result_array, dtype=np.float32))]
+
+
+                raise RuntimeError("Unexpected ONNX model output structure.")
 
             else:
                 raise ValueError(f"Unknown mode '{mode}'")
