@@ -27,6 +27,7 @@
 #pragma warning(pop)
 
 #include "imagegenpipelineargs.hpp"
+#include "src/http_payload.hpp"
 
 #define RETURN_IF_HOLDS_STATUS(NAME)                  \
     if (std::holds_alternative<absl::Status>(NAME)) { \
@@ -41,17 +42,24 @@
 namespace ovms {
 struct HttpPayload;
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
-std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const HttpPayload& payload);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::HttpPayload& payload);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser);
 
 std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload);
 
 std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 
 std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptionsFromMultipart(const MultiPartParser& payload, const ImageGenPipelineArgs& args);
 std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
 std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
 
