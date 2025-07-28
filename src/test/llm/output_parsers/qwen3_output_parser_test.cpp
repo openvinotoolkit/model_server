@@ -18,8 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "../../../llm/response_parsers/base_response_parser.hpp"
-#include "../../../llm/response_parsers/response_parser.hpp"
+#include "../../../llm/io_processing/base_output_parser.hpp"
+#include "../../../llm/io_processing/output_parser.hpp"
 #include "../../test_utils.hpp"
 
 using namespace ovms;
@@ -31,146 +31,146 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 #endif
 
-class Qwen3ResponseParserTest : public ::testing::Test {
+class Qwen3OutputParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<ov::genai::Tokenizer> tokenizer;
-    std::unique_ptr<ResponseParser> responseParser;
+    std::unique_ptr<OutputParser> outputParser;
 
     void SetUp() override {
         tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
-        responseParser = std::make_unique<ResponseParser>(*tokenizer, "qwen3");
+        outputParser = std::make_unique<OutputParser>(*tokenizer, "qwen3");
     }
 };
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
     std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithSingleToolCallAndThinking) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallAndThinking) {
     std::string input = "<think>Thinking about the tool call</think>"
                         "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "Thinking about the tool call");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool call"
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool call");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool call"
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking) {
     std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
                         "<tool_call>{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 3);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
-    auto firstToolCallId = parsedResponse.toolCalls[0].id;
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
-    EXPECT_EQ(parsedResponse.toolCalls[1].name, "another_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-    EXPECT_EQ(parsedResponse.toolCalls[1].id.empty(), false);  // ID should be generated
-    auto secondToolCallId = parsedResponse.toolCalls[1].id;
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+    auto secondToolCallId = parsedOutput.toolCalls[1].id;
     EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
 
-    EXPECT_EQ(parsedResponse.toolCalls[2].name, "third_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[2].arguments, "{\"key\":\"value\"}");
-    EXPECT_EQ(parsedResponse.toolCalls[2].id.empty(), false);  // ID should be generated
-    auto thirdToolCallId = parsedResponse.toolCalls[2].id;
+    EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
+    auto thirdToolCallId = parsedOutput.toolCalls[2].id;
     EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
     EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithThreeToolCallsAndThinking) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsAndThinking) {
     std::string input = "<think>Thinking about the tool calls</think>"
                         "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>"
                         "<tool_call>{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}}</tool_call>"
                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "");
-    EXPECT_EQ(parsedResponse.reasoning, "Thinking about the tool calls");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool calls"
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool calls");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool calls"
 
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 3);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
-    auto firstToolCallId = parsedResponse.toolCalls[0].id;
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
-    EXPECT_EQ(parsedResponse.toolCalls[1].name, "another_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-    EXPECT_EQ(parsedResponse.toolCalls[1].id.empty(), false);  // ID should be generated
-    auto secondToolCallId = parsedResponse.toolCalls[1].id;
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+    auto secondToolCallId = parsedOutput.toolCalls[1].id;
     EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
 
-    EXPECT_EQ(parsedResponse.toolCalls[2].name, "third_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[2].arguments, "{\"key\":\"value\"}");
-    EXPECT_EQ(parsedResponse.toolCalls[2].id.empty(), false);  // ID should be generated
-    auto thirdToolCallId = parsedResponse.toolCalls[2].id;
+    EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
+    auto thirdToolCallId = parsedOutput.toolCalls[2].id;
     EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
     EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "This is a regular model response without tool calls.");
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 0);
-    EXPECT_EQ(parsedResponse.reasoning, "");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 }
 
-TEST_F(Qwen3ResponseParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
+TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
-    ParsedResponse parsedResponse = responseParser->parse(generatedTokens);
-    EXPECT_EQ(parsedResponse.content, "This is a content part and next will be a tool call.\n\n");
-    EXPECT_EQ(parsedResponse.reasoning, "");
-    EXPECT_EQ(parsedResponse.reasoningTokenCount, 0);
-    ASSERT_EQ(parsedResponse.toolCalls.size(), 1);
-    EXPECT_EQ(parsedResponse.toolCalls[0].name, "example_tool");
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedResponse.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedResponse.toolCalls[0].id.empty(), false);  // ID should be generated
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
 }
 
 // Major positive test for streaming tool calls with reasoning and multiple chunks and phase switching
-TEST_F(Qwen3ResponseParserTest, HolisticStreaming) {
+TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Thinking phase
         {"<think>", std::nullopt},
@@ -245,7 +245,7 @@ TEST_F(Qwen3ResponseParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = responseParser->parseChunk(chunk);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -285,7 +285,7 @@ TEST_F(Qwen3ResponseParserTest, HolisticStreaming) {
     }
 }
 
-TEST_F(Qwen3ResponseParserTest, ToolCallsInsideReasoning) {
+TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoning) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Thinking phase
         {"<think>", std::nullopt},
@@ -320,7 +320,7 @@ TEST_F(Qwen3ResponseParserTest, ToolCallsInsideReasoning) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = responseParser->parseChunk(chunk);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -339,7 +339,7 @@ TEST_F(Qwen3ResponseParserTest, ToolCallsInsideReasoning) {
 
 // Negative test cases
 
-TEST_F(Qwen3ResponseParserTest, ToolCallsBrokenJson) {
+TEST_F(Qwen3OutputParserTest, ToolCallsBrokenJson) {
     std::vector<std::pair<std::string, bool>> chunkToErrorVec{
         {"<tool_call>\n", false},
         {"{\"", false},
@@ -357,10 +357,10 @@ TEST_F(Qwen3ResponseParserTest, ToolCallsBrokenJson) {
     };
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(responseParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = responseParser->parseChunk(chunk);
+                auto doc = outputParser->parseChunk(chunk);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;
@@ -368,7 +368,7 @@ TEST_F(Qwen3ResponseParserTest, ToolCallsBrokenJson) {
     }
 }
 
-TEST_F(Qwen3ResponseParserTest, ToolCallsDataAfterToolCall) {
+TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
     std::vector<std::pair<std::string, bool>> chunkToErrorVec{
         {"<tool_call>\n", false},
         {"{\"", false},
@@ -387,10 +387,10 @@ TEST_F(Qwen3ResponseParserTest, ToolCallsDataAfterToolCall) {
         {"Buffer is not cleared, JSON is still broken", true}};
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(responseParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = responseParser->parseChunk(chunk);
+                auto doc = outputParser->parseChunk(chunk);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;

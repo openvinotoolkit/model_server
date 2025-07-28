@@ -15,20 +15,20 @@
 //*****************************************************************************
 #include <gtest/gtest.h>
 #include <string>
-#include "../../../llm/response_parsers/base_response_parser.hpp"
+#include "../../../llm/io_processing/base_output_parser.hpp"
 
 using namespace ovms;
 
-class BaseResponseParserTest : public ::testing::Test {
+class BaseOutputParserTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // No specific setup needed for this test class
     }
 };
 
-TEST_F(BaseResponseParserTest, wrapFirstDelta) {
+TEST_F(BaseOutputParserTest, wrapFirstDelta) {
     std::string functionName = "example_function";
-    rapidjson::Document obj = BaseResponseParser::wrapFirstDelta(functionName, 0);
+    rapidjson::Document obj = BaseOutputParser::wrapFirstDelta(functionName, 0);
     const auto& wrappedDelta = obj["delta"];
     ASSERT_TRUE(wrappedDelta.IsObject());
     ASSERT_TRUE(wrappedDelta.HasMember("tool_calls"));
@@ -39,7 +39,7 @@ TEST_F(BaseResponseParserTest, wrapFirstDelta) {
     ASSERT_TRUE(toolCall.HasMember("id"));
     ASSERT_TRUE(toolCall["id"].IsString());
     std::string idStr = toolCall["id"].GetString();
-    // Assuming ID is a random alphanumeric string of length 9 (see src/llm/response_parsers/utils.cpp)
+    // Assuming ID is a random alphanumeric string of length 9 (see src/llm/io_processing/utils.cpp)
     ASSERT_EQ(idStr.size(), 9);
     ASSERT_TRUE(std::all_of(idStr.begin(), idStr.end(), [](char c) {
         return std::isalnum(static_cast<unsigned char>(c));
@@ -55,14 +55,14 @@ TEST_F(BaseResponseParserTest, wrapFirstDelta) {
     ASSERT_EQ(function["name"].GetString(), functionName);
 }
 
-TEST_F(BaseResponseParserTest, wrapDelta) {
+TEST_F(BaseOutputParserTest, wrapDelta) {
     std::string deltaStr = R"({
         "arguments": "location"
     })";
     rapidjson::Document delta;
     delta.Parse(deltaStr.c_str());
 
-    rapidjson::Document obj = BaseResponseParser::wrapDelta(delta, 0);
+    rapidjson::Document obj = BaseOutputParser::wrapDelta(delta, 0);
     const auto& wrappedDelta = obj["delta"];
     ASSERT_TRUE(wrappedDelta.IsObject());
     ASSERT_TRUE(wrappedDelta.HasMember("tool_calls"));

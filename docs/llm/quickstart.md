@@ -2,8 +2,7 @@
 
 Let's deploy [OpenVINO/Phi-3.5-mini-instruct-int4-ov](https://huggingface.co/OpenVINO/Phi-3.5-mini-instruct-int4-ov) model on Intel iGPU or ARC GPU.
 It is [microsoft/Phi-3.5-mini-instruct](https://huggingface.co/microsoft/Phi-3.5-mini-instruct) quantized to INT4 precision and converted to IR format.
-You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and 
-hardware configuration.
+You can use another model from [OpenVINO organization on HuggingFace](https://huggingface.co/OpenVINO) if you find one that better suits your needs and hardware configuration.
 
 ## Requirements
 - Linux or Windows 11
@@ -11,7 +10,7 @@ hardware configuration.
 - Intel iGPU or ARC GPU
 
 ## Deployment Steps
- 
+
 ### 1. Deploy the Model
 ::::{tab-set}
 
@@ -20,7 +19,7 @@ hardware configuration.
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 
@@ -28,7 +27,7 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 **Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
 
 ```bat
-ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2
+ovms.exe --source_model OpenVINO/Phi-3.5-mini-instruct-int4-ov --model_repository_path models --rest_port 8000 --task text_generation --target_device GPU --cache_size 2
 ```
 :::
 ::::
