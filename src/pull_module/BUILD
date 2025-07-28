@@ -42,11 +42,29 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "optimum_export",
+    srcs = ["optimum_export.cpp"],
+    hdrs = ["optimum_export.hpp"],
+    deps =  [
+        ":cmd_exec",
+        ":libgit2",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovmsfilesystem",
+        "@ovms//src:libovmslocalfilesystem",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "hf_pull_model_module",
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
         ":libgit2",
+        ":optimum_export",
         "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",

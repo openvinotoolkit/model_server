@@ -53,21 +53,22 @@ Configuration options for the server are defined only via command-line options a
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 | `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |
-| `allow_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
-| `allow_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
-| `allow_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
+| `allowed_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
+| `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
+| `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 
 ## Config management mode options
 
 Configuration options for the config management mode, which is used to manage config file in the model repository.
-| Option  | Value format  | Description  |
-|---|---|---|
-| `model_repository_path` | `string` | Path to the model repository. This path is prefixed to the relative model path. Use|
-| `list_models`| `NA` | List all models paths in the model repository. |
-| `model_name` | `string` | Name of the model as visible in serving. If ```--model_path``` is not provided, path is deduced from name. |
-| `model_path` | `string` | Optional. Path to the model repository. If path is relative then it is prefixed with ```--model_repository_path```. |
-| `add_to_config` | `string` |  Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to. |
-| `remove_from_config` | `string` |  Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from. |
+
+| Option                  | Value format | Description                                                                                                                                         |
+|-------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `model_repository_path` | `string`     | Path to the model repository. This path is prefixed to the relative model path.                                                                     |
+| `list_models`           | `NA`         | List all models paths in the model repository.                                                                                                      |
+| `model_name`            | `string`     | Name of the model as visible in serving. If `--model_path` is not provided, path is deduced from name.                                              |
+| `model_path`            | `string`     | Optional. Path to the model repository. If path is relative then it is prefixed with `--model_repository_path`.                                     |
+| `add_to_config`         | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to.                        |
+| `remove_from_config`    | `string`     | Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from.                   |
 
 ## Pull mode configuration options
 
@@ -77,13 +78,22 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
-| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.  |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                |
+| `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used. `Required`                |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
-| `--target_device` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"` |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).  Default: `text_generation` |
+| `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
+
+## Pull Mode Options for optimum-cli mode
+
+When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set two additional parameters for this mode.
+| Option                       | Value format | Description                                                                                                   |
+|------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
+| `--extra_quantization_params`| ` `          | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
+| `--weight-format`            | `string`      | Model precision used in optimum-cli export with conversion. Default `int8`.                |
+                        
 
 There are also additional environment variables that may change the behavior of pulling:
 
@@ -91,20 +101,16 @@ There are also additional environment variables that may change the behavior of 
 
 | Variable        | Value format | Description                                                                                                              |
 |-----------------|--------------|--------------------------------------------------------------------------------------------------------------------------|
-| `HF_ENDPOINT`   | `string`     | Default: `huggingface.co`. For users in China, set to `https://hf-mirror.com` if needed.                                 |
+| `HF_ENDPOINT`   | `string`     | Default: `https://huggingface.co`. For users in China, set to `https://www.modelscope.cn/models` or `https://hf-mirror.com` if needed.                                 |
 | `HF_TOKEN`      | `string`     | Authentication token required for accessing some models from Hugging Face.                                               |
 | `https_proxy`   | `string`     | If set, model downloads will use this proxy.                                                                             |
 
 ### Advanced Environment Variables for Pull Mode
 | Variable                            | Format  | Description                                                                                                |
+|-------------------------------------|---------|------------------------------------------------------------------------------------------------------------|
 | `GIT_OPT_SET_SERVER_CONNECT_TIMEOUT`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
 | `GIT_OPT_SET_SERVER_TIMEOUT`        | `int`   | Timeout for reading from and writing to a remote server. Default value 4000 ms.                            |
 | `GIT_OPT_SET_SSL_CERT_LOCATIONS`    | `string`| Path to check for ssl certificates.                                                                        |
-
-### Advanced Environment Variables for Pull Mode in 2025.2 release
-| Variable                       | Format  | Description                                                                                                |
-| `GIT_SERVER_CONNECT_TIMEOUT_MS`| `int`   | Timeout to attempt connections to a remote server. Default value 4000 ms.                                  |
-| `GIT_SERVER_TIMEOUT_MS`        | `int`   | Timeout for reading from and writing to a remote server. Default value 0 - using system sesttings          |
 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
@@ -120,6 +126,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--dynamic_split_fuse`        | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                           |
 | `--max_prompt_len`            | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                         |
 | `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
+| `--response_parser`           | `string`     | Type of parser to use for tool calls and reasoning in model output. Currently supported: [qwen3, llama3, hermes3, phi4] |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |
