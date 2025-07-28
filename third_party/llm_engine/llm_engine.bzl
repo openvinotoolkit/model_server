@@ -82,7 +82,7 @@ def _impl(repository_ctx):
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
         "BUILD_TOKENIZERS": "OFF",
-        "ENABLE_XGRAMMAR":"ON",
+        "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1
 

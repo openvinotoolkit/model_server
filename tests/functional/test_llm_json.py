@@ -24,7 +24,7 @@ import pytest
 import requests
 
 model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
-base_url = os.getenv("BASE_URL", "http://localhost:10000/v3")
+base_url = os.getenv("BASE_URL", "http://localhost:8000/v3")
 
 logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
@@ -335,7 +335,6 @@ class TestSingleModelInference:
             max_tokens=100,
             response_format=CalendarEvent,
         )
-        print("COMPLETION:", completion)
 
         print("CalendarEvent as JSON:", json.dumps(CalendarEvent.schema(), indent=2))
         print("COMPLETION CONTENT:",completion.choices[0].message.content)

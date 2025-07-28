@@ -1,8 +1,8 @@
 # Structured response in LLM models {#ovms_structured_output}
 
-OpenVINO Model Server can enforce the LLM models to generated the output according to a specific json schema.
+OpenVINO Model Server can enforce the LLM models to generate the output according to a specific json schema.
 That functionality can be applied in automation tasks where json content needs to be created based on the text passed in the request.
-Json format is a standard for a communication and data exchange between applications and microservices.
+Json format is a standard for communication and data exchange between applications and microservices.
 
 Below is an example how this capability can be used with an testing procedure to show accuracy gain.
 
@@ -177,7 +177,7 @@ to assess model response and its compliance with the expected schema and also th
 It will be executed with the response_format request field including the schema and with the schema passed in the system message.
 
 ```console
-pip install dataset
+pip install datasets tqdm openai jsonschema
 python accuracy_test.py --base_url http://localhost:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
 ```
 ```
