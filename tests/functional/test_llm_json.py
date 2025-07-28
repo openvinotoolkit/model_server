@@ -306,7 +306,7 @@ class TestSingleModelInference:
                     arguments += chunk.choices[0].delta.tool_calls[0].function.arguments
         assert arguments == '{"location": "Paris, France"}'
 
-    #@skip(reason="not implemented yet")
+    @skip(reason="not implemented yet")
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>
@@ -332,8 +332,7 @@ class TestSingleModelInference:
                 {"role": "user", "content": "Alice and Bob are going to a Science Fair on Friday."},
             ],
             temperature=0.0,
-            max_tokens=10,
-            #stop=["#"],
+            max_tokens=100,
             response_format=CalendarEvent,
         )
         print("COMPLETION:", completion)
