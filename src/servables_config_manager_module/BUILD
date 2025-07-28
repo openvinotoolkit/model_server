@@ -33,14 +33,12 @@ ovms_cc_library(
     hdrs = ["servablesconfigmanagermodule.hpp"],
     deps =  [
              "listmodels",
+             "//src/config_export_module:config_export",
              "//src:cpp_headers",
              "//src:libovmsstring_utils",
              "//src:libovmslogging",
              "//src:libovms_server_settings",
              "//src:libovms_module",
-             "//src/config_export_module:config_export",
-             "//src/graph_export:graph_export_types",
-             "//src/config_export_module:config_export_types",
     ],
     visibility = ["//visibility:public"],
 )

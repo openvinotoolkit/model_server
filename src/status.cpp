@@ -337,12 +337,17 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
 
     // Huggingface model download errors for libgit2
     {StatusCode::HF_FAILED_TO_INIT_LIBGIT2, "Failed to initialize libgit2 library"},
-    {StatusCode::HF_FAILED_TO_INIT_GIT, "Failed to initialize git executable"},
-    {StatusCode::HF_FAILED_TO_INIT_GIT_LFS, "Failed to initialize git-lfs executable"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT, "Failed to run git executable"},
+    {StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI, "Failed to run optimum-cli executable"},
+    {StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED, "Failed to run optimum-cli export command"},
+    {StatusCode::HF_FAILED_TO_INIT_GIT_LFS, "Failed to run git-lfs executable"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
     {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
     {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},
+    {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
+    {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
+    {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
 };
 }  // namespace ovms

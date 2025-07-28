@@ -27,6 +27,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
+#include "stringutils.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {
@@ -114,7 +115,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 }
 
 bool Config::validate() {
-    if (this->serverSettings.serverMode == HF_PULL_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
         if (!serverSettings.hfSettings.sourceModel.size()) {
             std::cerr << "source_model parameter is required for pull mode";
             return false;
@@ -127,7 +128,7 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+        if (serverSettings.hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
             std::cerr << "For now only OpenVINO models are supported in pulling mode";
             return false;
         }
@@ -174,7 +175,10 @@ bool Config::validate() {
                 return false;
             }
         }
-        return true;
+        // No more validation needed
+        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+            return true;
+        }
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
@@ -340,6 +344,10 @@ const std::string& Config::grpcChannelArguments() const { return this->serverSet
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
+const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
+const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
+const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 
 }  // namespace ovms

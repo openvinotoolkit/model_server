@@ -56,8 +56,11 @@ enum RequestType { Predict,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
+    V3_ListModels,
+    V3_RetrieveModel,
     V3,
-    Metrics };
+    Metrics,
+    Options };
 
 struct HttpRequestComponents {
     RequestType type;
@@ -103,7 +106,10 @@ public:
     static const std::string kfs_serverliveRegexExp;
     static const std::string kfs_servermetadataRegexExp;
 
+    static const std::string v3_ListModelsRegexExp;
+    static const std::string v3_RetrieveModelRegexExp;
     static const std::string v3_RegexExp;
+
     /**
      * @brief Construct a new HttpRest Api Handler
      *
@@ -226,12 +232,15 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
+    Status processListModelsRequest(std::string& response);
+    Status processRetrieveModelRequest(const std::string& name, std::string& response);
 
 private:
     const std::regex predictionRegex;
@@ -247,6 +256,8 @@ private:
     const std::regex kfs_serverliveRegex;
     const std::regex kfs_servermetadataRegex;
 
+    const std::regex v3_ListModelsRegex;
+    const std::regex v3_RetrieveModelRegex;
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;

@@ -13,20 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
+#pragma once
 #include <string>
 
-#include "graph_export_types.hpp"
 namespace ovms {
-
-std::string enumToString(GraphExportType type) {
-    auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown_graph";
-}
-
-GraphExportType stringToEnum(std::string inString) {
-    auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
-}
+// Generates random alphanumeric string of length 9 for tool call ID
+std::string generateRandomId();
 }  // namespace ovms

@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <ctime>
 
 #ifndef _WIN32
 #include <curl/curl.h>
@@ -113,6 +114,10 @@ const std::string HttpRestApiHandler::kfs_serverliveRegexExp =
 const std::string HttpRestApiHandler::kfs_servermetadataRegexExp =
     R"(/v2)";
 
+const std::string HttpRestApiHandler::v3_ListModelsRegexExp =
+    R"(/v3/(v1/)?models)";
+const std::string HttpRestApiHandler::v3_RetrieveModelRegexExp =
+    R"(/v3/(v1/)?models/(.+))";
 const std::string HttpRestApiHandler::v3_RegexExp =
     R"(/v3/.*?(/|$))";
 
@@ -129,6 +134,8 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfs_serverreadyRegex(kfs_serverreadyRegexExp),
     kfs_serverliveRegex(kfs_serverliveRegexExp),
     kfs_servermetadataRegex(kfs_servermetadataRegexExp),
+    v3_ListModelsRegex(v3_ListModelsRegexExp),
+    v3_RetrieveModelRegex(v3_RetrieveModelRegexExp),
     v3_Regex(v3_RegexExp),
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
@@ -206,12 +213,21 @@ void HttpRestApiHandler::registerAll() {
         return processServerMetadataKFSRequest(request_components, response, request_body);
     });
 
+    registerHandler(V3_ListModels, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+        return processListModelsRequest(response);
+    });
+    registerHandler(V3_RetrieveModel, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+        return processRetrieveModelRequest(request_components.model_name, response);
+    });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
         return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
+    });
+    registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processOptions(request_components, response, request_body);
     });
 }
 
@@ -556,6 +572,89 @@ static Status createV3HttpPayload(
 }
 #endif
 
+void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp) {
+    writer.StartObject();
+    writer.String("id");
+    writer.String(name.c_str());
+    writer.String("object");
+    writer.String("model");
+    writer.String("created");
+    writer.Int64(timestamp);
+    writer.String("owned_by");
+    writer.String("OVMS");
+    writer.EndObject();
+}
+
+Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
+    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
+    bool exist = false;
+    auto it = models.find(name);
+    if (it != models.end())
+        exist = true;
+    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
+    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
+        exist = true;
+#if (MEDIAPIPE_DISABLE == 0)
+    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
+    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
+        exist = true;
+#endif
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    if (!exist) {
+        writer.StartObject();
+        writer.String("error");
+        writer.String("Model not found");
+        writer.EndObject();
+        response = buffer.GetString();
+        return StatusCode::MODEL_NOT_LOADED;
+    }
+    time_t timestamp;
+    time(&timestamp);
+    writer.StartObject();
+    writer.String("object");
+    writer.String("list");
+    writer.String("data");
+    writer.StartArray();
+    parseModel(writer, name, timestamp);
+    writer.EndArray();
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
+    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    time_t timestamp;
+    time(&timestamp);
+    writer.StartObject();
+    writer.String("object");
+    writer.String("list");
+    writer.String("data");
+    writer.StartArray();
+    for (auto const& model : models) {
+        parseModel(writer, model.first, timestamp);
+    }
+    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
+    for (auto const& pipelineName : pipelinesNames) {
+        parseModel(writer, pipelineName, timestamp);
+    }
+#if (MEDIAPIPE_DISABLE == 0)
+    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
+    for (auto const& graphName : mediapipes) {
+        parseModel(writer, graphName, timestamp);
+    }
+#endif
+    writer.EndArray();
+    writer.String("object");
+    writer.String("list");
+    writer.EndObject();
+    response = buffer.GetString();
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
@@ -620,6 +719,11 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
     auto metricModule = dynamic_cast<const MetricModule*>(module);
     response = metricModule->getRegistry().collect();
 
+    return StatusCode::OK;
+}
+
+Status HttpRestApiHandler::processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body) {
+    // Options are returned from within drogon PreSendingAdvice
     return StatusCode::OK;
 }
 
@@ -749,7 +853,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     const std::unordered_map<std::string, std::string>& headers) {
     std::smatch sm;
     requestComponents.http_method = http_method;
-    if (http_method != "POST" && http_method != "GET") {
+    if (http_method != "POST" && http_method != "GET" && http_method != "OPTIONS") {
         return StatusCode::REST_UNSUPPORTED_METHOD;
     }
 
@@ -809,6 +913,8 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                    std::regex_match(request_path, sm, kfs_servermetadataRegex) ||
                    std::regex_match(request_path, sm, kfs_modelmetadataRegex) ||
                    std::regex_match(request_path, sm, kfs_modelreadyRegex) ||
+                   std::regex_match(request_path, sm, v3_ListModelsRegex) ||
+                   std::regex_match(request_path, sm, v3_RetrieveModelRegex) ||
                    std::regex_match(request_path, sm, metricsRegex))
                    ? StatusCode::REST_UNSUPPORTED_METHOD
                    : StatusCode::REST_INVALID_URL;
@@ -878,11 +984,24 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             requestComponents.type = Metrics;
             return StatusCode::OK;
         }
+        if (std::regex_match(request_path, sm, v3_ListModelsRegex)) {
+            requestComponents.type = V3_ListModels;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, v3_RetrieveModelRegex)) {
+            requestComponents.model_name = urlDecode(sm[2]);
+            requestComponents.type = V3_RetrieveModel;
+            return StatusCode::OK;
+        }
         return (std::regex_match(request_path, sm, predictionRegex) ||
                    std::regex_match(request_path, sm, kfs_inferRegex, std::regex_constants::match_any) ||
                    std::regex_match(request_path, sm, configReloadRegex))
                    ? StatusCode::REST_UNSUPPORTED_METHOD
                    : StatusCode::REST_INVALID_URL;
+    }
+    if (http_method == "OPTIONS") {
+        requestComponents.type = Options;
+        return StatusCode::OK;
     }
     return StatusCode::REST_INVALID_URL;
 }
@@ -896,20 +1015,17 @@ Status HttpRestApiHandler::processRequest(
     HttpResponseComponents& responseComponents,
     std::shared_ptr<HttpAsyncWriter> serverReaderWriter,
     std::shared_ptr<MultiPartParser> multiPartParser) {
-
     std::smatch sm;
     std::string request_path_str(request_path);
     if (FileSystem::isPathEscaped(request_path_str)) {
         SPDLOG_DEBUG("Path {} escape with .. is forbidden.", request_path);
         return StatusCode::PATH_INVALID;
     }
-
     HttpRequestComponents requestComponents;
     auto status = parseRequestComponents(requestComponents, http_method, request_path_str, *headers);
 
     if (!status.ok())
         return status;
-
     response->clear();
     return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
 }

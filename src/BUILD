@@ -134,6 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
+        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
     ],
 )
 
@@ -179,9 +180,8 @@ cc_library(
 ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
-    srcs = [],
-    deps = ["//src/config_export_module:config_export_types",
-            "//src/graph_export:graph_export_types",],
+    srcs = ["capi_frontend/server_settings.cpp"],
+    deps = [],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2264,11 +2264,11 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:threadpool",
         "libovmslogging",
         "libovmsstatus",
-        "libhttp_status_code"
+        "libhttp_status_code",
+        "libovms_config"
     ],
     visibility = ["//visibility:public",],
 )
-
 ovms_cc_library(
     name = "image_conversion",
     hdrs = [
@@ -2280,6 +2280,7 @@ ovms_cc_library(
     deps = [
         "@stb//:image",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/status",
         "//third_party:openvino",
         "//src:libovmslogging",
         "//src:libovmsprofiler",
@@ -2318,10 +2319,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [
-        "//src/graph_export:graph_export_types",
-        "//src/config_export_module:config_export_types",
-    ],
+    deps = [],
     visibility = ["//visibility:public"],
 )
 
@@ -2344,6 +2342,19 @@ cc_binary(
         "//src:libovmsfilesystemfactory",
     ],
     linkstatic = True,
+)
+
+
+
+cc_binary(
+    name = "optimum-cli",
+    srcs = [
+        "test/optimum_cli_mock.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [],
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_binary(
@@ -2463,6 +2474,7 @@ cc_test(
         + select({
             "//:not_disable_mediapipe": [
                 "test/embeddingsnode_test.cpp",
+                "test/listmodelsendpoint_test.cpp",
                 "test/mediapipeflow_test.cpp",
                 "test/mediapipe/inputsidepacketusertestcalc.cc",
                 "test/reranknode_test.cpp",
@@ -2492,10 +2504,12 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 # Tools support is limited to configuration with Python enabled
-                "test/llm/response_parsers/llama3_response_parser_test.cpp",
-                "test/llm/response_parsers/qwen3_response_parser_test.cpp",
-                "test/llm/response_parsers/hermes3_response_parser_test.cpp",
-                "test/llm/response_parsers/phi4_response_parser_test.cpp",
+                "test/llm/output_parsers/base_output_parser_test.cpp",
+                "test/llm/output_parsers/llama3_output_parser_test.cpp",
+                "test/llm/output_parsers/qwen3_output_parser_test.cpp",
+                "test/llm/output_parsers/hermes3_output_parser_test.cpp",
+                "test/llm/output_parsers/phi4_output_parser_test.cpp",
+                "test/llm/output_parsers/partial_json_builder_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2632,6 +2646,7 @@ cc_test(
         "//src:libcustom_node_horizontal_ocr.so",
     ],
     deps = [
+            "optimum-cli",
             "//src:ovms_lib",
             "//src:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
@@ -2645,7 +2660,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
-            ":listmodels_test",
+            ":listdirectorymodels_test",
             ":graph_export_test",
             ":config_export_test",
             ] + select({
@@ -2659,7 +2674,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:response_parsers",
+                "//src/llm:io_processing",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -2770,8 +2785,8 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
-    name = "listmodels_test",
-    srcs = ["test/listmodels_test.cpp"],
+    name = "listdirectorymodels_test",
+    srcs = ["test/listdirectorymodels_test.cpp"],
     alwayslink = True,
     linkopts = [],
     deps = [
@@ -2784,6 +2799,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
 )
+
 cc_library(
     name = "graph_export_test",
     linkstatic = 1,

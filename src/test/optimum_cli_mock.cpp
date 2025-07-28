@@ -14,30 +14,25 @@
 // limitations under the License.
 //*****************************************************************************
 #include <iostream>
-#include <map>
-#include <string>
-#pragma once
-namespace ovms {
-enum ConfigExportType : int {
-    ENABLE_MODEL,
-    DISABLE_MODEL,
-    DELETE_MODEL,
-    UNKNOWN_MODEL
-};
 
-const std::map<ConfigExportType, std::string> configExportTypeToString = {
-    {ENABLE_MODEL, "ENABLE_MODEL"},
-    {DISABLE_MODEL, "DISABLE_MODEL"},
-    {DELETE_MODEL, "DELETE_MODEL"},
-    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
+int main(int argc, char** argv) {
+    if (argc < 2)
+        return -1;
 
-const std::map<std::string, ConfigExportType> stringToConfigExportType = {
-    {"ENABLE_MODEL", ENABLE_MODEL},
-    {"DISABLE_MODEL", DISABLE_MODEL},
-    {"DELETE_MODEL", DELETE_MODEL},
-    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
+    std::cout << "Number of arguments: " << argc << std::endl;
+    for (int i = 0; i < argc; ++i) {
+        std::cout << "Argument " << i << ": " << argv[i] << std::endl;
+    }
+    for (int i = 0; i < argc; ++i) {
+        if (i == 1 && argv[i][0] == '-') {
+            std::cout << "usage: optimum-cli" << std::endl;
+            return 0;
+        }
+        if (i == 1 && argv[i][0] == 'e') {
+            std::cout << "Applying Weight Compression" << std::endl;
+            return 0;
+        }
+    }
 
-std::string enumToString(ConfigExportType type);
-ConfigExportType stringToConfigExportEnum(std::string inString);
-
-}  // namespace ovms
+    return 0;
+}

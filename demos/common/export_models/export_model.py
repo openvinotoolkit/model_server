@@ -30,6 +30,7 @@ def add_common_arguments(parser):
     parser.add_argument('--overwrite_models', default=False, action='store_true', help='Overwrite the model if it already exists in the models repository', dest='overwrite_models')
     parser.add_argument('--target_device', default="CPU", help='CPU, GPU, NPU or HETERO, default is CPU', dest='target_device')
     parser.add_argument('--ov_cache_dir', default=None, help='Folder path for compilation cache to speedup initialization time', dest='ov_cache_dir')
+    parser.add_argument('--extra_quantization_params', required=False, help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 
 parser = argparse.ArgumentParser(description='Export Hugging face models to OVMS models repository including all configuration for deployments')
 
@@ -38,7 +39,6 @@ parser_text = subparsers.add_parser('text_generation', help='export model for ch
 add_common_arguments(parser_text)
 parser_text.add_argument('--pipeline_type', default=None, choices=["LM", "LM_CB", "VLM", "VLM_CB", "AUTO"], help='Type of the pipeline to be used. AUTO is used by default', dest='pipeline_type')
 parser_text.add_argument('--kv_cache_precision', default=None, choices=["u8"], help='u8 or empty (model default). Reduced kv cache precision to u8 lowers the cache size consumption.', dest='kv_cache_precision')
-parser_text.add_argument('--extra_quantization_params', help='Add advanced quantization parameters. Check optimum-intel documentation. Example: "--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2"', dest='extra_quantization_params')
 parser_text.add_argument('--enable_prefix_caching', action='store_true', help='This algorithm is used to cache the prompt tokens.', dest='enable_prefix_caching')
 parser_text.add_argument('--disable_dynamic_split_fuse', action='store_false', help='The maximum number of tokens that can be batched together.', dest='dynamic_split_fuse')
 parser_text.add_argument('--max_num_batched_tokens', default=None, help='empty or integer. The maximum number of tokens that can be batched together.', dest='max_num_batched_tokens')
@@ -80,6 +80,9 @@ parser_rerank_ov.add_argument('--max_doc_length', default=16000, type=int, help=
 parser_image_generation = subparsers.add_parser('image_generation', help='export model for image generation endpoint')
 add_common_arguments(parser_image_generation)
 parser_image_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_image_generation.add_argument('--resolution', default="", help='Selection of allowed resolutions in a format of WxH; W=width H=height, space separated. If only one is selected, the pipeline will be reshaped to static.', dest='resolution')
+parser_image_generation.add_argument('--guidance_scale', default="", help='Static guidance scale for the image generation requests. If not specified, default 7.5f is used.', dest='guidance_scale')
+parser_image_generation.add_argument('--num_images_per_prompt', default="", help='Static number of images to be generated per the image generation request. If not specified, default 1 is used.', dest='num_images_per_prompt')
 parser_image_generation.add_argument('--max_resolution', default="", help='Max allowed resolution in a format of WxH; W=width H=height', dest='max_resolution')
 parser_image_generation.add_argument('--default_resolution', default="", help='Default resolution when not specified by client', dest='default_resolution')
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
@@ -288,6 +291,12 @@ node: {
       {%- if plugin_config_str %}
       plugin_config: '{{plugin_config_str}}',{% endif %}
       device: "{{target_device|default("CPU", true)}}",
+      {%- if resolution %}
+      resolution: "{{resolution}}",{% endif %}
+      {%- if num_images_per_prompt %}
+      num_images_per_prompt: {{num_images_per_prompt}},{% endif %}
+      {%- if guidance_scale %}
+      guidance_scale: {{guidance_scale}},{% endif %}
       {%- if max_resolution %}
       max_resolution: '{{max_resolution}}',{% endif %}
       {%- if default_resolution %}
@@ -379,11 +388,9 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if precision != 'int4':
                     print("NPU target device requires int4 precision. Changing to int4")
                     precision = 'int4'
-                if task_parameters['extra_quantization_params'] is None:
+                if task_parameters['extra_quantization_params'] == "":
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
-            if task_parameters['extra_quantization_params'] is None:
-                task_parameters['extra_quantization_params'] = ""
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
@@ -478,7 +485,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
             embeddings_path = os.path.join(model_repository_path, model_name,'embeddings', version)
             print("Exporting embeddings model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export embeddings model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -517,7 +524,7 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         if truncate:
@@ -539,7 +546,7 @@ def export_rerank_model_ov(model_repository_path, source_model, model_name, prec
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting rerank model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export rerank model", source_model)
         print("Exporting tokenizer to ", destination_path)
@@ -565,7 +572,7 @@ def export_rerank_model(model_repository_path, source_model, model_name, precisi
             embeddings_path = os.path.join(model_repository_path, model_name, 'rerank', version)
             print("Exporting rerank model to ",embeddings_path)
             if not os.path.isdir(embeddings_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} --trust-remote-code {}".format(source_model, precision, tmpdirname)
+                optimum_command = "optimum-cli export openvino --disable-convert-tokenizer --model {} --task text-classification --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], tmpdirname)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export rerank model", source_model)
                 set_rt_info(tmpdirname, 'openvino_model.xml', 'config.json')
@@ -601,7 +608,8 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     if os.path.isfile(model_index_path):
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
-        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {}".format(source_model, precision, target_path)
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
+        print(f'optimum cli command: {optimum_command}')
         if os.system(optimum_command):
             raise ValueError("Failed to export image generation model", source_model)
 
@@ -653,6 +661,8 @@ if args['task'] == 'text_generation':
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
 print("template params:", template_parameters)
 
+if template_parameters['extra_quantization_params'] is None:
+    template_parameters['extra_quantization_params'] = ""
 if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
@@ -672,10 +682,14 @@ elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',
         'target_device',
+        'resolution',
+        'num_images_per_prompt',
+        'guidance_scale',
         'max_resolution',
         'default_resolution',
         'max_num_images_per_prompt',
         'default_num_inference_steps',
         'max_num_inference_steps',
+        'extra_quantization_params'
     ]}
     export_image_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'], args['num_streams'])
