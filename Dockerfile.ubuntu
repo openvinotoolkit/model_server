@@ -356,7 +356,7 @@ COPY MakefileCapi /ovms/
 RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi cpp && \
                                          CAPI_FLAGS=${CAPI_FLAGS} make -f MakefileCapi c; fi ;
 RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \; \
-   find /ovms/bazel-out/k8-*/bin -iname 'libgit2.so' -exec cp -v {} /ovms_release/lib/ \;
+    && find /ovms/bazel-out/k8-*/bin -iname 'libgit2.so' -exec cp -v {} /ovms_release/lib/ \;
 
 RUN if ! [[ $CAPI_FLAGS == *"mp_off"* ]]; then true ; else exit 0 ; fi ; \
     find /ovms/bazel-out/k8-*/bin -iname 'libopenvino_genai.so*' -exec cp -v {} /ovms_release/lib/ \;
@@ -376,9 +376,7 @@ ARG BASE_OS=ubuntu
 ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
-COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
-COPY --from=capi-build /ovms_release/lib/libopenvino_genai.so* /ovms_release/lib/
-COPY --from=capi-build /ovms_release/lib/libgit2.so /ovms_release/lib/
+COPY --from=capi-build /ovms_release/lib/*.so* /ovms_release/lib/
 
 COPY create_package.sh /
 RUN ./create_package.sh
