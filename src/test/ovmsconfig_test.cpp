@@ -1029,9 +1029,11 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
         (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 7;
+    int arg_count = 9;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1063,9 +1065,11 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"--sym --ratio 1.0",
         (char*)"--target_device",
         (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 13;
+    int arg_count = 15;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1098,9 +1102,11 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"--sym --ratio 1.0",
         (char*)"--target_device",
         (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 14;
+    int arg_count = 16;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1291,43 +1297,6 @@ TEST(OvmsGraphConfigTest, negativeDynamicSplitFuse) {
 
     int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "dynamic_split_fuse: INVALID is not allowed. Supported values: true, false");
-}
-
-TEST(OvmsGraphConfigTest, negativeSourceModel) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)"text_generation",
-    };
-
-    int arg_count = 8;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
-}
-
-TEST(OvmsGraphConfigTest, negativeSourceModelPullAndStart) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--rest_port",
-        (char*)"8082",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-        (char*)"--task",
-        (char*)"text_generation",
-    };
-
-    int arg_count = 9;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
