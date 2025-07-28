@@ -524,25 +524,37 @@ new_local_repository(
 
 # Google Cloud SDK
 http_archive(
-    name = "com_github_googleapis_google_cloud_cpp",
-    sha256 = "a370bcf2913717c674a7250c4a310250448ffeb751b930be559a6f1887155f3b",
-    strip_prefix = "google-cloud-cpp-0.21.0",
-    url = "https://github.com/googleapis/google-cloud-cpp/archive/v0.21.0.tar.gz",
-    repo_mapping = {"@com_github_curl_curl" : "@curl"}
+    name = "google_cloud_cpp",
+    sha256 = "629cbfcc5bd581d38277ba8fa94a5b6591af1e0f6af0dab6d1d9ed796bf48b61",
+    strip_prefix = "google-cloud-cpp-2.39.0",
+    url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.39.0.tar.gz",
 )
 
-load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
-google_cloud_cpp_deps()
+load("@google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
 
-load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
-switched_rules_by_language(
-    name = "com_google_googleapis_imports",
-    cc = True,  # C++ support is only "Partially implemented", roll our own.
-    grpc = True,
-)
+gl_cpp_workspace0()
 
-load("@com_github_googleapis_google_cloud_cpp_common//bazel:google_cloud_cpp_common_deps.bzl", "google_cloud_cpp_common_deps")
-google_cloud_cpp_common_deps()
+load("@google_cloud_cpp//bazel:workspace1.bzl", "gl_cpp_workspace1")
+
+gl_cpp_workspace1()
+
+load("@google_cloud_cpp//bazel:workspace2.bzl", "gl_cpp_workspace2")
+
+gl_cpp_workspace2()
+
+# load("@google_cloud_cpp//bazel:workspace3.bzl", "gl_cpp_workspace3")
+
+# gl_cpp_workspace3()
+
+load("@google_cloud_cpp//bazel:workspace4.bzl", "gl_cpp_workspace4")
+
+gl_cpp_workspace4()
+
+load("@google_cloud_cpp//bazel:workspace5.bzl", "gl_cpp_workspace5")
+
+gl_cpp_workspace5()
+
+# grpc
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
