@@ -1,9 +1,3 @@
-commit 1259c7fa63c826a471813fdb1d73f2227b5c3307
-Author: rasapala <rafal.a.sapala@intel.com>
-Date:   Thu Jul 3 15:31:05 2025 +0200
-
-    Git-lfs support
-
 diff --git a/.gitignore b/.gitignore
 index 1b482f038..d0fe70060 100644
 --- a/.gitignore
@@ -54,6 +48,24 @@ index 60466d173..a35ad5f98 100644
  /**
   * This is priority that the internal ident filter will be registered with
   */
+diff --git a/src/cli/CMakeLists.txt b/src/cli/CMakeLists.txt
+index d121c588a..d190be0d9 100644
+--- a/src/cli/CMakeLists.txt
++++ b/src/cli/CMakeLists.txt
+@@ -46,6 +46,7 @@ set_target_properties(git2_cli PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
+ ide_split_sources(git2_cli)
+ 
+ target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
++target_include_directories(git2_cli INTERFACE $<INSTALL_INTERFACE:./src/cli>)
+ 
+ if(MSVC_IDE)
+ 	# Precompiled headers
+@@ -54,3 +55,5 @@ if(MSVC_IDE)
+ endif()
+ 
+ install(TARGETS git2_cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
++install(DIRECTORY ${libgit2_SOURCE_DIR}/src/cli/
++        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/${LIBGIT2_FILENAME}")
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
 index c18cb28d4..286fa7153 100644
 --- a/src/cli/cmd_clone.c
@@ -207,10 +219,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..c26182ef1
+index 000000000..4d9555fc3
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,435 @@
+@@ -0,0 +1,479 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -410,10 +422,28 @@ index 000000000..c26182ef1
 +	FILE *stream;
 +	size_t full_size;
 +	size_t already_copied;
-+	time_t lastCall;
++	time_t started_download;
++	time_t last_write_call;
 +};
 +
-+void print_progress(size_t count, size_t max, bool first_run)
++static void print_download_speed_info(size_t received_size, size_t elapsed_time)
++{
++	double recv_len = (double)received_size;
++	char *rate_units[] = { "B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL };
++	uint64_t elapsed = (uint64_t)elapsed_time;
++	double rate;
++	rate = elapsed ? recv_len / elapsed : received_size;
++
++	size_t rate_unit_idx = 0;
++	while (rate > 1024 && rate_units[rate_unit_idx + 1]) {
++		rate /= 1024.0;
++		rate_unit_idx++;
++	}
++	
++	printf(" [%.2f %s] ", rate, rate_units[rate_unit_idx]);
++}
++
++void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time)
 +{
 +	float progress = (float)count / max ;
 +	if (!first_run && progress < 0.01 && count > 0)
@@ -423,13 +453,15 @@ index 000000000..c26182ef1
 +	int bar_length = progress * bar_width;
 +
 +	printf("\rProgress: [");
-+	for (int i = 0; i < bar_length; ++i) {
++	int i;
++	for (i = 0; i < bar_length; ++i) {
 +		printf("#");
 +	}
-+	for (int i = bar_length; i < bar_width; ++i) {
++	for (i = bar_length; i < bar_width; ++i) {
 +		printf(" ");
 +	}
 +	printf("] %.2f%%", progress * 100);
++	print_download_speed_info(count, elapsed_time);
 +	if (progress == 1.0)
 +		printf("\n");
 +	fflush(stdout);
@@ -453,10 +485,12 @@ index 000000000..c26182ef1
 +
 +	out->already_copied += size * nmemb;
 +	time_t currentTime = time(NULL);
-+	if (currentTime - out->lastCall >= 1 ||
++	if (currentTime - out->last_write_call >= 1 ||
 +	    out->already_copied == out->full_size) {
-+		print_progress(out->already_copied, out->full_size, first_run);
-+		out->lastCall = currentTime;
++		print_progress(
++		        out->already_copied, out->full_size, first_run,
++		        currentTime - out->started_download );
++		out->last_write_call = currentTime;
 +	}
 +	
 +	return fwrite(buffer, size, nmemb, out->stream);
@@ -469,7 +503,7 @@ index 000000000..c26182ef1
 +
 +	char *ptr_new = realloc(mem->response, mem->size + realsize + 1);
 +	if (ptr_new == NULL) {
-+		return 0; // out of memory!
++		return 0; /* out of memory! */
 +	}
 +
 +	mem->response = ptr_new;
@@ -478,6 +512,19 @@ index 000000000..c26182ef1
 +	mem->response[mem->size] = 0;
 +
 +	return realsize;
++}
++
++static void print_download_info(const char* filename, size_t bytes)
++{
++	double recv_len = (double)bytes;
++	size_t recv_unit_idx = 0;
++	char *recv_units[] = { "B", "KiB", "MiB", "GiB", "TiB", NULL };
++	while (recv_len > 1024 && recv_units[recv_unit_idx + 1]) {
++		recv_len /= 1024.0;
++		recv_unit_idx++;
++	}
++	printf("\nDownloading lfs size: %.2f %s file: %s\n", recv_len, recv_units[recv_unit_idx], 
++	       filename);
 +}
 +
 +static void lfs_download(git_filter *self, void *payload)
@@ -516,12 +563,11 @@ index 000000000..c26182ef1
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_URL, lfs_info_url.ptr);
++		curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr);
 +
 +		git_str lfs_info_data = GIT_STR_INIT;
 +
-+		// "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a1f310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}"
++		/* "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a12310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}" */
 +		if (git_str_join_n(
 +		            &lfs_info_data, '"',5,
 +		            "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":",
@@ -531,15 +577,15 @@ index 000000000..c26182ef1
 +			    "}]}" ) < 0) {
 +			fprintf(stderr, "failed to create url '%s'",
 +			        la->full_path);
++			/* always cleanup */
++			curl_easy_cleanup(info_curl);
++			/* free the custom headers */
++			curl_slist_free_all(chunk);
 +			goto on_error;
 +		}
 +
 +		/* Now specify the POST data */
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr);
-+		        
-+
-+
++		curl_easy_setopt(info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr);
 +		curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 +		curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L);
 +
@@ -552,11 +598,17 @@ index 000000000..c26182ef1
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(info_curl);
 +		/* Check for errors */
-+		if (res != CURLE_OK)
++		if (res != CURLE_OK) {
 +			fprintf(stderr, "curl_easy_perform() failed: %s\n",
 +			        curl_easy_strerror(res));
++			/* always cleanup */
++			curl_easy_cleanup(info_curl);
++			/* free the custom headers */
++			curl_slist_free_all(chunk);
++			goto on_error;
++		}
 +
-+		// Get response data
++		/* Get response data */
 +		res_str.asize = response.size;
 +		res_str.size = response.size;
 +		res_str.ptr = git__strdup(response.response);
@@ -571,33 +623,37 @@ index 000000000..c26182ef1
 +	if (dl_curl) {
 +		struct FtpFile ftpfile = { tmp_out_file, NULL,
 +					   get_digit(la->lfs_size), 0,
-+			                   time(NULL) };
++			                   time(NULL), time(NULL) };
 +
 +		const char *href_regexp = "{\"href\":\"(.*)\"}}}]}";
-+		if (get_lfs_info_match(&res_str, href_regexp) < 0)
-+			return -1;
++		if (get_lfs_info_match(&res_str, href_regexp) < 0) {
++			/* always cleanup */
++			curl_easy_cleanup(dl_curl);
++			goto on_error;
++		}
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(
-+		        dl_curl, CURLOPT_URL, res_str.ptr);
-+
++		curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr);
 +		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 +		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
 +		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-+
-+		curl_easy_setopt(
-+		        dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
++		curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
 +		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
 +
-+
-+		printf("\nDownloading lfs file: %s\n", ftpfile.filename);
++		print_download_info(la->full_path, ftpfile.full_size);
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(dl_curl);
 +		/* Check for errors */
-+		if (res != CURLE_OK)
++		if (res != CURLE_OK) {
 +			fprintf(stderr, "curl_easy_perform() failed: %s\n",
 +			        curl_easy_strerror(res));
++			if (ftpfile.stream)
++				fclose(ftpfile.stream);
++			/* always cleanup */
++			curl_easy_cleanup(dl_curl);
++			goto on_error;
++		}
 +
 +		if (ftpfile.stream)
 +			fclose(ftpfile.stream);
@@ -670,3 +726,53 @@ index fbf143894..1890c61c1 100644
  };
  
  GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
+diff --git a/src/util/CMakeLists.txt b/src/util/CMakeLists.txt
+index 3692dc3d3..5f48697c2 100644
+--- a/src/util/CMakeLists.txt
++++ b/src/util/CMakeLists.txt
+@@ -75,3 +75,7 @@ ide_split_sources(util)
+ 
+ target_include_directories(util PRIVATE ${UTIL_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
+ target_include_directories(util SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
++install(DIRECTORY ${libgit2_SOURCE_DIR}/src/util/
++        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/${LIBGIT2_FILENAME}")
++install(FILES "${CMAKE_BINARY_DIR}/src/util/git2_features.h"
++        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/git2)
+diff --git a/src/util/cc-compat.h b/src/util/cc-compat.h
+index ae81970ea..2327fb518 100644
+--- a/src/util/cc-compat.h
++++ b/src/util/cc-compat.h
+@@ -87,17 +87,7 @@
+ #	pragma warning ( disable : 4127 )
+ #endif
+ 
+-#if defined (_MSC_VER)
+-	typedef unsigned char bool;
+-#	ifndef true
+-#		define true 1
+-#	endif
+-#	ifndef false
+-#		define false 0
+-#	endif
+-#else
+-#	include <stdbool.h>
+-#endif
++#include <stdbool.h>
+ 
+ #ifndef va_copy
+ #	ifdef __va_copy
+diff --git a/src/util/win32/posix.h b/src/util/win32/posix.h
+index 03fa2ac52..a994c413a 100644
+--- a/src/util/win32/posix.h
++++ b/src/util/win32/posix.h
+@@ -29,8 +29,8 @@ extern int p_utimes(const char *filename, const struct p_timeval times[2]);
+ extern int p_futimes(int fd, const struct p_timeval times[2]);
+ 
+ extern int p_readlink(const char *path, char *buf, size_t bufsiz);
+-extern int p_symlink(const char *old, const char *new);
+-extern int p_link(const char *old, const char *new);
++extern int p_symlink(const char *old, const char *next);
++extern int p_link(const char *old, const char *next);
+ extern int p_unlink(const char *path);
+ extern int p_mkdir(const char *path, mode_t mode);
+ extern int p_fsync(int fd);
