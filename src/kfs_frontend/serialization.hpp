@@ -55,8 +55,8 @@ Status serializePredictResponse(
         auto& inferOutputTensor = protoGetter.createOutput(outputInfo->getMappedName());
         if (useSharedOutputContent) {
             Status serializeTensorToTensorProtoRaw(
-                ::KFSResponse::InferOutputTensor& responseOutput,
-                std::string* rawOutputContents,
+                ::KFSResponse::InferOutputTensor & responseOutput,
+                std::string * rawOutputContents,
                 const std::shared_ptr<const TensorInfo>& servableOutput,
                 ov::Tensor& tensor);
             status = serializeTensorToTensorProtoRaw(inferOutputTensor, protoGetter.createContent(outputInfo->getMappedName()), outputInfo, tensor);
