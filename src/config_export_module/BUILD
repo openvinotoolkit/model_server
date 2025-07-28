@@ -22,8 +22,6 @@ ovms_cc_library(
     srcs = ["config_export.cpp",],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
-        "config_export_types",
-        "//src/graph_export:graph_export_types",
         "//src:libovms_server_settings",
         "//src:libovmsfilesystem",
         "//src:libovmslocalfilesystem",
@@ -31,12 +29,4 @@ ovms_cc_library(
         "//src:libovmsschema",
     ],
     visibility = ["//visibility:public",],
-)
-
-ovms_cc_library(
-    name = "config_export_types",
-    srcs = ["config_export_types.cpp"],
-    hdrs = ["config_export_types.hpp"],
-    deps =  [],
-    visibility = ["//visibility:public"],
 )

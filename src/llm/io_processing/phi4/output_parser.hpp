@@ -13,20 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
+#pragma once
+
+#include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
+#include <vector>
 
-#include "config_export_types.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#pragma warning(pop)
+
+#include "../base_output_parser.hpp"
+
 namespace ovms {
+class Phi4OutputParser : public BaseOutputParser {
+public:
+    Phi4OutputParser() = delete;
+    explicit Phi4OutputParser(ov::genai::Tokenizer& tokenizer) :
+        BaseOutputParser(tokenizer) {}
 
-std::string enumToString(ConfigExportType type) {
-    auto it = configExportTypeToString.find(type);
-    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
-}
-
-ConfigExportType stringToConfigExportEnum(std::string inString) {
-    auto it = stringToConfigExportType.find(inString);
-    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
-}
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+};
 }  // namespace ovms
