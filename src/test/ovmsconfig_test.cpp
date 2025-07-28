@@ -1029,9 +1029,11 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
         (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 7;
+    int arg_count = 9;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1063,9 +1065,11 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"--sym --ratio 1.0",
         (char*)"--target_device",
         (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 13;
+    int arg_count = 15;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1098,9 +1102,11 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"--sym --ratio 1.0",
         (char*)"--target_device",
         (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 14;
+    int arg_count = 16;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
