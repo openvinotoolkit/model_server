@@ -128,7 +128,7 @@ public:
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
-        SPDLOG_INFO("AAAAAAAAAAAA:\n{}", payload.body);
+        std::unique_ptr<ov::Tensor> images;  // output
 
         if (absl::StartsWith(payload.uri, "/v3/images/generations")) {
             if (payload.parsedJson->HasParseError())
@@ -139,24 +139,13 @@ public:
             }
             SET_OR_RETURN(std::string, prompt, getPromptField(payload));
 
-            // TODO: Support more pipeline types
-            // Depending on URI, select text2ImagePipeline/image2ImagePipeline/inpaintingPipeline
-
             ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(payload, pipe->args));
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
-            std::unique_ptr<ov::Tensor> images;
             auto status = generateTensor(request, prompt, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }
-            auto outputOrStatus = generateJSONResponseFromOvTensor(*images);
-            RETURN_IF_HOLDS_STATUS(outputOrStatus);
-            auto output = std::move(std::get<std::unique_ptr<std::string>>(outputOrStatus));
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
-
-            return absl::OkStatus();
         } else if (absl::StartsWith(payload.uri, "/v3/images/edits")) {
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
@@ -164,9 +153,10 @@ public:
             std::string prompt = payload.multipartParser->getFieldByName("prompt");
             std::string inputImageFileContent = std::string(payload.multipartParser->getFileContentByFieldName("image"));
 
-            if (prompt.empty() || inputImageFileContent.empty()) {
-                return absl::InvalidArgumentError("Missing required fields: 'prompt' or 'image'");
-            }
+            if (prompt.empty())
+                return absl::InvalidArgumentError("Missing required field: 'prompt'");
+            if (inputImageFileContent.empty())
+                return absl::InvalidArgumentError("Missing required field: 'image'");
 
             ov::Tensor image;
             try {
@@ -178,26 +168,24 @@ public:
                 return absl::InvalidArgumentError(ss.str());
             }
 
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptionsFromMultipart(*payload.multipartParser, pipe->args));
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
             ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline->clone();
-            std::unique_ptr<ov::Tensor> images;
             auto status = generateTensorImg2Img(request, prompt, image, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }
-
-
-            auto outputOrStatus = generateJSONResponseFromOvTensor(*images);
-            RETURN_IF_HOLDS_STATUS(outputOrStatus);
-            auto output = std::move(std::get<std::unique_ptr<std::string>>(outputOrStatus));
-            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
-
-            return absl::OkStatus();
         } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
+
+        auto outputOrStatus = generateJSONResponseFromOvTensor(*images);
+        RETURN_IF_HOLDS_STATUS(outputOrStatus);
+        auto output = std::move(std::get<std::unique_ptr<std::string>>(outputOrStatus));
+        cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "ImageGenCalculator  [Node: {}] Process end", cc->NodeName());
+
+        return absl::OkStatus();
     }
 };
 

@@ -68,9 +68,9 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std:
     }
     return std::make_pair(leftInt.value(), rightInt.value());
 }
-std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::HttpPayload& payload) {
-    auto sizeIt = payload.parsedJson->FindMember("size");
-    if (sizeIt == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& payload) {
+    auto sizeIt = payload.FindMember("size");
+    if (sizeIt == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!sizeIt->value.IsString()) {
@@ -85,9 +85,9 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms
     return std::nullopt;
 }
 
-std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
+    auto it = payload.FindMember(keyName.c_str());
+    if (it == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsString()) {
@@ -102,9 +102,9 @@ std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(cons
     }
     return value;
 }
-std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
+    auto it = payload.FindMember(keyName.c_str());
+    if (it == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsFloat()) {
@@ -129,9 +129,9 @@ std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms:
     }
 }
 
-std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const rapidjson::Document& payload, const std::string& keyName) {
+    auto it = payload.FindMember(keyName.c_str());
+    if (it == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsInt64()) {
@@ -155,9 +155,9 @@ std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovm
         return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int64"));
     }
 }
-std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
+    auto it = payload.FindMember(keyName.c_str());
+    if (it == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsInt()) {
@@ -181,9 +181,9 @@ std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::Mul
         return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int"));
     }
 }
-std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
+    auto it = payload.FindMember(keyName.c_str());
+    if (it == payload.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsUint64()) {
@@ -309,7 +309,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     return absl::OkStatus();
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& payload, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -380,8 +380,8 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // background/moderation/output_compression/output_format/quality/style
     // TODO possibly to be handled outside since output_compresiont/format are nonGenai
     for (auto key : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
-        auto it = payload.parsedJson->FindMember(key);
-        if (it != payload.parsedJson->MemberEnd()) {
+        auto it = payload.FindMember(key);
+        if (it != payload.MemberEnd()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", key));
         }
     }
@@ -407,7 +407,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
-    for (auto it = payload.parsedJson->MemberBegin(); it != payload.parsedJson->MemberEnd(); ++it) {
+    for (auto it = payload.MemberBegin(); it != payload.MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
         }
@@ -426,7 +426,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptionsFromMultipart(const ovms::MultiPartParser& payload, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& payload, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -543,73 +543,6 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptionsFromMulti
     SPDLOG_DEBUG("Image generation request options: \n{}", oss.str());
 
     return std::move(requestOptions);
-}
-
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
-    // NO -not handled yet
-    // OpenAI parameters
-    // https://platform.openai.com/docs/api-reference/images/createEdit 20/05/2025
-    // prompt REQUIRED DONE
-    // image string or array REQUIRED NO
-    // background  REJECTED string NO optional default=auto
-    // mask file NO
-    // model string NO optional default=dall-e-2
-    // n NO optional default=1   ----> num_images_per_prompt
-    // quality string REJECTED  NO optional default=auto
-    // response_format string NO optional default=url
-    // size DONE optional default=1024x1024
-    // user string REJECTED optional
-
-    // GenAI parameters
-    // https://github.com/openvinotoolkit/openvino.genai/blob/3c28e8279ca168ba28a79b50c62ec3b2f61d9f29/src/cpp/include/openvino/genai/image_generation/generation_config.hpp 15/05/2025
-    // prompt_2 string DONE
-    // prompt_3 string DONE
-    // negative_prompt string DONE
-    // negative_prompt_2 string DONE
-    // negative_prompt_3 string DONE
-    // num_images_per_prompt int DONE
-    // max_sequence_length int DONE
-    // height int64_t DONE
-    // width int64_t DONE
-    // rng_seed size_t DONE
-    // num_inference_steps size_t DONE
-    // strength float DONE
-    // guidance_scale float DONE
-    // generator ov::genaiGenerator NO
-    // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
-}
-
-std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
-    // NO -not handled yet
-    // OpenAI parameters
-    // https://platform.openai.com/docs/api-reference/images/createVariation 20/05/2025
-    // image string or array NO
-    // model string NO optional default=dall-e-2
-    // n NO optional default=1   ----> num_images_per_prompt
-    // quality string REJECTED  NO optional default=auto
-    // response_format string NO optional default=url
-    // size DONE optional default=auto
-    // user string REJECTED optional default=vivid
-
-    // GenAI parameters
-    // https://github.com/openvinotoolkit/openvino.genai/blob/3c28e8279ca168ba28a79b50c62ec3b2f61d9f29/src/cpp/include/openvino/genai/image_generation/generation_config.hpp 15/05/2025
-    // prompt_2 string DONE
-    // prompt_3 string DONE
-    // negative_prompt string DONE
-    // negative_prompt_2 string DONE
-    // negative_prompt_3 string DONE
-    // num_images_per_prompt int DONE
-    // max_sequence_length int DONE
-    // height int64_t DONE
-    // width int64_t DONE
-    // rng_seed size_t DONE
-    // num_inference_steps size_t DONE
-    // strength float DONE
-    // guidance_scale float DONE
-    // generator ov::genaiGenerator NO
-    // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
 }
 
 std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload) {
