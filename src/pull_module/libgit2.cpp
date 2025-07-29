@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <git2.h>
-#include <git2_cli/git2/progress.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -209,7 +208,7 @@ Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
                 path,
-                lfstatus);
+                ovms::Status(lfstatus).string());
         } else {
             SPDLOG_DEBUG("Path deleted: {}", path);
         }
@@ -222,17 +221,16 @@ Status HfDownloader::checkRequiredToolsArePresent() {
     std::string cmd = "git --version";
     int retCode = -1;
     std::string output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find("git version ") == std::string::npos) {
-        SPDLOG_DEBUG("Command output {}", output);
+    if (output.find("git version ") == std::string::npos) {
+        SPDLOG_DEBUG(output);
         SPDLOG_ERROR("Required git executable is not present. Please add git from ovms package to PATH.");
         return StatusCode::HF_FAILED_TO_INIT_GIT;
     }
 
     cmd = "git-lfs --version";
-    retCode = -1;
     output = exec_cmd(cmd, retCode);
-    if (retCode != 0 || output.find("git-lfs/") == std::string::npos) {
-        SPDLOG_DEBUG("Command output {}", output);
+    if (output.find("git-lfs/") == std::string::npos) {
+        SPDLOG_DEBUG(output);
         SPDLOG_ERROR("Required git-lfs executable is not present. Please add git-lfs from ovms package to PATH.");
         return StatusCode::HF_FAILED_TO_INIT_GIT_LFS;
     }
@@ -263,21 +261,11 @@ Status HfDownloader::cloneRepository() {
     }
 
     SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
-    cli_progress progress = CLI_PROGRESS_INIT;
     git_repository* cloned_repo = NULL;
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
-    git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-    /* Set up options */
-    checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-    checkout_opts.progress_cb = cli_progress_checkout;
-    checkout_opts.progress_payload = &progress;
-    clone_opts.checkout_opts = checkout_opts;
-    clone_opts.fetch_opts.callbacks.sideband_progress = cli_progress_fetch_sideband;
-    clone_opts.fetch_opts.callbacks.transfer_progress = cli_progress_fetch_transfer;
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
-    clone_opts.fetch_opts.callbacks.payload = &progress;
-
+ 
     // Use proxy
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;

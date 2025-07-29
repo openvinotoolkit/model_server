@@ -303,7 +303,7 @@ Status Model::cleanupModelTmpFiles(const ModelConfig& config) {
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting local copy of cloud model: {} reason: {}",
                 config.getLocalPath(),
-                lfstatus);
+                ovms::Status(lfstatus).string());
         } else {
             SPDLOG_DEBUG("Model removed from: {}", config.getPath());
         }

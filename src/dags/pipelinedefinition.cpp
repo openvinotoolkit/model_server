@@ -394,7 +394,7 @@ public:
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation of pipeline: {}; node name: {}; node kind: {}",
             pipelineName,
             dependantNodeInfo.nodeName,
-            dependantNodeInfo.kind);
+            (unsigned int)dependantNodeInfo.kind);
     }
 
     Status fetchUnderlyingModelInstance() {

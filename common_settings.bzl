@@ -199,7 +199,12 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
+                        "/wd6240", 
+                        "/wd6326",
+                        "/wd6385",
+                        "/wd6294",
                         "/guard:cf",
+                        "/utf-8",
 ]
 
 COMMON_STATIC_LIBS_COPTS = select({
@@ -222,6 +227,7 @@ COMMON_STATIC_TEST_COPTS = select({
                         "-W0",
                         "-Isrc",
                         "/wd4996",
+                        "/utf-8",
                     ],
                 })
 
@@ -236,6 +242,7 @@ COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
                 "//src:windows" : [
                         "-W0",
                         "-Isrc",
+                        "/utf-8",
                     ],
                 }) 
 

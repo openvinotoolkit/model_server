@@ -49,23 +49,17 @@ index 60466d173..a35ad5f98 100644
   * This is priority that the internal ident filter will be registered with
   */
 diff --git a/src/cli/CMakeLists.txt b/src/cli/CMakeLists.txt
-index d121c588a..d190be0d9 100644
+index d121c588a..edf2c257c 100644
 --- a/src/cli/CMakeLists.txt
 +++ b/src/cli/CMakeLists.txt
-@@ -46,6 +46,7 @@ set_target_properties(git2_cli PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
- ide_split_sources(git2_cli)
+@@ -47,6 +47,7 @@ ide_split_sources(git2_cli)
  
  target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
-+target_include_directories(git2_cli INTERFACE $<INSTALL_INTERFACE:./src/cli>)
  
++
  if(MSVC_IDE)
  	# Precompiled headers
-@@ -54,3 +55,5 @@ if(MSVC_IDE)
- endif()
- 
- install(TARGETS git2_cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-+install(DIRECTORY ${libgit2_SOURCE_DIR}/src/cli/
-+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/${LIBGIT2_FILENAME}")
+ 	set_target_properties(git2_cli PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
 index c18cb28d4..286fa7153 100644
 --- a/src/cli/cmd_clone.c
@@ -78,11 +72,67 @@ index c18cb28d4..286fa7153 100644
  
  	if (!checkout)
  		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
+diff --git a/src/cli/progress.h b/src/cli/progress.h
+index f08d68f19..0344304ec 100644
+--- a/src/cli/progress.h
++++ b/src/cli/progress.h
+@@ -58,7 +58,7 @@ typedef struct {
+  * @param payload A pointer to the cli_progress
+  * @return 0 on success, -1 on failure
+  */
+-extern int cli_progress_fetch_sideband(
++GIT_EXTERN(int) cli_progress_fetch_sideband(
+ 	const char *str,
+ 	int len,
+ 	void *payload);
+@@ -71,7 +71,7 @@ extern int cli_progress_fetch_sideband(
+  * @param payload A pointer to the cli_progress
+  * @return 0 on success, -1 on failure
+  */
+-extern int cli_progress_fetch_transfer(
++GIT_EXTERN(int) cli_progress_fetch_transfer(
+ 	const git_indexer_progress *stats,
+ 	void *payload);
+ 
+@@ -95,7 +95,7 @@ extern int cli_progress_indexer(
+  * @param total_steps The total number of checkout steps
+  * @param payload A pointer to the cli_progress
+  */
+-extern void cli_progress_checkout(
++GIT_EXTERN(void) cli_progress_checkout(
+ 	const char *path,
+ 	size_t completed_steps,
+ 	size_t total_steps,
+diff --git a/src/cli/sighandler.h b/src/cli/sighandler.h
+index 877223e02..59bb50bbd 100644
+--- a/src/cli/sighandler.h
++++ b/src/cli/sighandler.h
+@@ -15,6 +15,6 @@
+  * @param handler The function to run on interrupt
+  * @return 0 on success, -1 on failure
+  */
+-int cli_sighandler_set_interrupt(void (*handler)(void));
++GIT_EXTERN(int) cli_sighandler_set_interrupt(void (*handler)(void));
+ 
+ #endif /* CLI_sighandler_h__ */
+diff --git a/src/cli/win32/sighandler.c b/src/cli/win32/sighandler.c
+index 05a67fb14..da56c42f6 100644
+--- a/src/cli/win32/sighandler.c
++++ b/src/cli/win32/sighandler.c
+@@ -19,7 +19,7 @@ static BOOL WINAPI interrupt_proxy(DWORD signal)
+ 	return TRUE;
+ }
+ 
+-int cli_sighandler_set_interrupt(void (*handler)(void))
++GIT_EXTERN(int) cli_sighandler_set_interrupt(void (*handler)(void))
+ {
+ 	BOOL result;
+ 
 diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
-index a7d3c7ca4..d9282166d 100644
+index a7d3c7ca4..f1021e9dd 100644
 --- a/src/libgit2/CMakeLists.txt
 +++ b/src/libgit2/CMakeLists.txt
-@@ -5,6 +5,7 @@ add_library(libgit2 OBJECT)
+@@ -5,25 +5,29 @@ add_library(libgit2 OBJECT)
  
  include(PkgBuildConfig)
  include(CMakePackageConfigHelpers)
@@ -90,7 +140,31 @@ index a7d3c7ca4..d9282166d 100644
  
  set(LIBGIT2_INCLUDES
  	"${PROJECT_BINARY_DIR}/src/util"
-@@ -37,6 +38,11 @@ if(APPLE)
++	"${PROJECT_BINARY_DIR}/src/cli"
+ 	"${PROJECT_BINARY_DIR}/include"
+ 	"${PROJECT_SOURCE_DIR}/src/libgit2"
+ 	"${PROJECT_SOURCE_DIR}/src/util"
++	"${PROJECT_SOURCE_DIR}/src/cli"
+ 	"${PROJECT_SOURCE_DIR}/include")
+ 
+ # Collect sourcefiles
+ file(GLOB SRC_H
+ 	"${PROJECT_SOURCE_DIR}/include/git2.h"
+ 	"${PROJECT_SOURCE_DIR}/include/git2/*.h"
+-	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
++	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h"
++	"${PROJECT_SOURCE_DIR}/src/cli/progress.h")
+ list(SORT SRC_H)
+ target_sources(libgit2 PRIVATE ${SRC_H})
+ 
+ file(GLOB SRC_GIT2 *.c *.h
+ 	streams/*.c streams/*.h
+-	transports/*.c transports/*.h)
++	transports/*.c transports/*.h "${PROJECT_SOURCE_DIR}/src/cli/progress*")
+ list(SORT SRC_GIT2)
+ target_sources(libgit2 PRIVATE ${SRC_GIT2})
+ 
+@@ -37,6 +41,11 @@ if(APPLE)
  	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
  endif()
  
@@ -102,7 +176,7 @@ index a7d3c7ca4..d9282166d 100644
  ide_split_sources(libgit2)
  list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
  list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
-@@ -44,12 +50,35 @@ list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
+@@ -44,12 +53,35 @@ list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
  target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
  target_include_directories(libgit2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
  
@@ -138,7 +212,7 @@ index a7d3c7ca4..d9282166d 100644
  
  #
  # Compile and link libgit2
-@@ -69,8 +98,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+@@ -69,8 +101,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
  ide_split_sources(libgit2package)
  
  if(SONAME)
@@ -160,10 +234,40 @@ index f4b1ea96f..d8d4dee35 100644
  	mode_t mode;
  	git_filter_list *fl = NULL;
 diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
-index 237efc0ba..d4af7d9b0 100644
+index 237efc0ba..6f34bdbb1 100644
 --- a/src/libgit2/clone.c
 +++ b/src/libgit2/clone.c
-@@ -641,6 +641,7 @@ static int clone_repo(
+@@ -24,6 +24,7 @@
+ #include "repository.h"
+ #include "odb.h"
+ #include "net.h"
++#include "progress.h"
+ 
+ static int create_branch(
+ 	git_reference **branch,
+@@ -616,6 +617,21 @@ static int clone_repo(
+ 
+ 	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+ 
++
++	cli_progress progress = CLI_PROGRESS_INIT;
++	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
++
++	/* Set up options */
++	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
++	checkout_opts.progress_cb = cli_progress_checkout;
++	checkout_opts.progress_payload = &progress;
++	options.checkout_opts = checkout_opts;
++	options.fetch_opts.callbacks.sideband_progress =
++	        cli_progress_fetch_sideband;
++	options.fetch_opts.callbacks.transfer_progress =
++	        cli_progress_fetch_transfer;
++	options.fetch_opts.callbacks.payload = &progress;
++
+ 	/* enforce some behavior on fetch */
+ 	options.fetch_opts.update_fetchhead = 0;
+ 
+@@ -641,6 +657,7 @@ static int clone_repo(
  	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
  		return error;
  
@@ -726,18 +830,6 @@ index fbf143894..1890c61c1 100644
  };
  
  GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
-diff --git a/src/util/CMakeLists.txt b/src/util/CMakeLists.txt
-index 3692dc3d3..5f48697c2 100644
---- a/src/util/CMakeLists.txt
-+++ b/src/util/CMakeLists.txt
-@@ -75,3 +75,7 @@ ide_split_sources(util)
- 
- target_include_directories(util PRIVATE ${UTIL_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${libgit2_SOURCE_DIR}/include)
- target_include_directories(util SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
-+install(DIRECTORY ${libgit2_SOURCE_DIR}/src/util/
-+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/${LIBGIT2_FILENAME}")
-+install(FILES "${CMAKE_BINARY_DIR}/src/util/git2_features.h"
-+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/git2_cli/git2)
 diff --git a/src/util/cc-compat.h b/src/util/cc-compat.h
 index ae81970ea..2327fb518 100644
 --- a/src/util/cc-compat.h

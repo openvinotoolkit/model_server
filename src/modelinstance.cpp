@@ -1072,7 +1072,7 @@ Status ModelInstance::reloadModel(const ModelConfig& config, const DynamicModelP
     this->status.setLoading();
     while (!canUnloadInstance()) {
         SPDLOG_INFO("Waiting to reload model: {} version: {}. Blocked by: {} inferences in progress.",
-            getName(), getVersion(), predictRequestsHandlesCount);
+            getName(), getVersion(), (unsigned int)predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     if ((this->config.isCustomLoaderRequiredToLoadModel()) && (isCustomLoaderConfigChanged)) {
@@ -1155,17 +1155,17 @@ Status ModelInstance::reloadModelIfRequired(
         }
         if (!status.ok()) {
             SPDLOG_ERROR("Model: {}, version: {} reload (batch size change) failed. Status Code: {}, Error {}",
-                getName(), getVersion(), status.getCode(), status.string());
+                getName(), getVersion(), (unsigned int)status.getCode(), status.string());
         }
     } else if (status.reshapeRequired()) {
         status = reloadModel(std::nullopt, requestedShapes, modelUnloadGuardPtr);
         if (!status.ok() && status != StatusCode::RESHAPE_ERROR) {
             SPDLOG_ERROR("Model: {}, version: {} reload (reshape) failed. Status Code: {}, Error: {}",
-                getName(), getVersion(), status.getCode(), status.string());
+                getName(), getVersion(), (unsigned int)status.getCode(), status.string());
         }
     } else if (!status.ok()) {
         SPDLOG_DEBUG("Model: {}, version: {} validation of inferRequest failed. Status Code: {}, Error: {}",
-            getName(), getVersion(), status.getCode(), status.string());
+            getName(), getVersion(), (unsigned int)status.getCode(), status.string());
     }
     return status;
 }
@@ -1243,7 +1243,7 @@ void ModelInstance::unloadModelComponents() {
     subscriptionManager.notifySubscribers();
     while (!canUnloadInstance()) {
         SPDLOG_DEBUG("Waiting to unload model: {} version: {}. Blocked by: {} inferences in progress.",
-            getName(), getVersion(), predictRequestsHandlesCount);
+            getName(), getVersion(), (unsigned int)predictRequestsHandlesCount);
         std::this_thread::sleep_for(std::chrono::milliseconds(UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS));
     }
     SET_IF_ENABLED(this->getMetricReporter().inferReqQueueSize, 0);
