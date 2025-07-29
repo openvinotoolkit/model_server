@@ -162,13 +162,3 @@ if __name__ == "__main__":
     openai_client = AsyncOpenAI(base_url=base_url, api_key="unused", timeout=httpx.Timeout(600))
 
     asyncio.run(main())
-
-
-
-
-
-
-
-
-
-
