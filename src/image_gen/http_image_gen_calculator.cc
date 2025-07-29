@@ -137,10 +137,11 @@ public:
             if (!payload.parsedJson->IsObject()) {
                 return absl::InvalidArgumentError("JSON body must be an object");
             }
-            SET_OR_RETURN(std::string, prompt, getPromptField(payload));
+
+            SET_OR_RETURN(std::string, prompt, getPromptField(*payload.parsedJson));
+            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
             ov::genai::Text2ImagePipeline request = pipe->text2ImagePipeline->clone();
-            SET_OR_RETURN(ov::AnyMap, requestOptions, getImageGenerationRequestOptions(*payload.parsedJson, pipe->args));
 
             auto status = generateTensor(request, prompt, requestOptions, images);
             if (!status.ok()) {
@@ -150,17 +151,13 @@ public:
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
-            std::string prompt = payload.multipartParser->getFieldByName("prompt");
-            std::string inputImageFileContent = std::string(payload.multipartParser->getFileContentByFieldName("image"));
+            SET_OR_RETURN(std::string, prompt, getPromptField(*payload.multipartParser));
+            SET_OR_RETURN(std::optional<std::string>, image, getStringFromPayload(*payload.multipartParser, "image"));
+            RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
-            if (prompt.empty())
-                return absl::InvalidArgumentError("Missing required field: 'prompt'");
-            if (inputImageFileContent.empty())
-                return absl::InvalidArgumentError("Missing required field: 'image'");
-
-            ov::Tensor image;
+            ov::Tensor imageTensor;
             try {
-                image = loadImageStbiFromMemory(inputImageFileContent);
+                imageTensor = loadImageStbiFromMemory(image.value());
             } catch (std::runtime_error& e) {
                 std::stringstream ss;
                 ss << "Image parsing failed: " << e.what();
@@ -171,7 +168,7 @@ public:
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
             ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline->clone();
-            auto status = generateTensorImg2Img(request, prompt, image, requestOptions, images);
+            auto status = generateTensorImg2Img(request, prompt, imageTensor, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }

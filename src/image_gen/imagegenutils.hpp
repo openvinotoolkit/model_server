@@ -45,7 +45,8 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std:
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& payload);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser);
 
-std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload);
+std::variant<absl::Status, std::string> getPromptField(const rapidjson::Document& payload);
+std::variant<absl::Status, std::string> getPromptField(const ovms::MultiPartParser& payload);
 
 std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const rapidjson::Document& payload, const std::string& keyName);
 std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);

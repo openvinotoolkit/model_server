@@ -545,15 +545,23 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload) {
-    auto promptIt = payload.parsedJson->FindMember("prompt");
-    if (promptIt == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::string> getPromptField(const rapidjson::Document& payload) {
+    auto promptIt = payload.FindMember("prompt");
+    if (promptIt == payload.MemberEnd()) {
         return absl::InvalidArgumentError("prompt field is missing in JSON body");
     }
     if (!promptIt->value.IsString()) {
         return absl::InvalidArgumentError("prompt field is not a string");
     }
     return promptIt->value.GetString();
+}
+
+std::variant<absl::Status, std::string> getPromptField(const ovms::MultiPartParser& payload) {
+    std::string prompt = payload.getFieldByName("prompt");
+    if (prompt.empty()) {
+        return absl::InvalidArgumentError("prompt field is missing in multipart body");
+    }
+    return prompt;
 }
 
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor) {
