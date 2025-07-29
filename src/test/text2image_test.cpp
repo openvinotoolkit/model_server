@@ -35,6 +35,17 @@
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
 
+using ::testing::_;
+using ::testing::Return;
+
+class MockedMultiPartParser final : public ovms::MultiPartParser {
+public:
+    MOCK_METHOD(bool, parse, (), (override));
+    MOCK_METHOD(bool, hasParseError, (), (const, override));
+    MOCK_METHOD(std::string, getFieldByName, (const std::string& name), (const, override));
+    MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string& name), (const, override));
+};
+
 // clang-format off
 ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     std::string("/ovms/src/test/dummy"),
@@ -52,6 +63,9 @@ TEST(Text2ImageTest, testGetDimensions) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"size":"512x513"})");
+    MockedMultiPartParser multipartParser;
+    
+    // /create JSON
     auto dimensions = ovms::getDimensions(*payload.parsedJson);
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
     auto dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
@@ -60,30 +74,63 @@ TEST(Text2ImageTest, testGetDimensions) {
     EXPECT_EQ(dims.first, 512);
     EXPECT_EQ(dims.second, 513);
 
+    // /edit Multipart
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("512x513"));
+    dimensions = ovms::getDimensions(multipartParser);
+    ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
+    dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
+    ASSERT_TRUE(dimsOpt.has_value());
+    dims = dimsOpt.value();
+    EXPECT_EQ(dims.first, 512);
+    EXPECT_EQ(dims.second, 513);
+
+    // /create JSON
     payload.parsedJson->Parse(R"({"size":"auto"})");
     dimensions = ovms::getDimensions(*payload.parsedJson);
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions))) << std::get<absl::Status>(dimensions).message();
     dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
     ASSERT_FALSE(dimsOpt.has_value());
+    
+    // /edit Multipart
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("auto"));
+    dimensions = ovms::getDimensions(multipartParser);
+    ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
+    dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
+    ASSERT_FALSE(dimsOpt.has_value());
 
+    // /create JSON
     payload.parsedJson->Parse(R"({"other_field":"auto"})");
     dimensions = ovms::getDimensions(*payload.parsedJson);
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
     dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
     ASSERT_FALSE(dimsOpt.has_value());
+    
+    
+    // /edit Multipart
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return(""));
+    ON_CALL(multipartParser, getFieldByName("other_field")).WillByDefault(Return("auto"));
+    dimensions = ovms::getDimensions(multipartParser);
+    ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
+    dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
+    ASSERT_FALSE(dimsOpt.has_value());
 }
 void testNegativeDimensions(const std::string& dims) {
+    // /create JSON
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(dims.c_str());
     auto dimensions = ovms::getDimensions(*payload.parsedJson);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(dimensions)) << dims;
     EXPECT_EQ(std::get<absl::Status>(dimensions).code(), absl::StatusCode::kInvalidArgument) << dims;
+
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return(payload.parsedJson->GetObject()["size"].GetString()));
+    dimensions = ovms::getDimensions(multipartParser);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(dimensions)) << dims;
+    EXPECT_EQ(std::get<absl::Status>(dimensions).code(), absl::StatusCode::kInvalidArgument) << dims;
 }
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
-    ovms::HttpPayload payload;
-    payload.parsedJson = std::make_shared<rapidjson::Document>();
-
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"512_51x"})");
@@ -102,6 +149,7 @@ TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     SPDLOG_DEBUG("Minimum int64_t value: {}", std::numeric_limits<int64_t>::min());
 }
 TEST(Text2ImageTest, testGetStringFromPayload) {
+    // /create JSON
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"some_field":"test val"})");
@@ -111,8 +159,19 @@ TEST(Text2ImageTest, testGetStringFromPayload) {
     ASSERT_TRUE(optionalString.has_value());
     EXPECT_EQ(optionalString.value(), "test val");
     EXPECT_EQ(std::nullopt, std::get<std::optional<std::string>>(ovms::getStringFromPayload(*payload.parsedJson, "nonexistent_field")));
+
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("some_field")).WillByDefault(Return("test val"));
+    fieldVal = ovms::getStringFromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string>>(fieldVal));
+    optionalString = std::get<std::optional<std::string>>(fieldVal);
+    ASSERT_TRUE(optionalString.has_value());
+    EXPECT_EQ(optionalString.value(), "test val");
+    EXPECT_EQ(std::nullopt, std::get<std::optional<std::string>>(ovms::getStringFromPayload(multipartParser, "nonexistent_field")));
 }
 void testNegativeString(const std::string& key, const std::string& content) {
+    // /create JSON
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(content.c_str());
@@ -131,17 +190,47 @@ TEST(Text2ImageTest, testGetStringFromPayloadNegative) {
     testNegativeString("prompt", R"({"prompt":[1,2,3]})");
     testNegativeString("prompt", R"({"prompt":{}})");
     testNegativeString("prompt", R"({"prompt":{"a":1}})");
+
+    // /edit Multipart
+    // There is no way to fail from this operation
 }
 TEST(Text2ImageTest, testGetInt64FromPayload) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"some_field":1234567890123})");
+    // /create JSON
     auto fieldVal = ovms::getInt64FromPayload(*payload.parsedJson, "some_field");
     ASSERT_TRUE(std::holds_alternative<std::optional<int64_t>>(fieldVal));
     auto optionalInt64 = std::get<std::optional<int64_t>>(fieldVal);
     ASSERT_TRUE(optionalInt64.has_value());
     EXPECT_EQ(optionalInt64.value(), 1234567890123);
     EXPECT_EQ(std::nullopt, std::get<std::optional<int64_t>>(ovms::getInt64FromPayload(*payload.parsedJson, "nonexistent_field")));
+
+    payload.parsedJson->Parse(R"({"some_field":-1234567890123})");
+    fieldVal = ovms::getInt64FromPayload(*payload.parsedJson, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<int64_t>>(fieldVal));
+    optionalInt64 = std::get<std::optional<int64_t>>(fieldVal);
+    ASSERT_TRUE(optionalInt64.has_value());
+    EXPECT_EQ(optionalInt64.value(), -1234567890123);
+
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("some_field")).WillByDefault(Return("1234567890123"));
+    ON_CALL(multipartParser, getFieldByName("nonexistent_field")).WillByDefault(Return(""));
+    fieldVal = ovms::getInt64FromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<int64_t>>(fieldVal));
+    optionalInt64 = std::get<std::optional<int64_t>>(fieldVal);
+    ASSERT_TRUE(optionalInt64.has_value());
+    EXPECT_EQ(optionalInt64.value(), 1234567890123);
+    EXPECT_EQ(std::nullopt, std::get<std::optional<int64_t>>(ovms::getInt64FromPayload(multipartParser, "nonexistent_field")));
+
+    ON_CALL(multipartParser, getFieldByName("some_field")).WillByDefault(Return("-1234567890123"));
+    fieldVal = ovms::getInt64FromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<int64_t>>(fieldVal));
+    optionalInt64 = std::get<std::optional<int64_t>>(fieldVal);
+    ASSERT_TRUE(optionalInt64.has_value());
+    EXPECT_EQ(optionalInt64.value(), -1234567890123);
+    EXPECT_EQ(std::nullopt, std::get<std::optional<int64_t>>(ovms::getInt64FromPayload(multipartParser, "nonexistent_field")));
 }
 // TODO need to write for nonexistent fields for all functions
 void testNegativeInt64(const std::string& key, const std::string& content) {
@@ -149,6 +238,13 @@ void testNegativeInt64(const std::string& key, const std::string& content) {
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(content.c_str());
     auto fieldVal = ovms::getInt64FromPayload(*payload.parsedJson, key);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
+    EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
+}
+void testNegativeInt64MultiPart(const std::string& key, const std::string& content) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName(key)).WillByDefault(Return(content));
+    auto fieldVal = ovms::getInt64FromPayload(multipartParser, key);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
     EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
 }
@@ -165,6 +261,16 @@ TEST(Text2ImageTest, testGetInt64FromPayloadNegative) {
     testNegativeInt64("some_field", R"({"some_field":{"a":1}})");
     testNegativeInt64("some_field", R"({"some_field":123456789012345678901234567890})");
     testNegativeInt64("some_field", R"({"some_field":-123456789012345678901234567890})");
+
+    testNegativeInt64MultiPart("some_field", "    123 ");
+    testNegativeInt64MultiPart("some_field", "123.5");
+    testNegativeInt64MultiPart("some_field", "true");
+    testNegativeInt64MultiPart("some_field", "null");
+    testNegativeInt64MultiPart("some_field", "[1,2,3]");
+    testNegativeInt64MultiPart("some_field", "{}");
+    testNegativeInt64MultiPart("some_field", "{\"a\":1}");
+    testNegativeInt64MultiPart("some_field", "123456789012345678901234567890");
+    testNegativeInt64MultiPart("some_field", "-123456789012345678901234567890");
 }
 TEST(Text2ImageTest, testGetIntFromPayload) {
     ovms::HttpPayload payload;

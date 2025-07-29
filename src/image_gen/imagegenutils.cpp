@@ -144,16 +144,11 @@ std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovm
     if (value.empty()) {
         return std::nullopt;
     }
-    try {
-        int64_t intValue = std::stoll(value);
-        return intValue;
-    } catch (const std::invalid_argument& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int64: ", e.what()));
-    } catch (const std::out_of_range& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is out of range for int64: ", e.what()));
-    } catch (...) {
+    auto intValue = ovms::stoi64(value);
+    if (!intValue.has_value()) {
         return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int64"));
     }
+    return intValue.value();
 }
 std::variant<absl::Status, std::optional<int>> getIntFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
     auto it = payload.FindMember(keyName.c_str());
