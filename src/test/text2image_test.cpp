@@ -322,6 +322,13 @@ void testNegativeFloat(const std::string& key, const std::string& content) {
     ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
     EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
 }
+void testNegativeFloatMultiPart(const std::string& key, const std::string& content) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName(key)).WillByDefault(Return(content));
+    auto fieldVal = ovms::getFloatFromPayload(multipartParser, key);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
+    EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
+}
 TEST(Text2ImageTest, testGetFloatFromPayloadNegative) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -335,6 +342,16 @@ TEST(Text2ImageTest, testGetFloatFromPayloadNegative) {
     testNegativeFloat("some_field", R"({"some_field":{"a":1}})");
     testNegativeFloat("some_field", R"({"some_field":3.40282347e+39})");
     testNegativeFloat("some_field", R"({"some_field":-1.70141173e+39})");
+
+    testNegativeFloatMultiPart("some_field", "    123.45 ");
+    testNegativeFloatMultiPart("some_field", "123.45.67");
+    testNegativeFloatMultiPart("some_field", "true");
+    testNegativeFloatMultiPart("some_field", "null");
+    testNegativeFloatMultiPart("some_field", "[1,2,3]");
+    testNegativeFloatMultiPart("some_field", "{}");
+    testNegativeFloatMultiPart("some_field", "{\"a\":1}");
+    testNegativeFloatMultiPart("some_field", "3.40282347e+39");
+    testNegativeFloatMultiPart("some_field", "-1.70141173e+39");
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledOpenAIFields) {
     ovms::HttpPayload payload;

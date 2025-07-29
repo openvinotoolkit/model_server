@@ -117,16 +117,11 @@ std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms:
     if (value.empty()) {
         return std::nullopt;
     }
-    try {
-        float floatValue = std::stof(value);
-        return floatValue;
-    } catch (const std::invalid_argument& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a float: ", e.what()));
-    } catch (const std::out_of_range& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is out of range for float: ", e.what()));
-    } catch (...) {
+    auto floatValue = ovms::stof(value);
+    if (!floatValue.has_value()) {
         return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a float"));
     }
+    return floatValue.value();
 }
 
 std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const rapidjson::Document& payload, const std::string& keyName) {

@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -149,6 +150,29 @@ std::optional<int64_t> stoi64(const std::string& str) {
     }
     try {
         return std::stoll(str);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+// TODO: Write unit test
+std::optional<float> stof(const std::string& str) {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    size_t idx = 0;
+    try {
+        float val = std::stof(str, &idx);
+        // Check if the whole string was consumed
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
+        // Reject NaN or Inf
+        if (std::isnan(val) || std::isinf(val)) {
+            return std::nullopt;
+        }
+        return val;
     } catch (...) {
         return std::nullopt;
     }
