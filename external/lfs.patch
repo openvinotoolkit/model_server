@@ -117,7 +117,7 @@ index 05a67fb14..da56c42f6 100644
  	BOOL result;
  
 diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
-index a7d3c7ca4..9e39b3892 100644
+index a7d3c7ca4..13e9dfc37 100644
 --- a/src/libgit2/CMakeLists.txt
 +++ b/src/libgit2/CMakeLists.txt
 @@ -5,25 +5,29 @@ add_library(libgit2 OBJECT)
@@ -152,46 +152,31 @@ index a7d3c7ca4..9e39b3892 100644
  list(SORT SRC_GIT2)
  target_sources(libgit2 PRIVATE ${SRC_GIT2})
  
-@@ -37,6 +41,11 @@ if(APPLE)
+@@ -37,6 +41,23 @@ if(APPLE)
  	set_source_files_properties(streams/stransport.c PROPERTIES COMPILE_FLAGS -Wno-deprecated)
  endif()
  
 +cmake_print_variables(CURL_DEPENDENCIES_DIR)
-+list(APPEND LIBGIT2_SYSTEM_INCLUDES "${CURL_DEPENDENCIES_DIR}\\include")
-+list(APPEND LIBGIT2_SYSTEM_LIBS "${CURL_DEPENDENCIES_DIR}\\bin\\libcurl-x64.lib")
-+list(APPEND LIBGIT2_PC_LIBS "-lcurl")
++if(WIN32)
++    list(APPEND LIBGIT2_SYSTEM_INCLUDES "${CURL_DEPENDENCIES_DIR}\\include")
++    list(APPEND LIBGIT2_SYSTEM_LIBS "${CURL_DEPENDENCIES_DIR}\\bin\\libcurl-x64.lib")
++    list(APPEND LIBGIT2_PC_LIBS "-lcurl")
++else()
++    find_package(CURL REQUIRED)
++    if(CURL_FOUND)
++	list(APPEND LIBGIT2_SYSTEM_INCLUDES ${CURL_INCLUDE_DIR})
++	list(APPEND LIBGIT2_SYSTEM_LIBS ${CURL_LIBRARIES})
++	list(APPEND LIBGIT2_PC_LIBS ${CURL_LIBRARIES})
++    else()
++	message(FATAL_ERROR "Curl library and headers not found")
++    endif()
++endif()
++
 +
  ide_split_sources(libgit2)
  list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
  list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
-@@ -51,6 +60,26 @@ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
- set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
- set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
- 
-+# libcurl
-+#find_package(CURL REQUIRED PATHS "C:\\opt\\curl-8.14.1_1-win64-mingw")
-+#if(CURL_FOUND)
-+	#list(APPEND LIBGIT2_SYSTEM_INCLUDES ${CURL_INCLUDE_DIR})
-+	#list(APPEND LIBGIT2_SYSTEM_LIBS ${CURL_LIBRARIES})
-+	#list(APPEND LIBGIT2_PC_LIBS ${CURL_LIBRARIES})
-+#else()
-+	#message(FATAL_ERROR "Curl library and headers not found")
-+#endif()
-+
-+#add_library(Curl SHARED IMPORTED)
-+#set_target_properties(Curl PROPERTIES
-+#    IMPORTED_LOCATION "${CURL_DEPENDENCIES_DIR}/bin/libcurl-x64.dll"
-+#    IMPORTED_IMPLIB "${CURL_DEPENDENCIES_DIR}/bin/libcurl-x64.lib"
-+#    INTERFACE_INCLUDE_DIRECTORIES "${CURL_DEPENDENCIES_DIR}/include"
-+#)
-+
-+
-+
-+
- #
- # Compile and link libgit2
- #
-@@ -69,8 +98,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+@@ -69,8 +90,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
  ide_split_sources(libgit2package)
  
  if(SONAME)
