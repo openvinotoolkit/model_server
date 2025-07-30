@@ -128,14 +128,6 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             dnf clean all
 
 WORKDIR /
-# hadolint ignore=DL3003
-RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
-tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
-git clone https://github.com/git-lfs/git-lfs && \
-    cd git-lfs && \
-    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
-    /usr/local/go/bin/go build . && \
-    cp git-lfs /usr/bin/git-lfs
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 

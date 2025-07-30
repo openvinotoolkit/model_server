@@ -217,27 +217,6 @@ Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
     return lfstatus;
 }
 
-Status HfDownloader::checkRequiredToolsArePresent() {
-    std::string cmd = "git --version";
-    int retCode = -1;
-    std::string output = exec_cmd(cmd, retCode);
-    if (output.find("git version ") == std::string::npos) {
-        SPDLOG_DEBUG(output);
-        SPDLOG_ERROR("Required git executable is not present. Please add git from ovms package to PATH.");
-        return StatusCode::HF_FAILED_TO_INIT_GIT;
-    }
-
-    cmd = "git-lfs --version";
-    output = exec_cmd(cmd, retCode);
-    if (output.find("git-lfs/") == std::string::npos) {
-        SPDLOG_DEBUG(output);
-        SPDLOG_ERROR("Required git-lfs executable is not present. Please add git-lfs from ovms package to PATH.");
-        return StatusCode::HF_FAILED_TO_INIT_GIT_LFS;
-    }
-
-    return StatusCode::OK;
-}
-
 Status HfDownloader::cloneRepository() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -249,12 +228,7 @@ Status HfDownloader::cloneRepository() {
         std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
-
-    auto status = checkRequiredToolsArePresent();
-    if (!status.ok()) {
-        return status;
-    }
-
+    
     status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
