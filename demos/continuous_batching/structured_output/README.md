@@ -186,7 +186,7 @@ Requests: 1000, Successful responses: 1000, Exact matches: 135, Schema matches: 
 ```
 
 ```console
-python accuracy_test.py --base_url http://localhost:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
+python accuracy_test.py --base_url http://localhost:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --enable_response_format --concurrency 50 --limit 1000
 ```
 ```
 Requests: 1000, Successful responses: 1000, Exact matches: 217, Schema matches: 828 Invalid inputs: 0
