@@ -124,8 +124,18 @@ std::optional<uint32_t> stou32(const std::string& input) {
 }
 
 std::optional<int32_t> stoi32(const std::string& str) {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    size_t idx = 0;
     try {
-        return {static_cast<int32_t>(std::stoi(str))};
+        int32_t val = std::stoi(str, &idx);
+        // Check if the whole string was consumed
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
+        return val;
     } catch (...) {
         return std::nullopt;
     }

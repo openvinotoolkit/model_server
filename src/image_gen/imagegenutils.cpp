@@ -160,16 +160,11 @@ std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::Mul
     if (value.empty()) {
         return std::nullopt;
     }
-    try {
-        int intValue = std::stoi(value);
-        return intValue;
-    } catch (const std::invalid_argument& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int: ", e.what()));
-    } catch (const std::out_of_range& e) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is out of range for int: ", e.what()));
-    } catch (...) {
-        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int"));
+    auto intValue = ovms::stoi32(value);
+    if (!intValue.has_value()) {
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int32"));
     }
+    return intValue.value();
 }
 std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const rapidjson::Document& payload, const std::string& keyName) {
     auto it = payload.FindMember(keyName.c_str());

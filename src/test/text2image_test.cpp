@@ -252,6 +252,7 @@ TEST(Text2ImageTest, testGetInt64FromPayloadNegative) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     std::variant<absl::Status, int64_t> field;
+    // /create JSON
     testNegativeInt64("some_field", R"({"some_field":"123"})");
     testNegativeInt64("some_field", R"({"some_field":true})");
     testNegativeInt64("some_field", R"({"some_field":null})");
@@ -262,6 +263,7 @@ TEST(Text2ImageTest, testGetInt64FromPayloadNegative) {
     testNegativeInt64("some_field", R"({"some_field":123456789012345678901234567890})");
     testNegativeInt64("some_field", R"({"some_field":-123456789012345678901234567890})");
 
+    // /edit multipart
     testNegativeInt64MultiPart("some_field", "    123 ");
     testNegativeInt64MultiPart("some_field", "123.5");
     testNegativeInt64MultiPart("some_field", "true");
@@ -276,10 +278,19 @@ TEST(Text2ImageTest, testGetIntFromPayload) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"some_field":123})");
+    // /create JSON
     auto fieldVal = ovms::getIntFromPayload(*payload.parsedJson, "some_field");
     ASSERT_TRUE(std::holds_alternative<std::optional<int>>(fieldVal));
     EXPECT_EQ(std::get<std::optional<int>>(fieldVal).value(), 123);
     EXPECT_EQ(std::nullopt, std::get<std::optional<int>>(ovms::getIntFromPayload(*payload.parsedJson, "nonexistent_field")));
+
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("some_field")).WillByDefault(Return("123"));
+    fieldVal = ovms::getIntFromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<int>>(fieldVal));
+    EXPECT_EQ(std::get<std::optional<int>>(fieldVal).value(), 123);
+    EXPECT_EQ(std::nullopt, std::get<std::optional<int>>(ovms::getIntFromPayload(multipartParser, "nonexistent_field")));
 }
 void testNegativeInt(const std::string& key, const std::string& content) {
     ovms::HttpPayload payload;
@@ -289,10 +300,14 @@ void testNegativeInt(const std::string& key, const std::string& content) {
     ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
     EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
 }
+void testNegativeIntMultiPart(const std::string& key, const std::string& content) {
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName(key)).WillByDefault(Return(content));
+    auto fieldVal = ovms::getIntFromPayload(multipartParser, key);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(fieldVal)) << content;
+    EXPECT_EQ(std::get<absl::Status>(fieldVal).code(), absl::StatusCode::kInvalidArgument) << content;
+}
 TEST(Text2ImageTest, testGetIntFromPayloadNegative) {
-    ovms::HttpPayload payload;
-    payload.parsedJson = std::make_shared<rapidjson::Document>();
-    std::variant<absl::Status, int> field;
     testNegativeInt("some_field", R"({"some_field":"123"})");
     testNegativeInt("some_field", R"({"some_field":true})");
     testNegativeInt("some_field", R"({"some_field":null})");
@@ -302,17 +317,37 @@ TEST(Text2ImageTest, testGetIntFromPayloadNegative) {
     testNegativeInt("some_field", R"({"some_field":{"a":1}})");
     testNegativeInt("some_field", R"({"some_field":123456789012345678901234567890})");
     testNegativeInt("some_field", R"({"some_field":-123456789012345678901234567890})");
+
+    testNegativeIntMultiPart("some_field", "    123 ");
+    testNegativeIntMultiPart("some_field", "123.5");
+    testNegativeIntMultiPart("some_field", "true");
+    testNegativeIntMultiPart("some_field", "null");
+    testNegativeIntMultiPart("some_field", "[1,2,3]");
+    testNegativeIntMultiPart("some_field", "{}");
+    testNegativeIntMultiPart("some_field", "{\"a\":1}");
+    testNegativeIntMultiPart("some_field", "123456789012345678901234567890");
+    testNegativeIntMultiPart("some_field", "-123456789012345678901234567890");
 }
 TEST(Text2ImageTest, testGetFloatFromPayload) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"some_field":123.45})");
+    // /create JSON
     auto fieldVal = ovms::getFloatFromPayload(*payload.parsedJson, "some_field");
     ASSERT_TRUE(std::holds_alternative<std::optional<float>>(fieldVal));
     auto optionalFloat = std::get<std::optional<float>>(fieldVal);
     ASSERT_TRUE(optionalFloat.has_value());
     EXPECT_NEAR(std::get<std::optional<float>>(fieldVal).value(), 123.45, 0.0001);
     EXPECT_EQ(std::nullopt, std::get<std::optional<float>>(ovms::getFloatFromPayload(*payload.parsedJson, "nonexistent_field")));
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("some_field")).WillByDefault(Return("123.45"));
+    fieldVal = ovms::getFloatFromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<float>>(fieldVal));
+    optionalFloat = std::get<std::optional<float>>(fieldVal);
+    ASSERT_TRUE(optionalFloat.has_value());
+    EXPECT_NEAR(optionalFloat.value(), 123.45, 0.0001);
+    EXPECT_EQ(std::nullopt, std::get<std::optional<float>>(ovms::getFloatFromPayload(multipartParser, "nonexistent_field")));
 }
 void testNegativeFloat(const std::string& key, const std::string& content) {
     ovms::HttpPayload payload;
