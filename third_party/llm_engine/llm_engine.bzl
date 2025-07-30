@@ -66,6 +66,7 @@ def _impl(repository_ctx):
         "WIN32": "True",
         "X86_64": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
     else:
@@ -81,6 +82,7 @@ def _impl(repository_ctx):
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1
 

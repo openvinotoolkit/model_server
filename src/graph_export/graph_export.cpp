@@ -95,6 +95,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             response_parser: ")" << graphSettings.responseParser.value() << R"(",)";
     }
+    if (graphSettings.enableToolGuidedGeneration == "true") {
+        oss << R"(
+            enable_tool_guided_generation: true,)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";
