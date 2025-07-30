@@ -179,7 +179,7 @@ It will be executed with the response_format request field including the schema 
 ```console
 pip install datasets tqdm openai jsonschema
 curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/structured_output/accuracy_test.py -O 
-python accuracy_test.py --base_url http://localhost:8000/v3 --model_name OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
+python accuracy_test.py --base_url http://localhost:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
 ```
 ```
 Requests: 1000, Successful responses: 1000, Exact matches: 135, Schema matches: 435 Invalid inputs: 0
