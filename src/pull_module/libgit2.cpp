@@ -228,7 +228,7 @@ Status HfDownloader::cloneRepository() {
         std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
-    
+
     status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
