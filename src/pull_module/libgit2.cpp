@@ -265,7 +265,7 @@ Status HfDownloader::cloneRepository() {
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
- 
+
     // Use proxy
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
