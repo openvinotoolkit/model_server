@@ -16,5 +16,9 @@
 @echo off
 set "OVMS_DIR=%~dp0"
 set "PYTHONHOME=%OVMS_DIR%\python"
-set "PATH=%PATH%;%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts"
+IF "%~1"=="at_end" (
+    set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
+) ELSE (
+    set "PATH=%PATH%;%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts"
+)
 echo "OpenVINO Model Server Environment Initialized"
