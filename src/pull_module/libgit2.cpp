@@ -262,10 +262,10 @@ Status HfDownloader::cloneRepository() {
 
     SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
     git_repository* cloned_repo = NULL;
+    // clone_opts for progress reporting set in libgit2 lib by patch
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
-
+    // Credential check function
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
-
     // Use proxy
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;

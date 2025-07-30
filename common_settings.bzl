@@ -242,7 +242,6 @@ COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
                 "//src:windows" : [
                         "-W0",
                         "-Isrc",
-                        "/utf-8",
                     ],
                 }) 
 

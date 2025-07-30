@@ -31,5 +31,4 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     defines = ["FMT_HEADER_ONLY"],
-    copts = ["/utf-8"],
 )

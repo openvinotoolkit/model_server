@@ -28,7 +28,7 @@ cc_library(
     includes = [
         "include/",
     ],
-    copts = ["-Iexternal/spdlog/", "/utf-8"],
+    copts = ["-Iexternal/spdlog/"],
     deps = ["@fmtlib"],
     defines = ["SPDLOG_FMT_EXTERNAL"],
 )
