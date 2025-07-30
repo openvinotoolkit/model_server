@@ -482,8 +482,6 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
     // background/moderation/output_compression/output_format/quality/style
     // TODO possibly to be handled outside since output_compresiont/format are nonGenai
     for (auto key : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
-        //auto it = payload.parsedJson->FindMember(key);
-        //if (it != payload.parsedJson->MemberEnd()) {
         auto value = payload.getFieldByName(key);
         if (!value.empty()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", key));
@@ -511,11 +509,12 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Mu
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
-    //for (auto it = payload.parsedJson->MemberBegin(); it != payload.parsedJson->MemberEnd(); ++it) {
-    //    if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
-    //        return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
-    //    }
-    //} // TODO
+    auto fieldNames = payload.getAllFieldNames();
+    for (const auto& fieldName : fieldNames) {
+        if (acceptedFields.find(fieldName) == acceptedFields.end()) {
+            return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", fieldName));
+        }
+    }
     auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
     if (!status.ok()) {
         return status;

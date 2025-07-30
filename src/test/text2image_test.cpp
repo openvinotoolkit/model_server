@@ -44,6 +44,7 @@ public:
     MOCK_METHOD(bool, hasParseError, (), (const, override));
     MOCK_METHOD(std::string, getFieldByName, (const std::string& name), (const, override));
     MOCK_METHOD(std::string_view, getFileContentByFieldName, (const std::string& name), (const, override));
+    MOCK_METHOD(std::set<std::string>, getAllFieldNames, (), (const, override));
 };
 
 // clang-format off
@@ -64,7 +65,7 @@ TEST(Text2ImageTest, testGetDimensions) {
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"size":"512x513"})");
     MockedMultiPartParser multipartParser;
-    
+
     // /create JSON
     auto dimensions = ovms::getDimensions(*payload.parsedJson);
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
@@ -90,7 +91,7 @@ TEST(Text2ImageTest, testGetDimensions) {
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions))) << std::get<absl::Status>(dimensions).message();
     dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
     ASSERT_FALSE(dimsOpt.has_value());
-    
+
     // /edit Multipart
     ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("auto"));
     dimensions = ovms::getDimensions(multipartParser);
@@ -104,8 +105,7 @@ TEST(Text2ImageTest, testGetDimensions) {
     ASSERT_TRUE((std::holds_alternative<std::optional<resolution_t>>(dimensions)));
     dimsOpt = std::get<std::optional<resolution_t>>(dimensions);
     ASSERT_FALSE(dimsOpt.has_value());
-    
-    
+
     // /edit Multipart
     ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return(""));
     ON_CALL(multipartParser, getFieldByName("other_field")).WillByDefault(Return("auto"));
@@ -597,24 +597,20 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
 }
 
 TEST(Image2ImageTest, getImageEditGenerationRequestOptionsAllHandledOpenAIFields) {
-    ovms::HttpPayload payload;
-    payload.parsedJson = std::make_shared<rapidjson::Document>();
-    payload.parsedJson->Parse(R"({
-        "prompt": "test prompt",
-        "image": "base64_image",
-        "n": 4,
-        "size": "512x1024",
-        "model": "test model",
-        "response_format": "b64_json"
-    })");
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("image")).WillByDefault(Return("base64_image"));
+    ON_CALL(multipartParser, getFieldByName("n")).WillByDefault(Return("4"));
+    ON_CALL(multipartParser, getFieldByName("size")).WillByDefault(Return("512x1024"));
+    ON_CALL(multipartParser, getFieldByName("model")).WillByDefault(Return("test model"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("b64_json"));
     /*
         "background": "transparent",
         "mask": "base64_mask",
         "quality": "high",
         "user"
     */
-   // TODO: Segfault
-    auto requestOptions = ovms::getImageEditRequestOptions(*payload.multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << std::get<absl::Status>(requestOptions).message();
     auto& options = std::get<ov::AnyMap>(requestOptions);
     EXPECT_EQ(options.size(), 4);
@@ -624,6 +620,64 @@ TEST(Image2ImageTest, getImageEditGenerationRequestOptionsAllHandledOpenAIFields
     EXPECT_EQ(options.at("width").as<int64_t>(), 512);
     EXPECT_EQ(options.at("height").as<int64_t>(), 1024);
     EXPECT_EQ(options.at("num_images_per_prompt").as<int>(), 4);
+}
+TEST(Image2ImageTest, getImageEditRequestOptionsAllHandledGenAIFields) {
+    // ovms::HttpPayload payload;
+    // payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // payload.parsedJson->Parse(R"({
+    //     "prompt": "test prompt",
+    //     "prompt_2": "test prompt 2",
+    //     "prompt_3": "test prompt 3",
+    //     "negative_prompt": "test negative prompt",
+    //     "negative_prompt_2": "test negative prompt 2",
+    //     "negative_prompt_3": "test negative prompt 3",
+    //     "rng_seed": 123456789,
+    //     "guidance_scale": 7.5,
+    //     "width": 512,
+    //     "height": 1024,
+    //     "num_images_per_prompt": 4,
+    //     "num_inference_steps": 7,
+    //     "max_sequence_length": 256,
+    //     "strength": 0.75,
+    //     "response_format": "b64_json"
+    // })");
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+    ON_CALL(multipartParser, getFieldByName("prompt_2")).WillByDefault(Return("test prompt 2"));
+    ON_CALL(multipartParser, getFieldByName("prompt_3")).WillByDefault(Return("test prompt 3"));
+    ON_CALL(multipartParser, getFieldByName("negative_prompt")).WillByDefault(Return("test negative prompt"));
+    ON_CALL(multipartParser, getFieldByName("negative_prompt_2")).WillByDefault(Return("test negative prompt 2"));
+    ON_CALL(multipartParser, getFieldByName("negative_prompt_3")).WillByDefault(Return("test negative prompt 3"));
+    ON_CALL(multipartParser, getFieldByName("rng_seed")).WillByDefault(Return("123456789"));
+    ON_CALL(multipartParser, getFieldByName("guidance_scale")).WillByDefault(Return("7.5"));
+    ON_CALL(multipartParser, getFieldByName("width")).WillByDefault(Return("512"));
+    ON_CALL(multipartParser, getFieldByName("height")).WillByDefault(Return("1024"));
+    ON_CALL(multipartParser, getFieldByName("num_images_per_prompt")).WillByDefault(Return("4"));
+    ON_CALL(multipartParser, getFieldByName("num_inference_steps")).WillByDefault(Return("7"));
+    ON_CALL(multipartParser, getFieldByName("max_sequence_length")).WillByDefault(Return("256"));
+    ON_CALL(multipartParser, getFieldByName("strength")).WillByDefault(Return("0.75"));
+    ON_CALL(multipartParser, getFieldByName("response_format")).WillByDefault(Return("b64_json"));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    ASSERT_EQ(options.size(), 13);
+    for (auto& [key, value] : options) {
+        SPDLOG_DEBUG("key: {}, value: {}", key, value.as<std::string>());
+    }
+    EXPECT_EQ(options.at("prompt_2").as<std::string>(), "test prompt 2");
+    EXPECT_EQ(options.at("prompt_3").as<std::string>(), "test prompt 3");
+    EXPECT_EQ(options.at("negative_prompt").as<std::string>(), "test negative prompt");
+
+    EXPECT_EQ(options.at("negative_prompt_2").as<std::string>(), "test negative prompt 2");
+    EXPECT_EQ(options.at("negative_prompt_3").as<std::string>(), "test negative prompt 3");
+    EXPECT_EQ(options.at("rng_seed").as<size_t>(), 123456789);
+    EXPECT_EQ(options.at("guidance_scale").as<float>(), 7.5);
+    EXPECT_EQ(options.at("strength").as<float>(), 0.75);
+    EXPECT_EQ(options.at("max_sequence_length").as<int>(), 256);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 512);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 1024);
+    EXPECT_EQ(options.at("num_images_per_prompt"), 4);
+    EXPECT_EQ(options.at("num_inference_steps").as<size_t>(), 7);
 }
 
 using mediapipe::CalculatorContract;
