@@ -104,6 +104,7 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
     std::optional<std::string> responseParser;
+    std::string enableToolGuidedGeneration = "false";
 };
 
 struct EmbeddingsGraphSettingsImpl {

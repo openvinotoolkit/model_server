@@ -97,4 +97,6 @@ message LLMCalculatorOptions {
     optional CacheEvictionConfig cache_eviction_config = 19;
 
     optional string response_parser = 20;
+
+    optional bool enable_tool_guided_generation = 21 [default = false];
 }

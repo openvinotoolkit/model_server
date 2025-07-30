@@ -106,6 +106,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string response_parser` - name of the response parser to use for processing model output before creating a response;
+-    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false]; 
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -162,6 +163,8 @@ Those are the only acceptable values at the moment since OVMS supports `tools` h
 
 Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
+
+When `response_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
 ### OpenVINO runtime settings
 
