@@ -48,18 +48,6 @@ index 60466d173..a35ad5f98 100644
  /**
   * This is priority that the internal ident filter will be registered with
   */
-diff --git a/src/cli/CMakeLists.txt b/src/cli/CMakeLists.txt
-index d121c588a..edf2c257c 100644
---- a/src/cli/CMakeLists.txt
-+++ b/src/cli/CMakeLists.txt
-@@ -47,6 +47,7 @@ ide_split_sources(git2_cli)
- 
- target_include_directories(git2_cli PRIVATE ${CLI_INCLUDES})
- 
-+
- if(MSVC_IDE)
- 	# Precompiled headers
- 	set_target_properties(git2_cli PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
 index c18cb28d4..286fa7153 100644
 --- a/src/cli/cmd_clone.c
@@ -129,7 +117,7 @@ index 05a67fb14..da56c42f6 100644
  	BOOL result;
  
 diff --git a/src/libgit2/CMakeLists.txt b/src/libgit2/CMakeLists.txt
-index a7d3c7ca4..f1021e9dd 100644
+index a7d3c7ca4..9e39b3892 100644
 --- a/src/libgit2/CMakeLists.txt
 +++ b/src/libgit2/CMakeLists.txt
 @@ -5,25 +5,29 @@ add_library(libgit2 OBJECT)
@@ -176,20 +164,10 @@ index a7d3c7ca4..f1021e9dd 100644
  ide_split_sources(libgit2)
  list(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:util> $<TARGET_OBJECTS:libgit2> ${LIBGIT2_DEPENDENCY_OBJECTS})
  list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
-@@ -44,12 +53,35 @@ list(APPEND LIBGIT2_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES})
- target_include_directories(libgit2 PRIVATE ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES} PUBLIC ${PROJECT_SOURCE_DIR}/include)
- target_include_directories(libgit2 SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
- 
-+cmake_print_variables(LIBGIT2_SYSTEM_INCLUDES)
-+
- set(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
- set(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
- set(LIBGIT2_DEPENDENCY_INCLUDES ${LIBGIT2_DEPENDENCY_INCLUDES} PARENT_SCOPE)
- set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
+@@ -51,6 +60,26 @@ set(LIBGIT2_DEPENDENCY_OBJECTS ${LIBGIT2_DEPENDENCY_OBJECTS} PARENT_SCOPE)
  set(LIBGIT2_SYSTEM_INCLUDES ${LIBGIT2_SYSTEM_INCLUDES} PARENT_SCOPE)
  set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
-+cmake_print_variables(LIBGIT2_SYSTEM_INCLUDES)
-+
+ 
 +# libcurl
 +#find_package(CURL REQUIRED PATHS "C:\\opt\\curl-8.14.1_1-win64-mingw")
 +#if(CURL_FOUND)
@@ -209,10 +187,11 @@ index a7d3c7ca4..f1021e9dd 100644
 +
 +
 +
- 
++
  #
  # Compile and link libgit2
-@@ -69,8 +101,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
+ #
+@@ -69,8 +98,6 @@ set_target_properties(libgit2package PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PROJE
  ide_split_sources(libgit2package)
  
  if(SONAME)
@@ -221,18 +200,6 @@ index a7d3c7ca4..f1021e9dd 100644
  	if(LIBGIT2_FILENAME)
  		target_compile_definitions(libgit2package PRIVATE LIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
  		set_target_properties(libgit2package PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
-diff --git a/src/libgit2/checkout.c b/src/libgit2/checkout.c
-index f4b1ea96f..d8d4dee35 100644
---- a/src/libgit2/checkout.c
-+++ b/src/libgit2/checkout.c
-@@ -1529,6 +1529,7 @@ static int blob_content_to_file(
- 	mode_t file_mode = data->opts.file_mode ?
- 		data->opts.file_mode : entry_filemode;
- 	git_filter_session filter_session = GIT_FILTER_SESSION_INIT;
-+
- 	struct checkout_stream writer;
- 	mode_t mode;
- 	git_filter_list *fl = NULL;
 diff --git a/src/libgit2/clone.c b/src/libgit2/clone.c
 index 237efc0ba..6f34bdbb1 100644
 --- a/src/libgit2/clone.c
@@ -830,41 +797,3 @@ index fbf143894..1890c61c1 100644
  };
  
  GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
-diff --git a/src/util/cc-compat.h b/src/util/cc-compat.h
-index ae81970ea..2327fb518 100644
---- a/src/util/cc-compat.h
-+++ b/src/util/cc-compat.h
-@@ -87,17 +87,7 @@
- #	pragma warning ( disable : 4127 )
- #endif
- 
--#if defined (_MSC_VER)
--	typedef unsigned char bool;
--#	ifndef true
--#		define true 1
--#	endif
--#	ifndef false
--#		define false 0
--#	endif
--#else
--#	include <stdbool.h>
--#endif
-+#include <stdbool.h>
- 
- #ifndef va_copy
- #	ifdef __va_copy
-diff --git a/src/util/win32/posix.h b/src/util/win32/posix.h
-index 03fa2ac52..a994c413a 100644
---- a/src/util/win32/posix.h
-+++ b/src/util/win32/posix.h
-@@ -29,8 +29,8 @@ extern int p_utimes(const char *filename, const struct p_timeval times[2]);
- extern int p_futimes(int fd, const struct p_timeval times[2]);
- 
- extern int p_readlink(const char *path, char *buf, size_t bufsiz);
--extern int p_symlink(const char *old, const char *new);
--extern int p_link(const char *old, const char *new);
-+extern int p_symlink(const char *old, const char *next);
-+extern int p_link(const char *old, const char *next);
- extern int p_unlink(const char *path);
- extern int p_mkdir(const char *path, mode_t mode);
- extern int p_fsync(int fd);
