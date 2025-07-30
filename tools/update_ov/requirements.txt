@@ -2,5 +2,3 @@ bs4
 requests
 selenium
 webdriver-manager
-bs4
-selenium
