@@ -7,7 +7,7 @@ This demo demonstrates example deployment of a model with output precision `ov::
 The script below is downloading a public MobileNet model trained on the ImageNet data. The original model accepts on input the image array in the range of 0-1 and returns probabilities for all the trained classes. We are adding to the model preprocessing function changing the input data range to 0-255 and also postprocessing function which is retrieving the most likely label name as a string. 
 This is a very handy functionality because it allows us to export the model with the included pre/post processing functions as the model layers. The client just receives the string data with the label name for the classified image.
 
-> **Note:** This demo requires Python 3.10 for proper functionality. Using later Python versions may result in errors.
+> **Note:** Preparing the model in this demo requires tensorflow2.13 or older. Because pip packages with such versions are not available in latest python editions, it is recommended to use Python3.10.
 
 ```console
 git clone https://github.com/openvinotoolkit/model_server.git
