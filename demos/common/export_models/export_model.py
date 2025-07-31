@@ -382,7 +382,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                 if task_parameters['extra_quantization_params'] == "":
                     print("Using default quantization parameters for NPU: --sym --ratio 1.0 --group-size -1")
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
-            optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
+            optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --task text-generation-with-past --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
                 raise ValueError("Failed to export llm model", source_model)    
     ### Export draft model for speculative decoding 
@@ -402,7 +402,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         else: # assume HF model name or local pytorch model folder
             print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
+                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --task text-generation-with-past --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
