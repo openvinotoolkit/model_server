@@ -348,7 +348,6 @@ enum class StatusCode {
 
     // Huggingface model download errors for libgit2
     HF_FAILED_TO_INIT_LIBGIT2,
-    HF_FAILED_TO_INIT_GIT,
     HF_FAILED_TO_INIT_OPTIMUM_CLI,
     HF_RUN_OPTIMUM_CLI_EXPORT_FAILED,
     HF_GIT_CLONE_FAILED,
