@@ -31,6 +31,7 @@ pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/r
 or use the python binary from the ovms.zip or ovms.tar.gz package - see [deployment instructions](deploying_server_baremetal.md) for details.
 and run:
 ```console
+ovms\setupvars.bat
 ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
