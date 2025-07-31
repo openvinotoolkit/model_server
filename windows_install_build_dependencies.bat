@@ -44,6 +44,24 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+:: Bazel compilation settings
+set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
+set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST %VS_2019_PRO% goto :msvc_pro
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :mscv_error
+
+:mscv_error
+echo [ERROR] Required MSVC compiler not installed
+goto :exit_build_error
+:msvc_pro
+echo [INFO] Using MSVC %VS_2019_PRO%
+set BAZEL_VS=%VS_2019_PRO%
+goto :msvc_end
+:msvc_bt
+echo [INFO] Using MSVC %VS_2022_BT%
+set BAZEL_VS=%VS_2022_BT%
+:msvc_end
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
 IF /I EXIST %BAZEL_SHORT_PATH% (
@@ -407,6 +425,31 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:: Create lib file for libgit2 linking
+set "curl_lib=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.lib"
+IF /I EXIST %curl_lib% (
+    echo [INFO] file exists %curl_lib% 
+) ELSE (
+    set "CURL_LIB_PATH=%BAZEL_VS:"=%\VC\Tools\MSVC\*"
+    echo !CURL_LIB_PATH!
+    for /d %%F in ("!CURL_LIB_PATH!") do (
+        echo Matched directory: %%F
+        set "LIB_EXE=%%F\bin\Hostx64\x64\lib.exe"
+        goto :create_lib
+    )
+    echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+    exit /b
+    :create_lib
+	IF /I EXIST !LIB_EXE! (
+		set "curl_def=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.def"
+		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
+		if !errorlevel! neq 0 exit /b !errorlevel!
+        echo [INFO] !LIB_EXE! created.
+	) else (
+		echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+	)
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
