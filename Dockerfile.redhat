@@ -410,8 +410,6 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
 
 COPY --from=pkg /ovms_release /ovms
-# hadolint ignore=SC2114
-RUN mv /ovms/bin/git* /usr/bin
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
