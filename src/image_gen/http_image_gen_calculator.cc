@@ -152,12 +152,12 @@ public:
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
             SET_OR_RETURN(std::string, prompt, getPromptField(*payload.multipartParser));
-            SET_OR_RETURN(std::optional<std::string>, image, getStringFromPayload(*payload.multipartParser, "image"));
+            SET_OR_RETURN(std::optional<std::string_view>, image, getFileFromPayload(*payload.multipartParser, "image"));
             RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
             ov::Tensor imageTensor;
             try {
-                imageTensor = loadImageStbiFromMemory(image.value());
+                imageTensor = loadImageStbiFromMemory(std::string(image.value()));
             } catch (std::runtime_error& e) {
                 std::stringstream ss;
                 ss << "Image parsing failed: " << e.what();

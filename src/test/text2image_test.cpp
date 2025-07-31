@@ -170,6 +170,18 @@ TEST(Text2ImageTest, testGetStringFromPayload) {
     EXPECT_EQ(optionalString.value(), "test val");
     EXPECT_EQ(std::nullopt, std::get<std::optional<std::string>>(ovms::getStringFromPayload(multipartParser, "nonexistent_field")));
 }
+TEST(Text2ImageTest, testGetFileFromPayload) {
+    // /edit Multipart
+    MockedMultiPartParser multipartParser;
+    std::string val{"test val"};
+    ON_CALL(multipartParser, getFileContentByFieldName("some_field")).WillByDefault(Return(std::string_view(val)));
+    auto fieldVal = ovms::getFileFromPayload(multipartParser, "some_field");
+    ASSERT_TRUE(std::holds_alternative<std::optional<std::string_view>>(fieldVal));
+    auto optionalStringView = std::get<std::optional<std::string_view>>(fieldVal);
+    ASSERT_TRUE(optionalStringView.has_value());
+    EXPECT_EQ(optionalStringView.value(), "test val");
+    EXPECT_EQ(std::nullopt, std::get<std::optional<std::string_view>>(ovms::getFileFromPayload(multipartParser, "nonexistent_field")));
+}
 void testNegativeString(const std::string& key, const std::string& content) {
     // /create JSON
     ovms::HttpPayload payload;
@@ -678,6 +690,24 @@ TEST(Image2ImageTest, getImageEditRequestOptionsAllHandledGenAIFields) {
     EXPECT_EQ(options.at("height").as<int64_t>(), 1024);
     EXPECT_EQ(options.at("num_images_per_prompt"), 4);
     EXPECT_EQ(options.at("num_inference_steps").as<size_t>(), 7);
+}
+
+TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
+    // OpenAI fields background, quality, user
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "background"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "quality"}));
+    requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "user"}));
+    requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
 }
 
 using mediapipe::CalculatorContract;

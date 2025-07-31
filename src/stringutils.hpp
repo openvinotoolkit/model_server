@@ -88,6 +88,8 @@ bool startsWith(const std::string& str, const std::string& prefix);
  */
 std::optional<uint32_t> stou32(const std::string& input);
 
+std::optional<uint64_t> stou64(const std::string& input);
+
 /**
  * @brief Converts string to int32, returns 0 or specified default value if conversion failed
  *

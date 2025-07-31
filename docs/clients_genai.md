@@ -11,6 +11,7 @@ Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
+Image generation API <ovms_docs_rest_api_image_edit>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -21,6 +22,7 @@ OpenAI compatible endpoints:
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
+- [images/generations](./model_server_rest_api_image_edit.md)
 
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
