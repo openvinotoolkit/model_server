@@ -21,7 +21,5 @@ if (Test-Path "$env:OVMS_DIR\python") {
     $env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:SCRIPTS;$env:PATH"
 } else {
     $env:PATH="$env:PATH:$env:OVMS_DIR"
-    $env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:SCRIPTS;$env:PATH"
-
 }
 echo "OpenVINO Model Server Environment Initialized"
