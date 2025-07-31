@@ -25,14 +25,14 @@ docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(
 ### Install optimum-cli
 Install python on your baremetal system from `https://www.python.org/downloads/` and run the commands:
 ```console
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 
 or use the python binary from the ovms.zip or ovms.tar.gz package - see [deployment instructions](deploying_server_baremetal.md) for details.
 and run:
 ```console
-ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
-
+ovms\setupvars.bat
+ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
 
