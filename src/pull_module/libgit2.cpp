@@ -229,7 +229,7 @@ Status HfDownloader::cloneRepository() {
         return StatusCode::OK;
     }
 
-    status = checkIfOverwriteAndRemove(this->downloadPath);
+    auto status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }
