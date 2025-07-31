@@ -474,6 +474,85 @@ Output file (`output2.png`):
 ![output2](./output2.png)
 
 
+## Measuring throughput
+To increase throughput in image generation scenarios, it is worth changing plugin config and increase NUM_STREAMS. Additionally, set up static shape for the model to avoid dynamic shape overhead. This can be done by setting `resolution` parameter in the request.
+
+Edit graph.pbtxt and restart the server:
+```
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+node: {
+  name: "ImageGenExecutor"
+  calculator: "ImageGenCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  input_side_packet: "IMAGE_GEN_NODE_RESOURCES:pipes"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+      [type.googleapis.com / mediapipe.ImageGenCalculatorOptions]: {
+          models_path: "./"
+          device: "CPU"
+          num_images_per_prompt: 4  # 4 images per inference request
+          resolution: "512x512"     # reshape to static value
+          plugin_config: '{"PERFORMANCE_HINT":"THROUGHPUT","NUM_STREAMS":8}'
+      }
+  }
+}
+```
+
+Prepare example request `input_data.json`:
+```
+{
+  "data": [
+    {
+      "payload": [
+        {
+          "model": "OpenVINO/stable-diffusion-v1-5-int8-ov",
+          "prompt": "dog",
+          "num_inference_steps": 50
+        }
+      ]
+    }
+  ]
+}
+
+```
+
+Run benchmark:
+```bash
+docker run --rm -it --net=host -v $(pwd):/work:rw nvcr.io/nvidia/tritonserver:24.12-py3-sdk \
+  perf_analyzer \
+    -m OpenVINO/stable-diffusion-v1-5-int8-ov \
+    --input-data=/work/input_data.json \
+    --service-kind=openai \
+    --endpoint=v3/images/generations \
+    --async \
+    -u localhost:8000 \
+    --request-count 16 \
+    --concurrency-range 16
+```
+
+```
+*** Measurement Settings ***
+  Service Kind: OPENAI
+  Sending 16 benchmark requests
+  Using asynchronous calls for inference
+
+Request concurrency: 16
+  Client:
+    Request count: 16
+    Throughput: 0.0999919 infer/sec
+    Avg latency: 156783666 usec (standard deviation 1087845 usec)
+    p50 latency: 157110315 usec
+    p90 latency: 158720060 usec
+    p95 latency: 158720060 usec
+    p99 latency: 159494095 usec
+    Avg HTTP time: 156783654 usec (send/recv 8717 usec + response wait 156774937 usec)
+Inferences/Second vs. Client Average Batch Latency
+Concurrency: 16, throughput: 0.0999919 infer/sec, latency 156783666 usec
+```
+
+0.0999919 infer/sec meaning 0.4 images per second considering 4 images per prompt.
 
 
 ## References
