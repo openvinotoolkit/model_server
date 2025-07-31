@@ -422,7 +422,7 @@ TEST_F(TFSModelServiceTest, config_reload) {
 
     spdlog::info("req={} this->res={}", this->modelStatusRequest.DebugString(), this->modelStatusResponse.DebugString());
     ::grpc::Status ret = s.HandleReloadConfigRequest(nullptr, &modelStatusRequest, &modelStatusResponse);
-    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), (unsigned int)ret.error_code(), ret.error_details());
+    spdlog::info("returned grpc status: ok={} code={} msg='{}'", ret.ok(), ret.error_code(), ret.error_details());
     EXPECT_EQ(ret.ok(), true);
     server.setShutdownRequest(1);
     t.join();

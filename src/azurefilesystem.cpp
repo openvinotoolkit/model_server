@@ -214,7 +214,7 @@ StatusCode AzureFileSystem::downloadModelVersions(const std::string& path,
 
     auto sc = createTempPath(local_path);
     if (sc != StatusCode::OK) {
-        SPDLOG_LOGGER_ERROR(azurestorage_logger, "Failed to create a temporary path {}", Status(sc).string());
+        SPDLOG_LOGGER_ERROR(azurestorage_logger, "Failed to create a temporary path {}", sc);
         return sc;
     }
 

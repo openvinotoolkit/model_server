@@ -63,7 +63,7 @@ void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, 
 
 void addStatusToResponse(tensorflow::serving::GetModelStatusResponse* response, const model_version_t version, const PipelineDefinitionStatus& pipeline_status) {
     auto [state, error_code] = pipeline_status.convertToModelStatus();
-    SPDLOG_DEBUG("add_status_to_response state={} error_code={}", (unsigned int)state, (unsigned int)error_code);
+    SPDLOG_DEBUG("add_status_to_response state={} error_code={}", state, error_code);
     auto status_to_fill = response->add_model_version_status();
     status_to_fill->set_state(static_cast<tensorflow::serving::ModelVersionStatus_State>(static_cast<int>(state)));
     status_to_fill->set_version(version);

@@ -302,7 +302,7 @@ StatusCode GCSFileSystem::downloadModelVersions(const std::string& path,
     const std::vector<model_version_t>& versions) {
     auto sc = createTempPath(local_path);
     if (sc != StatusCode::OK) {
-        SPDLOG_LOGGER_ERROR(gcs_logger, "Failed to create a temporary path {}", Status(sc).string());
+        SPDLOG_LOGGER_ERROR(gcs_logger, "Failed to create a temporary path {}", sc);
         return sc;
     }
 

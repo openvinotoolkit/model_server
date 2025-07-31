@@ -731,10 +731,13 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovmslogging",
     hdrs = ["logging.hpp"],
-    srcs = ["logging.cpp",],
+    srcs = ["logging.cpp","ovms_enum_types.hpp"],
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
+        "libovmsstatus",
+        "ovms_header",
+        "grpc_utils",
     ],
     visibility = ["//visibility:public",],
     additional_copts = COPTS_OV_TRACE,

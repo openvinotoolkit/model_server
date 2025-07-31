@@ -82,7 +82,7 @@ inline static void setFailIfNotFailEarlier(ovms::Status& earlierStatusCode, ovms
     if (!status.ok()) {                                                                                                                    \
         setFailIfNotFailEarlier(firstErrorStatus, status);                                                                                 \
         SPDLOG_LOGGER_WARN(dag_executor_logger, "Executing pipeline: {} node: {} session: {} failed with ret code: {}, error message: {}", \
-            getName(), NODE.getName(), sessionKey, (unsigned int)status.getCode(), status.string());                                       \
+            getName(), NODE.getName(), sessionKey, status.getCode(), status.string());                                                     \
     }
 
 Status Pipeline::execute(ExecutionContext context) {

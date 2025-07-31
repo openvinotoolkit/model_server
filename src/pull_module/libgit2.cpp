@@ -208,7 +208,7 @@ Status HfDownloader::checkIfOverwriteAndRemove(const std::string& path) {
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
                 path,
-                ovms::Status(lfstatus).string());
+                lfstatus);
         } else {
             SPDLOG_DEBUG("Path deleted: {}", path);
         }

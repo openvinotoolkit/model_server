@@ -20,43 +20,13 @@
 #include <unordered_map>
 
 #include "modelversion.hpp"
+#include "ovms_enum_types.hpp"
 
 // note: think about using https://github.com/Neargye/magic_enum when compatible compiler is supported.
 
 namespace ovms {
 
-// those values have to match tensorflow-serving state:
-enum class ModelVersionState : int {
-    START = 10,
-    LOADING = 20,
-    AVAILABLE = 30,
-    UNLOADING = 40,
-    END = 50
-};
-
 const std::string& ModelVersionStateToString(ModelVersionState state);
-
-enum class ModelVersionStatusErrorCode : int {
-    OK = 0,
-    // CANCELLED = 1,
-    UNKNOWN = 2,
-    // INVALID_ARGUMENT = 3,
-    // DEADLINE_EXCEEDED = 4,
-    // NOT_FOUND = 5,
-    // ALREADY_EXISTS = 6,
-    // PERMISSION_DENIED = 7,
-    // UNAUTHENTICATED = 16,
-    // RESOURCE_EXHAUSTED = 8,
-    FAILED_PRECONDITION = 9,
-    // ABORTED = 10,
-    // OUT_OF_RANGE = 11,
-    // UNIMPLEMENTED = 12,
-    // INTERNAL = 13,
-    // UNAVAILABLE = 14,
-    // DATA_LOSS = 15,
-    // DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_
-    //    = 20
-};
 
 const std::string& ModelVersionStatusErrorCodeToString(ModelVersionStatusErrorCode code);
 

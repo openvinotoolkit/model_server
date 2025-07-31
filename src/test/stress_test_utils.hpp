@@ -1408,7 +1408,7 @@ public:
         std::for_each(workerThreads.begin(), workerThreads.end(), [](auto& t) { t->join(); });
 
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
-            SPDLOG_TRACE("Create:[{}]={} -- {}", static_cast<uint32_t>(retCode), (unsigned int)counter, ovms::Status(retCode).string());
+            SPDLOG_TRACE("Create:[{}]={} -- {}", static_cast<uint32_t>(retCode), counter.load(), retCode);
             if (requiredLoadResults.find(retCode) != requiredLoadResults.end()) {
                 EXPECT_GT(counter, 0) << static_cast<uint32_t>(retCode) << ":" << ovms::Status(retCode).string() << " did not occur. This may indicate fail or fail in test setup";
                 continue;
@@ -1770,7 +1770,7 @@ public:
         }
         for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
             if (counter > 0) {
-                SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), (unsigned int)counter);
+                SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter.load());
             }
         }
         std::stringstream ss;
@@ -1948,7 +1948,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), (unsigned int)counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter.load());
                 }
             }
 
@@ -2012,7 +2012,7 @@ public:
             GET_CAPI_STATUS_CODE(status)
             // check - blocking call - expected only on success
             if (status != nullptr) {
-                SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", ovms::Status(sc).string());
+                SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", sc);
             } else {
                 SPDLOG_INFO("OVMS_InferenceAsync GET START");
                 auto callbackReturnValue = unblockSignal.get();
@@ -2036,7 +2036,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), (unsigned int)counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter.load());
                 }
             }
 
@@ -2096,7 +2096,7 @@ public:
             }
             for (auto& [retCode, counter] : createPipelineRetCodesCounters) {
                 if (counter > 0) {
-                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), (unsigned int)counter);
+                    SPDLOG_DEBUG("Create:[{}]={}:{}", static_cast<uint32_t>(retCode), ovms::Status(retCode).string(), counter.load());
                 }
             }
 

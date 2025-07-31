@@ -41,7 +41,7 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
     // write test
     auto it = factories.find(requestInput.getBuffer()->getBufferType());
     if (it == factories.end()) {
-        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", (unsigned int)requestInput.getBuffer()->getBufferType());
+        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
         throw std::runtime_error("Could not find appropriate tensor factory");
     }
     IOVTensorFactory* factory = it->second.get();
