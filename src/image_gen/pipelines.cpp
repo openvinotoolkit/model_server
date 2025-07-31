@@ -59,5 +59,4 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
 
     text2ImagePipeline = std::make_unique<ov::genai::Text2ImagePipeline>(*image2ImagePipeline);
 }
-// TODO: Make other pipelines out of the basic one, with shared models, GenAI API supports that
 }  // namespace ovms

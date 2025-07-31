@@ -680,6 +680,24 @@ TEST(Image2ImageTest, getImageEditRequestOptionsAllHandledGenAIFields) {
     EXPECT_EQ(options.at("num_inference_steps").as<size_t>(), 7);
 }
 
+TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
+    // OpenAI fields background, quality, user
+    MockedMultiPartParser multipartParser;
+    ON_CALL(multipartParser, getFieldByName("prompt")).WillByDefault(Return("test prompt"));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "background"}));
+    auto requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "quality"}));
+    requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
+
+    ON_CALL(multipartParser, getAllFieldNames()).WillByDefault(Return(std::set<std::string>{"prompt", "user"}));
+    requestOptions = ovms::getImageEditRequestOptions(multipartParser, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
+}
+
 using mediapipe::CalculatorContract;
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
