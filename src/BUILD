@@ -134,7 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
-        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
+        "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
     ],
 )
 
@@ -2674,7 +2674,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:io_processing",
+                "//src/llm:output_parsers",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
