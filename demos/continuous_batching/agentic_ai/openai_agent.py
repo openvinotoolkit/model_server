@@ -120,4 +120,4 @@ if __name__ == "__main__":
         model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
     )
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER))
+    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))

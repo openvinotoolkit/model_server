@@ -13,20 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
-#include <string>
+#pragma once
+#include "../base_generation_config_builder.hpp"
 
-#include "graph_export_types.hpp"
 namespace ovms {
 
-std::string enumToString(GraphExportType type) {
-    auto it = typeToString.find(type);
-    return (it != typeToString.end()) ? it->second : "unknown_graph";
-}
+/*
+ * Hermes3GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Hermes3 and Qwen3 models.
+ * It overrides the parseConfigFromRequest method to set tool guided generation config.
+ */
+class Hermes3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
+public:
+    Hermes3GenerationConfigBuilder() = delete;
+    explicit Hermes3GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
+        BaseGenerationConfigBuilder(baseConfig) {}
 
-GraphExportType stringToEnum(std::string inString) {
-    auto it = stringToType.find(inString);
-    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
-}
+    void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
+};
 }  // namespace ovms

@@ -38,7 +38,6 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../schema.hpp"
-#include "graph_export_types.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)
@@ -95,6 +94,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     if (graphSettings.responseParser.has_value()) {
         oss << R"(
             response_parser: ")" << graphSettings.responseParser.value() << R"(",)";
+    }
+    if (graphSettings.enableToolGuidedGeneration == "true") {
+        oss << R"(
+            enable_tool_guided_generation: true,)";
     }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(

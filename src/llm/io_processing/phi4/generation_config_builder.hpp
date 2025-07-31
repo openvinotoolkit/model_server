@@ -13,20 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
-#include <map>
-#include <string>
+#pragma once
+#include "../base_generation_config_builder.hpp"
 
-#include "config_export_types.hpp"
 namespace ovms {
 
-std::string enumToString(ConfigExportType type) {
-    auto it = configExportTypeToString.find(type);
-    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
-}
+/*
+ * Phi4GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Phi-4 model.
+ * It overrides the parseConfigFromRequest method to set tool guided generation config.
+ */
+class Phi4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
+public:
+    Phi4GenerationConfigBuilder() = delete;
+    explicit Phi4GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
+        BaseGenerationConfigBuilder(baseConfig) {}
 
-ConfigExportType stringToConfigExportEnum(std::string inString) {
-    auto it = stringToConfigExportType.find(inString);
-    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
-}
+    void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
+};
 }  // namespace ovms

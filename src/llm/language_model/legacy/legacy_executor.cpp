@@ -34,7 +34,7 @@ void LegacyExecutor::processRequest() {
     OVMS_PROFILE_FUNCTION();
     SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
     try {
-        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->apiHandler->createGenerationConfig(requests.front()->baseGenerationConfig), requests.front()->textStreamer);
+        requests.front()->results = pipe->generate(requests.front()->inputIds, requests.front()->generationConfigBuilder->getConfig(), requests.front()->textStreamer);
     } catch (std::exception& e) {
         requests.front()->success = false;
         SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline generation failed: {}.", e.what());

@@ -52,6 +52,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes3","qwen3"], help='Set the type of model chat template and output parser', dest='tools_model_type')
+parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tools_model_type', dest='enable_tool_guided_generation')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
@@ -224,6 +225,7 @@ node: {
           draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
           {%- if tools_model_type %}
           response_parser: "{{tools_model_type}}",{% endif %}
+          enable_tool_guided_generation: {% if not enable_tool_guided_generation %}false{% else %} true{% endif%},
       }
   }
   input_stream_handler {

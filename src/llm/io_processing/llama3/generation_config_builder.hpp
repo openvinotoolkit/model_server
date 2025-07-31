@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -15,8 +14,20 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <string>
+#include "../base_generation_config_builder.hpp"
 
 namespace ovms {
-std::string exec_cmd(const std::string& command, int& returnCode);
+
+/*
+ * Llama3GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Llama3 models.
+ * It overrides the parseConfigFromRequest method to set tool guided generation config.
+ */
+class Llama3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
+public:
+    Llama3GenerationConfigBuilder() = delete;
+    explicit Llama3GenerationConfigBuilder(ov::genai::GenerationConfig& baseConfig) :
+        BaseGenerationConfigBuilder(baseConfig) {}
+
+    void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) override;
+};
 }  // namespace ovms

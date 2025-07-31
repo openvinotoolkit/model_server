@@ -13,35 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <iostream>
 #include <map>
 #include <string>
-#pragma once
+
+#include "server_settings.hpp"
+
 namespace ovms {
 
-enum GraphExportType {
-    TEXT_GENERATION_GRAPH,
-    RERANK_GRAPH,
-    EMBEDDINGS_GRAPH,
-    IMAGE_GENERATION_GRAPH,
-    UNKNOWN_GRAPH
-};
+std::string enumToString(ConfigExportType type) {
+    auto it = configExportTypeToString.find(type);
+    return (it != configExportTypeToString.end()) ? it->second : "UNKNOWN_MODEL";
+}
 
-const std::map<GraphExportType, std::string> typeToString = {
-    {TEXT_GENERATION_GRAPH, "text_generation"},
-    {RERANK_GRAPH, "rerank"},
-    {EMBEDDINGS_GRAPH, "embeddings"},
-    {IMAGE_GENERATION_GRAPH, "image_generation"},
-    {UNKNOWN_GRAPH, "unknown_graph"}};
+ConfigExportType stringToConfigExportEnum(const std::string& inString) {
+    auto it = stringToConfigExportType.find(inString);
+    return (it != stringToConfigExportType.end()) ? it->second : UNKNOWN_MODEL;
+}
 
-const std::map<std::string, GraphExportType> stringToType = {
-    {"text_generation", TEXT_GENERATION_GRAPH},
-    {"rerank", RERANK_GRAPH},
-    {"embeddings", EMBEDDINGS_GRAPH},
-    {"image_generation", IMAGE_GENERATION_GRAPH},
-    {"unknown_graph", UNKNOWN_GRAPH}};
+std::string enumToString(GraphExportType type) {
+    auto it = typeToString.find(type);
+    return (it != typeToString.end()) ? it->second : "unknown_graph";
+}
 
-std::string enumToString(GraphExportType type);
-GraphExportType stringToEnum(std::string inString);
+GraphExportType stringToEnum(const std::string& inString) {
+    auto it = stringToType.find(inString);
+    return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
+}
 
 }  // namespace ovms

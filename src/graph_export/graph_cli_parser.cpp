@@ -71,7 +71,11 @@ void GraphCLIParser::createOptions() {
         ("response_parser",
             "Response parser",
             cxxopts::value<std::string>(),
-            "RESPONSE_PARSER");
+            "RESPONSE_PARSER")
+        ("enable_tool_guided_generation",
+            "Enables enforcing tool schema during generation. Requires setting response parser. Default: false.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "ENABLE_TOOL_GUIDED_GENERATION");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -138,6 +142,7 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("response_parser")) {
             graphSettings.responseParser = result->operator[]("response_parser").as<std::string>();
         }
+        graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {
