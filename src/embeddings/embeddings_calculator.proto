@@ -26,5 +26,4 @@ message EmbeddingsCalculatorOptions {
     optional EmbeddingsCalculatorOptions ext = 1134737;
     }
     optional bool normalize_embeddings = 1 [default = true];
-    optional bool mean_pooling = 2 [default = false];
 }

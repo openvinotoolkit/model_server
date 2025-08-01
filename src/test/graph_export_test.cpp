@@ -232,7 +232,7 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "/model1/path",
             normalize_embeddings: false,
-            mean_pooling: true,
+            pooling: LAST_TOKEN,
             target_device: "GPU",
             plugin_config: '{ "NUM_STREAMS": "2"}',
         }
@@ -253,7 +253,7 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "./",
             normalize_embeddings: true,
-            mean_pooling: false,
+            pooling: CLS,
             target_device: "CPU",
             plugin_config: '{ "NUM_STREAMS": "1"}',
         }
@@ -390,7 +390,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.modelPath = "/model1/path";
     embeddingsGraphSettings.numStreams = 2;
     embeddingsGraphSettings.normalize = "false";
-    embeddingsGraphSettings.meanPooling = "true";
+    embeddingsGraphSettings.pooling = "LAST_TOKEN";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -423,7 +423,7 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     embeddingsGraphSettings.modelName = "myModel\"";
     embeddingsGraphSettings.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
-    embeddingsGraphSettings.meanPooling = "false";
+    embeddingsGraphSettings.pooling = "CLS";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);

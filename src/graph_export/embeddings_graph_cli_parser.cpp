@@ -48,10 +48,10 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "Normalize the embeddings.",
             cxxopts::value<std::string>()->default_value("true"),
             "NORMALIZE")
-        ("mean_pooling",
+        ("pooling",
             "Mean pooling option.",
-            cxxopts::value<std::string>()->default_value("false"),
-            "MEAN_POOLING");
+            cxxopts::value<std::string>()->default_value("CLS"),
+            "POOLING");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -91,7 +91,10 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
     } else {
         embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-        embeddingsGraphSettings.meanPooling = result->operator[]("mean_pooling").as<std::string>();
+        embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+    }
+    if(!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST_TOKEN")){
+        throw std::invalid_argument("For now only CLS and LAST_TOKEN pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }

@@ -40,13 +40,12 @@ namespace ovms {
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
-    std::filesystem::path parsedModelsPath;
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
     } else {
         parsedModelsPath = fsModelsPath.string();
     }
-    std::filesystem::path configPath = (std::filesystem::path(graphPath) / fsModelsPath / "config.json");
+    std::filesystem::path configPath = (parsedModelsPath / "config.json");
     if (std::filesystem::exists(configPath)) {
         std::ifstream ifs(configPath.string());
         if (ifs.is_open()) {
