@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
+            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
