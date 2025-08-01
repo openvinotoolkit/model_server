@@ -48,6 +48,18 @@ index 60466d173..a35ad5f98 100644
  /**
   * This is priority that the internal ident filter will be registered with
   */
+diff --git a/src/cli/CMakeLists.txt b/src/cli/CMakeLists.txt
+index d121c588a..b54a01a4b 100644
+--- a/src/cli/CMakeLists.txt
++++ b/src/cli/CMakeLists.txt
+@@ -16,6 +16,7 @@ else()
+ endif()
+ 
+ file(GLOB CLI_SRC_C *.c *.h)
++list(FILTER CLI_SRC_C EXCLUDE REGEX "progress*")
+ list(SORT CLI_SRC_C)
+ 
+ #
 diff --git a/src/cli/cmd_clone.c b/src/cli/cmd_clone.c
 index c18cb28d4..286fa7153 100644
 --- a/src/cli/cmd_clone.c
@@ -275,10 +287,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..4d9555fc3
+index 000000000..cd3aa39fd
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,479 @@
+@@ -0,0 +1,497 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -298,7 +310,7 @@ index 000000000..4d9555fc3
 +#include "array.h"
 +#include "common.h"
 +
-+#include "curl/curl.h"
++#include <curl/curl.h>
 +#include "git2/sys/filter.h"
 +#include "filter.h"
 +#include "str.h"
@@ -583,7 +595,25 @@ index 000000000..4d9555fc3
 +	       filename);
 +}
 +
-+static void lfs_download(git_filter *self, void *payload)
++/**
++ * lfs_download - Downloads a file using the LFS (Large File Storage) mechanism.
++ *
++ * This function performs the following steps:
++ * 1. Validates the input payload and initializes necessary resources.
++ * 2. Constructs a temporary output file path for the download.
++ * 3. Initializes CURL handles for HTTP requests.
++ * 4. Performs the download and writes the data to the temporary file.
++ * 5. Cleans up resources and handles errors appropriately.
++ *
++ * Error Handling:
++ * - If the payload is NULL, the function logs an error and returns immediately.
++ * - CURL initialization and operations are checked for errors, and appropriate cleanup is performed.
++ * - File operations are validated to ensure successful creation and writing.
++ *
++ * @param self: Unused parameter, reserved for future use.
++ * @param payload: Pointer to the lfs_attrs structure containing download parameters.
++ */
++        static void lfs_download(git_filter *self, void *payload)
 +{
 +	GIT_UNUSED(self);
 +	if (!payload) {
