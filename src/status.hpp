@@ -21,6 +21,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "logging.hpp"
+
 namespace ovms {
 
 enum class StatusCode {
@@ -443,3 +445,12 @@ public:
     }
 };
 }  // namespace ovms
+
+namespace fmt {
+template <>
+struct formatter<ovms::StatusCode> : formatter<std::string> {
+    auto format(ovms::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", ovms::Status(status).string());
+    }
+};
+}  // namespace fmt

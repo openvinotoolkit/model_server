@@ -19,14 +19,9 @@
 #include <string>
 
 #include <fmt/ranges.h>
-#include <grpcpp/support/status.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
-
-#include "src/ovms.h"
-#include "ovms_enum_types.hpp"
-#include "status.hpp"
 
 namespace ovms {
 
@@ -54,48 +49,3 @@ extern std::shared_ptr<spdlog::logger> ov_logger;
 void configure_logger(const std::string& log_level, const std::string& log_path);
 
 }  // namespace ovms
-
-namespace fmt {
-template <>
-struct formatter<ovms::StatusCode> : formatter<std::string> {
-    auto format(ovms::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", ovms::Status(status).string());
-    }
-};
-
-template <>
-struct formatter<ovms::ModelVersionState> : formatter<std::string> {
-    auto format(ovms::ModelVersionState state, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)state);
-    }
-};
-
-template <>
-struct formatter<ovms::ModelVersionStatusErrorCode> : formatter<std::string> {
-    auto format(ovms::ModelVersionStatusErrorCode code, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)code);
-    }
-};
-
-template <>
-struct formatter<OVMS_BufferType> : formatter<std::string> {
-    auto format(OVMS_BufferType type, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)type);
-    }
-};
-
-template <>
-struct formatter<::grpc::StatusCode> : formatter<std::string> {
-    auto format(::grpc::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)status);
-    }
-};
-
-template <>
-struct formatter<ovms::NodeKind> : formatter<std::string> {
-    auto format(ovms::NodeKind status, format_context& ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}", (unsigned int)status);
-    }
-};
-
-}  // namespace fmt

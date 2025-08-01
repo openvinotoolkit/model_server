@@ -25,10 +25,10 @@
 #include <vector>
 
 #include "../modelversion.hpp"
-#include "../ovms_enum_types.hpp"
 #include "../tensorinfo.hpp"
 #include "aliases.hpp"
 #include "node_library.hpp"
+#include "../logging.hpp"
 
 namespace ovms {
 
@@ -39,6 +39,13 @@ using parameters_t = std::unordered_map<std::string, std::string>;
 
 const std::string DL_NODE_CONFIG_TYPE = "DL model";
 const std::string CUSTOM_NODE_CONFIG_TYPE = "custom";
+
+enum class NodeKind {
+    ENTRY,
+    DL,
+    CUSTOM,
+    EXIT
+};
 
 Status toNodeKind(const std::string& str, NodeKind& nodeKind);
 
@@ -83,3 +90,13 @@ struct NodeInfo {
         parameters(parameters) {}
 };
 }  // namespace ovms
+
+namespace fmt {
+template <>
+struct formatter<ovms::NodeKind> : formatter<std::string> {
+    auto format(ovms::NodeKind status, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", (unsigned int)status);
+    }
+};
+
+}  // namespace fmt

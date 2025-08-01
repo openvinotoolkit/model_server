@@ -2012,7 +2012,7 @@ public:
             GET_CAPI_STATUS_CODE(status)
             // check - blocking call - expected only on success
             if (status != nullptr) {
-                SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", sc);
+                SPDLOG_INFO("OVMS_InferenceAsync failed with status: {}. Not waiting for callback execution.", ovms::Status(sc).string());
             } else {
                 SPDLOG_INFO("OVMS_InferenceAsync GET START");
                 auto callbackReturnValue = unblockSignal.get();
