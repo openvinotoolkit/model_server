@@ -67,6 +67,5 @@ protected:
     bool CheckIfProxySet();
     Status checkIfOverwriteAndRemove(const std::string& path);
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
-    Status checkRequiredToolsArePresent();
 };
 }  // namespace ovms

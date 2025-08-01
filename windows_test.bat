@@ -48,9 +48,8 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2019_PRO% goto :msvc_pro
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :mscv_error
-
-:mscv_error
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+:msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
 :msvc_pro

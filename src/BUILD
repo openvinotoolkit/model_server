@@ -731,7 +731,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovmslogging",
     hdrs = ["logging.hpp"],
-    srcs = ["logging.cpp",],
+    srcs = ["logging.cpp"],
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
@@ -1154,7 +1154,7 @@ ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
-    deps = [],
+    deps = ["libovmslogging"],
     visibility = ["//visibility:public"],
 )
 
@@ -1717,6 +1717,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "node_library",
         "libovms_dags_aliases",
+        "libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
@@ -1736,6 +1737,7 @@ ovms_cc_library(
     deps = [
         "libovmsstatus",
         "@com_github_grpc_grpc//:grpc++",
+        "libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2319,7 +2321,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [],
+    deps = ["libovmslogging"],
     visibility = ["//visibility:public"],
 )
 

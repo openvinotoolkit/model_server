@@ -101,7 +101,7 @@ Status CustomNodeSession::createTensor(const struct CustomNodeTensor* tensor, ov
         SPDLOG_LOGGER_ERROR(dag_executor_logger, "Node {}; session: {}; Unspecified output precision:{} from custom node tensor: {}",
             this->getName(),
             this->getSessionKey(),
-            precision,
+            (unsigned int)precision,
             tensor->name);
         return StatusCode::NODE_LIBRARY_INVALID_PRECISION;
     }
