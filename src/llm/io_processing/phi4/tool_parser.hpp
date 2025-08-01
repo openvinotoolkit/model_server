@@ -30,19 +30,20 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Llama3OutputParser : public BaseOutputParser {
-protected:
-    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    int64_t botTokenId = 128010;
-    // ";" is used as a separator between tool calls in the response
-    std::string separator = ";";
-
+class Phi4ToolParser : public BaseOutputParser {
 public:
-    Llama3OutputParser() = delete;
-    explicit Llama3OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Phi4ToolParser() = delete;
+    explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    std::string getParsingStartTag() const override {
+        return "functools";
+    }
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    std::string getParsingEndTag() const override {
+        return "";
+    }
 };
 }  // namespace ovms

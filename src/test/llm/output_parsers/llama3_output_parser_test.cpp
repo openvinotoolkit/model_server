@@ -41,7 +41,8 @@ protected:
 
     void SetUp() override {
         tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
-        outputParser = std::make_unique<OutputParser>(*tokenizer, "llama3");
+        // For Llama3 model there is only tool parser available
+        outputParser = std::make_unique<OutputParser>(*tokenizer, "llama3", "");
     }
 };
 
@@ -53,7 +54,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -71,7 +72,6 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
@@ -104,7 +104,6 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 }
 
 TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
@@ -122,7 +121,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces

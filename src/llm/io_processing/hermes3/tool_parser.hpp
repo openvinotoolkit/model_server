@@ -30,13 +30,33 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Phi4OutputParser : public BaseOutputParser {
+class Hermes3ToolParser : public BaseOutputParser {
+protected:
+    const std::string toolCallStartTag = "<tool_call>";
+    const std::string toolCallEndTag = "</tool_call>";
+
+    // Streaming required members
+    rapidjson::Document lastJson;
+    PartialJsonBuilder jsonBuilder;
+    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    // Storing last two chunks of arguments to return delta with delay.
+    // We do this to properly close arguments when tool call end tag is received.
+    // With support for more models this could be moved to the base class.
+    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+
 public:
-    Phi4OutputParser() = delete;
-    explicit Phi4OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Hermes3ToolParser() = delete;
+    explicit Hermes3ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    std::string getParsingStartTag() const override {
+        return toolCallStartTag;
+    }
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    std::string getParsingEndTag() const override {
+        return "";
+    }
 };
 }  // namespace ovms

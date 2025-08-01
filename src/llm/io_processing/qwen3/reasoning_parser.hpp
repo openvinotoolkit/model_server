@@ -17,7 +17,6 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
-#include <optional>
 #include <vector>
 
 #pragma warning(push)
@@ -30,20 +29,20 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Hermes3OutputParser : public BaseOutputParser {
-protected:
-    // Tool calls are wrapped in <tool_call> and </tool_call> tags
-    std::string toolCallStartTag = "<tool_call>";
-    int64_t toolCallStartTokenId = 128002;  // This is the token ID for <tool_call> in Hermes3 tokenizer
-    std::string toolCallEndTag = "</tool_call>";
-    int64_t toolCallEndTokenId = 128013;  // This is the token ID for </tool_call> in Hermes3 tokenizer
 
+class Qwen3ReasoningParser : public BaseOutputParser {
 public:
-    Hermes3OutputParser() = delete;
-    explicit Hermes3OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Qwen3ReasoningParser() = delete;
+    explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    std::string getParsingStartTag() const override {
+        return "<think>";
+    }
+    std::string getParsingEndTag() const override {
+        return "</think>";
+    }
 };
 }  // namespace ovms

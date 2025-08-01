@@ -27,25 +27,23 @@
 #pragma warning(pop)
 
 #include "../../../logging.hpp"
-#include "output_parser.hpp"
+#include "tool_parser.hpp"
 #include "../utils.hpp"
 
 namespace ovms {
 
-ParsedOutput Phi4OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedOutput parsedOutput;
+void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
     // Phi4 with vLLM template produces tool calls in the format:
     // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-    std::string decoded = tokenizer.decode(generatedTokens);
-    std::string toolsStartString = "functools";
-    size_t toolsStartPos = decoded.find(toolsStartString);
+    const std::string toolsStartString = "functools";
+    size_t toolsStartPos = parsedOutput.content.find(toolsStartString);
     if (toolsStartPos != std::string::npos) {
         // Extract the content before the tools part
-        parsedOutput.content = decoded.substr(0, toolsStartPos);
+        // parsedOutput.content = decoded.substr(0, toolsStartPos);
         // Extract the tools part, assuming it's all the remaining content after "functools"
-        std::string toolsString = decoded.substr(toolsStartPos + toolsStartString.length());
+        std::string toolsString = parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
         rapidjson::Document toolsDoc;
         toolsDoc.Parse(toolsString.c_str());
         if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
@@ -70,17 +68,15 @@ ParsedOutput Phi4OutputParser::parse(const std::vector<int64_t>& generatedTokens
                 }
                 parsedOutput.toolCalls.push_back(toolCall);
             }
+            // Remove the tools part from the content
+            parsedOutput.content.erase(toolsStartPos);
         } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
-            parsedOutput.content = decoded;  // If parsing fails, return the whole decoded content
         }
-    } else {
-        parsedOutput.content = decoded;
     }
-    return parsedOutput;
 }
 
-std::optional<rapidjson::Document> Phi4OutputParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk) {
     // Not implemented
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Phi4OutputParser::parseChunk is not implemented");
     return std::nullopt;

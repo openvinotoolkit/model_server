@@ -27,12 +27,14 @@
 #pragma warning(pop)
 
 #include "../../../logging.hpp"
-#include "output_parser.hpp"
+#include "tool_parser.hpp"
 #include "../utils.hpp"
 
 namespace ovms {
-ParsedOutput Llama3OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
-    ParsedOutput parsedOutput;
+void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+    // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
+    // and just extract substrings from the content and modify content in-place
+
     auto toolCallsStartPosition = generatedTokens.end();
 
     // Find botTokenId in generated_ids
@@ -46,12 +48,10 @@ ParsedOutput Llama3OutputParser::parse(const std::vector<int64_t>& generatedToke
         toolCallsStartPosition = botTokenIt + 1;
     } else {
         // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
-        std::string modelOutput = tokenizer.decode(generatedTokens);
-        if (!modelOutput.empty() && modelOutput[0] == '{') {
+        if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
             // If model output starts with "{", treat it as a tool call
             toolCallsStartPosition = generatedTokens.begin();
-        } else {
-            parsedOutput.content = std::move(modelOutput);
+            parsedOutput.content.clear();
         }
     }
 
@@ -98,12 +98,11 @@ ParsedOutput Llama3OutputParser::parse(const std::vector<int64_t>& generatedToke
             parsedOutput.toolCalls.push_back(toolCall);
         }
     }
-    return parsedOutput;
 }
 
-std::optional<rapidjson::Document> Llama3OutputParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk) {
     // Not implemented
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3OutputParser::parseChunk is not implemented");
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3ToolParser::parseChunk is not implemented");
     return std::nullopt;
 }
 

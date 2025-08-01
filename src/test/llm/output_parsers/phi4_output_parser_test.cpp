@@ -38,7 +38,8 @@ protected:
 
     void SetUp() override {
         tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
-        outputParser = std::make_unique<OutputParser>(*tokenizer, "phi4");
+        // For Phi4 model there is only tool parser available
+        outputParser = std::make_unique<OutputParser>(*tokenizer, "phi4", "");
     }
 };
 
@@ -49,7 +50,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -66,7 +67,6 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
@@ -99,7 +99,6 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 }
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
@@ -109,7 +108,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -124,7 +123,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithMultipleFunctoolsReturnsCont
     // Content after 'functools' cannot be parsed as array of JSON objects, so it is treated as content
     EXPECT_EQ(parsedOutput.content, "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);  // No valid tool calls parsed
 }
 
@@ -135,7 +134,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithArrayArguments) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "extractLastTransactionId");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
