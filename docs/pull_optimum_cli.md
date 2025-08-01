@@ -62,7 +62,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 
 Example for pulling `Qwen/Qwen3-8B`:
 
-```text
+```bash
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --target_device CPU --task text_generation 
 ```
 ::::{tab-set}
@@ -79,7 +79,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```text
+```bash
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --task text_generation 
 ```
 :::
