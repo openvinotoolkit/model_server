@@ -27,36 +27,9 @@
 namespace ovms {
 
 struct EmbeddingsServable : SidepacketServable {
-    PoolingMode poolingMode = PoolingMode::CLS;
-
 public:
     EmbeddingsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
-        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {
-        std::filesystem::path poolingConfigPath = (parsedModelsPath / "1_Pooling/config.json");
-        if (std::filesystem::exists(poolingConfigPath)) {
-            std::ifstream ifs(poolingConfigPath.string());
-            if (ifs.is_open()) {
-                rapidjson::Document poolingConfig;
-                rapidjson::IStreamWrapper isw(ifs);
-                rapidjson::ParseResult parseResult = poolingConfig.ParseStream(isw);
-                if (parseResult.Code()) {
-                    SPDLOG_ERROR("Parsing 1_Pooling/config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
-                } else {
-                    if (poolingConfig.HasMember("pooling_mode_lasttoken") && poolingConfig["pooling_mode_lasttoken"].IsBool() && poolingConfig["pooling_mode_lasttoken"].IsTrue()) {
-                        SPDLOG_DEBUG("Embdeddings model pooling mode: LAST_TOKEN");
-                        poolingMode = PoolingMode::LAST_TOKEN;
-                    } else {
-                        SPDLOG_DEBUG("Default pooling mode will be set: CLS");
-                    }
-                }
-            }
-        } else {
-            SPDLOG_DEBUG("Pooling mode config file {} not provided. Default pooling mode will be set: CLS", poolingConfigPath.c_str());
-        }
-    }
-    PoolingMode getPoolingMode() {
-        return poolingMode;
-    }
+        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {}
 };
 
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;

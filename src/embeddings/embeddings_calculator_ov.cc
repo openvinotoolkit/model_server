@@ -241,7 +241,13 @@ public:
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), embeddings_session->getPoolingMode(), tokens.attention_mask);
+        PoolingMode mode;
+        if(cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST_TOKEN){
+            mode = PoolingMode::LAST_TOKEN;
+        }else {
+            mode = PoolingMode::CLS;
+        }
+        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), mode, tokens.attention_mask);
         if (!status.ok()) {
             return status;
         }

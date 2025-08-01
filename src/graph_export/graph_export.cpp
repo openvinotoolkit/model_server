@@ -214,8 +214,8 @@ node {
             << graphOkPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
-            mean_pooling: )"
-            << graphSettings.meanPooling << R"(,
+            pooling: )"
+            << graphSettings.pooling << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",
             plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
         }
