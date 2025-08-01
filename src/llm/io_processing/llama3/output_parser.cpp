@@ -17,6 +17,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
+#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -32,60 +33,70 @@
 namespace ovms {
 ParsedOutput Llama3OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
     ParsedOutput parsedOutput;
+    auto toolCallsStartPosition = generatedTokens.end();
+
     // Find botTokenId in generated_ids
     auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
+
     if (botTokenIt != generatedTokens.end()) {
         // Decode the content before botTokenId
         std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
         parsedOutput.content = tokenizer.decode(contentTokens);
-        // Tokens after botTokenId
-        auto afterBotTokenIt = botTokenIt + 1;
-        if (afterBotTokenIt != generatedTokens.end()) {
-            std::vector<int64_t> toolCallsTokens(afterBotTokenIt, generatedTokens.end());
-            std::string toolsResponse = tokenizer.decode(toolCallsTokens);
-
-            std::vector<std::string> tools;
-            size_t start = 0;
-            size_t end = 0;
-            while ((end = toolsResponse.find(separator, start)) != std::string::npos) {
-                std::string tool = toolsResponse.substr(start, end - start);
-                if (!tool.empty()) {
-                    tools.push_back(tool);
-                }
-                start = end + separator.length();
-            }
-            std::string lastTool = toolsResponse.substr(start);
-            if (!lastTool.empty()) {
-                tools.push_back(lastTool);
-            }
-
-            for (const std::string& tool : tools) {
-                ToolCall toolCall;
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                rapidjson::Document toolDoc;
-                toolDoc.Parse(tool.c_str());
-                if (toolDoc.HasParseError()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
-                    continue;
-                }
-                if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
-                    toolCall.name = toolDoc["name"].GetString();
-                }
-                if (toolDoc.HasMember("parameters") && toolDoc["parameters"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolDoc["parameters"].Accept(toolWriter);
-                    toolCall.arguments = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                    continue;
-                }
-                parsedOutput.toolCalls.push_back(toolCall);
-            }
-        }
+        // Tokens after botTokenId will be treated as tool calls
+        toolCallsStartPosition = botTokenIt + 1;
     } else {
-        // If botTokenId is not found, decode the entire output as content
-        parsedOutput.content = tokenizer.decode(generatedTokens);
+        // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
+        std::string modelOutput = tokenizer.decode(generatedTokens);
+        if (!modelOutput.empty() && modelOutput[0] == '{') {
+            // If model output starts with "{", treat it as a tool call
+            toolCallsStartPosition = generatedTokens.begin();
+        } else {
+            parsedOutput.content = std::move(modelOutput);
+        }
+    }
+
+    if (toolCallsStartPosition != generatedTokens.end()) {
+        std::vector<int64_t> toolCallsTokens(toolCallsStartPosition, generatedTokens.end());
+        std::string toolsResponse = tokenizer.decode(toolCallsTokens);
+
+        std::vector<std::string> tools;
+        size_t start = 0;
+        size_t end = 0;
+        while ((end = toolsResponse.find(separator, start)) != std::string::npos) {
+            std::string tool = toolsResponse.substr(start, end - start);
+            if (!tool.empty()) {
+                tools.push_back(tool);
+            }
+            start = end + separator.length();
+        }
+        std::string lastTool = toolsResponse.substr(start);
+        if (!lastTool.empty()) {
+            tools.push_back(lastTool);
+        }
+
+        for (const std::string& tool : tools) {
+            ToolCall toolCall;
+            rapidjson::Document toolDoc;
+            toolDoc.Parse(tool.c_str());
+            if (toolDoc.HasParseError()) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse tool call as JSON");
+                continue;
+            }
+            if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
+                toolCall.name = toolDoc["name"].GetString();
+            }
+            if (toolDoc.HasMember("parameters") && toolDoc["parameters"].IsObject()) {
+                rapidjson::StringBuffer sb;
+                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                toolDoc["parameters"].Accept(toolWriter);
+                toolCall.arguments = sb.GetString();
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
+                continue;
+            }
+            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
+            parsedOutput.toolCalls.push_back(toolCall);
+        }
     }
     return parsedOutput;
 }

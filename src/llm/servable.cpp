@@ -78,6 +78,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
+    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->responseParserName, getProperties()->enableToolGuidedGeneration);
+    executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
     return absl::OkStatus();
 }
 

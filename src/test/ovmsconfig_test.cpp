@@ -914,9 +914,10 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"/draft/model/source",
         (char*)"--response_parser",
         (char*)"parserName",
-    };
+        (char*)"--enable_tool_guided_generation",
+        (char*)"true"};
 
-    int arg_count = 26;
+    int arg_count = 28;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -936,6 +937,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
     ASSERT_EQ(graphSettings.responseParser.value(), "parserName");
+    ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {

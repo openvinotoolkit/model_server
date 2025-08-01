@@ -144,7 +144,7 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250718/openvino_genai_windows_2025.3.0.0.dev20250718_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250729/openvino_genai_windows_2025.3.0.0.dev20250729_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)

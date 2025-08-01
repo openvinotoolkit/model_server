@@ -125,6 +125,7 @@ const std::string expectedGraphContentsWithResponseParser = R"(
             enable_prefix_caching: true,
             cache_size: 10,
             response_parser: "RESPONSE_PARSER",
+            enable_tool_guided_generation: true,
         }
     }
     input_stream_handler {
@@ -451,10 +452,11 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ASSERT_EQ(expectedFullPluginGraphContents, graphContents) << graphContents;
 }
 
-TEST_F(GraphCreationTest, positiveWithResponseParser) {
+TEST_F(GraphCreationTest, positiveWithResponseParserAndToolGuidedGeneration) {
     ovms::HFSettingsImpl hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings;
     graphSettings.responseParser = "RESPONSE_PARSER";
+    graphSettings.enableToolGuidedGeneration = "true";
 
     hfSettings.graphSettings = std::move(graphSettings);
 

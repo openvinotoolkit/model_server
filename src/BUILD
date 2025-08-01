@@ -2676,7 +2676,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:io_processing",
+                "//src/llm:output_parsers",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
