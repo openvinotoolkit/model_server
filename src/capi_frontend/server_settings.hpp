@@ -103,7 +103,8 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
-    std::optional<std::string> responseParser;
+    std::optional<std::string> reasoningParser;
+    std::optional<std::string> toolParser;
     std::string enableToolGuidedGeneration = "false";
 };
 
