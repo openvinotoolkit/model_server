@@ -38,7 +38,8 @@ protected:
 
     void SetUp() override {
         tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
-        outputParser = std::make_unique<OutputParser>(*tokenizer, "qwen3");
+        // For Qwen3 model we use hermes3 tool parser (due to the same format of generated tool calls) and qwen3 reasoning parser
+        outputParser = std::make_unique<OutputParser>(*tokenizer, "hermes3", "qwen3");
     }
 };
 
@@ -49,7 +50,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -65,7 +66,6 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallAndThinking) 
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool call");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool call"
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -82,7 +82,6 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
@@ -117,7 +116,6 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsAndThinking) 
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool calls");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 5);  // Number of tokens in "Thinking about the tool calls"
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
@@ -150,7 +148,6 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
 }
 
 TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
@@ -161,7 +158,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
-    EXPECT_EQ(parsedOutput.reasoningTokenCount, 0);
+
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
@@ -174,9 +171,9 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Thinking phase
         {"<think>", std::nullopt},
-        {"Now ", "{\"delta\":{\"content\":\"Now \"}}"},
-        {"we are ", "{\"delta\":{\"content\":\"we are \"}}"},
-        {"thinking ", "{\"delta\":{\"content\":\"thinking \"}}"},
+        {"Now ", "{\"delta\":{\"reasoning_content\":\"Now \"}}"},
+        {"we are ", "{\"delta\":{\"reasoning_content\":\"we are \"}}"},
+        {"thinking ", "{\"delta\":{\"reasoning_content\":\"thinking \"}}"},
         {"</think>", std::nullopt},
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
@@ -285,37 +282,37 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     }
 }
 
-TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoning) {
+TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoningStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Thinking phase
         {"<think>", std::nullopt},
-        {"Now ", "{\"delta\":{\"content\":\"Now \"}}"},
-        {"we are ", "{\"delta\":{\"content\":\"we are \"}}"},
-        {"thinking ", "{\"delta\":{\"content\":\"thinking \"}}"},
+        {"Now ", "{\"delta\":{\"reasoning_content\":\"Now \"}}"},
+        {"we are ", "{\"delta\":{\"reasoning_content\":\"we are \"}}"},
+        {"thinking ", "{\"delta\":{\"reasoning_content\":\"thinking \"}}"},
         // When tool call starts in a thinking phase we treat it as regular content
-        {"<tool_call>\n", "{\"delta\":{\"content\":\"<tool_call>\\n\"}}"},
-        {"{\"", "{\"delta\":{\"content\":\"{\\\"\"}}"},
-        {"name", "{\"delta\":{\"content\":\"name\"}}"},
-        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
-        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
-        {"super", "{\"delta\":{\"content\":\"super\"}}"},
-        {"_tool", "{\"delta\":{\"content\":\"_tool\"}}"},
-        {"_number", "{\"delta\":{\"content\":\"_number\"}}"},
-        {"_two", "{\"delta\":{\"content\":\"_two\"}}"},
-        {"\",", "{\"delta\":{\"content\":\"\\\",\"}}"},
-        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
-        {"arguments", "{\"delta\":{\"content\":\"arguments\"}}"},
-        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
-        {" {", "{\"delta\":{\"content\":\" {\"}}"},
-        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
-        {"arg1", "{\"delta\":{\"content\":\"arg1\"}}"},
-        {"\": ", "{\"delta\":{\"content\":\"\\\": \"}}"},
-        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
-        {"val{{{ue1", "{\"delta\":{\"content\":\"val{{{ue1\"}}"},
-        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
-        {"}", "{\"delta\":{\"content\":\"}\"}}"},
-        {"}", "{\"delta\":{\"content\":\"}\"}}"},
-        {"</tool_call>\n", "{\"delta\":{\"content\":\"</tool_call>\\n\"}}"},
+        {"<tool_call>\n", "{\"delta\":{\"reasoning_content\":\"<tool_call>\\n\"}}"},
+        {"{\"", "{\"delta\":{\"reasoning_content\":\"{\\\"\"}}"},
+        {"name", "{\"delta\":{\"reasoning_content\":\"name\"}}"},
+        {"\":", "{\"delta\":{\"reasoning_content\":\"\\\":\"}}"},
+        {" \"", "{\"delta\":{\"reasoning_content\":\" \\\"\"}}"},
+        {"super", "{\"delta\":{\"reasoning_content\":\"super\"}}"},
+        {"_tool", "{\"delta\":{\"reasoning_content\":\"_tool\"}}"},
+        {"_number", "{\"delta\":{\"reasoning_content\":\"_number\"}}"},
+        {"_two", "{\"delta\":{\"reasoning_content\":\"_two\"}}"},
+        {"\",", "{\"delta\":{\"reasoning_content\":\"\\\",\"}}"},
+        {" \"", "{\"delta\":{\"reasoning_content\":\" \\\"\"}}"},
+        {"arguments", "{\"delta\":{\"reasoning_content\":\"arguments\"}}"},
+        {"\":", "{\"delta\":{\"reasoning_content\":\"\\\":\"}}"},
+        {" {", "{\"delta\":{\"reasoning_content\":\" {\"}}"},
+        {"\"", "{\"delta\":{\"reasoning_content\":\"\\\"\"}}"},
+        {"arg1", "{\"delta\":{\"reasoning_content\":\"arg1\"}}"},
+        {"\": ", "{\"delta\":{\"reasoning_content\":\"\\\": \"}}"},
+        {"\"", "{\"delta\":{\"reasoning_content\":\"\\\"\"}}"},
+        {"val{{{ue1", "{\"delta\":{\"reasoning_content\":\"val{{{ue1\"}}"},
+        {"\"", "{\"delta\":{\"reasoning_content\":\"\\\"\"}}"},
+        {"}", "{\"delta\":{\"reasoning_content\":\"}\"}}"},
+        {"}", "{\"delta\":{\"reasoning_content\":\"}\"}}"},
+        {"</tool_call>\n", "{\"delta\":{\"reasoning_content\":\"</tool_call>\\n\"}}"},
         {"</think>", std::nullopt},
     };
 

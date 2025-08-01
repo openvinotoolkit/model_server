@@ -69,8 +69,8 @@ class OpenAIChatCompletionsHandler {
     std::chrono::time_point<std::chrono::system_clock> created;
     ov::genai::Tokenizer tokenizer;
     size_t processedTokens = 0;  // tracks overall number of tokens processed by the pipeline
-    // Response parser is used to parse chat completions response for specific models
-    std::unique_ptr<OutputParser> responseParser = nullptr;
+    // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
+    std::unique_ptr<OutputParser> outputParser = nullptr;
 
     absl::Status parseCompletionsPart();
     absl::Status parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath);
@@ -80,13 +80,13 @@ class OpenAIChatCompletionsHandler {
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
-        ov::genai::Tokenizer tokenizer, const std::string& responseParserName = "") :
+        ov::genai::Tokenizer tokenizer, const std::string& toolParserName = "", const std::string& reasoningParserName = "") :
         doc(doc),
         endpoint(endpoint),
         created(creationTime),
         tokenizer(tokenizer) {
-        if (!responseParserName.empty()) {
-            responseParser = std::make_unique<OutputParser>(tokenizer, responseParserName);
+        if (!toolParserName.empty() || !reasoningParserName.empty()) {
+            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName);
         }
     }
 
