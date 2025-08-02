@@ -1,16 +1,25 @@
 from pyovms import Tensor
 import numpy as np
-from scipy.special import softmax
-from tritonclient.utils import deserialize_bytes_tensor
 
 class OvmsPythonModel:
+    def initialize(self, kwargs: dict):
+        self.node_name = kwargs.get("node_name", "")
+        if "clip" in self.node_name.lower():
+            self.mode = "clip"
+        elif "dino" in self.node_name.lower():
+            self.mode = "dino"
+        elif "laion" in self.node_name.lower():
+            self.mode = "laion"
+        else:
+            raise ValueError(f"Unsupported model type in node name: {self.node_name}")
 
-    def initialize(self, kwargs:dict):
-        pass
-
-    def execute(self, inputs:list):
-        embedding=inputs[0].as_numpy()
-        norm=np.linalg.norm(embedding, axis=1, keepdims=True)
-        normalized_embedding=embedding/norm
-
-        return[Tensor(name="embedding", data=normalized_embedding.astype(np.float32))]
+    def execute(self, inputs: list) -> list:
+        try:
+            tensor = inputs[0]
+            embedding = np.frombuffer(tensor.data, dtype=np.float32).reshape(tensor.shape)
+            norm = np.linalg.norm(embedding, axis=1, keepdims=True) + 1e-10
+            normalized = embedding / norm
+            return [Tensor(name="embedding", buffer=normalized.astype(np.float32))]
+        except Exception as e:
+            print(">>> ERROR in Postprocessor:", str(e))
+            raise
