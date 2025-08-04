@@ -59,6 +59,9 @@ using OutputDataType = std::string;
 class RerankCalculatorOV : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
+    static const std::string RERANK_MODEL_INPUT_IDS_NAME;
+    static const std::string RERANK_MODEL_ATTENTION_MASK_NAME;
+    static const std::string RERANK_MODEL_TOKEN_TYPE_IDS_NAME;
     static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
 
     mediapipe::Timestamp timestamp{0};
@@ -229,12 +232,15 @@ public:
         return std::make_pair(input_ids, attention_mask);
     }
 
-    std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
+    std::vector<float> ComputeScoresUsingRerankModel(ov::Tensor input_ids, ov::Tensor attention_mask, ov::Tensor typeIds, const std::vector<size_t>& chunkMapping, size_t actual_batch_size) const {
         ModelMetricReporter tmp(nullptr, nullptr, "example_pipeline_name", 1);
         auto executingStreamIdGuard = std::make_shared<ExecutingStreamIdGuard>(rerank_session->getInferRequestsQueue(), tmp);
         ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
-        inferRequest.set_tensor("input_ids", input_ids);
-        inferRequest.set_tensor("attention_mask", attention_mask);
+        inferRequest.set_tensor(RERANK_MODEL_INPUT_IDS_NAME, input_ids);
+        inferRequest.set_tensor(RERANK_MODEL_ATTENTION_MASK_NAME, attention_mask);
+        if(typeIds.get_size() > 0){
+            inferRequest.set_tensor(RERANK_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
+        }
         inferRequest.start_async();
         inferRequest.wait();
         auto logits = inferRequest.get_tensor("logits");
@@ -278,12 +284,17 @@ public:
             // Prepare inputs for rerank model
             std::vector<size_t> chunk_mapping;
             auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
-
+            ov::Tensor typeIds;
+            if (rerank_session->getNumberOfModelInputs() == 3) {
+                typeIds = ov::Tensor{ov::element::i64, input_ids.get_shape()};
+                std::fill_n(typeIds.data<int64_t>(), input_ids.get_size(), 0);
+            }
             // Compute scores using rerank model
             size_t batch_size = handler.getDocumentsList().size();
             auto scores = ComputeScoresUsingRerankModel(
                 input_ids,
                 attention_mask,
+                typeIds,
                 chunk_mapping,
                 batch_size);
 
@@ -309,6 +320,10 @@ public:
 };
 const std::string RerankCalculatorOV::INPUT_TAG_NAME{"REQUEST_PAYLOAD"};
 const std::string RerankCalculatorOV::OUTPUT_TAG_NAME{"RESPONSE_PAYLOAD"};
+const std::string RerankCalculatorOV::RERANK_MODEL_INPUT_IDS_NAME{"input_ids"};
+const std::string RerankCalculatorOV::RERANK_MODEL_ATTENTION_MASK_NAME{"attention_mask"};
+const std::string RerankCalculatorOV::RERANK_MODEL_TOKEN_TYPE_IDS_NAME{"token_type_ids"};
+
 
 REGISTER_CALCULATOR(RerankCalculatorOV);
 
