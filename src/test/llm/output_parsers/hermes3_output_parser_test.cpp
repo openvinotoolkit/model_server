@@ -151,13 +151,12 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
         auto firstToolCallId = parsedOutput.toolCalls[0].id;
 
-        EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "third_tool");
         // Parser removes whitespaces, so we expect arguments value to be without spaces
-        EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
-        auto thirdToolCallId = parsedOutput.toolCalls[2].id;
-        EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
-        EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"key\":\"value\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
+        auto secondToolCallId = parsedOutput.toolCalls[1].id;
+        EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
     }
 }
 
