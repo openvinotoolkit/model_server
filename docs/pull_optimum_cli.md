@@ -83,7 +83,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```bash
+```bat
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --task text_generation 
 ```
 :::
