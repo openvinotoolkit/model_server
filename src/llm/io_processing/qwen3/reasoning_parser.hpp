@@ -29,7 +29,6 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-
 class Qwen3ReasoningParser : public BaseOutputParser {
 public:
     Qwen3ReasoningParser() = delete;
