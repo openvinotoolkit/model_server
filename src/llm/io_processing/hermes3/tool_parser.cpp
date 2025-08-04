@@ -68,7 +68,11 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
         }
         if (toolDoc.HasMember("name") && toolDoc["name"].IsString()) {
             toolCall.name = toolDoc["name"].GetString();
+        } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
+            continue;
         }
+
         if (toolDoc.HasMember("arguments") && toolDoc["arguments"].IsObject()) {
             rapidjson::StringBuffer sb;
             rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);

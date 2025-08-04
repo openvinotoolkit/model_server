@@ -47,7 +47,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
     std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -63,7 +63,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallAndThinking) 
                         "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool call");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -79,7 +79,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsNoThinking) {
                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -113,7 +113,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithThreeToolCallsAndThinking) 
                         "<tool_call>{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}</tool_call>";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "Thinking about the tool calls");
 
@@ -144,7 +144,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
@@ -155,7 +155,7 @@ TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens);
+    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
     EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -242,7 +242,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -317,7 +317,7 @@ TEST_F(Qwen3OutputParserTest, ToolCallsInsideReasoningStreaming) {
     };
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk);
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -354,10 +354,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsBrokenJson) {
     };
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, true), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk);
+                auto doc = outputParser->parseChunk(chunk, true);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;
@@ -384,10 +384,10 @@ TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
         {"Buffer is not cleared, JSON is still broken", true}};
     for (const auto& [chunk, shouldThrow] : chunkToErrorVec) {
         if (shouldThrow) {
-            EXPECT_THROW(outputParser->parseChunk(chunk), std::runtime_error) << "Expected error for chunk: " << chunk;
+            EXPECT_THROW(outputParser->parseChunk(chunk, true), std::runtime_error) << "Expected error for chunk: " << chunk;
         } else {
             EXPECT_NO_THROW({
-                auto doc = outputParser->parseChunk(chunk);
+                auto doc = outputParser->parseChunk(chunk, true);
                 // No further checks, just ensure no exception
             }) << "Unexpected error for chunk: "
                << chunk;

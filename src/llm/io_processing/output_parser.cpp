@@ -57,19 +57,23 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     }
 }
 
-ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens) {
+ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
+    // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
+    // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
+    // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }
-    if (toolParser) {
+    // We run tool parser only if the parser is available and tools have been provided in the request.
+    if (toolParser && toolsAvailable) {
         toolParser->parse(parsedOutput, generatedTokens);
     }
     return parsedOutput;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse) {
+std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable) {
     // Using appropriate parser based on the current processing phase
     // Call to this method should always return either result from parser parseChunk implementation or common parseContentChunk method.
     // If for any processing phase a nullopt should be returned, it should be done in the parser implementation.
@@ -77,14 +81,14 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
 
     bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingStartTag().empty() && !reasoningParser->getParsingEndTag().empty();
     bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTag().empty();
+    bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
     if (processingPhase == UNKNOWN) {
         // If we are in the UNKNOWN phase, we need to determine if we should switch to CONTENT, REASONING, or TOOL_CALLS phase.
         if (reasoningParserExistsAndSupportsStreaming && chunkResponse.find(reasoningParser->getParsingStartTag()) != std::string::npos) {
-            std::cout << "Switching to REASONING phase" << std::endl;
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse);
-        } else if (toolParserExistsAndSupportsStreaming && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+        } else if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
             processingPhase = TOOL_CALLS;
             return toolParser->parseChunk(chunkResponse);
         } else {
@@ -100,7 +104,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
     } else if (processingPhase == CONTENT) {
         // If we are in the CONTENT phase, we check if tool parser start tag is found and if so, switch to TOOL_CALLS phase.
         // TOOL_CALLS is the only phase that can be processed after CONTENT.
-        if (toolParserExistsAndSupportsStreaming && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+        if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
             processingPhase = TOOL_CALLS;
             return toolParser->parseChunk(chunkResponse);
         } else {

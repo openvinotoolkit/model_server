@@ -56,7 +56,11 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
                 toolCall.id = generateRandomId();  // Generate a random ID for the tool call
                 if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
                     toolCall.name = toolVal["name"].GetString();
+                } else {
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
+                    continue;
                 }
+
                 if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
                     rapidjson::StringBuffer sb;
                     rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);

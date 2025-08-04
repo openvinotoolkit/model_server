@@ -357,6 +357,10 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     return absl::OkStatus();
 }
 
+const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
+    return !request.toolNameSchemaMap.empty();
+}
+
 const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
     return request;
 }
@@ -755,7 +759,7 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
         parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds);
+        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
     }
     return parsedOutput;
 }
@@ -1049,7 +1053,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (outputParser != nullptr) {
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse);
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable());
             if (!delta.has_value()) {
                 return "";
             }
