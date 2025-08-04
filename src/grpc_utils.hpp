@@ -14,10 +14,24 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <string>
 #include <grpcpp/server_context.h>
+
+#include "logging.hpp"
 
 namespace ovms {
 class Status;
 
 const grpc::Status grpc(const Status& status);
 }  // namespace ovms
+
+namespace fmt {
+
+template <>
+struct formatter<::grpc::StatusCode> : formatter<std::string> {
+    auto format(::grpc::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", (unsigned int)status);
+    }
+};
+
+}  // namespace fmt
