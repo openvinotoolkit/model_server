@@ -105,7 +105,7 @@ content-type: application/json; charset=utf-8
 :::{dropdown} **Requesting rerank score with cURL**
 
 ```bash
-curl http://localhost:8000/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-reranker-large\", \"query\": \"welcome\", \"documents\":[\"good morning\",\"farewell\"]}"
+curl http://localhost:8125/v3/rerank  -H "Content-Type: application/json" -d "{ \"model\": \"cross-encoder/msmarco-MiniLM-L6-en-de-v1\", \"query\": \"How many people live in Berlin?\", \"documents\":[\"Berlin has a population of 3,520,031 registered inhabitants in an area of 891.82 square kilometers.\", \"New York City is famous for the Metropolitan Museum of Art.\"]}"
 ```
 ```json
 {
