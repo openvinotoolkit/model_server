@@ -66,7 +66,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 
 Example for pulling `Qwen/Qwen3-8B`:
 
-```bash
+```bat
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --target_device CPU --task text_generation 
 ```
 ::::{tab-set}
