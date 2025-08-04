@@ -919,7 +919,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--enable_tool_guided_generation",
         (char*)"true"};
 
-    int arg_count = 28;
+    int arg_count = 30;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
