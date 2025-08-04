@@ -884,6 +884,86 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
+TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndListModels) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        "--list_models"};
+    int arg_count = 8;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --add_to_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        "--list_models"};
+    int arg_count = 6;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+        "--model_repository_path",
+        "/models",
+        "--task",
+        "text_generation",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+    };
+    int arg_count = 14;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--add_to_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+        "--model_repository_path",
+        "/models",
+        "--task",
+        "text_generation",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+    };
+    int arg_count = 12;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--remove_from_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
