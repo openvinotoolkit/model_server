@@ -31,15 +31,15 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Hermes-3-Llama-3.1-8B";
 #endif
 
+static ov::genai::Tokenizer hermes3Tokenizer(tokenizerPath);
+
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::genai::Tokenizer> tokenizer;
     std::unique_ptr<OutputParser> outputParser;
 
     void SetUp() override {
-        tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
         // For Hermes3 model there is only tool parser available
-        outputParser = std::make_unique<OutputParser>(*tokenizer, "hermes3", "");
+        outputParser = std::make_unique<OutputParser>(hermes3Tokenizer, "hermes3", "");
     }
 };
 
@@ -51,7 +51,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -73,7 +73,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParser->parse(generatedTokens, false);  // Tools not available in the request
         EXPECT_EQ(parsedOutput.content, input);
@@ -95,7 +95,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -137,7 +137,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
     // The results should be identical
     std::vector<std::string> inputs = {inputWithProperClosure, inputWithImproperClosure};
     for (auto& input : inputs) {
-        auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -162,7 +162,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
 
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
@@ -172,7 +172,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);

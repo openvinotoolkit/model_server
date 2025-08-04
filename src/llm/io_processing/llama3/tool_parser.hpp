@@ -32,6 +32,10 @@
 namespace ovms {
 class Llama3ToolParser : public BaseOutputParser {
 protected:
+    const std::string parsingStartTag = "<|python_tag|>";
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string parsingEndTag = "";
+
     // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
     int64_t botTokenId = 128010;
     // ";" is used as a separator between tool calls in the response
@@ -44,12 +48,12 @@ public:
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
-    std::string getParsingStartTag() const override {
-        return "<|python_tag|>";
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    std::string getParsingEndTag() const override {
-        return "";
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
     }
 };
 }  // namespace ovms

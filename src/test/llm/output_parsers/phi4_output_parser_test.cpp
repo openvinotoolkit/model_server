@@ -31,21 +31,21 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
 #endif
 
+static ov::genai::Tokenizer phi4Tokenizer(tokenizerPath);
+
 class Phi4OutputParserTest : public ::testing::Test {
 protected:
-    std::unique_ptr<ov::genai::Tokenizer> tokenizer;
     std::unique_ptr<OutputParser> outputParser;
 
     void SetUp() override {
-        tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
         // For Phi4 model there is only tool parser available
-        outputParser = std::make_unique<OutputParser>(*tokenizer, "phi4", "");
+        outputParser = std::make_unique<OutputParser>(phi4Tokenizer, "phi4", "");
     }
 };
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -62,7 +62,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
                         "{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
                         "{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -95,7 +95,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInvali
     std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
                         "{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
                         "{\"name\": \"third_tool\", \"options\": {\"key\": \"value\"}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
@@ -112,7 +112,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInvali
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
@@ -122,7 +122,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\nfunctools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n");
@@ -136,7 +136,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
 }
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithMultipleFunctoolsReturnsContentOnly) {
     std::string input = "functools[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]\n\nThis is some content\n\nfunctools[{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     // Content after 'functools' cannot be parsed as array of JSON objects, so it is treated as content
@@ -148,7 +148,7 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithMultipleFunctoolsReturnsCont
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithArrayArguments) {
     std::string input = "functools[{\"name\": \"extractLastTransactionId\", \"arguments\": { \"filepath\": \"/var/log/db.log\", \"status\": [\"completed\", \"failed\"], \"encoding\": \"utf-8\", \"processFunction\": \"processFunction\"}}]";
-    auto generatedTensor = tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = phi4Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");

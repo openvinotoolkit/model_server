@@ -35,6 +35,10 @@ protected:
     const std::string toolCallStartTag = "<tool_call>";
     const std::string toolCallEndTag = "</tool_call>";
 
+    const std::string parsingStartTag = toolCallStartTag;
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string parsingEndTag = "";
+
     // Streaming required members
     rapidjson::Document lastJson;
     PartialJsonBuilder jsonBuilder;
@@ -51,12 +55,12 @@ public:
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
-    std::string getParsingStartTag() const override {
-        return toolCallStartTag;
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    std::string getParsingEndTag() const override {
-        return "";
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
     }
 };
 }  // namespace ovms

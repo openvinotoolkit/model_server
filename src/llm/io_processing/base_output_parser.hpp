@@ -82,11 +82,11 @@ public:
     // Get the tag that marks the beginning of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should start processing the content.
     // If empty string is returned, it means that the parser will never start processing the content.
-    virtual std::string getParsingStartTag() const = 0;
+    virtual const std::string& getParsingStartTag() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should stop processing the content.
     // If empty string is returned, it means that the parser will keep processing until the end of the content.
-    virtual std::string getParsingEndTag() const = 0;
+    virtual const std::string& getParsingEndTag() const = 0;
 };
 }  // namespace ovms

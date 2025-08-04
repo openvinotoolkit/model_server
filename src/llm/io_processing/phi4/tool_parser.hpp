@@ -31,6 +31,11 @@
 
 namespace ovms {
 class Phi4ToolParser : public BaseOutputParser {
+protected:
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string parsingStartTag = "functools";
+    const std::string parsingEndTag = "";
+
 public:
     Phi4ToolParser() = delete;
     explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
@@ -38,12 +43,12 @@ public:
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
-    std::string getParsingStartTag() const override {
-        return "functools";
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    std::string getParsingEndTag() const override {
-        return "";
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
     }
 };
 }  // namespace ovms
