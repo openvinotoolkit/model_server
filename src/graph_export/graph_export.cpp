@@ -52,11 +52,9 @@
 #endif
 namespace ovms {
 
-static std::ostringstream GetOvmsVersionStream(std::string projectName, std::string peojectVersion) {
+static std::ostringstream GetOvmsVersionStream(std::string projectName, std::string projectVersion) {
     std::ostringstream oss;
-    std::string project_name(projectName);
-    std::string project_version(peojectVersion);
-    oss << "# " << project_name + " " + project_version << std::endl;
+    oss << "# " << projectName + " " + projectVersion << std::endl;
     return oss;
 }
 
