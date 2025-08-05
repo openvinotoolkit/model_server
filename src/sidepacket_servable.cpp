@@ -42,7 +42,10 @@ namespace ovms {
     if (!token.has_value()) {                                                              \
         if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {     \
             auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString()); \
-            token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];       \
+            if(tokenizedInputs.input_ids.get_size() == 1)\
+                token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];   \
+            else\
+                SPDLOG_DEBUG("Parsing {} token from tokenizer_config.json failed", #token);  \
         }                                                                                  \
     }
 
@@ -87,7 +90,8 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     if (!status.ok()) {
         SPDLOG_ERROR("Error during embeddings node plugin_config option parsing to JSON: {}", pluginConfig);
     }
-    tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath);
+    ov::AnyMap tokenizerProperties = {{"add_special_tokens", false}};
+    tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath, tokenizerProperties);
     std::filesystem::path tokenizerConfigPath = (std::filesystem::path(graphPath) / fsModelsPath / "tokenizer_config.json");
     if (std::filesystem::exists(tokenizerConfigPath)) {
         std::ifstream ifs(tokenizerConfigPath.string());
@@ -96,7 +100,7 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
             rapidjson::IStreamWrapper isw(ifs);
             rapidjson::ParseResult parseResult = tokenizerConfig.ParseStream(isw);
             if (parseResult.Code()) {
-                SPDLOG_ERROR("Parsing config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
+                SPDLOG_ERROR("Parsing tokenizer_config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
             } else {
                 SET_TOKEN(pad_token);
                 SET_TOKEN(eos_token);
@@ -104,8 +108,11 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 if (!sep_token.has_value()) {
                     if (tokenizerConfig.HasMember("sep_token") && tokenizerConfig["sep_token"].IsString()) {
                         auto tokenizedInputs = tokenizer->encode(tokenizerConfig["sep_token"].GetString());
-                        sep_token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];
-                    } else {
+                        if(tokenizedInputs.input_ids.get_size() == 1)
+                            sep_token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];
+                        else
+                            SPDLOG_DEBUG("Parsing sep token from tokenizer_config.json failed");
+                    } else if(eos_token.has_value()) {
                         sep_token = eos_token;
                     }
                 }
