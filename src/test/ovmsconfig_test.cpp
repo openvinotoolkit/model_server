@@ -716,22 +716,18 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
     char* n_argv[] = {
         "ovms",
-        "--model_repository_path",
-        "/repo/path",
         "--remove_from_config",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
     char* n_argv[] = {
         "ovms",
-        "--model_repository_path",
-        "/repo/path",
         "--add_to_config",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
@@ -740,11 +736,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelNameWithPath) {
         "ovms",
         "--model_path",
         "/path1",
-        "--model_repository_path",
-        "/repo/path",
         "--remove_from_config",
         "/config/path"};
-    int arg_count = 7;
+    int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
@@ -753,11 +747,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
         "ovms",
         "--model_path",
         "/path1",
-        "--model_repository_path",
-        "/repo/path",
         "--add_to_config",
         "/config/path"};
-    int arg_count = 7;
+    int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
