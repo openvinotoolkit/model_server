@@ -109,10 +109,10 @@ public:
         this->max_allowed_chunks = options.max_allowed_chunks();
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Max allowed chunks: {}", this->max_allowed_chunks);
 
-        bos_token = rerank_session->getBosToken();
-        eos_token = rerank_session->getEosToken();
-        sep_token = rerank_session->getSepToken();
-        pad_token = rerank_session->getPadToken();
+        bos_token = rerank_session->getBosToken().value_or(0);
+        eos_token = rerank_session->getEosToken().value_or(0);
+        sep_token = rerank_session->getSepToken().value_or(0);
+        pad_token = rerank_session->getPadToken().value_or(0);
 
         // max_position_embeddings
         if (options.has_max_position_embeddings()) {

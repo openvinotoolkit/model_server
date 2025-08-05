@@ -179,7 +179,7 @@ public:
                 try {
                     for (size_t i = 0; i < received_batch_size; i++) {
                         int64_t* input_ids_start = reinterpret_cast<int64_t*>(tokens.input_ids.data()) + i * token_count_of_longest_document;
-                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, embeddings_session->getPadToken());
+                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, embeddings_session->getPadToken().value_or(0));
                         std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
 
                         int64_t* attention_mask_start = reinterpret_cast<int64_t*>(tokens.attention_mask.data()) + i * token_count_of_longest_document;
