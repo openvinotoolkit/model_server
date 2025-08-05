@@ -321,11 +321,11 @@ void CLIParser::parse(int argc, char** argv) {
             std::cerr << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
             exit(OVMS_EX_USAGE);
         }
-        if (result->count("add_to_config") && result->count("list_models") ) {
+        if (result->count("add_to_config") && result->count("list_models")) {
             std::cerr << "error parsing options - --list_models cannot be used with --add_to_config" << std::endl;
             exit(OVMS_EX_USAGE);
         }
-        if (result->count("remove_from_config") && result->count("list_models") ) {
+        if (result->count("remove_from_config") && result->count("list_models")) {
             std::cerr << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
             exit(OVMS_EX_USAGE);
         }
