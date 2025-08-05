@@ -89,8 +89,6 @@ copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %dest_dir%\git-lfs.exe dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\libcurl-x64.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
@@ -98,26 +96,6 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-
-if exist "C:\Program Files\Git\mingw64\bin" (
-    copy /Y "C:\Program Files\Git\mingw64\bin\git.exe" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libiconv-2.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libintl-8.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libpcre2-8-0.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libwinpthread-1.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\zlib1.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-) else (
-    echo "C:\Program Files\Git\mingw64\bin" does not exist
-    exit /b -1
-)
-
-
 
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
