@@ -329,12 +329,16 @@ void CLIParser::parse(int argc, char** argv) {
             std::cerr << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
             exit(OVMS_EX_USAGE);
         }
-        if (result->count("add_to_config") && result->count("model_repository_path")) {
-            std::cerr << "error parsing options - --model_repository_path cannot be used with --add_to_config" << std::endl;
+        if (result->count("add_to_config") && result->count("model_repository_path") && result->count("model_path")) {
+            std::cerr << "error parsing options - --model_repository_path cannot be used with --model_path" << std::endl;
             exit(OVMS_EX_USAGE);
         }
         if (result->count("remove_from_config") && result->count("model_repository_path")) {
             std::cerr << "error parsing options - --model_repository_path cannot be used with --remove_from_config" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("remove_from_config") && result->count("model_path")) {
+            std::cerr << "error parsing options - --model_path cannot be used with --remove_from_config" << std::endl;
             exit(OVMS_EX_USAGE);
         }
 #pragma warning(push)
