@@ -917,6 +917,41 @@ TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
+TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndRepositroyPath) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        "--model_repository_path",
+        (char*)modelPath.c_str()};
+    int arg_count = 9;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --add_to_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndRepositroyPath) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        "--model_repository_path",
+        (char*)configPath.c_str()};
+    int arg_count = 7;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
     std::string modelName = "name1";
     std::string modelPath = "/path/for/name1";
