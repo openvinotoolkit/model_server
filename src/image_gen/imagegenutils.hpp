@@ -44,7 +44,7 @@
     auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {
-struct MultiPartParser;
+class MultiPartParser;
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& doc);
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser);
