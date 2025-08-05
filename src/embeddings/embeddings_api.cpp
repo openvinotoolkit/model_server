@@ -171,7 +171,6 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
 
     writer.String("data");
     writer.StartArray();
-    // TODO: mean pooling
 
     ov::Shape outputShape = embeddingsTensor.get_shape();
     if (outputShape.size() != 3) {
@@ -180,7 +179,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     size_t batchSize = outputShape[0];
     for (size_t batchIterator = 0; batchIterator < batchSize; batchIterator++) {
         size_t stride;
-        if (poolingMode == PoolingMode::LAST_TOKEN) {
+        if (poolingMode == PoolingMode::LAST) {
             size_t attendedTokens = 0;
             if (!attentionMask.has_value()) {
                 return absl::InvalidArgumentError("Last token pooling mode requires attention mask");
@@ -194,10 +193,13 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
                 for (int i = 0; i < maxNumberOfTokens; i++) {
                     attendedTokens += reinterpret_cast<int32_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
                 }
-            } else {
+            } else if (attentionMask->get_element_type() == ov::element::Type_t::i8) {
                 for (int i = 0; i < maxNumberOfTokens; i++) {
                     attendedTokens += reinterpret_cast<uint8_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
                 }
+            }
+            else {
+                return absl::InternalError("Attention mask element type invalid.");
             }
             if (!(attendedTokens <= outputShape[1])) {
                 return absl::InternalError("Embeddings output and attention mask shape mismatch");

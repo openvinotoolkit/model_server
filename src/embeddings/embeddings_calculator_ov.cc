@@ -148,10 +148,13 @@ public:
                     for (int i = 0; i < tokens.attention_mask.get_size(); i++) {
                         attendedTokens += reinterpret_cast<int32_t*>(tokens.attention_mask.data())[i];
                     }
-                } else {
+                } else if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i8) {
                     for (int i = 0; i < tokens.attention_mask.get_byte_size(); i++) {
                         attendedTokens += reinterpret_cast<uint8_t*>(tokens.attention_mask.data())[i];
                     }
+                }
+                else{
+                    return absl::InternalError("Attention mask element type invalid.");
                 }
                 handler.setPromptTokensUsage(attendedTokens);
             } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
@@ -242,8 +245,8 @@ public:
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
         PoolingMode mode;
-        if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST_TOKEN) {
-            mode = PoolingMode::LAST_TOKEN;
+        if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
+            mode = PoolingMode::LAST;
         } else {
             mode = PoolingMode::CLS;
         }

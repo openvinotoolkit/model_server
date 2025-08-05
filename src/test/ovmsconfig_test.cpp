@@ -1721,7 +1721,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--pooling",
-        (char*)"LAST_TOKEN",
+        (char*)"LAST",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
@@ -1747,7 +1747,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST_TOKEN");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
@@ -1797,7 +1797,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
         (char*)"--pooling",
-        (char*)"LAST_TOKEN",
+        (char*)"LAST",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
@@ -1818,7 +1818,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST_TOKEN");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");

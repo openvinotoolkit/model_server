@@ -93,8 +93,8 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
     }
-    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST_TOKEN")){
-        throw std::invalid_argument("For now only CLS and LAST_TOKEN pooling modes are supported");
+    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST")){
+        throw std::invalid_argument("For now only CLS and LAST pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }

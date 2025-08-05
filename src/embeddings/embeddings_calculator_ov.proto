@@ -31,7 +31,7 @@ message EmbeddingsCalculatorOVOptions {
     optional string plugin_config = 4 [default = ""];
     enum Pooling {
       CLS = 0;
-      LAST_TOKEN = 1;
+      LAST = 1;
     }
     optional Pooling pooling = 5 [default = CLS];
 }

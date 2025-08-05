@@ -454,7 +454,7 @@ TEST(EmbeddingsSerialization, positiveLastTokenPooling) {
     ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST_TOKEN, attentionMask);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[4.0,5.0,6.0],"index":0},{"object":"embedding","embedding":[16.0,17.0,18.0],"index":1},{"object":"embedding","embedding":[19.0,20.0,21.0],"index":2}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
@@ -468,7 +468,7 @@ TEST(EmbeddingsSerialization, lastTokenPoolingMissingAttentionMask) {
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST_TOKEN);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST);
     ASSERT_EQ(status, absl::InvalidArgumentError("Last token pooling mode requires attention mask"));
 }
 
@@ -483,6 +483,6 @@ TEST(EmbeddingsSerialization, lastTokenPoolingInvalidAttentionMask) {
     ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST_TOKEN, attentionMask);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
     ASSERT_EQ(status, absl::InternalError("Embeddings output and attention mask shape mismatch"));
 }

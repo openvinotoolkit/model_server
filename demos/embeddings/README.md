@@ -57,15 +57,15 @@ models
 └── config.json
 
 ```
-> **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
-> In case you trained the pytorch model it can be exported like below:
-> `python export_model.py embeddings_ov --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
 
-The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via export parameters in the `export_model.py` script.
+The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. They can be set automatically via export parameters in the `export_model.py` script.
 
 For example:
-`python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
+`python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
 
+By default OVMS returns first token embeddings as sequence embeddings(its called CLS pooling), meanwhile some models gives better results with different than default pooling mode, one of those models is Qwen/Qwen3-Embedding-8B. To export Qwen3-Embedding you should use --pooling LAST parameter:
+`python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-8B --weight-format fp32 --pooling LAST --config_file_path models/config.json`
+**Note** For now OVMS support only two pooling modes: CLS and LAST
 
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:

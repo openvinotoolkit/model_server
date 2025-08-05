@@ -38,7 +38,7 @@ namespace ovms {
 
 enum class PoolingMode {
     CLS,
-    LAST_TOKEN
+    LAST
 };
 
 struct EmbeddingsRequest {
