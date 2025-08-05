@@ -357,6 +357,10 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     return absl::OkStatus();
 }
 
+const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
+    return !request.toolNameSchemaMap.empty();
+}
+
 const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
     return request;
 }
@@ -752,10 +756,10 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
 ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
-    if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParser == nullptr) {
+    if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
         parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = responseParser->parse(generatedIds);
+        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
     }
     return parsedOutput;
 }
@@ -1048,8 +1052,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // logprobs: object/null; Log probability information for the choice. TODO
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (responseParser != nullptr) {
-            std::optional<Document> delta = responseParser->parseChunk(chunkResponse);
+        if (outputParser != nullptr) {
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable());
             if (!delta.has_value()) {
                 return "";
             }

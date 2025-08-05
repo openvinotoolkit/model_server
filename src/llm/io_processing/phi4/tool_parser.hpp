@@ -30,20 +30,25 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Hermes3OutputParser : public BaseOutputParser {
+class Phi4ToolParser : public BaseOutputParser {
 protected:
-    // Tool calls are wrapped in <tool_call> and </tool_call> tags
-    std::string toolCallStartTag = "<tool_call>";
-    int64_t toolCallStartTokenId = 128002;  // This is the token ID for <tool_call> in Hermes3 tokenizer
-    std::string toolCallEndTag = "</tool_call>";
-    int64_t toolCallEndTokenId = 128013;  // This is the token ID for </tool_call> in Hermes3 tokenizer
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string parsingStartTag = "functools";
+    const std::string parsingEndTag = "";
 
 public:
-    Hermes3OutputParser() = delete;
-    explicit Hermes3OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Phi4ToolParser() = delete;
+    explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
+    }
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
+    }
 };
 }  // namespace ovms

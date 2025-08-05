@@ -91,9 +91,13 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             max_num_batched_tokens: )" << graphSettings.maxNumBatchedTokens.value() << R"(,)";
     }
-    if (graphSettings.responseParser.has_value()) {
+    if (graphSettings.reasoningParser.has_value()) {
         oss << R"(
-            response_parser: ")" << graphSettings.responseParser.value() << R"(",)";
+            reasoning_parser: ")" << graphSettings.reasoningParser.value() << R"(",)";
+    }
+    if (graphSettings.toolParser.has_value()) {
+        oss << R"(
+            tool_parser: ")" << graphSettings.toolParser.value() << R"(",)";
     }
     if (graphSettings.enableToolGuidedGeneration == "true") {
         oss << R"(
