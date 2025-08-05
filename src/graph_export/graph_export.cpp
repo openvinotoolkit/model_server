@@ -38,6 +38,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../schema.hpp"
+#include "../version.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)
@@ -51,8 +52,16 @@
 #endif
 namespace ovms {
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
+static std::ostringstream GetOvmsVersionStream(std::string projectName, std::string peojectVersion) {
     std::ostringstream oss;
+    std::string project_name(projectName);
+    std::string project_version(peojectVersion);
+    oss << "# " << project_name + " " + project_version << std::endl;
+    return oss;
+}
+
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss = GetOvmsVersionStream(PROJECT_NAME, PROJECT_VERSION);
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -141,7 +150,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 }
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
+    std::ostringstream oss = GetOvmsVersionStream(PROJECT_NAME, PROJECT_VERSION);
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -184,7 +193,7 @@ node {
 }
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
+    std::ostringstream oss = GetOvmsVersionStream(PROJECT_NAME, PROJECT_VERSION);
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -230,7 +239,7 @@ node {
 }
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
-    std::ostringstream oss;
+    std::ostringstream oss = GetOvmsVersionStream(PROJECT_NAME, PROJECT_VERSION);
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
