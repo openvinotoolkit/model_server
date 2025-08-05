@@ -56,7 +56,7 @@ int cred_acquire_cb(git_credential** out,
     char *username = NULL, *password = NULL;
     int error = -1;
 
-    fprintf(stdout, "Authentication is required for repository clone.\n");
+    fprintf(stdout, "Authentication is required for repository clone or model is missing.\n");
     if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
         const char* env_cred = std::getenv("HF_TOKEN");
         if (env_cred) {
