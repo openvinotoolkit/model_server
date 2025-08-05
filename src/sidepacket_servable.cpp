@@ -33,19 +33,18 @@
 
 namespace ovms {
 
-#define SET_TOKEN_ID(token, token_id_name)                                                 \
+#define SET_TOKEN_ID(token, token_id_name)                                                                                            \
     if (modelConfig.HasMember(token_id_name) && modelConfig[token_id_name].IsInt64() && modelConfig[token_id_name].GetInt64() != 0) { \
-        token = modelConfig[token_id_name].GetInt64();                                  \
+        token = modelConfig[token_id_name].GetInt64();                                                                                \
     }
 
-#define SET_TOKEN(token)\
-    if(!token.has_value()){\
-        if(tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()){\
-            auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString());\
-            token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0]; \
-        }\
+#define SET_TOKEN(token)                                                                   \
+    if (!token.has_value()) {                                                              \
+        if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {     \
+            auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString()); \
+            token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];       \
+        }                                                                                  \
     }
-
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
@@ -102,12 +101,11 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 SET_TOKEN(pad_token);
                 SET_TOKEN(eos_token);
                 SET_TOKEN(bos_token);
-                if(!sep_token.has_value()){
-                    if(tokenizerConfig.HasMember("sep_token") && tokenizerConfig["sep_token"].IsString()){
+                if (!sep_token.has_value()) {
+                    if (tokenizerConfig.HasMember("sep_token") && tokenizerConfig["sep_token"].IsString()) {
                         auto tokenizedInputs = tokenizer->encode(tokenizerConfig["sep_token"].GetString());
                         sep_token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];
-                    }
-                    else{
+                    } else {
                         sep_token = eos_token;
                     }
                 }
