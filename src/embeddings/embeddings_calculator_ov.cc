@@ -152,8 +152,7 @@ public:
                     for (int i = 0; i < tokens.attention_mask.get_byte_size(); i++) {
                         attendedTokens += reinterpret_cast<uint8_t*>(tokens.attention_mask.data())[i];
                     }
-                }
-                else{
+                } else {
                     return absl::InternalError("Attention mask element type invalid.");
                 }
                 handler.setPromptTokensUsage(attendedTokens);

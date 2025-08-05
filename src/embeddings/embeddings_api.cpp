@@ -197,8 +197,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
                 for (int i = 0; i < maxNumberOfTokens; i++) {
                     attendedTokens += reinterpret_cast<uint8_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
                 }
-            }
-            else {
+            } else {
                 return absl::InternalError("Attention mask element type invalid.");
             }
             if (!(attendedTokens <= outputShape[1])) {
