@@ -323,7 +323,7 @@ protected:
 
     std::string getVersionString() {
         std::stringstream expected;
-        expected << "# " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
+        expected << "# File created with: " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
         return expected.str();
     }
 };
