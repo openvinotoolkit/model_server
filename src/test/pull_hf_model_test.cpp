@@ -107,6 +107,12 @@ protected:
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
     }
+
+    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
+    // This string differs per build and setup
+    std::string removeVersionString(std::string input) {
+        return input.erase(0, input.find("\n") + 1);
+    }
 };
 
 const std::string expectedGraphContents = R"(
@@ -163,7 +169,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
@@ -181,7 +187,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 class TestOptimumDownloader : public ovms::OptimumDownloader {

@@ -38,6 +38,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../schema.hpp"
+#include "../version.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)
@@ -51,8 +52,11 @@
 #endif
 namespace ovms {
 
+static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -142,6 +146,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -185,6 +190,7 @@ node {
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -231,6 +237,7 @@ node {
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"
