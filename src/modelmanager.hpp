@@ -388,7 +388,7 @@ public:
      * 
      * @return Status 
      */
-    Status startFromConfig(const Config& config);
+    Status startFromConfig();
 
     /**
          * @brief Get the metric config

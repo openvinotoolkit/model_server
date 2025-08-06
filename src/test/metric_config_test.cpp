@@ -252,7 +252,7 @@ TEST_F(MetricsConfigTest, StartSingleGraphWithMetrics) {
     int arg_count = 8;
     ovms::Config::instance().parse(arg_count, n_argv);
 
-    auto status = manager.startFromConfig(ovms::Config::instance());
+    auto status = manager.startFromConfig();
     ASSERT_TRUE(status.ok());
 
     const auto& metricConfig = manager.getMetricConfig();
