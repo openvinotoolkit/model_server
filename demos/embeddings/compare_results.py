@@ -45,7 +45,7 @@ def run_model():
         start_time = datetime.datetime.now()
         input = tokenizer(text, padding=True, truncation=True, return_tensors='pt')
         model_output = model_pt(**input)
-        if args['pooling'] == "LAST_TOKEN":
+        if args['pooling'] == "LAST":
             sequence_lengths = input['attention_mask'].sum(dim=1) - 1
             batch_size = model_output.last_hidden_state.shape[0]
             embeddings = model_output.last_hidden_state[torch.arange(batch_size, device=model_output.last_hidden_state.device), sequence_lengths]
