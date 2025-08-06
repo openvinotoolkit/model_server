@@ -21,7 +21,7 @@ There are no extra steps needed to use structured output. Whole behavior is trig
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device GPU --cache_size 2
 ```
 :::
 
@@ -30,7 +30,7 @@ docker run --user $(id -u):$(id -g) -d --device /dev/dri --group-add=$(stat -c "
 
 ```bash
 mkdir models
-docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU --cache_size 2
+docker run --user $(id -u):$(id -g) -d --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render*  | head -1) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --task text_generation --rest_port 8000 --target_device NPU --cache_size 2
 ```
 :::
 
