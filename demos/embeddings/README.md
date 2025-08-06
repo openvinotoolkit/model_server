@@ -63,7 +63,7 @@ The default configuration of the `EmbeddingsCalculator` should work in most case
 For example:
 `python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
 
-By default OVMS returns first token embeddings as sequence embeddings(its called CLS pooling), meanwhile some models gives better results with different than default pooling mode, one of those models is Qwen/Qwen3-Embedding-8B. To export Qwen3-Embedding you should use --pooling LAST parameter:
+By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling), meanwhile some models gives better results with different than default pooling mode, one of those models is Qwen/Qwen3-Embedding-8B. To export Qwen3-Embedding you should use --pooling LAST parameter:
 `python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-8B --weight-format fp32 --pooling LAST --config_file_path models/config.json`
 **Note** For now OVMS support only two pooling modes: CLS and LAST
 
