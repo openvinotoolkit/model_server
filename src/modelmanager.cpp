@@ -182,7 +182,7 @@ Status ModelManager::start(const Config& config) {
     if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
-        status = startFromConfig();
+        status = startFromConfig(config);
     }
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
@@ -211,9 +211,7 @@ void ModelManager::startCleaner() {
     }
 }
 
-Status ModelManager::startFromConfig() {
-    auto& config = ovms::Config::instance();
-
+Status ModelManager::startFromConfig(const Config& config) {
     this->setRootDirectoryPath("");
     Status status = StatusCode::OK;
 
