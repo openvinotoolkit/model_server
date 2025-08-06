@@ -94,7 +94,7 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
         embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
     }
     if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST")){
-        throw std::invalid_argument("For now only CLS and LAST pooling modes are supported");
+        throw std::invalid_argument("Only CLS and LAST pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }
