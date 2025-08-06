@@ -38,15 +38,15 @@ namespace ovms {
         token = modelConfig[token_id_name].GetInt64();                                                                                \
     }
 
-#define SET_TOKEN(token)                                                                    \
-    if (!token.has_value()) {                                                               \
-        if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {      \
-            auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString());  \
-            if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64)                                  \
-                token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];    \
-            else                                                                            \
-                SPDLOG_DEBUG("Parsing {} token from tokenizer_config.json failed", #token); \
-        }                                                                                   \
+#define SET_TOKEN(token)                                                                                                       \
+    if (!token.has_value()) {                                                                                                  \
+        if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {                                         \
+            auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString());                                     \
+            if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64) \
+                token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];                                       \
+            else                                                                                                               \
+                SPDLOG_DEBUG("Parsing {} token from tokenizer_config.json failed", #token);                                    \
+        }                                                                                                                      \
     }
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
