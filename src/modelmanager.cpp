@@ -233,6 +233,11 @@ Status ModelManager::startFromConfig() {
         if (!status.ok())
             return status;
 
+        // Reading metric config only once per server start
+        status = loadMetricsFromCLI(config);
+        if (!status.ok())
+            return status;
+
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Adding mediapipe graph config for {}, {}", mpConfig.getGraphName(), mpConfig.getGraphPath());
         mediapipesInConfigFile.push_back(mpConfig);
         std::vector<ModelConfig> gatedModelConfigs;
@@ -269,15 +274,9 @@ Status ModelManager::startFromConfig() {
     }
 
     // Reading metric config only once per server start
-    if (!this->metricConfigLoadedOnce) {
-        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
-
-        this->metricConfigLoadedOnce = true;
-    } else {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
-        return StatusCode::INTERNAL_ERROR;
-    }
+    status = loadMetricsFromCLI(config);
+    if (!status.ok())
+        return status;
 
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
@@ -801,6 +800,20 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     auto& customloaders = ovms::CustomLoaders::instance();
     customloaders.finalize();
     return firstErrorStatus;
+}
+
+Status ModelManager::loadMetricsFromCLI(const Config& config) {
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        this->metricConfigLoadedOnce = true;
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
+        auto status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        return status;
+    } else {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
