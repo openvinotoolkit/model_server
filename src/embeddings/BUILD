@@ -32,7 +32,6 @@ ovms_cc_library(
 ovms_cc_library(
     name = "embeddings_servable",
     hdrs = ["embeddings_servable.hpp"],
-#    srcs = ["embeddings_api.cpp"],
     deps = ["//src:sidepacket_servable",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
