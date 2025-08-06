@@ -28,7 +28,7 @@ parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', hel
                     dest='model_name')
 parser.add_argument('--input', default=[], help='List of strings to query. default: []',
                     dest='input', action='append')
-parser.add_argument('--pooling', default="CLS", choices=["CLS", "LAST_TOKEN"], help='Embeddings pooling mode', dest='pooling')
+parser.add_argument('--pooling', default="CLS", choices=["CLS", "LAST"], help='Embeddings pooling mode', dest='pooling')
 
 args = vars(parser.parse_args())
 
