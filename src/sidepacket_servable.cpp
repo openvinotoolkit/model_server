@@ -42,7 +42,7 @@ namespace ovms {
     if (!token.has_value()) {                                                               \
         if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {      \
             auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString());  \
-            if (tokenizedInputs.input_ids.get_size() == 1)                                  \
+            if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64)                                  \
                 token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];    \
             else                                                                            \
                 SPDLOG_DEBUG("Parsing {} token from tokenizer_config.json failed", #token); \
@@ -108,7 +108,7 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                 if (!sep_token.has_value()) {
                     if (tokenizerConfig.HasMember("sep_token") && tokenizerConfig["sep_token"].IsString()) {
                         auto tokenizedInputs = tokenizer->encode(tokenizerConfig["sep_token"].GetString());
-                        if (tokenizedInputs.input_ids.get_size() == 1)
+                        if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64)
                             sep_token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];
                         else
                             SPDLOG_DEBUG("Parsing sep token from tokenizer_config.json failed");
