@@ -38,7 +38,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "../schema.hpp"
-#include "graph_export_types.hpp"
+#include "../version.hpp"
 
 #if (MEDIAPIPE_DISABLE == 0)
 #pragma warning(push)
@@ -52,8 +52,11 @@
 #endif
 namespace ovms {
 
+static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -91,6 +94,18 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     if (graphSettings.maxNumBatchedTokens.has_value()) {
         oss << R"(
             max_num_batched_tokens: )" << graphSettings.maxNumBatchedTokens.value() << R"(,)";
+    }
+    if (graphSettings.reasoningParser.has_value()) {
+        oss << R"(
+            reasoning_parser: ")" << graphSettings.reasoningParser.value() << R"(",)";
+    }
+    if (graphSettings.toolParser.has_value()) {
+        oss << R"(
+            tool_parser: ")" << graphSettings.toolParser.value() << R"(",)";
+    }
+    if (graphSettings.enableToolGuidedGeneration == "true") {
+        oss << R"(
+            enable_tool_guided_generation: true,)";
     }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
@@ -131,6 +146,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 
 static Status createRerankGraphTemplate(const std::string& directoryPath, const RerankGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -174,6 +190,7 @@ node {
 
 static Status createEmbeddingsGraphTemplate(const std::string& directoryPath, const EmbeddingsGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // Windows path creation - graph parser needs forward slashes in paths
     std::string graphOkPath = graphSettings.modelPath;
     if (FileSystem::getOsSeparator() != "/") {
@@ -220,6 +237,7 @@ node {
 
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const ImageGenerationGraphSettingsImpl& graphSettings) {
     std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
     // clang-format off
     oss << R"(
 input_stream: "HTTP_REQUEST_PAYLOAD:input"

@@ -22,14 +22,13 @@
 #include <vector>
 
 #include "capi_frontend/server_settings.hpp"
-#include "config_export_module/config_export_types.hpp"
-#include "graph_export/graph_export_types.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
 #include "graph_export/embeddings_graph_cli_parser.hpp"
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
+#include "stringutils.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -160,11 +159,11 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<bool>()->default_value("false"),
                 "LIST_MODELS")
             ("add_to_config",
-                "Path to directory containing config.json file for OVMS, to add specific model to",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to",
                 cxxopts::value<std::string>(),
                 "ADD_TO_CONFIG")
             ("remove_from_config",
-                "Path to directory containing config.json file for OVMS, to remove specific model from",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from",
                 cxxopts::value<std::string>(),
                 "REMOVE_FROM_CONFIG");
 
@@ -187,8 +186,16 @@ void CLIParser::parse(int argc, char** argv) {
                 "MODEL_REPOSITORY_PATH")
             ("task",
                 "Choose type of model export: text_generation - chat and completion endpoints, embeddings - embeddings endpoint, rerank - rerank endpoint, image_generation - image generation/edit/inpainting endpoints.",
-                cxxopts::value<std::string>()->default_value("text_generation"),
-                "TASK");
+                cxxopts::value<std::string>(),
+                "TASK")
+            ("weight-format",
+                "Model precision used in optimum-cli export with conversion",
+                cxxopts::value<std::string>()->default_value("int8"),
+                "WEIGHT_FORMAT")
+            ("extra_quantization_params",
+                "Model quantization parameters used in optimum-cli export with conversion for text generation models",
+                cxxopts::value<std::string>(),
+                "EXTRA_QUANTIZATION_PARAMS");
 
         options->add_options("single model")
             ("model_name",
@@ -282,11 +289,8 @@ void CLIParser::parse(int argc, char** argv) {
                     }
                 }
             } else {
-                // Default task is text_generation
-                task = TEXT_GENERATION_GRAPH;
-                GraphCLIParser cliParser;
-                unmatchedOptions = cliParser.parse(result->unmatched());
-                this->graphOptionsParser = std::move(cliParser);
+                std::cerr << "error parsing options - --task parameter wasn't passed";
+                exit(OVMS_EX_USAGE);
             }
 
             if (unmatchedOptions.size()) {
@@ -307,6 +311,34 @@ void CLIParser::parse(int argc, char** argv) {
         }
         if (isHFPullOrPullAndStart(this->result) && result->count("list_models")) {
             std::cerr << "error parsing options - --list_models cannot be used with --pull or --task" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (isHFPullOrPullAndStart(this->result) && result->count("remove_from_config")) {
+            std::cerr << "error parsing options - --remove_from_config cannot be used with --pull or --task" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (isHFPullOrPullAndStart(this->result) && result->count("add_to_config")) {
+            std::cerr << "error parsing options - --add_to_config cannot be used with --pull or --task" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("add_to_config") && result->count("list_models")) {
+            std::cerr << "error parsing options - --list_models cannot be used with --add_to_config" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("remove_from_config") && result->count("list_models")) {
+            std::cerr << "error parsing options - --list_models cannot be used with --remove_from_config" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("add_to_config") && result->count("model_repository_path") && result->count("model_path")) {
+            std::cerr << "error parsing options - --model_repository_path cannot be used with --model_path" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("remove_from_config") && result->count("model_repository_path")) {
+            std::cerr << "error parsing options - --model_repository_path cannot be used with --remove_from_config" << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+        if (result->count("remove_from_config") && result->count("model_path")) {
+            std::cerr << "error parsing options - --model_path cannot be used with --remove_from_config" << std::endl;
             exit(OVMS_EX_USAGE);
         }
 #pragma warning(push)
@@ -508,8 +540,25 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
-        if (result->count("source_model"))
+        if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
+            // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
+            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
+                hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
+            }
+        }
+
+        if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
+            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
+        }
+        if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
+            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+        }
+
+        if (result->count("weight-format"))
+            hfSettings.precision = result->operator[]("weight-format").as<std::string>();
+        if (result->count("extra_quantization_params"))
+            hfSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {
@@ -540,7 +589,11 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case IMAGE_GENERATION_GRAPH: {
-                    std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    if (std::holds_alternative<ImageGenerationGraphCLIParser>(this->graphOptionsParser)) {
+                        std::get<ImageGenerationGraphCLIParser>(this->graphOptionsParser).prepare(serverSettings, hfSettings, modelName);
+                    } else {
+                        throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
+                    }
                     break;
                 }
                 case UNKNOWN_GRAPH: {
@@ -554,6 +607,14 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             } else {
                 throw std::logic_error("Tried to prepare graph settings without graph parser initialization");
             }
+        }
+    // No pull nor pull and start mode
+    } else {
+        if (result->count("weight-format")) {
+            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
+        }
+        if (result->count("extra_quantization_params")) {
+            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
         }
     }
 }

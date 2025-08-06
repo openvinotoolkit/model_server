@@ -44,6 +44,24 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+:: Bazel compilation settings
+set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
+set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST %VS_2019_PRO% goto :msvc_pro
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+
+:msvc_error
+echo [ERROR] Required MSVC compiler not installed
+goto :exit_build_error
+:msvc_pro
+echo [INFO] Using MSVC %VS_2019_PRO%
+set BAZEL_VS=%VS_2019_PRO%
+goto :msvc_end
+:msvc_bt
+echo [INFO] Using MSVC %VS_2022_BT%
+set BAZEL_VS=%VS_2022_BT%
+:msvc_end
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
 IF /I EXIST %BAZEL_SHORT_PATH% (
@@ -126,7 +144,7 @@ IF /I EXIST %bash_path% (
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/2025.2/windows/openvino_genai_windows_2025.2.0.0_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250729/openvino_genai_windows_2025.3.0.0.dev20250729_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)
@@ -178,6 +196,8 @@ if "!output_user_root!" neq "opt" (
     powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+:: Remove genai headers to be replaced by the ones from openvino_genai repository
+rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -254,87 +274,6 @@ IF /I EXIST %bazel_path% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install go ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-echo [INFO] Installing go ...
-
-set "go_dir=go"
-set "go_ver=go1.24.4.windows-amd64.zip"
-set "go_http=https://go.dev/dl/"
-
-set "go_zip=%opt_install_dir%\%go_ver%"
-
-:: Download curl
-IF /I EXIST %go_zip% (
-    if %expunge% EQU 1 (
-        del /S /Q %go_zip%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %go_zip% )
-    
-) ELSE (
-    %wget_path% -P %opt_install_dir%\ %go_http%%go_ver%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Extract go
-IF /I EXIST %opt_install_dir%\%go_dir% (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%go_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%go_dir% )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%go_zip%" -C %opt_install_dir%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: git-lfs - reinstalled per worker
-set "gitlfs_dir=git-lfs-main_9_6_2025"
-set "gitlfs_http=https://github.com/git-lfs/git-lfs"
-set "gitlfs_repo=%opt_install_dir%\git-lfs-repo"
-
-echo [INFO] Installing git-lfs: %gitlfs_dir% ...
-:: Download git-lfs
-IF /I EXIST %gitlfs_repo% (
-    if %expunge% EQU 1 (
-        rmdir /S /Q %gitlfs_repo%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        git clone %gitlfs_http% %gitlfs_repo%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        
-    ) else ( echo [INFO] directory exists %gitlfs_repo% )
-    
-) ELSE (
-    git clone %gitlfs_http% %gitlfs_repo%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Build git-lfs
-IF /I EXIST %gitlfs_repo%\git-lfs.exe (
-    echo [INFO] git-lfs exists %gitlfs_repo%\git-lfs.exe
-) ELSE (
-    for /f %%i in ('cd') do set IN_PWD=%%i
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    cd %gitlfs_repo%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    "C:\opt\go\bin\go.exe" build .
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    cd !IN_PWD!
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:: Create git-lfs link - always to make sure it points to latest version
-IF /I EXIST %opt_install_dir%\git-lfs.exe (
-    del /Q %opt_install_dir%\git-lfs.exe
-)
-mklink %opt_install_dir%\git-lfs.exe %gitlfs_repo%\git-lfs.exe
-if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
@@ -486,6 +425,31 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
 ) ELSE (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+:: Create lib file for libgit2 linking
+set "curl_lib=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.lib"
+IF /I EXIST %curl_lib% (
+    echo [INFO] file exists %curl_lib% 
+) ELSE (
+    set "CURL_LIB_PATH=%BAZEL_VS:"=%\VC\Tools\MSVC\*"
+    echo !CURL_LIB_PATH!
+    for /d %%F in ("!CURL_LIB_PATH!") do (
+        echo Matched directory: %%F
+        set "LIB_EXE=%%F\bin\Hostx64\x64\lib.exe"
+        goto :create_lib
+    )
+    echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+    exit /b
+    :create_lib
+	IF /I EXIST !LIB_EXE! (
+		set "curl_def=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.def"
+		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
+		if !errorlevel! neq 0 exit /b !errorlevel!
+        echo [INFO] !LIB_EXE! created.
+	) else (
+		echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+	)
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

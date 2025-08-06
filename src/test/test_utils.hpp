@@ -67,11 +67,13 @@ void SetEnvironmentVar(const std::string& var, const std::string& val);
 void UnSetEnvironmentVar(const std::string& var);
 const std::string GetEnvVar(const std::string& var);
 
+std::string dirTree(const std::string& path, const std::string& indent = "");
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
+std::string getOvmsTestExecutablePath();
 
 #ifdef _WIN32
 const std::string getWindowsRepoRootPath();
@@ -811,6 +813,7 @@ protected:
     }
 
     void TearDown() override {
+        SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
         std::filesystem::remove_all(directoryPath);
     }
 
@@ -1038,7 +1041,6 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizeAndEnsureFree(std::string& port);
 void randomizeAndEnsureFrees(std::string& port1, std::string& port2);
-std::string getOvmsTestExecutablePath();
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 

@@ -169,7 +169,7 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Werror=format-security",
                     "-Wl,-z,noexecstack",
                     "-fPIC",
-                    "-D_GLIBCXX_ASSERTIONS",
+                    #"-D_GLIBCXX_ASSERTIONS", - causes errors on gpu
                     "-Wl,-z,relro",
                     "-Wl,-z,relro,-z,now",
                     "-Wl,-z,nodlopen",
@@ -199,7 +199,12 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
+                        "/wd6240", 
+                        "/wd6326",
+                        "/wd6385",
+                        "/wd6294",
                         "/guard:cf",
+                        "/utf-8",
 ]
 
 COMMON_STATIC_LIBS_COPTS = select({
@@ -222,6 +227,7 @@ COMMON_STATIC_TEST_COPTS = select({
                         "-W0",
                         "-Isrc",
                         "/wd4996",
+                        "/utf-8",
                     ],
                 })
 
