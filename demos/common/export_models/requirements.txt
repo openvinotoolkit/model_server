@@ -1,16 +1,14 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
---pre
-optimum-intel==1.27.0
+optimum==1.27.0
+optimum-intel==1.25.1
 openvino-tokenizers==2025.2.0.0
 openvino==2025.2.0
 nncf>=2.11.0 
-sentence_transformers
+sentence_transformers==5.0.0
 sentencepiece==0.2.0
 openai 
 transformers<4.53
-einops
+einops==0.8.1
 torchvision
 timm==1.0.15
 diffusers==0.33.1  # for image generation
