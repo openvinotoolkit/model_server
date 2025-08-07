@@ -26,10 +26,8 @@ namespace ovms {
  * It is designed to be extended by specific configuration builders for different models or pipeline types.
  */
 class BaseGenerationConfigBuilder {
-private:
-    ov::genai::GenerationConfig config;
-
 protected:
+    ov::genai::GenerationConfig config;
     void setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig);
 
 public:

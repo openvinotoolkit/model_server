@@ -57,12 +57,19 @@ enum ProcessingPhase {
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
-
+    // Flag indicating whether parsing start tag has been injected into the prompt
+    // if true, parser should assume start tag already appeared and start parsing immediately
+    bool zeroTriggerParsingEnabled = false;
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
     virtual ~BaseOutputParser() = default;
+
+    // Calling this method should put parser into zero trigger parsing mode where it starts parsing immediately, without seeking the start tag.
+    void enableZeroTriggerParsing() {
+        zeroTriggerParsingEnabled = true;
+    }
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}

@@ -37,8 +37,16 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
 
     // Phi4 with vLLM template produces tool calls in the format:
     // functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-    const std::string toolsStartString = "functools";
-    size_t toolsStartPos = parsedOutput.content.find(toolsStartString);
+
+    std::string toolsStartString;
+    size_t toolsStartPos = 0;
+    // If "functools" has been injected we assume the whole generated output is an array with tool calls,
+    // otherwise we search for the "functools" tag in the content.
+    if (!zeroTriggerParsingEnabled) {
+        toolsStartString = "functools";
+        toolsStartPos = parsedOutput.content.find(toolsStartString);
+    }
+
     if (toolsStartPos != std::string::npos) {
         // Extract the content before the tools part
         // parsedOutput.content = decoded.substr(0, toolsStartPos);

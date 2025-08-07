@@ -60,12 +60,37 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     }
 }
 
+bool OutputParser::isToolParserAvailable() const {
+    return toolParser != nullptr;
+}
+
+bool OutputParser::isReasoningParserAvailable() const {
+    return reasoningParser != nullptr;
+}
+
+void OutputParser::enableZeroTriggerToolParsing() {
+    if (toolParser) {
+        toolParser->enableZeroTriggerParsing();
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool parser is not available, cannot enable zero trigger tool parsing");
+    }
+}
+
+std::string OutputParser::getToolParserStartTag() const {
+    if (toolParser) {
+        return toolParser->getParsingStartTag();
+    } else {
+        throw std::runtime_error("Tool parser is not available, cannot get start tag");
+    }
+}
+
 ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Raw model output: {}", parsedOutput.content);
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }
