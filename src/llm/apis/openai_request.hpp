@@ -75,6 +75,8 @@ struct OpenAIChatCompletionsRequest {
     std::optional<std::string> responseSchema{std::nullopt};
     // Map that holds tool names and schemas for their arguments
     std::map<std::string, std::string> toolNameSchemaMap;
+    // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
+    std::string toolChoice;
 
     OpenAIChatCompletionsRequest() = default;
     ~OpenAIChatCompletionsRequest() = default;

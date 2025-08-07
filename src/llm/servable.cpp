@@ -122,6 +122,18 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
     }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
+    if (executionContext->apiHandler->getToolChoice() == "required") {
+        const auto& outputParser = executionContext->apiHandler->getOutputParser();
+        if (outputParser != nullptr && outputParser->isToolParserAvailable()) {
+            // If tool parser is available, we add tool parser start tag to the input text
+            // to increase the chance of the model generating tool calls immediately.
+            outputParser->enableZeroTriggerToolParsing();
+            inputText += outputParser->getToolParserStartTag();
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool parser trigger: {} at the end of the input.", outputParser->getToolParserStartTag());
+        } else {
+            return absl::InvalidArgumentError("Tool parser is not available, but tool_choice is set to 'required'");
+        }
+    }
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
