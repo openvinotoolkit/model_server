@@ -408,7 +408,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         else: # assume HF model name or local pytorch model folder
             print("Exporting draft LLM model to ", draft_llm_model_path)
             if not os.path.isdir(draft_llm_model_path) or args['overwrite_models']:
-                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --task text-generation-with-past --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
+                optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(draft_source_model, precision, draft_llm_model_path)
                 if os.system(optimum_command):
                     raise ValueError("Failed to export llm model", source_model)
 
