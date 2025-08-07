@@ -132,7 +132,6 @@ void testNegativeDimensions(const std::string& dims) {
 }
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     testNegativeDimensions(R"({"size":"51:512"})");
-    testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"512_51x"})");
     testNegativeDimensions(R"({"size":"51x512x"})");
     testNegativeDimensions(R"({"size":"-51x52"})");

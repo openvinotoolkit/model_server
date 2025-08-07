@@ -2,7 +2,7 @@
 
 ## API Reference
 OpenVINO Model Server includes now the `images/edits` endpoint using OpenAI API.
-It is used to execute [image2image]()https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation and [inpainting](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) tasks with OpenVINO GenAI pipelines.
+It is used to execute [image2image](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) and [inpainting](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) tasks with OpenVINO GenAI pipelines.
 Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-reference/images/createEdit) for more information on the API.
 The endpoint is exposed via a path:
 

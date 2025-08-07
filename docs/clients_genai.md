@@ -22,7 +22,7 @@ OpenAI compatible endpoints:
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
-- [images/generations](./model_server_rest_api_image_edit.md)
+- [images/edit](./model_server_rest_api_image_edit.md)
 
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)

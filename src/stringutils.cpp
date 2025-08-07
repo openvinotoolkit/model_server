@@ -108,7 +108,7 @@ std::optional<uint32_t> stou32(const std::string& input) {
     std::string str = input;
     ovms::erase_spaces(str);
 
-    if (str.size() > 0 && str[0] == '-') {
+    if (!str.empty() && str[0] == '-') {
         return std::nullopt;
     }
 
@@ -129,7 +129,7 @@ std::optional<uint64_t> stou64(const std::string& str) {
     }
 
     // Reject negative numbers for unsigned conversion
-    if (str.size() > 0 && str[0] == '-') {
+    if (!str.empty() && str[0] == '-') {
         return std::nullopt;
     }
 
