@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2024 Intel Corporation
+// Copyright 2025 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,25 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 
-syntax = "proto2";
-package mediapipe;
+#include "../sidepacket_servable.hpp"
+#include "embeddings_api.hpp"
+#include "../filesystem.hpp"
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/error/en.h>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
-import "mediapipe/framework/calculator.proto";
+namespace ovms {
 
-message EmbeddingsCalculatorOVOptions {
-  extend mediapipe.CalculatorOptions {
-    // https://github.com/google/mediapipe/issues/634 have to be unique in app
-    // no rule to obtain this
-    optional EmbeddingsCalculatorOVOptions ext = 1134738;
-    }
-    required string models_path = 1;
-    optional bool normalize_embeddings = 2 [default = true];
-    optional string target_device = 3 [default = "CPU"];
-    optional string plugin_config = 4 [default = ""];
-    enum Pooling {
-      CLS = 0;
-      LAST = 1;
-    }
-    optional Pooling pooling = 5 [default = CLS];
-}
+struct EmbeddingsServable : SidepacketServable {
+public:
+    EmbeddingsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
+        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {}
+};
+
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
+}  // namespace ovms
