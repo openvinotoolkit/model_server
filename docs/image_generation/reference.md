@@ -18,6 +18,8 @@ struct HttpPayload {
 
 The input JSON content should be compatible with the [Image Generation API](../model_server_rest_api_image_generation.md).
 
+The input multi-part content should be compatible with the [Image Edit API](../model_server_rest_api_image_edit.md).
+
 The input also includes a side packet with a reference to `IMAGE_GEN_NODE_RESOURCES` which is a shared object representing multiple OpenVINO GenAI pipelines built from OpenVINO models loaded into memory just once.
 
 **Every node based on Image Generation Calculator MUST have exactly that specification of this side packet:**
@@ -52,7 +54,7 @@ Above node configuration should be used as a template since user is not expected
 
 The calculator supports the following `node_options` for tuning the pipeline configuration:
 -    `required string models_path` - location of the models and scheduler directory (can be relative);
--    `optional string device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"]
+-    `optional string device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"] or mixed - space separated. Example: `CPU GPU NPU` equals to `text_encode=CPU denoise=GPU vae=NPU`
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2025/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options). The config is used for all models in the pipeline except for tokenizers (text encoders/decoders, unet, vae) [default = "{}"]
 -    `optional string max_resolution` - maximum resolution allowed for generation. Requests exceeding this value will be rejected. [default = "4096x4096"];
 -    `optional string default_resolution` - default resolution used for generation. If not specified, underlying model shape will determine final resolution.
@@ -60,6 +62,10 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint64 default_num_inference_steps` - default number of inference steps used for generation, if not specified by the request [default = 50];
 -    `optional uint64 max_num_inference_steps` - maximum number of inference steps allowed for generation. Requests exceeding this value will be rejected. [default = 100];
 
+Static model resolution settings:
+-    `optional string resolution` - enforces static resolution for all requests. When specified, underlying models are reshaped to this resolution.
+-    `optional uint64 num_images_per_prompt` - used together with max_resolution, to define batch size in static model shape.
+-    `optional float guidance_scale` - used together with max_resolution
 
 ## Models Directory
 
@@ -161,4 +167,5 @@ Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/mas
 
 ## References
 - [Image Generation API](../model_server_rest_api_image_generation.md)
+- [Image Edit API](../model_server_rest_api_image_edit.md)
 - Demos on [CPU/GPU](../../demos/image_generation/README.md)
