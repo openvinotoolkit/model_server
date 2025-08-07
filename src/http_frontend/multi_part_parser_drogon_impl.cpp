@@ -40,4 +40,17 @@ std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::str
     return it->second.fileContent();
 }
 
+std::set<std::string> DrogonMultiPartParser::getAllFieldNames() const {
+    std::set<std::string> fieldNames;
+    auto fileMap = this->parser->getFilesMap();
+    for (const auto& [name, _] : fileMap) {
+        fieldNames.insert(name);
+    }
+    auto params = this->parser->getParameters();
+    for (const auto& [name, _] : params) {
+        fieldNames.insert(name);
+    }
+    return fieldNames;
+}
+
 }  // namespace ovms
