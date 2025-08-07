@@ -67,7 +67,6 @@ For example:
 ```console
 python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-8B --weight-format fp32 --pooling LAST --config_file_path models/config.json`
 ```
-For now OVMS support only two pooling modes: CLS and LAST
 
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
