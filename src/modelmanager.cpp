@@ -233,7 +233,6 @@ Status ModelManager::startFromConfig() {
         if (!status.ok())
             return status;
 
-        // Reading metric config only once per server start
         status = loadMetricsFromCLI(config);
         if (!status.ok())
             return status;
@@ -273,7 +272,6 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
-    // Reading metric config only once per server start
     status = loadMetricsFromCLI(config);
     if (!status.ok())
         return status;
