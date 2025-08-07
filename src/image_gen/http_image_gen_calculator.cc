@@ -93,7 +93,20 @@ static absl::Status generateTensorImg2Img(ov::genai::Image2ImagePipeline& reques
     }
     return absl::OkStatus();
 }
-
+// written out separately to avoid msvc crashing when using try-catch in process method ...
+static absl::Status makeTensorFromString(const std::string& filePayload, ov::Tensor& imageTensor) {
+    try {
+        imageTensor = loadImageStbiFromMemory(filePayload);
+    } catch (std::runtime_error& e) {
+        std::stringstream ss;
+        ss << "Image parsing failed: " << e.what();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+        return absl::InvalidArgumentError(ss.str());
+    } catch (...) {
+        return absl::InternalError("Unknown error during image parsing");
+    }
+    return absl::OkStatus();
+}
 class ImageGenCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -156,19 +169,15 @@ public:
             RET_CHECK(image.has_value() && !image.value().empty()) << "Image field is missing in multipart body";
 
             ov::Tensor imageTensor;
-            try {
-                imageTensor = loadImageStbiFromMemory(std::string(image.value()));
-            } catch (std::runtime_error& e) {
-                std::stringstream ss;
-                ss << "Image parsing failed: " << e.what();
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-                return absl::InvalidArgumentError(ss.str());
+            auto status = makeTensorFromString(std::string(image.value()), imageTensor);
+            if (!status.ok()) {
+                return status;
             }
 
             SET_OR_RETURN(ov::AnyMap, requestOptions, getImageEditRequestOptions(*payload.multipartParser, pipe->args));
 
             ov::genai::Image2ImagePipeline request = pipe->image2ImagePipeline->clone();
-            auto status = generateTensorImg2Img(request, prompt, imageTensor, requestOptions, images);
+            status = generateTensorImg2Img(request, prompt, imageTensor, requestOptions, images);
             if (!status.ok()) {
                 return status;
             }
