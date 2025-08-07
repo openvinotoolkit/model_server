@@ -73,7 +73,7 @@ def count_tokens(docs, model):
     documents = docs.iter(batch_size=1)
     num_tokens = 0
     for request in documents:
-        num_tokens += len(tokenizer(request["text"],add_special_tokens=False)["input_ids"][0])
+        num_tokens += len(tokenizer(request["text"],add_special_tokens=False, truncation=True)["input_ids"][0])
     return num_tokens
 
 @dataclass
