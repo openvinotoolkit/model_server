@@ -76,6 +76,7 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
     BAAI/bge-large-en-v1.5
     BAAI/bge-large-zh-v1.5
     thenlper/gte-small
+    Qwen/Qwen3-Embedding-0.6B
 ```
 
 ## Server Deployment
