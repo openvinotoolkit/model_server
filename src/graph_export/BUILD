@@ -31,6 +31,7 @@ ovms_cc_library(
         "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
+        "@ovms//src:libovms_version",
     ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",

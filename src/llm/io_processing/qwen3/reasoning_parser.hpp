@@ -17,7 +17,6 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
-#include <optional>
 #include <vector>
 
 #pragma warning(push)
@@ -30,19 +29,24 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Llama3OutputParser : public BaseOutputParser {
+class Qwen3ReasoningParser : public BaseOutputParser {
 protected:
-    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    int64_t botTokenId = 128010;
-    // ";" is used as a separator between tool calls in the response
-    std::string separator = ";";
+    // Tags used to identify the reasoning segment in the content
+    const std::string parsingStartTag = "<think>";
+    const std::string parsingEndTag = "</think>";
 
 public:
-    Llama3OutputParser() = delete;
-    explicit Llama3OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Qwen3ReasoningParser() = delete;
+    explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
+    }
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
+    }
 };
 }  // namespace ovms

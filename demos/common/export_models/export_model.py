@@ -51,8 +51,9 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--tools_model_type', choices=["llama3","phi4","hermes3","qwen3"], help='Set the type of model chat template and output parser', dest='tools_model_type')
-parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tools_model_type', dest='enable_tool_guided_generation')
+parser_text.add_argument('--reasoning_parser', choices=["qwen3"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3","phi4","hermes3"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
 add_common_arguments(parser_embeddings)
@@ -223,8 +224,10 @@ node: {
           {%- if draft_model_dir_name %}
           # Speculative decoding configuration
           draft_models_path: "./{{draft_model_dir_name}}",{% endif %}
-          {%- if tools_model_type %}
-          response_parser: "{{tools_model_type}}",{% endif %}
+          {%- if reasoning_parser %}
+          reasoning_parser: "{{reasoning_parser}}",{% endif %}
+          {%- if tool_parser %}
+          tool_parser: "{{tool_parser}}",{% endif %}
           enable_tool_guided_generation: {% if not enable_tool_guided_generation %}false{% else %} true{% endif%},
       }
   }

@@ -21,35 +21,36 @@
 #include <vector>
 
 #include "base_output_parser.hpp"
-#include "llama3/output_parser.hpp"
-#include "qwen3/output_parser.hpp"
-#include "hermes3/output_parser.hpp"
-#include "phi4/output_parser.hpp"
 
 namespace ovms {
+
 class OutputParser {
-    std::unique_ptr<BaseOutputParser> parser_impl;
+    enum ProcessingPhase {
+        UNKNOWN,
+        CONTENT,
+        REASONING,
+        TOOL_CALLS
+    };
+
+    ov::genai::Tokenizer tokenizer;
+    std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
+    std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
+
+    // Streaming related members
+    ProcessingPhase processingPhase = UNKNOWN;
+
+    // Common method for parsing content chunk in the streaming mode.
+    rapidjson::Document parseContentChunk(const std::string& chunk);
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, std::string parserName) {
-        if (parserName == "llama3") {
-            parser_impl = std::make_unique<Llama3OutputParser>(tokenizer);
-        } else if (parserName == "qwen3") {
-            parser_impl = std::make_unique<Qwen3OutputParser>(tokenizer);
-        } else if (parserName == "hermes3") {
-            parser_impl = std::make_unique<Hermes3OutputParser>(tokenizer);
-        } else if (parserName == "phi4") {
-            parser_impl = std::make_unique<Phi4OutputParser>(tokenizer);
-        } else {
-            throw std::invalid_argument("Unsupported response parser: " + parserName);
-        }
-    }
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) {
-        return parser_impl->parse(generatedTokens);
-    }
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) {
-        return parser_impl->parseChunk(chunkResponse);
-    }
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName);
+
+    // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
+
+    // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
+    // or nullopt if no response can be produced.
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const bool toolsAvailable);
 };
 }  // namespace ovms
