@@ -112,16 +112,21 @@ Text generation for NPU target device. Command below sets max allowed prompt siz
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --config_file_path models/config_all.json --model_repository_path models --target_device NPU --max_prompt_len 2048 --ov_cache_dir ./models/.ov_cache
 ```
 
+> **Note:** Some models like `mistralai/Mistral-7B-Instruct-v0.3` might fail to export because the task can't be determined automatically. In such situation it can be set in `--extra_quantization_parameters`. For example:
+```console
+python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --extra_quantization_params "--task text-generation-with-past"
+```
+
 ### Embedding Models
 
 #### Embeddings with deployment on a single CPU host:
 ```console
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
 ```
 
 #### Embeddings with deployment on a dual CPU host:
 ```console
-python export_model.py embeddings --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
 ```
 
 #### With Input Truncation
@@ -138,7 +143,7 @@ python export_model.py embeddings \
 
 ### Reranking Models
 ```console
-python export_model.py rerank \
+python export_model.py rerank_ov \
     --source_model BAAI/bge-reranker-large \
     --weight-format int8 \
     --config_file_path models/config_all.json \
