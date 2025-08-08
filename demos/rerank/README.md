@@ -201,6 +201,7 @@ Average document length: 92.248 tokens
 BAAI/bge-reranker-large
 BAAI/bge-reranker-v2-m3
 BAAI/bge-reranker-base
+cross-encoder/msmarco-MiniLM-L6-en-de-v1
 ```
 
 ## Integration with Langchain

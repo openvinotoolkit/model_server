@@ -98,7 +98,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             # Try to read data from tokenizer_config.json
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
-                f = open(templates_directory + "/tokenizer_config.json")
+                f = open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
                 bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.

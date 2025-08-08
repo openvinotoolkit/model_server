@@ -127,8 +127,6 @@ Run `setupvars` script to set required environment variables.
 
 > **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
 
-> **Note**: If package contains Python, OVMS uses Python's Jinja package to apply chat template when serving LLMs. In such case, please ensure you have Windows "Beta Unicode UTF-8 for worldwide language support" enabled. [Instruction](llm_utf8_troubleshoot.png)
-
 You can also build model server from source by following the [developer guide](windows_developer_guide.md).
 
 :::

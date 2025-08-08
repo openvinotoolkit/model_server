@@ -1,27 +1,38 @@
-# OpenAI API image generation endpoint {#ovms_docs_rest_api_image_generation}
+# OpenAI API image edit endpoint {#ovms_docs_rest_api_image_edit}
 
 ## API Reference
-OpenVINO Model Server includes now the `images/generations` endpoint using OpenAI API.
-It is used to execute [text2image](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) task with OpenVINO GenAI pipeline.
-Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-reference/images/create) for more information on the API.
+OpenVINO Model Server includes now the `images/edits` endpoint using OpenAI API.
+It is used to execute [image2image](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) and [inpainting](https://github.com/openvinotoolkit/openvino.genai/tree/master/samples/cpp/image_generation) tasks with OpenVINO GenAI pipelines.
+Please see the [OpenAI API Reference](https://platform.openai.com/docs/api-reference/images/createEdit) for more information on the API.
 The endpoint is exposed via a path:
 
-<b>http://server_name:port/v3/images/generations</b>
+<b>http://server_name:port/v3/images/edits</b>
 
-Request body must be in JSON format, and the request must have `Content-Type: application/json` header.
+Request body must be in `multipart/form-data` format.
 
 ### Example request
+```
+curl -X POST http://localhost:8000/v3/images/edits \
+  -F "model=OpenVINO/stable-diffusion-v1-5-fp16-ov" \
+  -F "image=@three_cats.png" \
+  -F "strength=0.7" \
+  -F 'prompt=Three zebras' \
+  | jq -r '.data[0].b64_json' | base64 --decode > edit.png
+```
 
+### Generate 4 variations of the edit
 ```
-curl http://localhost:8000/v3/images/generations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "black-forest-labs/FLUX.1-schnell",
-    "prompt": "three cats",
-    "num_inference_steps": 10,
-    "size": "512x512"
-  }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
+curl -X POST http://localhost:8000/v3/images/edits \
+  -F "model=OpenVINO/stable-diffusion-v1-5-fp16-ov" \
+  -F "image=@three_cats.png" \
+  -F "strength=0.7" \
+  -F "prompt=Three zebras" \
+  -F "n=4" \
+  | jq -r '.data[].b64_json' \
+  | awk '{print > ("img" NR ".b64") } END { for(i=1;i<=NR;i++) system("base64 --decode img" i ".b64 > edit" i ".png && rm img" i ".b64") }'
 ```
+
+![image edit](./image-edit-zebras.png)
 
 ### Example response
 
@@ -38,12 +49,15 @@ curl http://localhost:8000/v3/images/generations \
 
 ## Request
 
-| Param | OpenVINO Model Server | OpenAI /images/generations API | Type | Description |
+| Param | OpenVINO Model Server | OpenAI /images/edits API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
+| image | ⚠️ | ✅ | string or array of strings (required) | The image to edit. Must be a single image (⚠️**Note**: Array of strings is not supported for now.) |
+| mask | ❌ | ✅ | string | Triggers inpainting pipeline type. An additional image whose fully transparent areas (e.g. where alpha is zero) indicate where `image` should be edited. Not supported for now. |
 | prompt | ✅ | ✅ | string (required) | A text description of the desired image(s). |
 | size | ✅ | ✅ | string or null (default: auto) | The size of the generated images. Must be in WxH format, example: `1024x768`. Default model W/H will be used when using `auto`. |
 | n | ✅ | ✅ | integer or null (default: `1`) | A number of images to generate. If you want to generate multiple images for the same combination of generation parameters and text prompts, you can use this parameter for better performance as internally computations will be performed with batch for Unet / Transformer models and text embeddings tensors will also be computed only once. |
+| input_fidelity | ⚠️ | ✅ | string or null | Control how much effort the model will exert to match the style and features, especially facial features, of input images.  (⚠️**Note**: Not supported for now - use `strength` parameter.  |
 | background | ❌ | ✅ | string or null (default: auto) | Allows to set transparency for the background of the generated image(s). Not supported for now. |
 | stream | ❌ | ✅ | boolean or null (default: false) | Generate the image in streaming mode. Not supported for now. |
 | style | ❌ | ✅ | string or null (default: vivid) | The style of the generated images. Recognized OpenAI settings, but not supported: vivid, natural. |
@@ -67,7 +81,7 @@ curl http://localhost:8000/v3/images/generations \
 | num_images_per_prompt | ✅ | ❌ | integer (default: `1`) | The same as base parameter `n`. |
 | num_inference_steps | ✅ | ❌ | integer (default: `50`) | Defines denoising iteration count. Higher values increase quality and generation time, lower values generate faster with less detail. |
 | guidance_scale | ✅ | ❌ | float (optional) | Guidance scale parameter which controls how model sticks to text embeddings generated by text encoders within a pipeline. Higher value of guidance scale moves image generation towards text embeddings, but resulting image will be less natural and more augmented. |
-| strength | ❌ | ❌ | float (optional) min: 0.0, max: 1.0 | **Only for [image editing](./model_server_rest_api_image_edit.md) endpoints.** Indicates extent to transform the reference `image`. Must be between 0 and 1. `image` is used as a starting point and more noise is added the higher the `strength`. The number of denoising steps depends on the amount of noise initially added. When `strength` is 1, added noise is maximum and the denoising process runs for the full number of iterations specified in `num_inference_steps`. A value of 1 essentially ignores `image` parameter. |
+| strength | ✅ | ❌ | float (optional) min: 0.0, max: 1.0 | Indicates extent to transform the reference `image`. Must be between 0 and 1. `image` is used as a starting point and more noise is added the higher the `strength`. The number of denoising steps depends on the amount of noise initially added. When `strength` is 1, added noise is maximum and the denoising process runs for the full number of iterations specified in `num_inference_steps`. A value of 1 essentially ignores `image` parameter. |
 | rng_seed | ✅ | ❌ | integer (optional) | Seed for random generator. |
 | max_sequence_length | ✅ | ❌ | integer (optional) | This parameters limits max sequence length for T5 encoder for SD3 and FLUX models. T5 tokenizer output is padded with pad tokens to 'max_sequence_length' within a pipeline. So, for better performance, you can specify this parameter to lower value to speed-up T5 encoder inference as well as inference of transformer denoising model. For optimal performance it can be set to a number of tokens for `prompt_3` / `negative_prompt_3` for SD3 or `prompt_2` for FLUX. |
 
@@ -95,6 +109,6 @@ Endpoint can raise an error related to incorrect request in the following condit
 
 ## References
 
-[End to end demo with image generation endpoint](../demos/image_generation/README.md)
+[End to end demo with image edit endpoint](../demos/image_generation/README.md)
 
 [Code snippets](./clients_genai.md)
