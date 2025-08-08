@@ -107,6 +107,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (!success) {
             return absl::Status(absl::StatusCode::kInvalidArgument, inputText);
         }
+        SPDLOG_INFO("BBBBBBBBBBBBB:\n[{}]", inputText);
 #else
         ov::genai::ChatHistory& chatHistory = executionContext->apiHandler->getChatHistory();
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded

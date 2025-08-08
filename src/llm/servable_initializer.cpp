@@ -60,6 +60,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             global json
             import json
             from pathlib import Path
+            global datetime
+            import datetime
 
             global jinja2
             import jinja2
@@ -67,7 +69,10 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
-
+            
+            def strftime_now(format):
+                return datetime.datetime.now().strftime(format)
+            
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
             default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
@@ -85,7 +90,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-            jinja_env.globals["raise_exception"] = raise_exception     
+            jinja_env.globals["raise_exception"] = raise_exception
+            jinja_env.globals["strftime_now"] = strftime_now
             if jinja_file.is_file():
                 template = jinja_env.get_template("template.jinja")
 
