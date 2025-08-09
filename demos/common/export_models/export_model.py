@@ -231,7 +231,8 @@ node: {
           reasoning_parser: "{{reasoning_parser}}",{% endif %}
           {%- if tool_parser %}
           tool_parser: "{{tool_parser}}",{% endif %}
-          enable_tool_guided_generation: {% if not enable_tool_guided_generation %}false{% else %} true{% endif%},
+          {%- if enable_tool_guided_generation %}
+          enable_tool_guided_generation: {% if not enable_tool_guided_generation %}false{% else %} true{% endif%},{% endif %}
       }
   }
   input_stream_handler {
