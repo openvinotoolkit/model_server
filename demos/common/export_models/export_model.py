@@ -401,7 +401,12 @@ def export_text_generation_model(model_repository_path, source_model, model_name
                     task_parameters['extra_quantization_params'] = "--sym --ratio 1.0 --group-size -1"
             optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], llm_model_path)
             if os.system(optimum_command):
-                raise ValueError("Failed to export llm model", source_model)    
+                raise ValueError("Failed to export llm model", source_model)
+            if not (os.path.isfile(os.path.join(llm_model_path, 'openvino_detokenizer.xml'))):
+                print("Tokenizer and detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model")
+                convert_tokenizer_command = "convert_tokenizer --with-detokenizer -o {} {}".format(llm_model_path, source_model)
+                if os.system(convert_tokenizer_command):
+                    raise ValueError("Failed to export tokenizer and detokenizer", source_model)
     ### Export draft model for speculative decoding 
     draft_source_model = task_parameters.get("draft_source_model", None)
     draft_model_dir_name = None   

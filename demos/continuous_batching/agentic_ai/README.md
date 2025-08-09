@@ -1,5 +1,7 @@
 # Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
+This demo version requires OVMS version 2025.3. Build it from [source](../../../docs/build_from_source.md) before it is published.
+
 OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
 You can learn more about [tools calling based on OpenAI API](https://platform.openai.com/docs/guides/function-calling?api-mode=responses)
@@ -10,10 +12,14 @@ Here are presented required steps to deploy language models trained for tools su
 The application employing OpenAI agent SDK is using MCP server. It is equipped with a set of tools to providing context for the content generation.
 The tools can also be used for automation purposes based on input in text format.  
 
+
+
 ## Export LLM model
 Currently supported models:
 - Qwen/Qwen3-8B
+- Qwen/Qwen3-4B
 - meta-llama/Llama-3.1-8B-Instruct
+- meta-llama/Llama-3.2-3B-Instruct
 - NousResearch/Hermes-3-Llama-3.1-8B
 - microsoft/Phi-4-mini-instruct
 
@@ -23,7 +29,7 @@ The model response with tool call follow a specific syntax which is process by a
 Download export script, install it's dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -47,7 +53,13 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-for
 ::::
 
 You can use similar commands for different models. Change the source_model and the tools_model_type (note that as of today the following types as available: `[phi4, llama3, qwen3, hermes3]`).
-> **Note:** The tuned chat template will be copied to the model folder as template.jinja and the response parser will be set in the graph.pbtxt
+> **Note:** Some models give more reliable responses with tunned chat template. Copy custom template to the model folder like below:
+```
+curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
+curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
+curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8B/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
+curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
+```
 
 
 ## Start OVMS
@@ -74,7 +86,7 @@ In case you want to use GPU device to run the generation, add extra docker param
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:ro openvino/model_server:2025.2-gpu \
+docker run -d --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:ro openvino/model_server:latest-gpu \
 --rest_port 8000 --model_path /models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B
 ```
 :::
