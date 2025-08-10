@@ -28,6 +28,11 @@
 
 #include "imagegenpipelineargs.hpp"
 
+#pragma warning(push)
+#pragma warning(disable : 4996 4244 4267 4127)
+#include "rapidjson/document.h"
+#pragma warning(pop)
+
 #define RETURN_IF_HOLDS_STATUS(NAME)                  \
     if (std::holds_alternative<absl::Status>(NAME)) { \
         return std::get<absl::Status>(NAME);          \
@@ -39,21 +44,28 @@
     auto NAME = std::get<TYPE>(NAME##_OPT);
 
 namespace ovms {
-struct HttpPayload;
+class MultiPartParser;
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions);
-std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const HttpPayload& payload);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& doc);
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser);
 
-std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload);
+std::variant<absl::Status, std::string> getPromptField(const rapidjson::Document& doc);
+std::variant<absl::Status, std::string> getPromptField(const ovms::MultiPartParser& payload);
 
-std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
-std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
-std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
-std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
-std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const rapidjson::Document& doc, const std::string& keyName);
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<std::string_view>> getFileFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const rapidjson::Document& doc, const std::string& keyName);
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const rapidjson::Document& doc, const std::string& keyName);
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const rapidjson::Document& doc, const std::string& keyName);
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const rapidjson::Document& doc, const std::string& keyName);
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::MultiPartParser& payload, const std::string& keyName);
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
-std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const HttpPayload& payload, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& doc, const ImageGenPipelineArgs& args);
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& payload, const ImageGenPipelineArgs& args);
 
 std::unique_ptr<std::string> generateJSONResponseFromB64Images(const std::vector<std::string>& base64Images);
 

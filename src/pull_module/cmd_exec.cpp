@@ -21,15 +21,25 @@
 #include <string>
 
 namespace ovms {
-std::string exec_cmd(const std::string& command) {
+std::string exec_cmd(const std::string& command, int& returnCode) {
     char buffer[200];
     std::string result = "";
     try {
         // Open pipe to file
 #ifdef _WIN32
-        std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), _pclose);
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = _pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), pcloseDeleter);
 #elif __linux__
-        std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pclose);
+        auto pcloseDeleter = [&returnCode](FILE* ptr) {
+            if (ptr) {
+                returnCode = pclose(ptr);
+            }
+        };
+        std::shared_ptr<FILE> pipe(popen(command.c_str(), "r"), pcloseDeleter);
 #endif
         if (!pipe) {
             return "Error: popen failed.";

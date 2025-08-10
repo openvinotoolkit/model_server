@@ -20,6 +20,7 @@
 #include <unordered_map>
 
 #include "modelversion.hpp"
+#include "logging.hpp"
 
 // note: think about using https://github.com/Neargye/magic_enum when compatible compiler is supported.
 
@@ -33,8 +34,6 @@ enum class ModelVersionState : int {
     UNLOADING = 40,
     END = 50
 };
-
-const std::string& ModelVersionStateToString(ModelVersionState state);
 
 enum class ModelVersionStatusErrorCode : int {
     OK = 0,
@@ -57,6 +56,8 @@ enum class ModelVersionStatusErrorCode : int {
     // DO_NOT_USE_RESERVED_FOR_FUTURE_EXPANSION_USE_DEFAULT_IN_SWITCH_INSTEAD_
     //    = 20
 };
+
+const std::string& ModelVersionStateToString(ModelVersionState state);
 
 const std::string& ModelVersionStatusErrorCodeToString(ModelVersionStatusErrorCode code);
 
@@ -101,3 +102,21 @@ private:
 };
 
 }  // namespace ovms
+
+namespace fmt {
+
+template <>
+struct formatter<ovms::ModelVersionState> : formatter<std::string> {
+    auto format(ovms::ModelVersionState state, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", (unsigned int)state);
+    }
+};
+
+template <>
+struct formatter<ovms::ModelVersionStatusErrorCode> : formatter<std::string> {
+    auto format(ovms::ModelVersionStatusErrorCode code, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", (unsigned int)code);
+    }
+};
+
+}  // namespace fmt

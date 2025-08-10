@@ -59,7 +59,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->endpoint,
         std::chrono::system_clock::now(),
         getProperties()->tokenizer,
-        getProperties()->responseParserName);
+        getProperties()->toolParserName,
+        getProperties()->reasoningParserName);
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
@@ -78,6 +79,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
+    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
+    executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
     return absl::OkStatus();
 }
 
@@ -166,17 +169,24 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
-            executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            }
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty())
+        if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-        executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
+        }
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+        if (!serializedChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+        }
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 

@@ -206,10 +206,11 @@ class StreamClient:
         display_th = threading.Thread(target=self.display)
         display_th.start()
         test_frame = self.grab_frame()
-        np_test_frame = np.array(test_frame, dtype=datatype.dtype())
+
         if test_frame is None:
             self. force_exit = True
         else:
+            np_test_frame = np.array(test_frame, dtype=datatype.dtype())
             if self.width is None:
                 self.width = np_test_frame.shape[1]
             if self.height is None:

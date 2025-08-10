@@ -328,11 +328,14 @@ class TestSingleModelInference:
         completion = client.beta.chat.completions.parse(
             model=model_name,
             messages=[
-                {"role": "system", "content": "Extract the event information."},
+                {"role": "system", "content": "Extract the event information and place them in json format."},
                 {"role": "user", "content": "Alice and Bob are going to a Science Fair on Friday."},
             ],
+            temperature=0.0,
+            max_tokens=100,
             response_format=CalendarEvent,
         )
+
         print("CalendarEvent as JSON:", json.dumps(CalendarEvent.schema(), indent=2))
         print("COMPLETION CONTENT:",completion.choices[0].message.content)
         json_str = completion.choices[0].message.content

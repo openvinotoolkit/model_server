@@ -26,8 +26,6 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
-#include "../graph_export/graph_export_types.hpp"
-#include "../config_export_module/config_export_types.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../systeminfo.hpp"
 #include "test_utils.hpp"
@@ -356,6 +354,19 @@ TEST_F(OvmsConfigDeathTest, hfWrongTask) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter unsupported value: bad_task");
 }
 
+TEST_F(OvmsConfigDeathTest, hfNoTaskParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 6;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options - --task parameter wasn't passed");
+}
+
 TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
     char* n_argv[] = {
         "ovms",
@@ -364,10 +375,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameter) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--max_allowed_chunks",
         "1400",
     };
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --max_allowed_chunks, 1400,");
 }
 
@@ -550,10 +563,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGraphParameterName) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--min_num_batched_tokens",
         "145",
     };
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --min_num_batched_tokens, 145,");
 }
 
@@ -631,10 +646,12 @@ TEST_F(OvmsConfigDeathTest, hfBadTextGenGraphNoPull) {
         "some/model",
         "--model_repository_path",
         "/some/path",
+        "--task",
+        "text_generation",
         "--normalizes",
         "true",
     };
-    int arg_count = 7;
+    int arg_count = 9;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "task: text_generation - error parsing options - unmatched arguments : --normalizes, true,");
 }
 
@@ -658,7 +675,7 @@ TEST_F(OvmsConfigDeathTest, hfBadEmbeddingsGraphNoPort) {
     char* n_argv[] = {
         "ovms",
         "--source_model",
-        "some/model",
+        "OpenVINO/model",
         "--model_repository_path",
         "/some/path",
         "--task",
@@ -699,11 +716,9 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
     char* n_argv[] = {
         "ovms",
-        "--model_repository_path",
-        "/repo/path",
         "--remove_from_config",
         "/config/path"};
-    int arg_count = 5;
+    int arg_count = 3;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
@@ -718,29 +733,14 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 
-TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelNameWithPath) {
-    char* n_argv[] = {
-        "ovms",
-        "--model_path",
-        "/path1",
-        "--model_repository_path",
-        "/repo/path",
-        "--remove_from_config",
-        "/config/path"};
-    int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
-}
-
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
     char* n_argv[] = {
         "ovms",
         "--model_path",
         "/path1",
-        "--model_repository_path",
-        "/repo/path",
         "--add_to_config",
         "/config/path"};
-    int arg_count = 7;
+    int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
 }
 TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
@@ -789,6 +789,68 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "model_repository_path parameter is required for pull mode");
 }
 
+TEST_F(OvmsConfigDeathTest, hfPullWrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--weight-format",
+        "int4",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, hfPullWrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "Openvino/model",
+        "--task",
+        "embeddings",
+        "--extra_quantization_params",
+        "int4",
+        "--model_repository_path",
+        "/models",
+    };
+    int arg_count = 10;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, WrongPrecisionParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--weight-format",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
+TEST_F(OvmsConfigDeathTest, WrongQuantizationParameter) {
+    char* n_argv[] = {
+        "ovms",
+        "--config_path",
+        "/config.json",
+        "--port",
+        "44",
+        "--extra_quantization_params",
+        "int4",
+    };
+    int arg_count = 7;
+    EXPECT_THROW(ovms::Config::instance().parse(arg_count, n_argv), std::logic_error);
+}
+
 TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
     char* n_argv[] = {
         "ovms",
@@ -797,10 +859,143 @@ TEST_F(OvmsConfigDeathTest, simultaneousPullAndListModels) {
         "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
         "--model_repository_path",
         "/models",
+        "--task",
+        "text_generation",
         "--list_models"};
-    int arg_count = 7;
+    int arg_count = 9;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndListModels) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        "--list_models"};
+    int arg_count = 8;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --add_to_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndListModels) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        "--list_models"};
+    int arg_count = 6;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--list_models cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousAddToConfigAndRepositroyPath) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        "--model_repository_path",
+        (char*)modelPath.c_str()};
+    int arg_count = 9;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --model_path") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndRepositroyPath) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)configPath.c_str()};
+    int arg_count = 7;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_repository_path cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousRemoveFromConfigAndModelPath) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)configPath.c_str()};
+    int arg_count = 7;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--model_path cannot be used with --remove_from_config") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousPullAndAdd) {
+    std::string modelName = "name1";
+    std::string modelPath = "/path/for/name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+        "--model_repository_path",
+        "/models",
+        "--task",
+        "text_generation",
+        (char*)"--add_to_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+    };
+    int arg_count = 14;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--add_to_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
+}
+
+TEST_F(OvmsConfigDeathTest, simultaneousPullAndRemove) {
+    std::string modelName = "name1";
+    std::string configPath = "test/repository";
+    char* n_argv[] = {
+        "ovms",
+        "--pull",
+        "--source_model",
+        "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov",
+        "--model_repository_path",
+        "/models",
+        "--task",
+        "text_generation",
+        (char*)"--remove_from_config",
+        (char*)configPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+    };
+    int arg_count = 12;
+
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "--remove_from_config cannot be used with --pull or --task") << createCmd(arg_count, n_argv) << buffer.str();
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChanged) {
@@ -813,6 +1008,8 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"VLM",
         (char*)"--max_num_seqs",
@@ -829,11 +1026,14 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"true",
         (char*)"--draft_source_model",
         (char*)"/draft/model/source",
-        (char*)"--response_parser",
-        (char*)"parserName",
-    };
+        (char*)"--reasoning_parser",
+        (char*)"reasoningParserName",
+        (char*)"--tool_parser",
+        (char*)"toolParserName",
+        (char*)"--enable_tool_guided_generation",
+        (char*)"true"};
 
-    int arg_count = 24;
+    int arg_count = 30;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -852,7 +1052,9 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.value(), "/draft/model/source");
-    ASSERT_EQ(graphSettings.responseParser.value(), "parserName");
+    ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
+    ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
+    ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {
@@ -866,6 +1068,8 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"--overwrite_models",
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"VLM",
         (char*)"--max_num_seqs",
@@ -874,7 +1078,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChanged) {
         (char*)"NPU",
     };
 
-    int arg_count = 13;
+    int arg_count = 15;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -930,7 +1134,111 @@ TEST(OvmsGraphConfigTest, positiveTaskTextGen) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
-    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
+    ASSERT_EQ(graphSettings.reasoningParser.has_value(), false);
+    ASSERT_EQ(graphSettings.toolParser.has_value(), false);
+}
+
+TEST(OvmsExportHfSettingsTest, positiveDefault) {
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "int8");
+    ASSERT_EQ(hfSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.has_value(), false);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChanged) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--weight-format",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 15;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
+
+TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--rest_port",
+        (char*)"8080",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--overwrite_models",
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--weight-format",
+        (char*)"fp64",
+        (char*)"--extra_quantization_params",
+        (char*)"--sym --ratio 1.0",
+        (char*)"--target_device",
+        (char*)"NPU",
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 16;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.overwriteModels, true);
+    ASSERT_EQ(hfSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
+    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
@@ -943,9 +1251,11 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
     };
 
-    int arg_count = 6;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -964,7 +1274,8 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
-    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
+    ASSERT_EQ(graphSettings.reasoningParser.has_value(), false);
+    ASSERT_EQ(graphSettings.toolParser.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveDefaultStart) {
@@ -976,11 +1287,13 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--port",
         (char*)"8080",
     };
 
-    int arg_count = 7;
+    int arg_count = 9;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -1000,7 +1313,8 @@ TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.has_value(), false);
     ASSERT_EQ(graphSettings.dynamicSplitFuse, "true");
     ASSERT_EQ(graphSettings.draftModelDirName.has_value(), false);
-    ASSERT_EQ(graphSettings.responseParser.has_value(), false);
+    ASSERT_EQ(graphSettings.reasoningParser.has_value(), false);
+    ASSERT_EQ(graphSettings.toolParser.has_value(), false);
 }
 
 TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
@@ -1013,11 +1327,13 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceHetero) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--target_device",
         (char*)"HETERO",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
@@ -1035,11 +1351,13 @@ TEST(OvmsGraphConfigTest, negativePipelineType) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--pipeline_type",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "pipeline_type: INVALID is not allowed. Supported types: LM, LM_CB, VLM, VLM_CB, AUTO");
 }
 
@@ -1053,11 +1371,13 @@ TEST(OvmsGraphConfigTest, negativeTargetDevice) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--target_device",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "target_device: INVALID is not allowed. Supported devices: CPU, GPU, NPU, HETERO");
 }
 
@@ -1071,11 +1391,13 @@ TEST(OvmsGraphConfigTest, negativeEnablePrefixCaching) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--enable_prefix_caching",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "enable_prefix_caching: INVALID is not allowed. Supported values: true, false");
 }
 
@@ -1089,28 +1411,14 @@ TEST(OvmsGraphConfigTest, negativeDynamicSplitFuse) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         (char*)"--dynamic_split_fuse",
         (char*)"INVALID",
     };
 
-    int arg_count = 8;
+    int arg_count = 10;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "dynamic_split_fuse: INVALID is not allowed. Supported values: true, false");
-}
-
-TEST(OvmsGraphConfigTest, negativeSourceModel) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--pull",
-        (char*)"--source_model",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)downloadPath.c_str(),
-    };
-
-    int arg_count = 6;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "For now only OpenVINO models are supported in pulling mode");
 }
 
 TEST(OvmsGraphConfigTest, positiveAllChangedRerank) {
@@ -1370,8 +1678,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--mean_pooling",
-        (char*)"true",
+        (char*)"--pooling",
+        (char*)"CLS",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
@@ -1395,7 +1703,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
@@ -1412,8 +1720,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--mean_pooling",
-        (char*)"true",
+        (char*)"--pooling",
+        (char*)"LAST",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
@@ -1439,7 +1747,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
-    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, servingName);
@@ -1471,7 +1779,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
-    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "false");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
     ASSERT_EQ(embeddingsGraphSettings.modelName, modelName);
@@ -1488,8 +1796,8 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
-        (char*)"--mean_pooling",
-        (char*)"true",
+        (char*)"--pooling",
+        (char*)"LAST",
         (char*)"--task",
         (char*)"embeddings",
         (char*)"--target_device",
@@ -1510,7 +1818,7 @@ TEST(OvmsGraphConfigTest, positiveSomeChangedEmbeddings) {
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(embeddingsGraphSettings.meanPooling, "true");
+    ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
@@ -1819,59 +2127,6 @@ TEST(OvmsConfigManipulationTest, positiveEnableModelRepoParam) {
 
 TEST(OvmsConfigManipulationTest, positiveDisableModel) {
     std::string modelName = "name1";
-    std::string modelPath = "/path/for/name1";
-    std::string configPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--remove_from_config",
-        (char*)configPath.c_str(),
-        (char*)"--model_name",
-        (char*)modelName.c_str(),
-        (char*)"--model_path",
-        (char*)modelPath.c_str(),
-    };
-
-    int arg_count = 7;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-    auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::DISABLE_MODEL);
-
-    auto& modelSettings = config.getModelSettings();
-    ASSERT_EQ(modelSettings.modelName, modelName);
-    ASSERT_EQ(modelSettings.modelPath, modelPath);
-    ASSERT_EQ(modelSettings.configPath, configPath);
-}
-
-TEST(OvmsConfigManipulationTest, positiveDisableModelRepoParam) {
-    std::string modelName = "name1";
-    std::string modelPath = "/path/for/name1";
-    std::string configPath = "test/repository";
-    char* n_argv[] = {
-        (char*)"ovms",
-        (char*)"--remove_from_config",
-        (char*)configPath.c_str(),
-        (char*)"--model_name",
-        (char*)modelName.c_str(),
-        (char*)"--model_repository_path",
-        (char*)modelPath.c_str(),
-    };
-
-    int arg_count = 7;
-    ConstructorEnabledConfig config;
-    config.parse(arg_count, n_argv);
-    auto& serverSettigns = config.getServerSettings();
-    ASSERT_EQ(serverSettigns.exportConfigType, ovms::DISABLE_MODEL);
-
-    auto& modelSettings = config.getModelSettings();
-    ASSERT_EQ(modelSettings.modelName, modelName);
-    ASSERT_EQ(modelSettings.modelPath, ovms::FileSystem::joinPath({modelPath, modelName}));
-    ASSERT_EQ(modelSettings.configPath, configPath);
-}
-
-TEST(OvmsConfigManipulationTest, positiveDisableModelNoModelPath) {
-    std::string modelName = "name1";
-    std::string modelPath = "/path/for/name1";
     std::string configPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
@@ -1889,7 +2144,6 @@ TEST(OvmsConfigManipulationTest, positiveDisableModelNoModelPath) {
 
     auto& modelSettings = config.getModelSettings();
     ASSERT_EQ(modelSettings.modelName, modelName);
-    ASSERT_EQ(modelSettings.modelPath, "");
     ASSERT_EQ(modelSettings.configPath, configPath);
 }
 

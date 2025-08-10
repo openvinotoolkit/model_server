@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "servablesconfigmanagermodule.hpp"
 
+#include <iostream>
 #include <filesystem>
 #include <string>
 #include <sstream>

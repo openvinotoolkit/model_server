@@ -100,6 +100,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         };
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
+    legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
+    legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
     return absl::OkStatus();
 }
 
@@ -168,8 +170,11 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
     }
     if (generationStatus != std::future_status::ready) {  // continue
         if (lastTextChunk.size() > 0) {
-            executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE));
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::NONE);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            }
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
@@ -179,9 +184,13 @@ absl::Status VisualLanguageModelLegacyServable::preparePartialResponse(std::shar
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty())
+        if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-        executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP));
+        }
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, ov::genai::GenerationFinishReason::STOP);
+        if (!serializedChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+        }
         // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");

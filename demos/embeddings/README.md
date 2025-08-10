@@ -57,15 +57,16 @@ models
 └── config.json
 
 ```
-> **Note** The actual models support version management and can be automatically swapped to newer version when new model is uploaded in newer version folder.
-> In case you trained the pytorch model it can be exported like below:
-> `python export_model.py embeddings_ov --source_model <pytorch model> --model_name Alibaba-NLP/gte-large-en-v1.5 --precision int8 --config_file_path models/config.json --version 2`
 
-The default configuration of the `EmbeddingsCalculator` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. Runtime configuration for both models can be tuned in `subconfig.json` file. They can be set automatically via export parameters in the `export_model.py` script.
+The default configuration of the `EmbeddingsCalculatorOV` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. They can be set automatically via export parameters in the `export_model.py` script.
 
 For example:
-`python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --precision int8 --num_streams 2 --skip_normalize --config_file_path models/config.json`
+`python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
 
+> **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS and LAST. For example:
+```console
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --pooling LAST --config_file_path models/config.json`
+```
 
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
@@ -75,6 +76,7 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
     BAAI/bge-large-en-v1.5
     BAAI/bge-large-zh-v1.5
     thenlper/gte-small
+    Qwen/Qwen3-Embedding-0.6B
 ```
 
 ## Server Deployment
@@ -240,7 +242,7 @@ The script [compare_results.py](./compare_results.py) can assist with such exper
 ```bash
 popd
 cd model_server/demos/embeddings
-python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --input "hello world" --input "goodbye world"
+python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 50.626 ms NewModel
