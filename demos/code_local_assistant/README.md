@@ -22,7 +22,7 @@ mkdir models
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
 ```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --task text_generation --target_device NPU --overwrite_models
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
 ```
 
 > **Note:** Use `--target_device GPU` for Intel GPU or omit this parameter to run on Intel CPU
@@ -34,7 +34,7 @@ Code completion works in non-streaming, unary mode. Do not use instruct model, t
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --task text_generation --target_device NPU --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
 ```
 
 Examine that workspace is set up properly `models/config_all.json`:

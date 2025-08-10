@@ -134,7 +134,7 @@ cc_shared_library(
     features = [],
     roots = [
         "//src:ovms_lib",
-        "@llm_engine//:llm_engine", "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
+        "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
     ],
 )
 
@@ -731,7 +731,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovmslogging",
     hdrs = ["logging.hpp"],
-    srcs = ["logging.cpp",],
+    srcs = ["logging.cpp"],
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_glog_glog//:glog", # used to manage Mediapipe logging
@@ -1154,7 +1154,7 @@ ovms_cc_library(
     name = "libovmsstatus",
     hdrs = ["status.hpp",],
     srcs = ["status.cpp",],
-    deps = [],
+    deps = ["libovmslogging"],
     visibility = ["//visibility:public"],
 )
 
@@ -1717,6 +1717,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "node_library",
         "libovms_dags_aliases",
+        "libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
@@ -1736,6 +1737,7 @@ ovms_cc_library(
     deps = [
         "libovmsstatus",
         "@com_github_grpc_grpc//:grpc++",
+        "libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2319,7 +2321,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = [],
+    deps = ["libovmslogging"],
     visibility = ["//visibility:public"],
 )
 
@@ -2674,7 +2676,7 @@ cc_test(
             })  + select({
             "//conditions:default": [
                 "//src/llm:genai_servables",
-                "//src/llm:io_processing",
+                "//src/llm:output_parsers",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",

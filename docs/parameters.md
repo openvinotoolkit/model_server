@@ -83,7 +83,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
-| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embedding`, `rerank`, `image_generation`).              |
+| `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
 
 ## Pull Mode Options for optimum-cli mode
@@ -115,18 +115,20 @@ There are also additional environment variables that may change the behavior of 
 Task specific parameters for different tasks (text generation/image generation/embeddings/rerank) are listed below:
 
 ### Text generation
-| option                        | Value format | Description                                                                                                    |
-|-------------------------------|--------------|----------------------------------------------------------------------------------------------------------------|
-| `--max_num_seqs`              | `integer`    | The maximum number of sequences that can be processed together. Default: 256.                                  |
-| `--pipeline_type`             | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.             |
-| `--enable_prefix_caching`     | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                   |
-| `--max_num_batched_tokens`    | `integer`    | The maximum number of tokens that can be batched together.                                                     |
-| `--cache_size`                | `integer`    | Cache size in GB. Default: 10.                                                                                 |
-| `--draft_source_model`        | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                |
-| `--dynamic_split_fuse`        | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                           |
-| `--max_prompt_len`            | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                         |
-| `--kv_cache_precision`        | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).|
-| `--response_parser`           | `string`     | Type of parser to use for tool calls and reasoning in model output. Currently supported: [qwen3, llama3, hermes3, phi4] |
+| option                                | Value format | Description                                                                                                                |
+|---------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------|
+| `--max_num_seqs`                      | `integer`    | The maximum number of sequences that can be processed together. Default: 256.                                              |
+| `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
+| `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
+| `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
+| `--cache_size`                        | `integer`    | Cache size in GB. Default: 10.                                                                                             |
+| `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
+| `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
+| `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
+| `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
+| `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Currently supported: [qwen3]                     |
+| `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Currently supported: [llama3, hermes3, phi4]            |
+| `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 
 ### Image generation
 | option                            | Value format | Description                                                                                                         |

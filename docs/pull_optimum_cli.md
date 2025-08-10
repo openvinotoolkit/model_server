@@ -25,14 +25,18 @@ docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(
 ### Install optimum-cli
 Install python on your baremetal system from `https://www.python.org/downloads/` and run the commands:
 ```console
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 
-or use the python binary from the ovms.zip or ovms.tar.gz package - see [deployment instructions](deploying_server_baremetal.md) for details.
-and run:
-```console
-ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+or use the python binary from the ovms_windows_python_on.zip or ovms.tar.gz package - see [deployment instructions](deploying_server_baremetal.md) for details.
 
+```bat
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2/ovms_windows_python_on.zip -o ovms.zip
+tar -xf ovms.zip
+```
+```bat
+ovms\setupvars.bat
+ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
 ```
 Then use the ovms cli commands described in `Pulling the models` section
 
@@ -62,7 +66,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 
 Example for pulling `Qwen/Qwen3-8B`:
 
-```text
+```bat
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --target_device CPU --task text_generation 
 ```
 ::::{tab-set}
@@ -79,7 +83,7 @@ docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino
 :sync: baremetal
 **Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
-```text
+```bat
 ovms --pull --source_model "Qwen/Qwen3-8B" --model_repository_path /models --model_name Qwen3-8B --task text_generation 
 ```
 :::

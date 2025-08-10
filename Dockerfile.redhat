@@ -128,14 +128,6 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             dnf clean all
 
 WORKDIR /
-# hadolint ignore=DL3003
-RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
-tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
-git clone https://github.com/git-lfs/git-lfs && \
-    cd git-lfs && \
-    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
-    /usr/local/go/bin/go build . && \
-    cp git-lfs /usr/bin/git-lfs
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
@@ -418,8 +410,6 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
 
 COPY --from=pkg /ovms_release /ovms
-# hadolint ignore=SC2114
-RUN mv /ovms/bin/git* /usr/bin
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info

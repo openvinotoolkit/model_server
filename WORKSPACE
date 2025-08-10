@@ -578,18 +578,21 @@ http_archive(
 # spdlog
 http_archive(
     name = "com_github_gabime_spdlog",
-    url = "https://github.com/gabime/spdlog/archive/v1.4.0.tar.gz",
-    sha256 = "afd18f62d1bc466c60bef088e6b637b0284be88c515cedc59ad4554150af6043",
-    strip_prefix = "spdlog-1.4.0",
+    urls = [ 
+        "https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz",
+        "https://mirror.bazel.build/github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz",
+    ],
+    sha256 = "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67",
+    strip_prefix = "spdlog-1.15.3",
     build_file = "@//third_party/spdlog:BUILD"
 )
 
 # fmtlib
 http_archive(
     name = "fmtlib",
-    url = "https://github.com/fmtlib/fmt/archive/6.0.0.tar.gz",
-    sha256 = "f1907a58d5e86e6c382e51441d92ad9e23aea63827ba47fd647eacc0d3a16c78",
-    strip_prefix = "fmt-6.0.0",
+    url = "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz",
+    sha256 = "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af",
+    strip_prefix = "fmt-11.2.0",
     build_file = "@//third_party/fmtlib:BUILD"
 )
 

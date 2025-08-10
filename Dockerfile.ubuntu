@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             autoconf \
             curl \
             ca-certificates \
+            git \
             gpg \
             libcurl4-openssl-dev \
             libssl-dev \
@@ -44,23 +45,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             zlib1g-dev && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
-            
-# Need to upgrade git for ubuntu22-24 git vulnerability fix
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common gpg-agent ; \
-        add-apt-repository ppa:git-core/ppa -y ; \
-        apt-get update && apt-get install --no-install-recommends -y git ; \
-        apt-get clean ; \
-        rm -rf /var/lib/apt/lists/* ;
 
 WORKDIR /
-# hadolint ignore=DL3003
-RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
-tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
-git clone https://github.com/git-lfs/git-lfs && \
-    cd git-lfs && \
-    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
-    /usr/local/go/bin/go build . && \
-    cp git-lfs /usr/bin/git-lfs
 
 ####### Azure SDK needs new boost:
 WORKDIR /boost
@@ -354,8 +340,6 @@ RUN if [ "$FUZZER_BUILD" == "0" ]; then  CAPI_FLAGS=${CAPI_FLAGS} make -f Makefi
 RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so' -exec cp -v {} /ovms_release/lib/ \; \
     && find /ovms/bazel-out/k8-*/bin -iname 'libgit2.so' -exec cp -v {} /ovms_release/lib/ \;
 
-RUN if ! [[ $CAPI_FLAGS == *"mp_off"* ]]; then true ; else exit 0 ; fi ; \
-    find /ovms/bazel-out/k8-*/bin -iname 'libopenvino_genai.so*' -exec cp -v {} /ovms_release/lib/ \;
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM build as pkg
@@ -373,7 +357,6 @@ ARG ov_use_binary=0
 ARG FUZZER_BUILD=0
 ARG debug_bazel_flags=--strip=never\ --copt="-g "\ -c\ dbg
 COPY --from=capi-build /ovms_release/lib/libovms_shared.so /ovms_release/lib/
-COPY --from=capi-build /ovms_release/lib/libopenvino_genai.s[o]* /ovms_release/lib/
 COPY --from=capi-build /ovms_release/lib/libgit2.so /ovms_release/lib/
 
 COPY create_package.sh /
@@ -435,8 +418,6 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
-# hadolint ignore=SC2114
-RUN mv /ovms/bin/git* /usr/bin
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info

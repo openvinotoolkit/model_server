@@ -74,9 +74,9 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= f705706fbceca2fade8daa685f51bfacc730744f # master 2025-07-18
+OV_SOURCE_BRANCH ?= cc73719a2c667106c454f3abe663e312832365f1 # master 2025-07-29
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= ad1d5550bb726aeb296c4bd964f477ffd9b77247 # master 2025-05-26
+OV_TOKENIZERS_BRANCH ?= d9a2bb05e750f1c628ada5ed81457f880719fd73 # master 2025-07-25
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -160,12 +160,12 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.27.34303"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19553-f705706fbce/openvino_toolkit_ubuntu24_2025.3.0.dev20250718_x86_64.tgz
+	INSTALL_DRIVER_VERSION ?= "24.52.32224"
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19616-cc73719a2c6/openvino_toolkit_ubuntu24_2025.3.0.dev20250729_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19553-f705706fbce/openvino_toolkit_ubuntu22_2025.3.0.dev20250718_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19616-cc73719a2c6/openvino_toolkit_ubuntu22_2025.3.0.dev20250729_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -174,7 +174,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19553-f705706fbce/openvino_toolkit_rhel8_2025.3.0.dev20250718_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19616-cc73719a2c6/openvino_toolkit_rhel8_2025.3.0.dev20250729_x86_64.tgz
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 

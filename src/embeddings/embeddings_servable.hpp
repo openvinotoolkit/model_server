@@ -15,28 +15,22 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/genai/tokenizer.hpp>
+#include "../sidepacket_servable.hpp"
+#include "embeddings_api.hpp"
+#include "../filesystem.hpp"
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/error/en.h>
+#include <memory>
 #include <string>
-#include <optional>
-#include <vector>
-
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
-
-#include "../base_output_parser.hpp"
+#include <unordered_map>
 
 namespace ovms {
-class Phi4OutputParser : public BaseOutputParser {
-public:
-    Phi4OutputParser() = delete;
-    explicit Phi4OutputParser(ov::genai::Tokenizer& tokenizer) :
-        BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+struct EmbeddingsServable : SidepacketServable {
+public:
+    EmbeddingsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
+        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {}
 };
+
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 }  // namespace ovms

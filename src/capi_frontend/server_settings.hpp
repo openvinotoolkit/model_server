@@ -103,7 +103,9 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
-    std::optional<std::string> responseParser;
+    std::optional<std::string> reasoningParser;
+    std::optional<std::string> toolParser;
+    std::string enableToolGuidedGeneration = "false";
 };
 
 struct EmbeddingsGraphSettingsImpl {
@@ -112,7 +114,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     std::string normalize = "true";
-    std::string meanPooling = "false";
+    std::string pooling = "CLS";
 };
 
 struct RerankGraphSettingsImpl {

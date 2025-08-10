@@ -1,7 +1,7 @@
 # Image Generation with OpenAI API {#ovms_demos_image_generation}
 
-This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) in the OpenVINO Model Server.
-Image generation pipeline is exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` endpoints.
+This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) to create and edit images with the OpenVINO Model Server.
+Image generation pipelines are exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` and `images/edits` endpoints.
 
 > **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
@@ -375,9 +375,9 @@ curl http://localhost:8000/v1/config
 
 A single servable exposes following endpoints:
 - text to image: `images/generations`
+- image to image: `images/edits` 
 
 Endpoints unsupported for now:
-- image to image: `images/edits` 
 - inpainting: `images/edits` with `mask` field
 
 All requests are processed in unary format, with no streaming capabilities.
@@ -474,9 +474,45 @@ Output file (`output2.png`):
 ![output2](./output2.png)
 
 
+### Requesting image edit with OpenAI Python package
+
+```python
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
+
+response = client.images.edit(
+            model="OpenVINO/FLUX.1-schnell-int4-ov",
+            image=open("output2.png", "rb"),
+            prompt="pink cats",
+            extra_body={
+                "rng_seed": 60,
+                "size": "512x512",
+                "num_inference_steps": 3,
+                "strength": 0.7
+            }
+        )
+base64_image = response.data[0].b64_json
+
+image_data = base64.b64decode(base64_image)
+image = Image.open(BytesIO(image_data))
+image.save('edit_output.png')
+
+```
+
+Output file (`edit_output.png`):  
+![edit_output](./edit_output.png)
+
 
 
 ## References
 - [Image Generation API](../../docs/model_server_rest_api_image_generation.md)
+- [Image Edit API](../../docs/model_server_rest_api_image_edit.md)
 - [Writing client code](../../docs/clients_genai.md)
-- [Image Generation calculator reference](../../docs/image_generation/reference.md)
+- [Image Generation/Edit calculator reference](../../docs/image_generation/reference.md)

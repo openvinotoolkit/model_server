@@ -38,7 +38,7 @@ Run `export_model.py` script to download and quantize the model:
 
 **LLM**
 ```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --ov_cache_dir ./models/.ov_cache --model_repository_path models --task text_generation  --overwrite_models
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --ov_cache_dir ./models/.ov_cache --model_repository_path models --overwrite_models
 ```
 **Note:** The parameter `--ov_cache` stores the model compilation cache to speedup initialization time for sequential startup. Drop this parameter if you don't want to store the compilation cache.
 

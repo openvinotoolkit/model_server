@@ -23,6 +23,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
+#include <set>
 
 #include "openai_json_response.hpp"
 
@@ -303,8 +304,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     }
 
     bool jsonChanged = false;
-    if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
-        return absl::OkStatus();
     if (tool_choice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
@@ -323,11 +322,23 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 auto nameIt = functionIt->value.GetObject().FindMember("name");
                 if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                     std::string functionName = nameIt->value.GetString();
-                    if (tool_choice != functionName) {
+                    // If tool_choice is set to "auto", we keep all tools
+                    // If tool_choice is set to a specific function name, we keep only that tool
+                    if (tool_choice != "auto" && tool_choice != functionName) {
                         it->value.Erase(&obj);
                         jsonChanged = true;
                     } else {
                         i++;
+                        // If we keep the tool, add tool name and schema to the request
+                        auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
+                        if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // Dump parameters object to string since this is the schema format expected by GenAI
+                            rapidjson::StringBuffer buffer;
+                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                            parametersIt->value.Accept(writer);
+                            std::string parametersStr = buffer.GetString();
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                        }
                     }
                 } else {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
@@ -335,7 +346,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             } else {
                 return absl::InvalidArgumentError("Function is not a valid JSON object");
             }
-            // Add new tool to tools list - TBD
         }
     }
     if (jsonChanged) {
@@ -345,6 +355,14 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         request.processedJson = buffer.GetString();
     }
     return absl::OkStatus();
+}
+
+const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
+    return !request.toolNameSchemaMap.empty();
+}
+
+const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
+    return request;
 }
 
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
@@ -360,6 +378,10 @@ ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() {
 
 std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
     return request.maxTokens;
+}
+
+std::optional<std::string> OpenAIChatCompletionsHandler::getResponseSchema() const {
+    return request.responseSchema;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
@@ -397,6 +419,45 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     // specific part of max_tokens validation due to echo dependency
     if (request.maxTokens == 0) {
         return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+    }
+
+    // parse response_format
+    it = doc.FindMember("response_format");
+    if (it != doc.MemberEnd()) {
+        if (it->value.IsNull())
+            return absl::OkStatus();
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("response_format is not an object");
+        auto responseFormat = it->value.GetObject();
+        auto typeIt = responseFormat.FindMember("type");
+        if (typeIt != responseFormat.MemberEnd()) {
+            if (!typeIt->value.IsString())
+                return absl::InvalidArgumentError("response_format.type is not a string");
+            if (std::string(typeIt->value.GetString()) != "json_schema") {
+                return absl::InvalidArgumentError("response_format.type can be only json_schema");
+            } else {
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd()) {
+                    if (!jsonSchemaIt->value.IsObject())
+                        return absl::InvalidArgumentError("response_format.json_schema is not an object");
+                    auto jsonSchema = jsonSchemaIt->value.GetObject();
+                    auto schemaIt = jsonSchema.FindMember("schema");
+                    if (schemaIt == jsonSchema.MemberEnd())
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
+                    if (!schemaIt->value.IsObject())
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is not an object");
+                    // Convert schema value to a JSON string and assign to optional string responseSchema
+                    StringBuffer schemaBuffer;
+                    Writer<StringBuffer> schemaWriter(schemaBuffer);
+                    schemaIt->value.Accept(schemaWriter);
+                    request.responseSchema = std::make_optional<std::string>(schemaBuffer.GetString());
+                } else {
+                    return absl::InvalidArgumentError("response_format.json_schema is missing");
+                }
+            }
+        } else {
+            return absl::InvalidArgumentError("response_format.type is missing");
+        }
     }
 
     return absl::OkStatus();
@@ -671,10 +732,6 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
         usage.completionTokens += numTokens;
 }
 
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig(const ov::genai::GenerationConfig& base) const {
-    return request.createGenerationConfig(base);
-}
-
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
 
@@ -699,10 +756,10 @@ void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& g
 ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
-    if (endpoint != Endpoint::CHAT_COMPLETIONS || responseParser == nullptr) {
+    if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
         parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = responseParser->parse(generatedIds);
+        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
     }
     return parsedOutput;
 }
@@ -995,8 +1052,8 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // logprobs: object/null; Log probability information for the choice. TODO
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        if (responseParser != nullptr) {
-            std::optional<Document> delta = responseParser->parseChunk(chunkResponse);
+        if (outputParser != nullptr) {
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable());
             if (!delta.has_value()) {
                 return "";
             }

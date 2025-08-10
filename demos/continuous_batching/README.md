@@ -402,6 +402,10 @@ Check the demo [text generation with visual model](./vlm/README.md)
 
 Check the demo [AI agent with MCP server and OpenVINO acceleration](./agentic_ai/README.md)
 
+## Use structured output with json schema guided generation
+
+Check the demo [structured output](./structured_output/README.md)
+
 ## References
 - [Chat Completions API](../../docs/model_server_rest_api_chat.md)
 - [Completions API](../../docs/model_server_rest_api_completions.md)

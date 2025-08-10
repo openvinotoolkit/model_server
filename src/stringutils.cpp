@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -107,7 +108,7 @@ std::optional<uint32_t> stou32(const std::string& input) {
     std::string str = input;
     ovms::erase_spaces(str);
 
-    if (str.size() > 0 && str[0] == '-') {
+    if (!str.empty() && str[0] == '-') {
         return std::nullopt;
     }
 
@@ -122,9 +123,42 @@ std::optional<uint32_t> stou32(const std::string& input) {
     }
 }
 
-std::optional<int32_t> stoi32(const std::string& str) {
+std::optional<uint64_t> stou64(const std::string& str) {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    // Reject negative numbers for unsigned conversion
+    if (!str.empty() && str[0] == '-') {
+        return std::nullopt;
+    }
+
+    size_t idx = 0;
     try {
-        return {static_cast<int32_t>(std::stoi(str))};
+        uint64_t val = std::stoull(str, &idx);
+        // Check if the whole string was consumed
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
+        return val;
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+std::optional<int32_t> stoi32(const std::string& str) {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    size_t idx = 0;
+    try {
+        int32_t val = std::stoi(str, &idx);
+        // Check if the whole string was consumed
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
+        return val;
     } catch (...) {
         return std::nullopt;
     }
@@ -149,6 +183,28 @@ std::optional<int64_t> stoi64(const std::string& str) {
     }
     try {
         return std::stoll(str);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+std::optional<float> stof(const std::string& str) {
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    size_t idx = 0;
+    try {
+        float val = std::stof(str, &idx);
+        // Check if the whole string was consumed
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
+        // Reject NaN or Inf
+        if (std::isnan(val) || std::isinf(val)) {
+            return std::nullopt;
+        }
+        return val;
     } catch (...) {
         return std::nullopt;
     }

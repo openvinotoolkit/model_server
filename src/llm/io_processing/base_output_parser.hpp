@@ -45,8 +45,6 @@ struct ParsedOutput {
     ToolCalls toolCalls;
     // Decoded reasoning from the response
     std::string reasoning;
-    // Number of reasoning tokens in the response
-    size_t reasoningTokenCount = 0;
 };
 
 // Enum used to track current processing phase, used in streaming mode
@@ -59,10 +57,7 @@ enum ProcessingPhase {
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
-    ProcessingPhase processingPhase = CONTENT;
-    rapidjson::Document lastJson;
-    PartialJsonBuilder jsonBuilder;
-    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
@@ -76,9 +71,22 @@ public:
     // {"tool_calls":[{"index":0,"function":<delta>}]}
     static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
 
-    virtual ParsedOutput parse(const std::vector<int64_t>& generatedTokens) = 0;
+    // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
+    // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
+    virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) = 0;
+
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;
+
+    // Get the tag that marks the beginning of the segment that should be processed by the parser.
+    // This method is used in streaming mode to determine if the parser should start processing the content.
+    // If empty string is returned, it means that the parser will never start processing the content.
+    virtual const std::string& getParsingStartTag() const = 0;
+
+    // Get the tag that marks the end of the segment that should be processed by the parser.
+    // This method is used in streaming mode to determine if the parser should stop processing the content.
+    // If empty string is returned, it means that the parser will keep processing until the end of the content.
+    virtual const std::string& getParsingEndTag() const = 0;
 };
 }  // namespace ovms

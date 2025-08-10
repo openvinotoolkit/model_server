@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <optional>
 #include <vector>
 
 #pragma warning(push)
@@ -29,31 +30,30 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-
-class Qwen3OutputParser : public BaseOutputParser {
+class Llama3ToolParser : public BaseOutputParser {
 protected:
-    // Tool calls are wrapped in <tool_call> and </tool_call> tags
-    std::string toolCallStartTag = "<tool_call>";
-    int64_t toolCallStartTokenId = 151657;  // This is the token ID for <tool_call> in Qwen3 tokenizer
-    std::string toolCallEndTag = "</tool_call>";
-    int64_t toolCallEndTokenId = 151658;  // This is the token ID for </tool_call> in Qwen3 tokenizer
+    const std::string parsingStartTag = "<|python_tag|>";
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string parsingEndTag = "";
 
-    std::string reasoningStartTag = "<think>";
-    int64_t reasoningStartTokenId = 151667;  // This is the token ID for <think> in Qwen3 tokenizer
-    std::string reasoningEndTag = "</think>";
-    int64_t reasoningEndTokenId = 151668;  // This is the token ID for </think> in Qwen3 tokenizer
-
-    // Storing last two chunks of arguments to return delta with delay.
-    // We do this to properly close arguments when tool call end tag is received.
-    // With support for more models this could be moved to the base class.
-    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
+    int64_t botTokenId = 128010;
+    // ";" is used as a separator between tool calls in the response
+    std::string separator = ";";
 
 public:
-    Qwen3OutputParser() = delete;
-    explicit Qwen3OutputParser(ov::genai::Tokenizer& tokenizer) :
+    Llama3ToolParser() = delete;
+    explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    const std::string& getParsingStartTag() const override {
+        return parsingStartTag;
+    }
+    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+    const std::string& getParsingEndTag() const override {
+        return parsingEndTag;
+    }
 };
 }  // namespace ovms
