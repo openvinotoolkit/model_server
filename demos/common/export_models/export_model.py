@@ -463,7 +463,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         # Custom Templates
         if template_parameters.get("tool_parser") == "mistral":
             template_path = os.path.join(model_repository_path, model_name, "template.jinja")
-            with open(template_path, "wb") as f:
+            with open(template_path, "w") as f:
                 # Modified from https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral_parallel.jinja
                 with open(os.path.dirname(os.path.abspath(__file__)) + "/templates/tool_chat_template_mistral_parallel.jinja", "r") as template_file:
                     content = template_file.read()
