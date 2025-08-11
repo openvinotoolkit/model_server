@@ -376,6 +376,36 @@ def add_servable_to_config(config_path, mediapipe_name, base_path):
         json.dump(config_data, config_file, indent=4)
     print("Added servable to config file", config_path)
 
+def apply_template_patches(template_content, model_type):
+    """Apply model-specific patches to the downloaded template."""
+    patches = {
+        "phi4": [
+            # Example patches for phi4
+        ],
+        "llama3": [
+            # Example patches for llama3
+        ],
+        "hermes3": [
+            # Hermes3 specific patches
+        ],
+        "mistral": [
+            # Mistral specific patches - force model to produce single JSON array of tool calls
+            (
+                "If you call one or more tools, format them in a single JSON array or objects, where each object is a tool call, not as separate objects outside of an array or multiple arrays.",
+                "If you call one or more tools, format them in a **SINGLE** JSON array of objects, where each object is a tool call, PLEASE NEST ALL OBJECTS IN SINGLE array."
+            ),
+        ],
+        "qwen3": [
+            # Qwen3 patches (if needed)
+        ]
+    }
+    
+    if model_type in patches:
+        for old_pattern, new_pattern in patches[model_type]:
+            template_content = template_content.replace(old_pattern, new_pattern)
+    
+    return template_content
+
 def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
     ### Export model
@@ -464,6 +494,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             "phi4": "tool_chat_template_phi4_mini.jinja",
             "llama3": "tool_chat_template_llama3.1_json.jinja",
             "hermes3": "tool_chat_template_hermes.jinja",
+            "mistral": "tool_chat_template_mistral_parallel.jinja",
             "qwen3": None
             }
         template_name = template_mapping[task_parameters.get("tools_model_type")]
@@ -472,9 +503,14 @@ def export_text_generation_model(model_repository_path, source_model, model_name
             import requests
             response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
             print(response.raise_for_status())
-            with open(template_path, "wb") as f:
-                f.write(response.content)
-            print(f"Downloaded tuned chat template to {template_path}")
+            
+            # Apply patches to the template content
+            template_content = response.content.decode('utf-8')
+            template_content = apply_template_patches(template_content, task_parameters.get("tools_model_type"))
+            
+            with open(template_path, "w") as f:
+                f.write(template_content)
+            print(f"Downloaded and patched tuned chat template to {template_path}")
 
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 

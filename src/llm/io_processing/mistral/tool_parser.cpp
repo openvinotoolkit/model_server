@@ -42,16 +42,42 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
         return;
     }
 
+    bool isToolGenerated = false;
+    // ignore first whitespaces
+    auto begin = parsedOutput.content.begin();
+    while (begin != parsedOutput.content.end() && std::isspace(*begin)) {
+        ++begin;
+    }
+    
+    if (begin != parsedOutput.content.end() && *begin == '[') {
+        // If the content starts with '[', it indicates that tool calls might be present.
+        //isToolGenerated = true;
+
+        while (begin != parsedOutput.content.end() && std::isspace(*begin)) {
+            ++begin;
+        }
+
+        if (begin != parsedOutput.content.end() && *begin == '{') {
+            isToolGenerated = true;
+        } else {
+            // not a tool call
+        }
+    } else {
+        // not a tool call
+    }
 
     // Mistral with vLLM template produces tool calls in the format:
     // [{"name": [function name], "arguments": [function arguments as JSON]}, ...]
-    if (parsedOutput.content[0] == '[') {
+    // So we ensure if first non white characters are [ and {
+    if (isToolGenerated) {
         // Extract the content before the tools part
         // parsedOutput.content = decoded.substr(0, toolsStartPos);
         // Extract the tools part, assuming it's all the remaining content after "["
         //std::string toolsString = parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
         rapidjson::Document toolsDoc;
-        toolsDoc.Parse(parsedOutput.content.c_str());
+        std::string content = parsedOutput.content.substr(begin - parsedOutput.content.begin());
+        //toolsDoc.Parse(parsedOutput.content.c_str());
+        toolsDoc.Parse(content.c_str());
         if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
             for (auto& toolVal : toolsDoc.GetArray()) {
                 if (!toolVal.IsObject()) {
