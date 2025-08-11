@@ -672,11 +672,12 @@ if args['task'] == 'text_generation':
         args['draft_model_name'] = args['draft_source_model']
 ###
 
+if args['extra_quantization_params'] is None:
+    args['extra_quantization_params'] = ""
+
 template_parameters = {k: v for k, v in args.items() if k not in ['model_repository_path', 'source_model', 'model_name', 'precision', 'version', 'config_file_path', 'overwrite_models']}
 print("template params:", template_parameters)
 
-if template_parameters['extra_quantization_params'] is None:
-    template_parameters['extra_quantization_params'] = ""
 if args['task'] == 'text_generation':
     export_text_generation_model(args['model_repository_path'], args['source_model'], args['model_name'], args['precision'], template_parameters, args['config_file_path'])
 
