@@ -53,7 +53,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-for
 ::::
 
 You can use similar commands for different models. Change the source_model and the tools_model_type (note that as of today the following types as available: `[phi4, llama3, qwen3, hermes3]`).
-> **Note:** Some models give more reliable responses with tunned chat template. Copy custom template to the model folder like below:
+> **Note:** Some models give more reliable responses with tuned chat template. Copy custom template to the model folder like below:
 ```
 curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
