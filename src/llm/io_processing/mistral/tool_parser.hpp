@@ -31,11 +31,6 @@
 
 namespace ovms {
 class MistralToolParser : public BaseOutputParser {
-protected:
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string parsingStartTag = "functools";
-    const std::string parsingEndTag = "";
-
 public:
     MistralToolParser() = delete;
     explicit MistralToolParser(ov::genai::Tokenizer& tokenizer) :
@@ -44,10 +39,12 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
     const std::string& getParsingStartTag() const override {
+        static const std::string parsingStartTag = "[{";
         return parsingStartTag;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
+        static const std::string parsingEndTag = "[{";
         return parsingEndTag;
     }
 };

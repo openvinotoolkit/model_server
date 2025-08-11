@@ -32,8 +32,6 @@
 namespace ovms {
 
 void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    SPDLOG_INFO("AAAAAAAAAAAAAAAA:\n[{}]", parsedOutput.content);
-
     std::vector<std::string> tools;
     size_t pos = 0;
     size_t firstToolCallPos = parsedOutput.content.find("<tool_call>", pos);

@@ -70,6 +70,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
             
+            # Appears in some of mistral chat templates
             def strftime_now(format):
                 return datetime.datetime.now().strftime(format)
             
