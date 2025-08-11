@@ -165,7 +165,7 @@ for chunk in stream:
         print(chunk.choices[0].text, end="", flush=True)
 ```
 
-```
+Output:
 if len(numbers) <= 1:
   return numbers
 else:

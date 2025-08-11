@@ -109,7 +109,7 @@ tar -xf ovms.zip
 or archive without python:
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2.1     /ovms_windows_python_off.zip -o ovms.zip
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2025.2.1/ovms_windows_python_off.zip -o ovms.zip
 tar -xf ovms.zip
 ```
 
