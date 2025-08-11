@@ -115,7 +115,7 @@ python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-In
 ```console
 python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --extra_quantization_params "--task text-generation-with-past"
 ```
-> **Note:** Model `microsoft/Phi-3.5-vision-instruct` requires one manual adjustments ofter export in the file `generation_config.json` like in the [PR](https://huggingface.co/microsoft/Phi-3.5-vision-instruct/discussions/40/files).
+> **Note:** Model `microsoft/Phi-3.5-vision-instruct` requires one manual adjustments after export in the file `generation_config.json` like in the [PR](https://huggingface.co/microsoft/Phi-3.5-vision-instruct/discussions/40/files).
 It will ensure, the generation stops after eos token.
 
 ### Embedding Models
