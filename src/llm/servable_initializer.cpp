@@ -72,7 +72,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
-
+            
+            # Following the logic from:
+            # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
                 # This extension is used to track the indices of assistant-generated tokens in the rendered chat
                 tags = {"generation"}
