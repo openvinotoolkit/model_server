@@ -10,7 +10,7 @@ This script automates exporting models from Hugging Faces hub or fine-tuned in P
 ```console
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server/demos/common/export_models
-pip install -q -r requirements.txt
+BUILD_CUDA_EXT=0 pip install -q -r requirements.txt
 mkdir models
 python export_model.py --help
 ```
