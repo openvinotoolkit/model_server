@@ -13,5 +13,4 @@ transformers<4.53
 einops
 torchvision
 timm==1.0.15
-auto_gptq==0.7.1 # for GPTQ models
 diffusers==0.33.1  # for image generation

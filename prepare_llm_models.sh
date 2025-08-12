@@ -59,7 +59,7 @@ else
     python3.10 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    BUILD_CUDA_EXT=0 pip3 install -U -r demos/common/export_models/requirements.txt
+    pip3 install -U -r demos/common/export_models/requirements.txt
 fi
 mkdir -p $1
 
