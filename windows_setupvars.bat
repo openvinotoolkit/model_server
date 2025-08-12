@@ -32,7 +32,7 @@ set BAZEL_VS=%VS_2022_BT%
 
 :: Bazel compilation settings end
 set "BAZEL_VC=%BAZEL_VS:"=%\VC"
-set "BAZEL_VC_FULL_VERSION=14.29.30133"
+set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
