@@ -63,7 +63,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
-BUILD_CUDA_EXT=0 pip install -U -r demos\common\export_models\requirements.txt
+set BUILD_CUDA_EXT=0 
+pip install -U -r demos\common\export_models\requirements.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
