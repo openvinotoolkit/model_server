@@ -127,7 +127,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             rm -rf /var/lib/apt/lists/*
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
-RUN python3.10 -m pip install "numpy<2.0.0 gguf_parser==0.1.1" --no-cache-dir
+RUN python3.10 -m pip install "numpy<2.0.0" "gguf_parser==0.1.1" --no-cache-dir
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
