@@ -1,0 +1,31 @@
+diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
+index be83c971749..bd80e19896e 100644
+--- a/tensorflow/workspace2.bzl
++++ b/tensorflow/workspace2.bzl
+@@ -396,7 +396,7 @@ def _tf_repositories():
+ 
+     tf_http_archive(
+         name = "nsync",
+-        patch_file = ["//third_party:nsync.patch"],
++        patch_file = ["//third_party:nsync.patch", "//third_party:nsync_chrono.patch"],
+         sha256 = "1d63e967973733d2c97e841e3c05fac4d3fa299f01d14c86f2695594c7a4a2ec",
+         strip_prefix = "nsync-1.29.2",
+         system_build_file = "//third_party/systemlibs:nsync.BUILD",
+diff --git a/third_party/nsync_chrono.patch b/third_party/nsync_chrono.patch
+new file mode 100644
+index 00000000000..7f0f8539727
+--- /dev/null
++++ b/third_party/nsync_chrono.patch
+@@ -0,0 +1,12 @@
++diff --git a/platform/c++11/platform.h b/platform/c++11/platform.h
++index 2c80e0b..4fbc6d0 100644
++--- a/platform/c++11/platform.h
+++++ b/platform/c++11/platform.h
++@@ -28,6 +28,7 @@
++ 
++ #include <mutex>
++ #include <condition_variable>
+++#include <chrono>
++ 
++ #include "nsync_cpp.h"
++ 

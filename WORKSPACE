@@ -424,6 +424,7 @@ http_archive(
         "@mediapipe//third_party:org_tensorflow_custom_ops.diff",
         "@mediapipe//third_party:org_tensorflow_objc_build_fixes.diff",
         "tf_2.18_logging.patch",
+        "tf_nsync_chrono.patch",
     ],
     patch_args = [
         "-p1",
