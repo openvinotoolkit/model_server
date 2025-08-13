@@ -152,6 +152,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
     SPDLOG_DEBUG("Chat template took from OV GenAI :{}", properties->pipeline->get_tokenizer().get_chat_template());
+    SPDLOG_DEBUG("Original Chat template took from OV GenAI :{}", properties->pipeline->get_tokenizer().get_original_chat_template());
 #if (PYTHON_DISABLE == 0)
     loadPyTemplateProcessor(properties, parsedModelsPath);
 #else
