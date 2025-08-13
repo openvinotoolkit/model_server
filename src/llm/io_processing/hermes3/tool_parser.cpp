@@ -34,7 +34,13 @@ namespace ovms {
 void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
     size_t pos = 0;
-    size_t firstToolCallPos = parsedOutput.content.find("<tool_call>", pos);
+    size_t firstToolCallPos = 0;
+    // If zero trigger parsing is enabled, we assume tool calls start from the beginning of the content.
+    // Otherwise, we search for the first occurrence of the tool call start tag.
+    if (!zeroTriggerParsingEnabled) {
+        firstToolCallPos = parsedOutput.content.find("<tool_call>", pos);
+    }
+    
     const std::string startTag = "<tool_call>";
     const std::string endTag = "</tool_call>";
 

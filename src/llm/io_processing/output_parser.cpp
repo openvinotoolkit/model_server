@@ -90,7 +90,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Raw model output: {}", parsedOutput.content);
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", parsedOutput.content);
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }
@@ -116,9 +116,20 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         if (reasoningParserExistsAndSupportsStreaming && chunkResponse.find(reasoningParser->getParsingStartTag()) != std::string::npos) {
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse);
-        } else if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
-            processingPhase = TOOL_CALLS;
-            return toolParser->parseChunk(chunkResponse);
+        } else if (applyToolParser) {
+            if (toolParser->isZeroTriggerParsingEnabled()) {
+                // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt, but for the unified parsing logic,
+                //  we still parse it to put parser in a proper state.
+                processingPhase = TOOL_CALLS;
+                toolParser->parseChunk(toolParser->getParsingStartTag());
+                return toolParser->parseChunk(chunkResponse);
+            } else if (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+                processingPhase = TOOL_CALLS;
+                return toolParser->parseChunk(chunkResponse);
+            } else {
+                processingPhase = CONTENT;
+                return parseContentChunk(chunkResponse);
+            }
         } else {
             processingPhase = CONTENT;
             return parseContentChunk(chunkResponse);

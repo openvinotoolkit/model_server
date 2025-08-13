@@ -71,6 +71,10 @@ public:
         zeroTriggerParsingEnabled = true;
     }
 
+    bool isZeroTriggerParsingEnabled() const {
+        return zeroTriggerParsingEnabled;
+    }
+
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
     static rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);

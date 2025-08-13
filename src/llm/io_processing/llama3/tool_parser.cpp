@@ -35,23 +35,27 @@ void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
     // and just extract substrings from the content and modify content in-place
 
-    auto toolCallsStartPosition = generatedTokens.end();
+    // If zero trigger parsing is enabled, we assume botTokenId has been injected into the prompt and whole output are tool calls,
+    // otherwise we search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
+    auto toolCallsStartPosition = generatedTokens.begin();
+    if (!zeroTriggerParsingEnabled) {
+        toolCallsStartPosition = generatedTokens.end();
+        // Find botTokenId in generated_ids
+        auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
 
-    // Find botTokenId in generated_ids
-    auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
-
-    if (botTokenIt != generatedTokens.end()) {
-        // Decode the content before botTokenId
-        std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
-        parsedOutput.content = tokenizer.decode(contentTokens);
-        // Tokens after botTokenId will be treated as tool calls
-        toolCallsStartPosition = botTokenIt + 1;
-    } else {
-        // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
-        if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
-            // If model output starts with "{", treat it as a tool call
-            toolCallsStartPosition = generatedTokens.begin();
-            parsedOutput.content.clear();
+        if (botTokenIt != generatedTokens.end()) {
+            // Decode the content before botTokenId
+            std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
+            parsedOutput.content = tokenizer.decode(contentTokens);
+            // Tokens after botTokenId will be treated as tool calls
+            toolCallsStartPosition = botTokenIt + 1;
+        } else {
+            // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
+            if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
+                // If model output starts with "{", treat it as a tool call
+                toolCallsStartPosition = generatedTokens.begin();
+                parsedOutput.content.clear();
+            }
         }
     }
 
