@@ -274,7 +274,6 @@ Status HfDownloader::cloneRepository() {
     if (!status.ok()) {
         return status;
     }
-
     return StatusCode::OK;
 }
 
