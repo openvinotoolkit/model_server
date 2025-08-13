@@ -198,6 +198,7 @@ cc_library(
         "//src:libovmsstatus",
         "//src:libovmsmediapipe_utils",
         "//src:libovmsprofiler",
+        "//src:libovmsstring_utils",
         "//src:libovmsfilesystem",
         "llmcalculator_cc_proto",
         ":openai_completions_api_handler",
