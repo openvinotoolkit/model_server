@@ -107,7 +107,7 @@ def check_dir(start_dir):
         'net_http.patch',
         'partial.patch',
         'ovms_drogon_trantor.patch',
-        'gorila.patch',
+        'gorilla.patch',
         'opencv_cmake_flags.txt',
         'ovms-c/dist',
         'requirements.txt',
