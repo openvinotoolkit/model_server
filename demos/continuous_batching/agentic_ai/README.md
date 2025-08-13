@@ -40,13 +40,13 @@ Run `export_model.py` script to download and quantize the model:
 
 :::{tab-item} CPU
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --overwrite_models --enable_prefix_caching
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3 --overwrite_models --enable_prefix_caching
 ```
 :::
 
 :::{tab-item} GPU
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tools_model_type qwen3 --target_device GPU --enable_prefix_caching --cache_size 2
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int8 --config_file_path models/config.json --model_repository_path models --tool_parser qwen3 --target_device GPU --enable_prefix_caching --cache_size 2
 ```
 :::
 
