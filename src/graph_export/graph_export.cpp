@@ -54,9 +54,24 @@ namespace ovms {
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
+static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
+    std::string modelsPath;
+    if (ggufFilenameOpt.has_value()) {
+        // if gguf file then remove last part
+        // extract gguf filename from graphSettings.modelPath
+        std::string ggufFilename = ggufFilenameOpt.value();
+        modelsPath = FileSystem::joinPath({modelPath, ggufFilename});
+    } else {
+        modelsPath = modelPath;
+    }
+    SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
+    return modelsPath;
+}
+
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings, const std::optional<std::string> ggufFilename) {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
+    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -80,7 +95,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             device: ")"
         << graphSettings.targetDevice << R"(",
             models_path: ")"
-        << graphSettings.modelPath << R"(",
+        << modelsPath << R"(",
             plugin_config: ')"
         << GraphExport::createPluginString(graphSettings.pluginConfig) << R"(',
             enable_prefix_caching: )"
@@ -140,7 +155,15 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     }
 #endif
     // clang-format on
-    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    // FIXME extend to other
+    // if directoryPathi is actually gguf file (has .gguf but mith also end like .gguf) then full path need to omit last part (gguf file name) and append graph.pbtxt otherwis pass it as it is but join graph.pbtxt to it
+    std::string fullPath = directoryPath;
+    if (fullPath.find(".gguf") != std::string::npos) {
+        // if gguf file then remove last part
+        std::filesystem::path p(directoryPath);
+        fullPath = p.parent_path().string();
+    }
+    fullPath = FileSystem::joinPath({fullPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
@@ -325,20 +348,20 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     auto status = LocalFileSystem::exists(directoryPath, &exists);
     if (!status.ok())
         return status;
-
-    bool is_dir = false;
-    status = LocalFileSystem::isDir(directoryPath, &is_dir);
-    if (!status.ok())
-        return status;
-
-    if (!is_dir) {
-        SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
-        return StatusCode::PATH_INVALID;
+    if (!hfSettings.ggufFilename.has_value()) {
+        bool is_dir = false;
+        status = LocalFileSystem::isDir(directoryPath, &is_dir);
+        if (!status.ok())
+            return status;
+    
+        if (!is_dir) {
+            SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
+            return StatusCode::PATH_INVALID;
+        }
     }
-
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
+            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings), hfSettings.ggufFilename);
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;

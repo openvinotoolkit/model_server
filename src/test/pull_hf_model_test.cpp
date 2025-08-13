@@ -173,6 +173,11 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+    EnvGuard guard;
+    guard.set("HF_ENDPOINT", "https://modelscope.cn");
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    this->filesToPrintInCaseOfFailure.emplace_back("config.json");
+    //guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";

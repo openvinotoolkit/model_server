@@ -294,6 +294,7 @@ ovms_cc_library(
         "ovms_exit_codes",
     ],
     visibility = ["//visibility:public",],
+    additional_copts = COPTS_DROGON,
 )
 ovms_cc_library(
     name = "libovms_cliparser",
@@ -2664,6 +2665,7 @@ cc_test(
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
             ":pull_hf_model_test",
+            ":pull_gguf_hf_model_test",
             ":listdirectorymodels_test",
             ":graph_export_test",
             ":config_export_test",
@@ -2781,6 +2783,24 @@ cc_library(
         ":test_utils",
         "//src/pull_module:libgit2",
         "//src/pull_module:hf_pull_model_module",
+        "//src:ovms_lib",
+        "libovmsstring_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "pull_gguf_hf_model_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/pull_gguf_hf_model_test.cpp"],
+    linkopts = [],
+    deps = [
+        "@libgit2_engine//:libgit2_engine",
+        "//src/servables_config_manager_module:listmodels",
+        ":test_utils",
+        "//src/pull_module:gguf_export",
         "//src:ovms_lib",
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",

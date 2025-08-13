@@ -38,6 +38,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
 #include "../filesystem.hpp"
+#include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
 #include "language_model/legacy/servable_initializer.hpp"
@@ -71,6 +72,45 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             global ImmutableSandboxedEnvironment
             from jinja2.sandbox import ImmutableSandboxedEnvironment
             from jinja2.ext import Extension
+            print("Loading chat template from directory:", templates_directory)
+            gguf_bos_token = None
+            gguf_eos_token = None
+            gguf_template = None
+            try:
+
+               from gguf_parser import GGUFParser
+               # find gguf file in templates_directory and open it with GGUFParser
+               ggufFile = None
+               # if templates_directory is actually a file, use it directly
+               if Path(templates_directory).is_file() and templates_directory.endswith(".gguf"):
+                   ggufFile = Path(templates_directory)
+               else:
+                   # otherwise, look for gguf files in the directory
+                   print("Searching for GGUF files in:", templates_directory)
+               for file in Path(templates_directory).glob("*.gguf"):
+                   ggufFile = file
+                   break
+               print(f"GGUF file found: {ggufFile}")
+               parser = GGUFParser(ggufFile)
+               parser.parse()
+               metadata = parser.metadata
+               for key, val in metadata.items():
+                   if "eos" in key or "bos" in key or "chat" in key or "tool" in key:
+                       print(f"k:{key}, v:{val}")
+               # metadata dictionary
+               gguf_template = metadata.get('tokenizer.chat_template', None)
+               gguf_bos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.bos_token_id')]
+               gguf_eos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.eos_token_id')]
+               # print template, bos_token and eos_token
+               print(f'GGUF template: {gguf_template}, bos_token: {gguf_bos_token}, eos_token: {gguf_eos_token}')
+               print("GGUF format version:", metadata.get("version"))
+               print(f"Context length:{metadata.get('context_length')}")
+               print("GGUF file successfully loaded:", ggufFile)
+            except Exception as e:
+                print(f"Caught exception while trying to load GGUF file: {e}")
+            finally:
+                print("GGUF file loading finished.")
+
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
@@ -173,6 +213,14 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
+            print("Setting everything")
+            if gguf_bos_token:
+                bos_token = gguf_bos_token
+            if gguf_eos_token:
+                eos_token = gguf_eos_token
+            if gguf_template:
+                chat_template = gguf_template
+                template = jinja_env.from_string(gguf_template)
         )",
             py::globals(), locals);
 
@@ -220,12 +268,13 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} does not exist. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    if (!std::filesystem::is_directory(outPath)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory. ", outPath);
-        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    // if is directory or file with .gguf extension then it is ok
+    // FIXME gguf format with parts
+    if (std::filesystem::is_directory(outPath) || endsWith(outPath, ".gguf")) {
+        return StatusCode::OK;
     }
-
-    return StatusCode::OK;
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory nor GGUF file ", outPath);
+    return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
 }
 
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {

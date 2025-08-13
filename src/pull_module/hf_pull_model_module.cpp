@@ -23,6 +23,7 @@
 #include "../config.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
+#include "gguf_export.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -99,7 +100,7 @@ std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
 Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
-    if (config.getServerSettings().hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD) {
+    if (config.getServerSettings().hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
         auto guardOrError = createGuard();
         RETURN_IF_ERROR(guardOrError);
     }
@@ -111,7 +112,7 @@ Status HfPullModelModule::start(const ovms::Config& config) {
 
 Status HfPullModelModule::clone() const {
     std::string graphDirectory = "";
-    if (this->hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD) {
+    if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
         auto guardOrError = createGuard();
         if (std::holds_alternative<Status>(guardOrError)) {
             return std::get<Status>(guardOrError);
@@ -123,13 +124,25 @@ Status HfPullModelModule::clone() const {
             return status;
         }
         graphDirectory = hfDownloader.getGraphDirectory();
-    } else {
+    } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
         OptimumDownloader optimumDownloader(this->hfSettings);
         auto status = optimumDownloader.cloneRepository();
         if (!status.ok()) {
             return status;
         }
         graphDirectory = optimumDownloader.getGraphDirectory();
+    } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
+        GGUFDownloader ggufDownloader(this->GetHfEndpoint(), this->hfSettings);
+        auto status = ggufDownloader.downloadModel();
+        if (!status.ok()) {
+            return status;
+        }
+        graphDirectory = ggufDownloader.getModelPath();
+        SPDLOG_ERROR("GGUF graphDirectory: {}", graphDirectory);
+        // FIXME need to use gguffilename
+    } else {
+        //SPDLOG_ERROR("Unsupported download type: {}", enumToString(this->hfSettings.downloadType));
+        return StatusCode::INTERNAL_ERROR;
     }
     std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
     GraphExport graphExporter;

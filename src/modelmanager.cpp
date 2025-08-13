@@ -229,6 +229,8 @@ Status ModelManager::startFromConfig() {
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
+        // TODO could be moved to config/cli_parser?
+        // probably we need to keep it here as we need to know if pbtxt exists what to do with gguf_filename?
         status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
         if (!status.ok())
             return status;

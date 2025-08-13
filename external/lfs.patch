@@ -290,7 +290,7 @@ new file mode 100644
 index 000000000..cd3aa39fd
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,497 @@
+@@ -0,0 +1,498 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -724,6 +724,7 @@ index 000000000..cd3aa39fd
 +		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 +		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
 +		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
++		curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"OpenVINO Model Server");
 +		curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
 +		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
 +

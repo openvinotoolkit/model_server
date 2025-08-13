@@ -814,10 +814,42 @@ protected:
 
     void TearDown() override {
         SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
+        // search for files from filesToPrintInCaseOfFailure in directoryPath and
+        // then print its path with filename and contents
+        // search for files recursively in directoryPath
+        // in case of gtest failure print the contents of the files
+        // check if this test failed and if yes print contents of the files
+        if (::testing::Test::HasFailure()) {
+            auto filePathsToPrint = searchFilesRecursively(directoryPath, filesToPrintInCaseOfFailure);
+            for (const auto& filePath : filePathsToPrint) {
+                std::stringstream content;
+                std::ifstream file(filePath);
+                if (file.is_open()) {
+                    content << file.rdbuf();
+                    SPDLOG_ERROR("File:{} Contents:\n{}", filePath, content.str());
+                } else {
+                    SPDLOG_ERROR("Could not open file: {}", filePath);
+                    continue;
+                }
+            }
+        }
         std::filesystem::remove_all(directoryPath);
+    }
+    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) {
+        std::vector<std::string> foundFiles;
+        for (const auto& file : filesToSearch) {
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+                if (entry.is_regular_file() && entry.path().filename() == file) {
+                    foundFiles.push_back(entry.path().string());
+                    SPDLOG_DEBUG("Found file: {}", entry.path().string());
+                }
+            }
+        }
+        return foundFiles;
     }
 
     std::string directoryPath;
+    std::vector<std::string> filesToPrintInCaseOfFailure;
 };
 
 /**
