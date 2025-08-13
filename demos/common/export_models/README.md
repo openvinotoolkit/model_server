@@ -123,7 +123,7 @@ python export_model.py text_generation --source_model mistralai/Mistral-7B-Instr
 > **Note:** Model `microsoft/Phi-3.5-vision-instruct` requires one manual adjustments after export in the file `generation_config.json` like in the [PR](https://huggingface.co/microsoft/Phi-3.5-vision-instruct/discussions/40/files).
 It will ensure, the generation stops after eos token.
 
-> **Note:** In oder to export GPTQ models, you need to install also package `auto_gptq` via command `BUILD_CUDA_EXT=0 pip install auto_gptq` on Linux and `set BUILD_CUDA_EXT=0 && pip install auto_gptq` on Windows. 
+> **Note:** In order to export GPTQ models, you need to install also package `auto_gptq` via command `BUILD_CUDA_EXT=0 pip install auto_gptq` on Linux and `set BUILD_CUDA_EXT=0 && pip install auto_gptq` on Windows. 
 
 
 ### Embedding Models
