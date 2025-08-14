@@ -151,13 +151,9 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    SPDLOG_DEBUG("Chat template took from OV GenAI :{}", properties->pipeline->get_tokenizer().get_chat_template());
-    SPDLOG_DEBUG("Original Chat template took from OV GenAI :{}", properties->pipeline->get_tokenizer().get_original_chat_template());
-#if (PYTHON_DISABLE == 0)
-    loadPyTemplateProcessor(properties, parsedModelsPath);
-#else
-    loadDefaultTemplateProcessorIfNeeded(properties);
-#endif
+    SPDLOG_DEBUG("Chat template took from OV GenAI :\n{}", properties->pipeline->get_tokenizer().get_chat_template());
+    //SPDLOG_DEBUG("Original Chat template took from OV GenAI :\n{}", properties->pipeline->get_tokenizer().get_original_chat_template());
+    loadChatTemplate(properties, parsedModelsPath);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }

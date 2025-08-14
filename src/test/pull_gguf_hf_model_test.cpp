@@ -120,7 +120,7 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
 
 std::vector<std::tuple<std::string, std::string, std::string, std::string>> ggufParams = {
     std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"),
-    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF", "/resolve/master/", "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf")
+    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF", "/resolve/master/", "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"),
     //std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf"),
     std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")
 };
