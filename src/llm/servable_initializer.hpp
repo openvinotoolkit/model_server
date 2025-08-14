@@ -46,6 +46,7 @@ struct GenAiServableProperties;
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
+    static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
 #if (PYTHON_DISABLE == 0)
     // Use Python Jinja module for template processing
     static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);

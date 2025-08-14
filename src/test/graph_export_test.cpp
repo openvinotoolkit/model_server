@@ -181,6 +181,45 @@ const std::string expectedDefaultGraphContents = R"(
     }
 )";
 
+const std::string expectedGGUFGraphContents = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node: {
+    name: "LLMExecutor"
+    calculator: "HttpLLMCalculator"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    input_side_packet: "LLM_NODE_RESOURCES:llm"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    node_options: {
+        [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+            max_num_seqs:256,
+            device: "CPU",
+            models_path: "./PRETTY_GOOD_GGUF_MODEL.gguf",
+            plugin_config: '{ }',
+            enable_prefix_caching: true,
+            cache_size: 10,
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+            tag_index: "LOOPBACK:0"
+            }
+        }
+        }
+    }
+    }
+)";
+
+
 const std::string expectedRerankGraphContentsNonDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
@@ -396,6 +435,18 @@ TEST_F(GraphCreationTest, positiveDefault) {
 
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedDefaultGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveGGUF) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    ASSERT_EQ(expectedGGUFGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, rerankPositiveNonDefault) {

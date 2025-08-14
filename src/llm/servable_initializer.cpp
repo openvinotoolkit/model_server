@@ -50,11 +50,48 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+static const std::string DEFAULT_CHAT_TEMPLATE = R"({% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }})";
+
+void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+#if (PYTHON_DISABLE == 0)
+    loadPyTemplateProcessor(properties, chatTemplateDirectory);
+#else
+    loadDefaultTemplateProcessorIfNeeded(properties)
+#endif
+}
+
+static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
+        bool isGGUFModel = false;
+        if (std::filesystem::exists(chatTemplatePath) && std::filesystem::is_directory(chatTemplatePath)) {
+            for (const auto& entry : std::filesystem::directory_iterator(chatTemplatePath)) {
+                    // check if contains *gguf* in filename
+               if (entry.is_regular_file() && entry.path().filename().string().find("gguf") != std::string::npos) {
+                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
+                    isGGUFModel = true;
+                    break;
+                }
+            }
+        }
+        return isGGUFModel;
+}
+
 #if (PYTHON_DISABLE == 0)
 void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
+        bool isGGUFModel = checkIfGGUFModel(chatTemplateDirectory);
+// how to define locals as py::dict to pass into py:exec?
+// we need to pass tokenizer template and bos/eos tokens to python code
+// if we have GGUF model, we will use them to create a template object
+        std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
+        std::string tokenizerBosToken = properties->tokenizer.get_bos_token();
+        std::string tokenizerEosToken = properties->tokenizer.get_eos_token();
+        SPDLOG_TRACE("Tokenizer chat template: {}, bos token:{} eos_token:{} isGGUFModel:{}", tokenizerTemplate, tokenizerBosToken, tokenizerEosToken, isGGUFModel);
+        auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
+                        "tokenizer_bos_token"_a = tokenizerBosToken,
+                        "tokenizer_eos_token"_a = tokenizerEosToken,
+                        "templates_directory"_a = chatTemplateDirectory,
+                        "is_gguf_model"_a = isGGUFModel);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -77,7 +114,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             gguf_eos_token = None
             gguf_template = None
             try:
-
                from gguf_parser import GGUFParser
                # find gguf file in templates_directory and open it with GGUFParser
                ggufFile = None
@@ -171,6 +207,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             bos_token = ""
             eos_token = ""
             chat_template = default_chat_template
+            set_default_chat_template = False
             tool_chat_template = None
 
             template = None
@@ -208,26 +245,28 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                             elif template_entry.get("name") == "tool_use":
                                 tool_chat_template = template_entry.get("template")
             if template is None:
-                template = jinja_env.from_string(chat_template)
+                if is_gguf_model and (chat_template == default_chat_template):
+                    # in this case we want to get chat template from tokenizer passed to script
+                    template = jinja_env.from_string(tokenizer_template)
+                    bos_token = tokenizer_bos_token
+                    eos_token = tokenizer_eos_token
+                else:
+                    template = jinja_env.from_string(chat_template)
             if tool_chat_template is not None:
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
             print("Setting everything")
-            if gguf_bos_token:
-                bos_token = gguf_bos_token
-            if gguf_eos_token:
-                eos_token = gguf_eos_token
-            if gguf_template:
-                chat_template = gguf_template
-                template = jinja_env.from_string(gguf_template)
         )",
             py::globals(), locals);
-
+        // need to check if chat template directory contains gguf file
+        std::string pythonChatTemplate = locals["chat_template"].cast<std::string>();
+        SPDLOG_TRACE("Python chat template: {}", pythonChatTemplate);
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
         properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
         properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
+        SPDLOG_ERROR("ER");
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
@@ -241,13 +280,14 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
+        SPDLOG_ERROR("ER");
 }
 #else
 void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
     const std::string modelChatTemplate = properties->tokenizer.get_chat_template();
     if (modelChatTemplate.empty()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Could not load model chat template. Using default template.");
-        properties->tokenizer.set_chat_template("{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}");
+        properties->tokenizer.set_chat_template(DEFAULT_CHAT_TEMPLATE);
     }
 }
 #endif
