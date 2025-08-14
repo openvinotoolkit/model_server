@@ -45,22 +45,15 @@ set "PYTHONHOME=C:\opt\Python312"
 set "PATH=%setPath%"
 
 :: Bazel compilation settings
-set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2019_PRO% goto :msvc_pro
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
-:msvc_pro
-echo [INFO] Using MSVC %VS_2019_PRO%
-set BAZEL_VS=%VS_2019_PRO%
-goto :msvc_end
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
 set BAZEL_VS=%VS_2022_BT%
-:msvc_end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
@@ -137,14 +130,14 @@ IF /I EXIST %bash_path% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
-    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250729/openvino_genai_windows_2025.3.0.0.dev20250729_x86_64.zip"
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.3.0.0.dev20250812/openvino_genai_windows_2025.3.0.0.dev20250812_x86_64.zip"
 )
 
 :: Extract genai_ver from GENAI_PACKAGE_URL (filename)

@@ -187,6 +187,8 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/GS",
                         "/DYNAMICBASE",
                         "/Qspectre",
+                        "/wd4305",  # abseil after switch to build tools 22
+                        "/wd4324",  # genai after switch to build tools 22
                         "/wd4068",
                         "/wd4458",
                         "/wd4100",

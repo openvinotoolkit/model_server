@@ -2680,7 +2680,8 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
 #endif
 
     if (params.modelName.find("vlm") != std::string::npos) {
-        genAiTemplateParsing = true;  // VLM models always use GenAI template parsing
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);  // GenAI accepts such messages, so we expect a successful response
+        return;
     }
 
     if (genAiTemplateParsing) {
@@ -3189,9 +3190,15 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         }
     )";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    if (params.modelName.find("vlm") != std::string::npos) {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+            ovms::StatusCode::OK);  // GenAI supports such messages
+    } else {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
 }
 
 TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
