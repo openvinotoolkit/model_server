@@ -117,7 +117,7 @@ if __name__ == "__main__":
     agent = Agent(
         name="Assistant",
         mcp_servers=[fs_server, weather_server],
-        model_settings=ModelSettings(tool_choice="auto", temperature=0.0),
+        model_settings=ModelSettings(tool_choice="auto", temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": False}}),
     )
     loop = asyncio.new_event_loop()
     loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))

@@ -3,13 +3,13 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
 optimum-intel
-openvino-tokenizers<=2025.3.0.0.dev20250729
-openvino<=2025.3.0.dev20250729
+openvino-tokenizers<=2025.3.0.0.dev20250812
+openvino<=2025.3.0.dev20250812
 nncf>=2.11.0 
 sentence_transformers
 sentencepiece==0.2.0
 openai 
-transformers<4.52
+transformers<4.53
 einops
 torchvision
 timm==1.0.15
