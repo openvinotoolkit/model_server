@@ -40,20 +40,20 @@ Note: The users in China need to set environment variable HF_ENDPOINT="https://h
 ```console
 mkdir models
 # Qwen/Qwen3-8B
-python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3
+python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
 # Qwen/Qwen3-4B
-python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3
+python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
 # meta-llama/Llama-3.1-8B-Instruct
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
 # meta-llama/Llama-3.2-8B-Instruct
-python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
 # NousResearch/Hermes-3-Llama-3.1-8B
-python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
 curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8Bt/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
 # microsoft/Phi-4-mini-instruct 
-python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models
+python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --cache_size 2
 curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
@@ -101,19 +101,19 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 Run one of the commands below:
 ```bat
-ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-4B --model_name Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-4B --model_name Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.1-8B-Instruct --model_name meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.1-8B-Instruct --model_name meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-8B-Instruct --model_name meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-8B-Instruct --model_name meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/microsoft/Phi-4-mini-instruct --model_name microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/microsoft/Phi-4-mini-instruct --model_name microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/OpenVINO/Qwen3-8B-int4-ov --model_name OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/OpenVINO/Qwen3-8B-int4-ov --model_name OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-ov --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size2
+ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-ov --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 
 ```
 :::
@@ -123,28 +123,28 @@ ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-
 Run one of the commands:
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation
 
 ```
 :::
@@ -157,28 +157,28 @@ It can be applied using the commands below:
 ```bash
 # Qwen/Qwen3-8B
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 # Qwen/Qwen3-4B
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 # meta-llama/Llama-3.1-8B-Instruct
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 # meta-llama/Llama-3.2-8B-Instruct
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 # NousResearch/Hermes-3-Llama-3.1-8B
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 # microsoft/Phi-4-mini-instruct
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 # OpenVINO/Qwen3-8B-int4-ov
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 # OpenVINO/Phi-4-mini-instruct-int4-ov
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size2
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
 
@@ -222,28 +222,28 @@ Run the agentic application
 ::::{tab-set}
 
 :::{tab-item} Qwen3
-```console
+```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://ov-spr-28.sclab.intel.com:8001/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
 ```
-```console
+```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://ov-spr-28.sclab.intel.com:8001/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Hermes
-```console
+```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
 ```
-```console
+```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Llama3.1
-```console
+```bash
 python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.1-8B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Llama3.2
-```console
+```bash
 python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-8B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
@@ -253,7 +253,7 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model m
 ```
 :::
 :::{tab-item} Openvino 
-```console
+```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
