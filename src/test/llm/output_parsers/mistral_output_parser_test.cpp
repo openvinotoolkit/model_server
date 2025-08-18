@@ -47,7 +47,6 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    SPDLOG_INFO("AAAAAAAAAAA: [{}]", generatedTokens);
     ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "");
     EXPECT_EQ(parsedOutput.reasoning, "");

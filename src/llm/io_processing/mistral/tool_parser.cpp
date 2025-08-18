@@ -32,13 +32,6 @@
 
 namespace ovms {
 
-static std::string::iterator skipToFirstNonWhitespaceCharacter(std::string::iterator it, const std::string::iterator& end) {
-    while (it != end && std::isspace(*it)) {
-        ++it;
-    }
-    return it;
-}
-
 void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
@@ -57,7 +50,6 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
 
     if (toolsStartPos != std::string::npos && toolsEndPos != std::string::npos) {
         std::string remaining = decoded.substr(0, toolsStartPos) + decoded.substr(toolsEndPos + toolsStartEnd.length());
-
 
         size_t toolsStartPos2 = remaining.find(toolsStartString);
         size_t toolsEndPos2 = remaining.find(toolsStartEnd);
