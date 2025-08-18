@@ -51,7 +51,7 @@ python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-In
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
 # NousResearch/Hermes-3-Llama-3.1-8B
 python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
-curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8Bt/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
+curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8B/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
 # microsoft/Phi-4-mini-instruct 
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --cache_size 2
 curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
