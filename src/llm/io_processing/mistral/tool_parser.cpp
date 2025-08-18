@@ -69,7 +69,6 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
                     continue;
                 }
                 ToolCall toolCall;
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
                 if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
                     toolCall.name = toolVal["name"].GetString();
                 } else {
@@ -86,6 +85,7 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
                     continue;
                 }
+                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
                 parsedOutput.toolCalls.push_back(toolCall);
             }
             parsedOutput.content = remaining;
