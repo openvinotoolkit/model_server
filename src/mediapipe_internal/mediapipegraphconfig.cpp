@@ -115,7 +115,6 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
             this->setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
         } else {
             std::string defaultSubconfigPath = getBasePath() + "subconfig.json";
-            SPDLOG_DEBUG("No subconfig path was provided for graph: {} so default subconfig file: {} will be loaded.", getGraphName(), defaultSubconfigPath);
             this->setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
             this->setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
         }
