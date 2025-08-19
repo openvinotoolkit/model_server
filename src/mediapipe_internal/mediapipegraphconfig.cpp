@@ -129,14 +129,14 @@ Status MediapipeGraphConfig::parseNode(const rapidjson::Value& v) {
 }
 
 void MediapipeGraphConfig::logGraphConfigContent() const {
-    std::string filePath = this->basePath + DEFAULT_GRAPH_FILENAME;
-    std::ifstream fileStream(filePath);
+    std::ifstream fileStream(this->graphPath);
     if (!fileStream.is_open()) {
-        SPDLOG_ERROR("Failed to open file: {}", filePath);
+        SPDLOG_ERROR("Failed to open file: {}", this->graphPath);
         return;
     }
     std::stringstream buffer;
     buffer << fileStream.rdbuf();
-    SPDLOG_DEBUG("Content of file {}:\n{}", filePath, buffer.str());
+    SPDLOG_DEBUG("Content of file {}:\n{}", this->graphPath, buffer.str());
+    fileStream.close();
 }
 }  // namespace ovms
