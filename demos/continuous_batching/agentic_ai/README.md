@@ -27,6 +27,7 @@ Currently supported models:
 ::::{tab-set}
 
 :::{tab-item} Export using python script
+
 Download export script, install its dependencies and create directory for the models:
 ```console
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
@@ -59,6 +60,7 @@ curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githu
 :::
 
 :::{tab-item} Direct pulling from HuggingFace from docker containers
+
 ```bash
 # OpenVINO/Qwen3-8B-int4-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
@@ -69,6 +71,7 @@ curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/template.jinja https://ra
 ```
 :::
 :::{tab-item} Direct pulling from HuggingFace on Windows
+
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
@@ -252,7 +255,7 @@ python openai_agent.py --query "List the files in folder /root" --model meta-lla
 python openai_agent.py --query "What is the current weather in Tokyo?" --model microsoft/Phi-4-mini-instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
-:::{tab-item} Openvino 
+:::{tab-item} OpenVINO
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 
