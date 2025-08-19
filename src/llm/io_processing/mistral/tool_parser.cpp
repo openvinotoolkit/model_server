@@ -35,63 +35,48 @@ namespace ovms {
 void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
-    if (parsedOutput.content.empty()) {
+    if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
         return;
     }
 
-    std::string decoded = tokenizer.decode(generatedTokens, {ov::genai::skip_special_tokens(false)});
+    if (generatedTokens[0] != this->botTokenId) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
+        return;
+    }
 
-    const std::string toolsStartString = getParsingStartTag();
-    const std::string toolsStartEnd = getParsingEndTag();
+    rapidjson::Document toolsDoc;
+    toolsDoc.Parse(parsedOutput.content.c_str());
 
-    size_t toolsStartPos = decoded.find(toolsStartString);
-    size_t toolsEndPos = decoded.find(toolsStartEnd);
-
-    if (toolsStartPos != std::string::npos && toolsEndPos != std::string::npos) {
-        std::string remaining = decoded.substr(0, toolsStartPos) + decoded.substr(toolsEndPos + toolsStartEnd.length());
-
-        size_t toolsStartPos2 = remaining.find(toolsStartString);
-        size_t toolsEndPos2 = remaining.find(toolsStartEnd);
-        bool hasMoreSpecialTags = !(toolsStartPos2 == std::string::npos && toolsEndPos2 == std::string::npos);
-
-        std::string toolsString = decoded.substr(
-            toolsStartPos + toolsStartString.length(),
-            toolsEndPos - toolsStartPos - toolsStartString.length());
-
-        rapidjson::Document toolsDoc;
-        toolsDoc.Parse(toolsString.c_str());
-
-        if (!toolsDoc.HasParseError() && toolsDoc.IsArray() && !hasMoreSpecialTags) {
-            for (auto& toolVal : toolsDoc.GetArray()) {
-                if (!toolVal.IsObject()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                    continue;
-                }
-                ToolCall toolCall;
-                if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                    toolCall.name = toolVal["name"].GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                    continue;
-                }
-
-                if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolVal["arguments"].Accept(toolWriter);
-                    toolCall.arguments = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                    continue;
-                }
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                parsedOutput.toolCalls.push_back(toolCall);
+    if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
+        for (auto& toolVal : toolsDoc.GetArray()) {
+            if (!toolVal.IsObject()) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
+                continue;
             }
-            parsedOutput.content = remaining;
-        } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
+            ToolCall toolCall;
+            if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
+                toolCall.name = toolVal["name"].GetString();
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
+                continue;
+            }
+
+            if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
+                rapidjson::StringBuffer sb;
+                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
+                toolVal["arguments"].Accept(toolWriter);
+                toolCall.arguments = sb.GetString();
+            } else {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
+                continue;
+            }
+            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
+            parsedOutput.toolCalls.push_back(toolCall);
         }
+        parsedOutput.content.clear();
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
     }
 }
 
