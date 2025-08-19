@@ -226,10 +226,10 @@ Run the agentic application
 
 :::{tab-item} Qwen3
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://ov-spr-28.sclab.intel.com:8001/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
 ```
 ```bash
-python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://ov-spr-28.sclab.intel.com:8001/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
+python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Hermes
