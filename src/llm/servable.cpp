@@ -37,7 +37,8 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
+    std::string requestBody = getBodyWithDecodedContent(payload);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", requestBody);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
@@ -206,6 +207,26 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     std::stringstream ss;
     ss << "data: " << text << "\n\n";
     return ss.str();
+}
+std::string getBodyWithDecodedContent(const ovms::HttpPayload& payload) {
+    auto json = payload.parsedJson;
+    std::string requestContent;
+    if (json->HasMember("messages") && (*json)["messages"].IsArray() && !(*json)["messages"].Empty()) {
+        const auto& message = (*json)["messages"][0];
+        if (message.HasMember("content") && message["content"].IsString()) {
+            requestContent = message["content"].GetString();
+        }
+    }
+    std::string requestBody = payload.body;
+    std::string contentKey = "\"content\":";
+    auto contentIdx = requestBody.find(contentKey);
+    if (contentIdx != std::string::npos) {
+        requestBody = requestBody.substr(0, contentIdx);
+        requestBody += contentKey;
+        requestBody += requestContent.empty() ? "null" : requestContent;
+        requestBody += payload.body.substr(contentIdx + contentKey.length() + requestContent.length()*2 + 1);
+    }
+    return requestBody;
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)

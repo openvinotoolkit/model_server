@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <rapidjson/document.h>
 
 #include "openvino/genai/text_streamer.hpp"
 
@@ -181,4 +182,5 @@ public:
 };
 std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
+std::string getBodyWithDecodedContent(const ovms::HttpPayload& payload);
 }  // namespace ovms
