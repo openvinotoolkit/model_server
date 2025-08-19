@@ -86,7 +86,10 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
         std::string tokenizerBosToken = properties->tokenizer.get_bos_token();
         std::string tokenizerEosToken = properties->tokenizer.get_eos_token();
-        SPDLOG_TRACE("Tokenizer chat template: {}, bos token:{} eos_token:{} isGGUFModel:{}", tokenizerTemplate, tokenizerBosToken, tokenizerEosToken, isGGUFModel);
+        auto& tokenizer = properties->tokenizer;
+        std::string bosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_bos_token_id()}), {ov::genai::skip_special_tokens(false)});
+        std::string eosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_eos_token_id()}), {ov::genai::skip_special_tokens(false)});
+        SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {}, decoded bos: {} decoded eos:{} isGGUF:{}", tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), bosToken, eosToken, isGGUFModel);
         auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
                         "tokenizer_bos_token"_a = tokenizerBosToken,
                         "tokenizer_eos_token"_a = tokenizerEosToken,
@@ -130,15 +133,13 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                parser = GGUFParser(ggufFile)
                parser.parse()
                metadata = parser.metadata
-               for key, val in metadata.items():
-                   if "eos" in key or "bos" in key or "chat" in key or "tool" in key:
-                       print(f"k:{key}, v:{val}")
-               # metadata dictionary
                gguf_template = metadata.get('tokenizer.chat_template', None)
                gguf_bos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.bos_token_id')]
                gguf_eos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.eos_token_id')]
+               # if gguf_bos/eos_token are None then set them to "NoNe" string # FIXME for debug
+               gguf_bos_token = "NoNe" if gguf_bos_token is None else gguf_bos_token
+               gguf_eos_token = "NoNe" if gguf_eos_token is None else gguf_eos_token
                # print template, bos_token and eos_token
-               print(f'GGUF template: {gguf_template}, bos_token: {gguf_bos_token}, eos_token: {gguf_eos_token}')
                print("GGUF format version:", metadata.get("version"))
                print(f"Context length:{metadata.get('context_length')}")
                print("GGUF file successfully loaded:", ggufFile)
@@ -257,6 +258,10 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             else:
                 tool_template = template
             print("Setting everything")
+            # print comparison between tokenizer eos/bos/chat_template and gguf ones. Fist bos, then eos, then chat_template
+            print(f"Tokenizer bos_token: {tokenizer_bos_token}, GGUF bos_token: {gguf_bos_token}")
+            print(f"Tokenizer eos_token: {tokenizer_eos_token}, GGUF eos_token: {gguf_eos_token}")
+            print(f"Tokenizer chat_template: \n{tokenizer_template}\n, GGUF chat_template: \n{gguf_template}")
         )",
             py::globals(), locals);
         // need to check if chat template directory contains gguf file

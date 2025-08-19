@@ -225,7 +225,7 @@ int progress_callback(void* clientp,
 
 Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
     //construct url
-    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {} XXXXXXXXXX", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
+    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
     std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
     SPDLOG_TRACE("Constructed URL: {}", url);
 

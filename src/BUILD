@@ -2661,6 +2661,7 @@ cc_test(
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
+            ":test_gguf_environment",
             ":network_utils_test",
             "//src:custom_nodes_common_buffersqueue",
             "@com_google_googletest//:gtest",
@@ -2754,6 +2755,20 @@ cc_library(
     copts = COPTS_TESTS,
 )
 cc_library(
+    name = "test_gguf_environment",
+    linkstatic = 1,
+    alwayslink = True,
+    hdrs = ["test/gguf_environment.hpp",],
+    srcs = ["test/gguf_environment.cpp",],
+    linkopts = [],
+    deps = [
+            "libovmslogging",
+            "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
     name = "inferencerequest_test",
     linkstatic = 1,
     alwayslink = True,
@@ -2800,6 +2815,7 @@ cc_library(
         "@libgit2_engine//:libgit2_engine",
         "//src/servables_config_manager_module:listmodels",
         ":test_utils",
+        ":test_gguf_environment",
         "//src/pull_module:gguf_export",
         "//src:ovms_lib",
         "libovmsstring_utils",

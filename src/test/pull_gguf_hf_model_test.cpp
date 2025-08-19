@@ -22,6 +22,7 @@
 
 #include <git2.h>
 #include "test_utils.hpp"
+#include "gguf_environment.hpp"
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
 #include "src/pull_module/gguf_export.hpp"
@@ -100,7 +101,7 @@ class GGUFDownloaderPullHfModelParameterized : public GGUFDownloaderPullHfModel,
 };
 
 TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
-    GTEST_SKIP() << " too long for ci";
+    SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string hfEndpoint = std::get<0>(GetParam());
     const std::string sourceModel = std::get<1>(GetParam());
     const std::string filenamePrefix = std::get<2>(GetParam());
@@ -149,6 +150,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
 //curl -L   -H "Authorization: Bearer $HF_TOKEN"   -o DeepSeek‑R1‑Distill‑Qwen‑7B‑Q4_K_M.gguf   https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
 //https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
+    SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string sourceModel = "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
@@ -159,7 +161,16 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
     SPDLOG_ERROR("ER");
     ASSERT_TRUE(status.ok()) << status.string();
-    // TODO check if file exists, graphpbtx etc
+    // TODO check if file exists, its size
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    bool exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok());
+    // check size of the file with std::filesystem
+    size_t fileSize = 0;
+    std::filesystem::path filePath(fullPath);
+    fileSize = std::filesystem::file_size(filePath);
+    EXPECT_EQ(13, fileSize);
 }
 
 void find_file_in_tree(git_repository* repo, git_tree* tree, 
