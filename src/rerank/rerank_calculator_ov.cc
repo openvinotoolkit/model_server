@@ -42,7 +42,7 @@
 #include "../profiler.hpp"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 #include "src/rerank/rerank_utils.hpp"
-#include "../sidepacket_servable.hpp"
+#include "rerank_servable.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../executingstreamidguard.hpp"
 
@@ -62,7 +62,7 @@ class RerankCalculatorOV : public CalculatorBase {
     static const std::string RERANK_MODEL_INPUT_IDS_NAME;
     static const std::string RERANK_MODEL_ATTENTION_MASK_NAME;
     static const std::string RERANK_MODEL_TOKEN_TYPE_IDS_NAME;
-    static constexpr size_t NUMBER_OF_SPECIAL_TOKENS = 4;
+    static constexpr size_t DEFAULT_NUMBER_OF_SPECIAL_TOKENS = 4;
 
     mediapipe::Timestamp timestamp{0};
     std::chrono::time_point<std::chrono::system_clock> created;
@@ -72,12 +72,14 @@ class RerankCalculatorOV : public CalculatorBase {
     int64_t sep_token{0};
     int64_t pad_token{0};
 
+    size_t number_of_special_tokens = DEFAULT_NUMBER_OF_SPECIAL_TOKENS;
+
     uint64_t max_position_embeddings{512};
 
     size_t max_allowed_chunks{0};  // Read from options in ::Open()
 
 protected:
-    std::shared_ptr<ovms::SidepacketServable> rerank_session{nullptr};
+    std::shared_ptr<ovms::RerankServable> rerank_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -114,6 +116,10 @@ public:
         sep_token = rerank_session->getSepToken().value_or(0);
         pad_token = rerank_session->getPadToken().value_or(0);
 
+        if(!rerank_session->addBosToken){
+            number_of_special_tokens = 0;
+        }
+
         // max_position_embeddings
         if (options.has_max_position_embeddings()) {
             this->max_position_embeddings = options.max_position_embeddings();
@@ -127,9 +133,9 @@ public:
         }
 
         // post-validation
-        if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
-            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
-            return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
+        if (this->max_position_embeddings <= 2 * number_of_special_tokens) {
+            SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * number_of_special_tokens");
+            return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * number_of_special_tokens");
         }
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "RerankCalculatorOV [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
@@ -153,7 +159,15 @@ public:
         // Validate batch size before tokenizing
         if (handler.getDocumentsList().size() > this->max_allowed_chunks)
             throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
-
+        if(!rerank_session->addBosToken){
+            std::vector<std::string> data;
+            for(auto document : handler.getDocumentsList()){
+                data.push_back(handler.getQuery() + document);
+                chunk_mapping.push_back(0);
+            }
+            auto tokens = rerank_session->getTokenizer().encode(data);
+            return std::make_pair(tokens.input_ids, tokens.attention_mask);
+        }
         // Compute Query Tokens
         auto query_tokens = ComputeTokensForString(handler.getQuery());
 
@@ -166,9 +180,9 @@ public:
         }
         auto tokens = rerank_session->getTokenizer().encode(handler.getDocumentsList());
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "\nMax position embeddings: {}\nQuery tokens: {}\nSpecial tokens: {}\nRemaining space for chunk: {}",
-            this->max_position_embeddings, query_tokens.size(), NUMBER_OF_SPECIAL_TOKENS, this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS);
+            this->max_position_embeddings, query_tokens.size(), number_of_special_tokens, this->max_position_embeddings - query_tokens.size() - number_of_special_tokens);
         SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Number of documents: {}; with max token count: {} before chunking", tokens.input_ids.get_shape()[0], tokens.input_ids.get_shape()[1]);
-        size_t max_tokens_per_chunk = this->max_position_embeddings - query_tokens.size() - NUMBER_OF_SPECIAL_TOKENS;
+        size_t max_tokens_per_chunk = this->max_position_embeddings - query_tokens.size() - number_of_special_tokens;
         ov::Tensor out_input_ids, out_attention_mask;
         auto status = chunkDocuments(
             tokens.input_ids,
@@ -184,7 +198,7 @@ public:
         size_t tokens_count_of_longest_document = out_input_ids.get_shape()[1];
         if (tokens_count_of_longest_document > max_tokens_per_chunk)
             throw std::runtime_error("tokens_count_of_longest_document exceeds max_tokens_per_chunk");  // should never happen
-        size_t total_tokens_count_per_batch = tokens_count_of_longest_document + NUMBER_OF_SPECIAL_TOKENS + query_tokens.size();
+        size_t total_tokens_count_per_batch = tokens_count_of_longest_document + number_of_special_tokens + query_tokens.size();
         size_t batch_size = out_input_ids.get_shape()[0];
         if (batch_size != chunk_mapping.size())
             throw std::runtime_error("error");  // should never happen
@@ -203,7 +217,10 @@ public:
             BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_3 TOKENS>  EOS_TOKEN
             BOS_TOKEN  <QUERY TOKENS>  EOS_TOKEN SEP_TOKEN  <DOCUMENT_N TOKENS>  EOS_TOKEN
         */
-
+        if(!rerank_session->addBosToken){
+            SPDLOG_LOGGER_DEBUG(rerank_calculator_logger, "Add bos token is set to false. No special tokens will be added.");
+            // return std::make_pair(out_input_ids, out_attention_mask);
+        }
         for (size_t i = 0; i < batch_size; i++) {
             int64_t* input_ids_data = reinterpret_cast<int64_t*>(input_ids.data()) + i * total_tokens_count_per_batch;
             int64_t* attention_mask_data = reinterpret_cast<int64_t*>(attention_mask.data()) + i * total_tokens_count_per_batch;
@@ -211,22 +228,35 @@ public:
             int64_t* out_input_ids_data = reinterpret_cast<int64_t*>(out_input_ids.data()) + i * tokens_count_of_longest_document;
 
             // Fill input_ids
-            input_ids_data[0] = this->bos_token;
-            std::memcpy(input_ids_data + 1, query_tokens.data(), query_tokens.size() * sizeof(int64_t));
-            input_ids_data[query_tokens.size() + 1] = this->eos_token;
-            input_ids_data[query_tokens.size() + 2] = this->sep_token;
-            std::memcpy(input_ids_data + 1 + query_tokens.size() + 2, out_input_ids_data, tokens_count_of_longest_document * sizeof(int64_t));
-
-            input_ids_data[total_tokens_count_per_batch - 1] = this->pad_token;
-
-            auto it = std::find(out_input_ids_data, out_input_ids_data + tokens_count_of_longest_document, this->pad_token);
-            size_t pad_token_index = (it != out_input_ids_data + tokens_count_of_longest_document) ? std::distance(out_input_ids_data, it) : tokens_count_of_longest_document;
-
-            input_ids_data[1 + query_tokens.size() + 2 + pad_token_index] = this->eos_token;
-
+            size_t bosOffset = 0;
+            size_t sepOffset = 0;
+            size_t eosOffset = 0;
+            size_t padOffset = 0;
+            if(rerank_session->addBosToken){
+                bosOffset = 1;
+                input_ids_data[0] = this->bos_token;
+                
+            }
+            std::memcpy(input_ids_data + bosOffset, query_tokens.data(), query_tokens.size() * sizeof(int64_t));
+            if(rerank_session->addBosToken){
+                input_ids_data[query_tokens.size() + bosOffset] = this->eos_token;
+                sepOffset = 1;
+                input_ids_data[query_tokens.size() + bosOffset + sepOffset] = this->sep_token;
+                eosOffset = 1;
+            }
+            std::memcpy(input_ids_data + eosOffset + query_tokens.size() + bosOffset + sepOffset, out_input_ids_data, tokens_count_of_longest_document * sizeof(int64_t));
+            size_t pad_token_index = 0;
+            if(rerank_session->addBosToken){
+                padOffset = 1;
+                input_ids_data[total_tokens_count_per_batch - padOffset] = this->pad_token;
+                auto it = std::find(out_input_ids_data, out_input_ids_data + tokens_count_of_longest_document, this->pad_token);
+                pad_token_index = (it != out_input_ids_data + tokens_count_of_longest_document) ? std::distance(out_input_ids_data, it) : tokens_count_of_longest_document;
+                input_ids_data[bosOffset + query_tokens.size() + eosOffset + sepOffset + pad_token_index] = this->eos_token;
+                eosOffset = 2;
+            }
             // Fill attention_mask
             std::fill(attention_mask_data, attention_mask_data + total_tokens_count_per_batch, int64_t(0));
-            std::fill(attention_mask_data, attention_mask_data + 1 + query_tokens.size() + 2 + pad_token_index + 1, int64_t(1));
+            std::fill(attention_mask_data, attention_mask_data + bosOffset + query_tokens.size() + bosOffset + eosOffset + sepOffset + pad_token_index, int64_t(1));
         }
 
         return std::make_pair(input_ids, attention_mask);

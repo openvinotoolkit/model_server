@@ -78,4 +78,5 @@ public:
 };
 
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 }  // namespace ovms

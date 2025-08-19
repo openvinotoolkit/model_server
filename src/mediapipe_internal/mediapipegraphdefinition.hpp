@@ -45,6 +45,7 @@
 
 #include "../sidepacket_servable.hpp"
 #include "../embeddings/embeddings_servable.hpp"
+#include "../rerank/rerank_servable.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -60,8 +61,8 @@ class GenAiServable;
 struct ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
 struct GraphSidePackets {
