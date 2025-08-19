@@ -61,8 +61,8 @@ class GenAiServable;
 struct ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
-using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<SidepacketServable>>;
+using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
+using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
 struct GraphSidePackets {
