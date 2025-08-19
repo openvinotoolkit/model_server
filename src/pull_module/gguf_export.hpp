@@ -41,7 +41,7 @@ protected:
     HFSettingsImpl hfSettings;
     const std::string hfEndpoint;
     std::string downloadPath;
-/*    std::string sourceModel;
+    /*    std::string sourceModel;
     std::string downloadPath;
     bool overwriteModels;
 

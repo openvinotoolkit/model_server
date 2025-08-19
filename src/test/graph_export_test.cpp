@@ -219,7 +219,6 @@ const std::string expectedGGUFGraphContents = R"(
     }
 )";
 
-
 const std::string expectedRerankGraphContentsNonDefault = R"(
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"

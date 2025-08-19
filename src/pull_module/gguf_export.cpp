@@ -51,7 +51,9 @@ static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const 
     return lfstatus;
 }
 
-GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) : hfSettings(hfSettings), hfEndpoint(hfEndpoint) {
+GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
+    hfSettings(hfSettings),
+    hfEndpoint(hfEndpoint) {
     this->downloadPath = FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel});
 }
 
@@ -71,7 +73,7 @@ Status GGUFDownloader::downloadModel() {
     }
     std::filesystem::create_directories(this->downloadPath);
     ovms::Status status;
-    //auto status = checkIfOverwriteAndRemove(this->downloadPath);
+    // auto status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }
@@ -100,10 +102,9 @@ Status GGUFDownloader::downloadModel() {
            filename);
 }*/
 
-static const char* rate_units[] = { "B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL };
+static const char* rate_units[] = {"B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL};
 
-static void print_download_speed_info(size_t received_size, size_t elapsed_time)
-{
+static void print_download_speed_info(size_t received_size, size_t elapsed_time) {
     double recv_len = (double)received_size;
     uint64_t elapsed = (uint64_t)elapsed_time;
     double rate;
@@ -117,10 +118,9 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     printf(" [%.2f %s] ", rate, rate_units[rate_unit_idx]);
 }
 
-static const char* sizeUnits[] = { "B", "KB", "MB", "GB", "TB", NULL };
-void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time)
-{
-    float progress = (float)count / max ;
+static const char* sizeUnits[] = {"B", "KB", "MB", "GB", "TB", NULL};
+void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
+    float progress = (float)count / max;
     if (!first_run && progress < 0.01 && count > 0)
         return;
 
@@ -150,8 +150,8 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
 }
 
 struct FtpFile {
-    const char *filename;
-    FILE *stream;
+    const char* filename;
+    FILE* stream;
 };
 
 void fileClose(FILE* file) {
@@ -160,30 +160,28 @@ void fileClose(FILE* file) {
     }
 }
 
-static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
-{
-    struct FtpFile *out = (struct FtpFile *)stream;
+static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void* stream) {
+    struct FtpFile* out = (struct FtpFile*)stream;
     if (!out->stream) {
         /* open file for writing */
         out->stream = fopen(out->filename, "wb");
         if (!out->stream) {
             fprintf(stderr, "failure, cannot open file to write: %s\n",
-                    out->filename);
+                out->filename);
             return 0; /* failure, cannot open file to write */
         }
     }
     return fwrite(buffer, size, nmemb, out->stream);
 }
 
-#define CHECK_CURL_CALL(call) \
-    do { \
-        CURLcode curlCode = call; \
-        if (curlCode != CURLE_OK) { \
+#define CHECK_CURL_CALL(call)                                                                            \
+    do {                                                                                                 \
+        CURLcode curlCode = call;                                                                        \
+        if (curlCode != CURLE_OK) {                                                                      \
             SPDLOG_ERROR("curl error: {}. Error code: {}", curl_easy_strerror(curlCode), (int)curlCode); \
-            return StatusCode::INTERNAL_ERROR; \
-        } \
+            return StatusCode::INTERNAL_ERROR;                                                           \
+        }                                                                                                \
     } while (0)
-
 
 struct ProgressData {
     time_t started_download;
@@ -191,10 +189,10 @@ struct ProgressData {
     bool fullDownloadPrinted = false;
 };
 int progress_callback(void* clientp,
-                      curl_off_t dltotal,
-                      curl_off_t dlnow,
-                      curl_off_t ultotal,
-                      curl_off_t ulnow) {
+    curl_off_t dltotal,
+    curl_off_t dlnow,
+    curl_off_t ultotal,
+    curl_off_t ulnow) {
     ProgressData* pcs = reinterpret_cast<ProgressData*>(clientp);
     // FIXME nullptr handle
     if (dlnow == 0) {
@@ -202,10 +200,10 @@ int progress_callback(void* clientp,
         pcs->last_print_time = time(NULL);
     }
     time_t currentTime = time(NULL);
-    if(currentTime - pcs->last_print_time < 1) {
+    if (currentTime - pcs->last_print_time < 1) {
         return 0;
     }
-    //SPDLOG_DEBUG("Progress callback called with dltotal: {}, dlnow: {}, ultotal: {}, ulnow: {}", dltotal, dlnow, ultotal, ulnow);
+    // SPDLOG_DEBUG("Progress callback called with dltotal: {}, dlnow: {}, ultotal: {}, ulnow: {}", dltotal, dlnow, ultotal, ulnow);
     if ((dltotal == dlnow) && dltotal < 1000) {
         // Usually with first messages we don't get the full size and
         // we don't want to print progress bar
@@ -224,7 +222,7 @@ int progress_callback(void* clientp,
 }
 
 Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
-    //construct url
+    // construct url
     SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
     std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
     SPDLOG_TRACE("Constructed URL: {}", url);
@@ -232,14 +230,13 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     // construct filepath
     auto filePath = FileSystem::joinPath({downloadPath, ggufFilename});
 
-    // agent string required to avoid 403 Forbidden error on modelscope 
+    // agent string required to avoid 403 Forbidden error on modelscope
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT)); // TODO error
-    auto globalCurlGuard = std::unique_ptr<void, void(*)(void*)>(
-        nullptr, [](void*) { curl_global_cleanup(); }
-    );
+    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));  // TODO error
+    auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
+        nullptr, [](void*) { curl_global_cleanup(); });
     curl = curl_easy_init();
     if (!curl) {
         SPDLOG_ERROR("Failed to initialize cURL.");

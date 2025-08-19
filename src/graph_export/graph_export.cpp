@@ -353,7 +353,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         status = LocalFileSystem::isDir(directoryPath, &is_dir);
         if (!status.ok())
             return status;
-    
+
         if (!is_dir) {
             SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
             return StatusCode::PATH_INVALID;

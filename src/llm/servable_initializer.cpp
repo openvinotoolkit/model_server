@@ -61,18 +61,18 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 }
 
 static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
-        bool isGGUFModel = false;
-        if (std::filesystem::exists(chatTemplatePath) && std::filesystem::is_directory(chatTemplatePath)) {
-            for (const auto& entry : std::filesystem::directory_iterator(chatTemplatePath)) {
-                    // check if contains *gguf* in filename
-               if (entry.is_regular_file() && entry.path().filename().string().find("gguf") != std::string::npos) {
-                    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
-                    isGGUFModel = true;
-                    break;
-                }
+    bool isGGUFModel = false;
+    if (std::filesystem::exists(chatTemplatePath) && std::filesystem::is_directory(chatTemplatePath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(chatTemplatePath)) {
+            // check if contains *gguf* in filename
+            if (entry.is_regular_file() && entry.path().filename().string().find("gguf") != std::string::npos) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
+                isGGUFModel = true;
+                break;
             }
         }
-        return isGGUFModel;
+    }
+    return isGGUFModel;
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -80,9 +80,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     py::gil_scoped_acquire acquire;
     try {
         bool isGGUFModel = checkIfGGUFModel(chatTemplateDirectory);
-// how to define locals as py::dict to pass into py:exec?
-// we need to pass tokenizer template and bos/eos tokens to python code
-// if we have GGUF model, we will use them to create a template object
+        // how to define locals as py::dict to pass into py:exec?
+        // we need to pass tokenizer template and bos/eos tokens to python code
+        // if we have GGUF model, we will use them to create a template object
         std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
         std::string tokenizerBosToken = properties->tokenizer.get_bos_token();
         std::string tokenizerEosToken = properties->tokenizer.get_eos_token();
@@ -91,10 +91,10 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         std::string eosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_eos_token_id()}), {ov::genai::skip_special_tokens(false)});
         SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {}, decoded bos: {} decoded eos:{} isGGUF:{}", tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), bosToken, eosToken, isGGUFModel);
         auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
-                        "tokenizer_bos_token"_a = tokenizerBosToken,
-                        "tokenizer_eos_token"_a = tokenizerEosToken,
-                        "templates_directory"_a = chatTemplateDirectory,
-                        "is_gguf_model"_a = isGGUFModel);
+            "tokenizer_bos_token"_a = tokenizerBosToken,
+            "tokenizer_eos_token"_a = tokenizerEosToken,
+            "templates_directory"_a = chatTemplateDirectory,
+            "is_gguf_model"_a = isGGUFModel);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -285,7 +285,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
-        SPDLOG_ERROR("ER");
+    SPDLOG_ERROR("ER");
 }
 #else
 void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {

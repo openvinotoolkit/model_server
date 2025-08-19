@@ -90,7 +90,7 @@ class GGUFDownloaderPullHfModel : public TestWithTempDir {
 protected:
     void TearDown() {
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
-        //TestWithTempDir::TearDown();
+        // TestWithTempDir::TearDown();
     }
 };
 
@@ -118,13 +118,11 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
 
 // now make this parametrized test with prety printing of parameters instead of enumeration
 
-
 std::vector<std::tuple<std::string, std::string, std::string, std::string>> ggufParams = {
     std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"),
     std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF", "/resolve/master/", "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"),
-    //std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf"),
-    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")
-};
+    // std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf"),
+    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")};
 // FIXME make handling independent of "/" in the endpoint
 
 INSTANTIATE_TEST_SUITE_P(
@@ -134,12 +132,12 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<GGUFDownloaderPullHfModelParameterized::ParamType>& info) {
         auto paramTuple = info.param;
         std::string paramName = ovms::joins({
-            std::get<0>(paramTuple), // hfEndpoint
-            std::get<1>(paramTuple), // sourceModel
-            std::get<2>(paramTuple),  // filenamePrefix
-            std::get<3>(paramTuple)  // ggufFileName
-            }, "_"
-        );
+                                                std::get<0>(paramTuple),  // hfEndpoint
+                                                std::get<1>(paramTuple),  // sourceModel
+                                                std::get<2>(paramTuple),  // filenamePrefix
+                                                std::get<3>(paramTuple)   // ggufFileName
+                                            },
+            "_");
         std::replace(paramName.begin(), paramName.end(), '-', '_');
         std::replace(paramName.begin(), paramName.end(), '/', '_');
         std::replace(paramName.begin(), paramName.end(), ':', '_');
@@ -148,15 +146,15 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
-//curl -L   -H "Authorization: Bearer $HF_TOKEN"   -o DeepSeek‑R1‑Distill‑Qwen‑7B‑Q4_K_M.gguf   https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
-//https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
+    // curl -L   -H "Authorization: Bearer $HF_TOKEN"   -o DeepSeek‑R1‑Distill‑Qwen‑7B‑Q4_K_M.gguf   https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
+    // https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/blob/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
     SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string sourceModel = "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
     const std::string ggufFileName = "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf";
     const std::string hfEndpoint = "https://huggingface.co";
-    //const std::string hfEndpoint = "https://www.modelscope.cn";
+    // const std::string hfEndpoint = "https://www.modelscope.cn";
     SPDLOG_ERROR("ER");
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
     SPDLOG_ERROR("ER");
@@ -173,10 +171,10 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     EXPECT_EQ(13, fileSize);
 }
 
-void find_file_in_tree(git_repository* repo, git_tree* tree, 
-                       const std::regex& pattern, 
-                       const std::string& current_path, 
-                       std::vector<std::string>& matches) {
+void find_file_in_tree(git_repository* repo, git_tree* tree,
+    const std::regex& pattern,
+    const std::string& current_path,
+    std::vector<std::string>& matches) {
     size_t count = git_tree_entrycount(tree);
     for (size_t i = 0; i < count; ++i) {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
@@ -196,11 +194,11 @@ void find_file_in_tree(git_repository* repo, git_tree* tree,
             }
         }
     }
-} 
+}
 
 TEST(libgit2, manuallyClonedRepoMetadataGetGGUFFiles) {
     GTEST_SKIP() << "Assuming we could run git in shell we could retrievegguf files like this";
-// git clone --filter=blob:none --no-checkout https://huggingface.co/unsloth/gpt-oss-120b-GGUF ./curl_test_repo
+    // git clone --filter=blob:none --no-checkout https://huggingface.co/unsloth/gpt-oss-120b-GGUF ./curl_test_repo
     git_libgit2_init();
     git_repository* repo = nullptr;
     git_repository_open(&repo, "/ovms/curl_test_repo");
@@ -213,10 +211,10 @@ TEST(libgit2, manuallyClonedRepoMetadataGetGGUFFiles) {
     git_commit_tree(&tree, commit);
 
     std::vector<std::string> matches;
-    std::string partial_filename= "gguf";
-// construct regex that catches all file with gguf in name
-        std::regex pattern(".*" + partial_filename + ".*");
-    
+    std::string partial_filename = "gguf";
+    // construct regex that catches all file with gguf in name
+    std::regex pattern(".*" + partial_filename + ".*");
+
     find_file_in_tree(repo, tree, pattern, "/ovms_curl_test_repo", matches);
 
     for (auto& m : matches) {
@@ -228,4 +226,3 @@ TEST(libgit2, manuallyClonedRepoMetadataGetGGUFFiles) {
     git_repository_free(repo);
     git_libgit2_shutdown();
 }
-
