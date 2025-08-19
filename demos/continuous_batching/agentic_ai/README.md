@@ -25,7 +25,6 @@ Currently supported models:
 
 
 ::::{tab-set}
-
 :::{tab-item} Export using python script
 
 Download export script, install its dependencies and create directory for the models:
@@ -58,20 +57,16 @@ python export_model.py text_generation --source_model microsoft/Phi-4-mini-instr
 curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
-
 :::{tab-item} Direct pulling from HuggingFace from docker containers
-
 ```bash
 # OpenVINO/Qwen3-8B-int4-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
 # OpenVINO/Phi-4-mini-instruct-int4-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation
 curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
-
 ```
 :::
 :::{tab-item} Direct pulling from HuggingFace on Windows
-
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
@@ -82,7 +77,6 @@ ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-min
 curl -L -o models\microsoft\Phi-4-mini-instruct\template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
-
 ::::
 
 You can use similar commands for different models. Change the source_model and the weights-format. 
@@ -96,9 +90,7 @@ You can use similar commands for different models. Change the source_model and t
 Select deployment option depending on how you prepared models in the previous step.
 
 ::::{tab-set}
-
 :::{tab-item} Deploying on Windows with GPU
-
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
@@ -120,9 +112,7 @@ ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-
 
 ```
 :::
-
 :::{tab-item} Deploying in a docker container on CPU
-
 Run one of the commands:
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
@@ -151,9 +141,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 
 ```
 :::
-
 :::{tab-item} Deploying in a docker container on GPU
-
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
@@ -184,9 +172,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-
 :::{tab-item} Deploy all models in a single container
-
 Those steps deploy all the models exported earlier. The python script added the models to `models/config.json` so just the remaining models pulled directly from HuggingFace Hub are to be added:
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
@@ -219,11 +205,10 @@ pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/ma
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
-Run the agentic application
+Run the agentic application:
 
 
 ::::{tab-set}
-
 :::{tab-item} Qwen3
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
