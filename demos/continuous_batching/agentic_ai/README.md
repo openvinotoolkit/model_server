@@ -46,7 +46,7 @@ python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-for
 # meta-llama/Llama-3.1-8B-Instruct
 python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
-# meta-llama/Llama-3.2-8B-Instruct
+# meta-llama/Llama-3.2-3B-Instruct
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
 # NousResearch/Hermes-3-Llama-3.1-8B
@@ -107,7 +107,7 @@ ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-4B --model_name Qwen/Qw
 
 ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.1-8B-Instruct --model_name meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 
-ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-8B-Instruct --model_name meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
+ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-3B-Instruct --model_name meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 
 ovms.exe --rest_port 8000 --model_path models/microsoft/Phi-4-mini-instruct --model_name microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 
@@ -132,7 +132,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
 
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
 --rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2 --task text_generation
@@ -164,9 +164,9 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 # meta-llama/Llama-3.1-8B-Instruct
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-# meta-llama/Llama-3.2-8B-Instruct
+# meta-llama/Llama-3.2-3B-Instruct
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 # NousResearch/Hermes-3-Llama-3.1-8B
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
@@ -244,7 +244,7 @@ python openai_agent.py --query "List the files in folder /root" --model meta-lla
 :::
 :::{tab-item} Llama3.2
 ```bash
-python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-8B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 :::{tab-item} Phi4
