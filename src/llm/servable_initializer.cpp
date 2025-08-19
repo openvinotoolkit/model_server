@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -61,18 +62,42 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 }
 
 static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
-    bool isGGUFModel = false;
-    if (std::filesystem::exists(chatTemplatePath) && std::filesystem::is_directory(chatTemplatePath)) {
+    if (!std::filesystem::exists(chatTemplatePath))
+        return false;
+
+    if (std::filesystem::is_regular_file(chatTemplatePath) && (chatTemplatePath.find(".gguf") != std::string::npos)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template path is a GGUF file: {}", chatTemplatePath);
+        return true;
+    }
+    if (std::filesystem::is_directory(chatTemplatePath)) {
         for (const auto& entry : std::filesystem::directory_iterator(chatTemplatePath)) {
-            // check if contains *gguf* in filename
-            if (entry.is_regular_file() && entry.path().filename().string().find("gguf") != std::string::npos) {
+            if (entry.is_regular_file() && entry.path().filename().string().find(".gguf") != std::string::npos) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
-                isGGUFModel = true;
-                break;
+                return true;
             }
         }
     }
-    return isGGUFModel;
+    return false;
+}
+
+static std::pair<std::optional<std::string>, std::optional<std::string>> getBosAndEosTokenFromTokenizerVocab(const std::shared_ptr<ov::genai::Tokenizer>& tokenizer) {
+    auto vocab = tokenizer->get_vocab();
+    SPDLOG_TRACE("Tokenizer vocab size: {}", vocab.size());
+    auto bosTokenId = tokenizer->get_bos_token_id();
+    auto eosTokenId = tokenizer->get_eos_token_id();
+    std::optional<std::string> bosToken;
+    std::optional<std::string> eosToken;
+    // since tokenizer get_bos_token does not work for gguf we will search in map by value
+    for (const auto& [token, id] : vocab) {
+        // SPDLOG_TRACE("Tokenizer vocab token: {}, id: {}", token, id);
+        if (id == bosTokenId) {
+            bosToken = token;
+        }
+        if (id == eosTokenId) {
+            eosToken = token;
+        }
+    }
+    return std::make_pair(bosToken, eosToken);
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -86,6 +111,23 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
         std::string tokenizerBosToken = properties->tokenizer.get_bos_token();
         std::string tokenizerEosToken = properties->tokenizer.get_eos_token();
+        // time measure following if statement
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        // Workaround for CVS-172426
+        if (isGGUFModel && (tokenizerBosToken.empty() || tokenizerEosToken.empty())) {
+            // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
+            std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
+            tokens = getBosAndEosTokenFromTokenizerVocab(std::make_shared<ov::genai::Tokenizer>(properties->tokenizer));
+            SPDLOG_TRACE("Tokens bos: {}, eos: {}", tokens.first.has_value() ? tokens.first.value() : "None", tokens.second.has_value() ? tokens.second.value() : "None");
+            if (tokens.first.has_value()) {
+                tokenizerBosToken = tokens.first.value();
+            }
+            if (tokens.second.has_value()) {
+                tokenizerEosToken = tokens.second.value();
+            }
+        }
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
         auto& tokenizer = properties->tokenizer;
         std::string bosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_bos_token_id()}), {ov::genai::skip_special_tokens(false)});
         std::string eosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_eos_token_id()}), {ov::genai::skip_special_tokens(false)});

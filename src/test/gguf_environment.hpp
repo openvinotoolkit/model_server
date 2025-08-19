@@ -18,10 +18,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#define SKIP_AND_EXIT_IF_NO_GGUF()                                                                               \
-    if (GGUFEnvironment::shouldSkipWithoutGGUFEnabled()) {                                                               \
+#define SKIP_AND_EXIT_IF_NO_GGUF()                                                                                 \
+    if (GGUFEnvironment::shouldSkipWithoutGGUFEnabled()) {                                                         \
         GTEST_SKIP() << "Skipping GGUF tests because those tests were not enabled. Check gguf_environment.[hc]pp"; \
-        return;                                                                                                 \
+        return;                                                                                                    \
     }
 
 class GGUFEnvironment : public testing::Environment {

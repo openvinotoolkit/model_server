@@ -97,7 +97,7 @@ protected:
 // Make parametrized test for GGUFDownloaderPullHfModel
 // where i pass endpoint, sourceModel, ggufFilename
 
-class GGUFDownloaderPullHfModelParameterized : public GGUFDownloaderPullHfModel, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string>> {
+class GGUFDownloaderPullHfModelParameterized : public GGUFDownloaderPullHfModel, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string, size_t>> {
 };
 
 TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
@@ -106,6 +106,7 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     const std::string sourceModel = std::get<1>(GetParam());
     const std::string filenamePrefix = std::get<2>(GetParam());
     const std::string ggufFileName = std::get<3>(GetParam());
+    const size_t expectedSize = std::get<4>(GetParam());
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
     ASSERT_TRUE(status.ok()) << status.string();
@@ -114,13 +115,16 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
     EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    // check size of the file with std::filesystem
+    std::filesystem::path filePath(fullPath);
+    size_t fileSize = std::filesystem::file_size(filePath);
+    EXPECT_EQ(expectedSize, fileSize);
 }
 
-std::vector<std::tuple<std::string, std::string, std::string, std::string>> ggufParams = {
-    std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"),
-    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF", "/resolve/master/", "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"),
-    // std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf"),
-    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")};
+std::vector<std::tuple<std::string, std::string, std::string, std::string, size_t>> ggufParams = {
+    std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168)),
+    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568)),
+    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568))};
 // FIXME make handling independent of "/" in the endpoint
 
 INSTANTIATE_TEST_SUITE_P(
@@ -166,7 +170,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     size_t fileSize = 0;
     std::filesystem::path filePath(fullPath);
     fileSize = std::filesystem::file_size(filePath);
-    EXPECT_EQ(13, fileSize);
+    EXPECT_EQ(4683071488, fileSize);
 }
 
 void find_file_in_tree(git_repository* repo, git_tree* tree,
