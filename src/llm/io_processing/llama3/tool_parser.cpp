@@ -35,10 +35,10 @@ void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
     // and just extract substrings from the content and modify content in-place
 
-    // If zero trigger parsing is enabled, we assume botTokenId has been injected into the prompt and whole output are tool calls,
+    // If immediate trigger parsing is enabled, we assume botTokenId has been injected into the prompt and whole output are tool calls,
     // otherwise we search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
     auto toolCallsStartPosition = generatedTokens.begin();
-    if (!zeroTriggerParsingEnabled) {
+    if (!immediateParsingEnabled) {
         toolCallsStartPosition = generatedTokens.end();
         // Find botTokenId in generated_ids
         auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);

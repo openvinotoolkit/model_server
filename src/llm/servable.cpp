@@ -127,7 +127,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         if (outputParser != nullptr && outputParser->isToolParserAvailable()) {
             // If tool parser is available, we add tool parser start tag to the input text
             // to increase the chance of the model generating tool calls immediately.
-            outputParser->enableZeroTriggerToolParsing();
+            outputParser->enableImmediateToolParsing();
             inputText += outputParser->getToolParserStartTag();
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool parser trigger: {} at the end of the input.", outputParser->getToolParserStartTag());
         } else {

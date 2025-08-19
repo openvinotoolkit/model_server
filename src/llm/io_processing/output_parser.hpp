@@ -49,7 +49,7 @@ public:
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;
 
-    void enableZeroTriggerToolParsing();
+    void enableImmediateToolParsing();
     std::string getToolParserStartTag() const;
 
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.

@@ -42,7 +42,7 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     size_t toolsStartPos = 0;
     // If "functools" has been injected we assume the whole generated output is an array with tool calls,
     // otherwise we search for the "functools" tag in the content.
-    if (!zeroTriggerParsingEnabled) {
+    if (!immediateParsingEnabled) {
         toolsStartString = "functools";
         toolsStartPos = parsedOutput.content.find(toolsStartString);
     }

@@ -68,9 +68,9 @@ bool OutputParser::isReasoningParserAvailable() const {
     return reasoningParser != nullptr;
 }
 
-void OutputParser::enableZeroTriggerToolParsing() {
+void OutputParser::enableImmediateToolParsing() {
     if (toolParser) {
-        toolParser->enableZeroTriggerParsing();
+        toolParser->enableImmediateParsing();
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool parser is not available, cannot enable zero trigger tool parsing");
     }
@@ -117,14 +117,14 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse);
         } else if (applyToolParser) {
-            if (toolParser->isZeroTriggerParsingEnabled()) {
+            if (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+                processingPhase = TOOL_CALLS;
+                return toolParser->parseChunk(chunkResponse);
+            } else if (toolParser->isImmediateParsingEnabled()) {
                 // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt, but for the unified parsing logic,
-                //  we still parse it to put parser in a proper state.
+                // we still parse it to put parser in a proper state.
                 processingPhase = TOOL_CALLS;
                 toolParser->parseChunk(toolParser->getParsingStartTag());
-                return toolParser->parseChunk(chunkResponse);
-            } else if (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
-                processingPhase = TOOL_CALLS;
                 return toolParser->parseChunk(chunkResponse);
             } else {
                 processingPhase = CONTENT;
