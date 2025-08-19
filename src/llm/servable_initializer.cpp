@@ -57,7 +57,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #if (PYTHON_DISABLE == 0)
     loadPyTemplateProcessor(properties, chatTemplateDirectory);
 #else
-    loadDefaultTemplateProcessorIfNeeded(properties)
+    loadDefaultTemplateProcessorIfNeeded(properties);
 #endif
 }
 
