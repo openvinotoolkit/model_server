@@ -687,6 +687,8 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
             auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            } else {
+                mediapipeGraphConfig.logGraphConfigContent();
             }
         }
         mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
@@ -922,7 +924,6 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
     std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
     for (auto& mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
-        rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
