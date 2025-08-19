@@ -141,7 +141,7 @@ Status HfPullModelModule::clone() const {
         SPDLOG_ERROR("GGUF graphDirectory: {}", graphDirectory);
         // FIXME need to use gguffilename
     } else {
-        SPDLOG_ERROR("Unsupported download type: {}", enumToString(this->hfSettings.downloadType));
+        // SPDLOG_ERROR("Unsupported download type: {}", enumToString(this->hfSettings.downloadType));
         return StatusCode::INTERNAL_ERROR;
     }
     std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
