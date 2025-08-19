@@ -156,7 +156,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 #endif
     // clang-format on
     // FIXME extend to other
-    // if directoryPathi is actually gguf file (has .gguf but mith also end like .gguf) then full path need to omit last part (gguf file name) and append graph.pbtxt otherwis pass it as it is but join graph.pbtxt to it
+    // if directoryPathi is actually gguf file (has .gguf but mith also end like .gguf) then full path need to omit last part (gguf file name) and append graph.pbtxt otherwise pass it as it is but join graph.pbtxt to it
     std::string fullPath = directoryPath;
     if (fullPath.find(".gguf") != std::string::npos) {
         // if gguf file then remove last part
