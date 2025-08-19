@@ -285,17 +285,15 @@ public:
             std::vector<size_t> chunk_mapping;
             ov::genai::TokenizedInputs tokens;
             size_t batch_size = handler.getDocumentsList().size();
-            if(!rerank_session->addBosToken){
+            if (!rerank_session->addBosToken) {
                 std::vector<std::string> data(batch_size);
-                for(int i = 0; i < batch_size; i++){
+                for (int i = 0; i < batch_size; i++) {
                     data[i] += handler.getQuery() + handler.getDocumentsList()[i];
                 }
                 chunk_mapping.resize(batch_size);
                 std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
                 tokens = rerank_session->getTokenizer().encode(data);
-            }
-            else
-            {
+            } else {
                 std::tie(tokens.input_ids, tokens.attention_mask) = PrepareInputsForRerankModel(handler, chunk_mapping);
             }
             std::optional<ov::Tensor> typeIds;
