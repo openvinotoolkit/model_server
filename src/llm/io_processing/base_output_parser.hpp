@@ -60,6 +60,7 @@ protected:
     // Flag indicating whether parsing start tag has been injected into the prompt
     // if true, parser should assume start tag already appeared and start parsing immediately
     bool immediateParsingEnabled = false;
+
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :

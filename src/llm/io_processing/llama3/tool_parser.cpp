@@ -57,6 +57,8 @@ void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
                 parsedOutput.content.clear();
             }
         }
+    } else {
+        parsedOutput.content.clear();
     }
 
     if (toolCallsStartPosition != generatedTokens.end()) {

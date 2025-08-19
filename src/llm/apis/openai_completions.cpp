@@ -725,7 +725,7 @@ StreamOptions OpenAIChatCompletionsHandler::getStreamOptions() const { return re
 bool OpenAIChatCompletionsHandler::isStream() const { return request.stream; }
 std::string OpenAIChatCompletionsHandler::getModel() const { return request.model; }
 std::string OpenAIChatCompletionsHandler::getToolChoice() const { return request.toolChoice; }
-const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser;}
+const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;
