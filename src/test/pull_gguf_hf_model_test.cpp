@@ -153,7 +153,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
     const std::string ggufFileName = "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf";
-    const std::string hfEndpoint = "https://huggingface.co";
+    const std::string hfEndpoint = "https://huggingface.co/";
     // const std::string hfEndpoint = "https://www.modelscope.cn";
     SPDLOG_ERROR("ER");
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);

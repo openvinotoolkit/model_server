@@ -173,7 +173,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
-    EnvGuard guard;
+    // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
