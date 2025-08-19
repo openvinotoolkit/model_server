@@ -106,7 +106,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->schedulerConfig.max_num_seqs,
         properties->schedulerConfig.enable_prefix_caching);
 
-    if(properties->schedulerConfig.use_cache_eviction) {
+    if (properties->schedulerConfig.use_cache_eviction) {
         const auto& cacheEvictionConfig = properties->schedulerConfig.cache_eviction_config;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "CacheEvictionConfig: start_size={}, recent_size={}, max_cache_size={}, aggregation_mode={}, apply_rotation={}",
             cacheEvictionConfig.get_start_size(),
@@ -114,7 +114,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             cacheEvictionConfig.get_max_cache_size(),
             static_cast<int>(cacheEvictionConfig.aggregation_mode),
             cacheEvictionConfig.apply_rotation);
-    }else{
+    } else{
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "CacheEvictionConfig is not used");
     }
 
