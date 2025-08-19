@@ -114,7 +114,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             cacheEvictionConfig.get_max_cache_size(),
             static_cast<int>(cacheEvictionConfig.aggregation_mode),
             cacheEvictionConfig.apply_rotation);
-    } else{
+    } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "CacheEvictionConfig is not used");
     }
 
