@@ -153,7 +153,17 @@ public:
         // Validate batch size before tokenizing
         if (handler.getDocumentsList().size() > this->max_allowed_chunks)
             throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
-
+        if (!rerank_session->addBosToken) {
+            auto batchSize = handler.getDocumentsList().size();
+            std::vector<std::string> data(batchSize);
+            for (int i = 0; i < batchSize; i++) {
+                data[i] += handler.getQuery() + handler.getDocumentsList()[i];
+            }
+            chunk_mapping.resize(batchSize);
+            std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
+            auto tokens = rerank_session->getTokenizer().encode(data);
+            return std::make_pair(tokens.input_ids, tokens.attention_mask);
+        }
         // Compute Query Tokens
         auto query_tokens = ComputeTokensForString(handler.getQuery());
 
@@ -283,28 +293,17 @@ public:
         try {
             // Prepare inputs for rerank model
             std::vector<size_t> chunk_mapping;
-            ov::genai::TokenizedInputs tokens;
-            size_t batch_size = handler.getDocumentsList().size();
-            if (!rerank_session->addBosToken) {
-                std::vector<std::string> data(batch_size);
-                for (int i = 0; i < batch_size; i++) {
-                    data[i] += handler.getQuery() + handler.getDocumentsList()[i];
-                }
-                chunk_mapping.resize(batch_size);
-                std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
-                tokens = rerank_session->getTokenizer().encode(data);
-            } else {
-                std::tie(tokens.input_ids, tokens.attention_mask) = PrepareInputsForRerankModel(handler, chunk_mapping);
-            }
+            auto [input_ids, attention_mask] = PrepareInputsForRerankModel(handler, chunk_mapping);
             std::optional<ov::Tensor> typeIds;
             if (rerank_session->getNumberOfModelInputs() == 3) {
-                typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
-                std::fill_n(typeIds->data<int64_t>(), tokens.input_ids.get_size(), 0);
+                typeIds = ov::Tensor{ov::element::i64, input_ids.get_shape()};
+                std::fill_n(typeIds->data<int64_t>(), input_ids.get_size(), 0);
             }
+            size_t batch_size = handler.getDocumentsList().size();
             // Compute scores using rerank model
             auto scores = ComputeScoresUsingRerankModel(
-                tokens.input_ids,
-                tokens.attention_mask,
+                input_ids,
+                attention_mask,
                 typeIds,
                 chunk_mapping,
                 batch_size);

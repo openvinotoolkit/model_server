@@ -32,24 +32,26 @@ public:
     RerankServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
         SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {
         std::filesystem::path tokenizerConfigPath = (parsedModelsPath / "tokenizer_config.json");
-        if (std::filesystem::exists(tokenizerConfigPath)) {
-            std::ifstream ifs(tokenizerConfigPath.string());
-            if (ifs.is_open()) {
-                rapidjson::Document tokenizerConfig;
-                rapidjson::IStreamWrapper isw(ifs);
-                rapidjson::ParseResult parseResult = tokenizerConfig.ParseStream(isw);
-                if (parseResult.Code()) {
-                    SPDLOG_ERROR("Parsing tokenizer_config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
-                } else {
-                    if (tokenizerConfig.HasMember("add_bos_token") && tokenizerConfig["add_bos_token"].IsBool() && tokenizerConfig["add_bos_token"].IsFalse()) {
-                        SPDLOG_DEBUG("Rerank model add_bos_token set to false");
-                        addBosToken = false;
-                    }
-                }
-            }
+        if (!std::filesystem::exists(tokenizerConfigPath)) {
+            return;
+        }
+        std::ifstream ifs(tokenizerConfigPath.string());
+        if (!ifs.is_open()) {
+            return;
+        }
+        rapidjson::Document tokenizerConfig;
+        rapidjson::IStreamWrapper isw(ifs);
+        rapidjson::ParseResult parseResult = tokenizerConfig.ParseStream(isw);
+        if (parseResult.Code()) {
+            SPDLOG_ERROR("Parsing tokenizer_config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
+            return;
+        }
+        if (tokenizerConfig.HasMember("add_bos_token") && tokenizerConfig["add_bos_token"].IsBool() && tokenizerConfig["add_bos_token"].IsFalse()) {
+            SPDLOG_DEBUG("Rerank model add_bos_token set to false");
+            addBosToken = false;
         }
     }
-    bool getAddBosToken() {
+    bool getAddBosToken() const {
         return addBosToken;
     }
 };
