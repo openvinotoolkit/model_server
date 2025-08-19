@@ -185,7 +185,7 @@ Status ModelManager::start(const Config& config) {
         return status;
     }
     startWatcher(isStartedWithConfigFile());
-    if(sequenceCleaupIntervalMinutes > 0 || resourcesCleanupIntervalMillisec > 0)
+    if (sequenceCleaupIntervalMinutes > 0 || resourcesCleanupIntervalMillisec > 0)
         startCleaner();
 
     return status;

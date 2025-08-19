@@ -224,7 +224,7 @@ std::string getBodyWithDecodedContent(const ovms::HttpPayload& payload) {
         requestBody = requestBody.substr(0, contentIdx);
         requestBody += contentKey;
         requestBody += requestContent.empty() ? "null" : requestContent;
-        requestBody += payload.body.substr(contentIdx + contentKey.length() + requestContent.length()*2 + 1);
+        requestBody += payload.body.substr(contentIdx + contentKey.length() + requestContent.length() * 2 + 1);
     }
     return requestBody;
 }
