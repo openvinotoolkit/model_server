@@ -256,6 +256,7 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "./",
             normalize_embeddings: true,
+            truncate: false,
             pooling: CLS,
             target_device: "CPU",
             plugin_config: '{ "NUM_STREAMS": "1"}',
