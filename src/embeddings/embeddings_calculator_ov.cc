@@ -128,7 +128,11 @@ public:
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 received_batch_size = strings->size();
-                tokens = embeddings_session->getTokenizer().encode(*strings);
+                ov::AnyMap params = {};
+                if(cc->Options<EmbeddingsCalculatorOVOptions>().truncate()){
+                    params = {{"max_length", max_context_length}};
+                }
+                tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
                 size_t input_ids_size = tokens.input_ids.get_shape()[1];
                 if (input_ids_size > max_context_length) {
