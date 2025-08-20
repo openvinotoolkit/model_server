@@ -214,6 +214,8 @@ node {
             << graphOkPath << R"(",
             normalize_embeddings: )"
             << graphSettings.normalize << R"(,
+            truncate: )"
+            << graphSettings.truncate << R"(,
             pooling: )"
             << graphSettings.pooling << R"(,
             target_device: ")" << graphSettings.targetDevice << R"(",

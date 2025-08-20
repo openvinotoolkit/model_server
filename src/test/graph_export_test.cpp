@@ -234,6 +234,7 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "/model1/path",
             normalize_embeddings: false,
+            truncate: true,
             pooling: LAST,
             target_device: "GPU",
             plugin_config: '{ "NUM_STREAMS": "2"}',
@@ -458,6 +459,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.modelPath = "/model1/path";
     embeddingsGraphSettings.numStreams = 2;
     embeddingsGraphSettings.normalize = "false";
+    embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
