@@ -246,7 +246,9 @@ TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
 }
 
 TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
-    std::string targetJson = R"(\n\n{
+    std::string targetJson = R"(
+    
+    {
         "major_object": {
             "string": "OpenVINO",
             "minor_object": {
