@@ -69,7 +69,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
-    SPDLOG_ERROR("ER: modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -154,7 +154,6 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 #endif
     // clang-format on
     std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
-    SPDLOG_ERROR("ER: fullPath: {}, directoryPath: {}, ggufFilename: {}", fullPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 

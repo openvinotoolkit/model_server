@@ -105,7 +105,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     py::gil_scoped_acquire acquire;
     try {
         bool isGGUFModel = checkIfGGUFModel(chatTemplateDirectory);
-        // how to define locals as py::dict to pass into py:exec?
         // we need to pass tokenizer template and bos/eos tokens to python code
         // if we have GGUF model, we will use them to create a template object
         std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
@@ -263,7 +262,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 tool_template = template
             print(f"Tokenizer bos_token: {tokenizer_bos_token}")
             print(f"Tokenizer eos_token: {tokenizer_eos_token}")
-            print(f"Tokenizer chat_template: \n{tokenizer_template}\n")
+            #print(f"Tokenizer chat_template: \n{tokenizer_template}\n")
         )",
             py::globals(), locals);
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
@@ -283,7 +282,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
-    SPDLOG_ERROR("ER");
 }
 #else
 void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
@@ -312,7 +310,7 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
     // if is directory or file with .gguf extension then it is ok
-    if (std::filesystem::is_directory(outPath) || endsWith(outPath, ".gguf")) {
+    if (std::filesystem::is_directory(outPath) || (outPath.find(".gguf") != std::string::npos)) {
         return StatusCode::OK;
     }
     SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory nor GGUF file ", outPath);

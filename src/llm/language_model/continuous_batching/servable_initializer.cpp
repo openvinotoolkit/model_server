@@ -71,11 +71,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (!status.ok()) {
         return status;
     }
-    SPDLOG_ERROR("ER:{}", parsedModelsPath);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
     properties->modelsPath = parsedModelsPath;
-    // TODO everything is in GGUF
-    // -> skip modelGenerationConfig & properties?
     std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
     if (std::filesystem::exists(modelGenerationConfigPath)) {
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
@@ -155,7 +152,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
-    // TODO
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);

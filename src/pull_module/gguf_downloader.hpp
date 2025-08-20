@@ -41,17 +41,5 @@ protected:
     HFSettingsImpl hfSettings;
     const std::string hfEndpoint;
     std::string downloadPath;
-    /*    std::string sourceModel;
-    std::string downloadPath;
-    bool overwriteModels;
-
-    OptimumDownloader();
-    Status checkRequiredToolsArePresent();
-    std::string getExportCmd();
-    std::string getExportCmdText();
-    std::string getExportCmdEmbeddings();
-    std::string getExportCmdRerank();
-    std::string getExportCmdImageGeneration();
-    */
 };
 }  // namespace ovms
