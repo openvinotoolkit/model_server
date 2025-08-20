@@ -148,6 +148,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 |---------------------------|--------------|--------------------------------------------------------------------------------|
 | `--num_streams`           | `integer`    | The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems. Default: 1. |
 | `--normalize`             | `bool`       | Normalize the embeddings. Default: true.                                       |
+| `--truncate`              | `bool`       | Truncate input when exceeds model context. Default: false                      |
 | `--mean_pooling`          | `bool`       | Mean pooling option. Default: false.                                           |
 
 ### Rerank
