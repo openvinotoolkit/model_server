@@ -544,7 +544,6 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             // should be validated in cli_parser/config?
             hfSettings.ggufFilename = result->operator[]("gguf_filename").as<std::string>();
             hfSettings.downloadType = GGUF_DOWNLOAD;
-            // TODO validate that download typ is gguf_pull_download even if org is openvino
         }
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
