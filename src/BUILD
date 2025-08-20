@@ -2541,6 +2541,7 @@ cc_test(
         "test/llm/config.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_cb_with_tool_parser.pbtxt",
         "test/llm/lm_legacy_regular.pbtxt",
         "test/llm/lm_cb_speculative.pbtxt",
         "test/llm/lm_cb_prompt_lookup.pbtxt",
