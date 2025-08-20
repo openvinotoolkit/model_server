@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 #include <openvino/genai/generation_config.hpp>
+#include <openvino/genai/tokenizer.hpp>
 #include "../apis/openai_request.hpp"
 
 namespace ovms {
@@ -38,6 +39,10 @@ public:
     virtual ~BaseGenerationConfigBuilder() = default;
 
     ov::genai::GenerationConfig& getConfig() { return config; }
+
+    // Validates the structured output configuration, if exists.
+    // Throws exception if validation fails.
+    void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer);
 
     /*
      * Fills generation config with values read from OpenAI request.
