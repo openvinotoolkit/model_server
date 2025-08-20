@@ -714,7 +714,7 @@ index 000000000..cd3aa39fd
 +
 +		const char *href_regexp = "\"download\"\\s*:\\s*\\{\\s*\"href\":\"([^\"]+)\"";
 +		if (get_lfs_info_match(&res_str, href_regexp) < 0) {
-+			/* always cleanup */ 
++			/* always cleanup */
 +			curl_easy_cleanup(dl_curl);
 +			goto on_error;
 +		}
@@ -764,7 +764,7 @@ index 000000000..cd3aa39fd
 +
 +on_error:
 +	git__free(payload);
-+	fprintf(stderr, "LFS download failed for file %s\n", la->full_path);fprintf(stderr, "LFS download failed for file %s\n", la->full_path);
++	fprintf(stderr, "LFS download failed for file %s\n", la->full_path);
 +	return;
 +}
 +

@@ -57,10 +57,7 @@ static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created w
 static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
-        // if gguf file then remove last part
-        // extract gguf filename from graphSettings.modelPath
-        std::string ggufFilename = ggufFilenameOpt.value();
-        modelsPath = FileSystem::joinPath({modelPath, ggufFilename});
+        modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
     } else {
         modelsPath = modelPath;
     }
@@ -158,8 +155,8 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     // FIXME extend to other
     // if directoryPathi is actually gguf file (has .gguf but mith also end like .gguf) then full path need to omit last part (gguf file name) and append graph.pbtxt otherwise pass it as it is but join graph.pbtxt to it
     std::string fullPath = directoryPath;
-    if (fullPath.find(".gguf") != std::string::npos) {
-        // if gguf file then remove last part
+    SPDLOG_ERROR("ER: fullPath: {}, directoryPath: {}, ggufFilename: {}", fullPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    if (std::nullopt != ggufFilename) {
         std::filesystem::path p(directoryPath);
         fullPath = p.parent_path().string();
     }

@@ -155,49 +155,12 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             from jinja2.sandbox import ImmutableSandboxedEnvironment
             from jinja2.ext import Extension
             print("Loading chat template from directory:", templates_directory)
-            gguf_bos_token = None
-            gguf_eos_token = None
-            gguf_template = None
-            try:
-               from gguf_parser import GGUFParser
-               # find gguf file in templates_directory and open it with GGUFParser
-               ggufFile = None
-               # if templates_directory is actually a file, use it directly
-               if Path(templates_directory).is_file() and templates_directory.endswith(".gguf"):
-                   ggufFile = Path(templates_directory)
-               else:
-                   # otherwise, look for gguf files in the directory
-                   print("Searching for GGUF files in:", templates_directory)
-               for file in Path(templates_directory).glob("*.gguf"):
-                   ggufFile = file
-                   break
-               print(f"GGUF file found: {ggufFile}")
-               parser = GGUFParser(ggufFile)
-               parser.parse()
-               metadata = parser.metadata
-               gguf_template = metadata.get('tokenizer.chat_template', None)
-               gguf_bos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.bos_token_id')]
-               gguf_eos_token = metadata.get('tokenizer.ggml.tokens')[metadata.get('tokenizer.ggml.eos_token_id')]
-               # if gguf_bos/eos_token are None then set them to "NoNe" string # FIXME for debug
-               gguf_bos_token = "NoNe" if gguf_bos_token is None else gguf_bos_token
-               gguf_eos_token = "NoNe" if gguf_eos_token is None else gguf_eos_token
-               # print template, bos_token and eos_token
-               print("GGUF format version:", metadata.get("version"))
-               print(f"Context length:{metadata.get('context_length')}")
-               print("GGUF file successfully loaded:", ggufFile)
-            except Exception as e:
-                print(f"Caught exception while trying to load GGUF file: {e}")
-            finally:
-                print("GGUF file loading finished.")
-
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
-            
             # Appears in some of mistral chat templates
             def strftime_now(format):
                 return datetime.datetime.now().strftime(format)
-            
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
@@ -250,7 +213,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             bos_token = ""
             eos_token = ""
             chat_template = default_chat_template
-            set_default_chat_template = False
             tool_chat_template = None
 
             template = None
@@ -299,21 +261,15 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
-            print("Setting everything")
-            # print comparison between tokenizer eos/bos/chat_template and gguf ones. Fist bos, then eos, then chat_template
-            print(f"Tokenizer bos_token: {tokenizer_bos_token}, GGUF bos_token: {gguf_bos_token}")
-            print(f"Tokenizer eos_token: {tokenizer_eos_token}, GGUF eos_token: {gguf_eos_token}")
-            print(f"Tokenizer chat_template: \n{tokenizer_template}\n, GGUF chat_template: \n{gguf_template}")
+            print(f"Tokenizer bos_token: {tokenizer_bos_token}")
+            print(f"Tokenizer eos_token: {tokenizer_eos_token}")
+            print(f"Tokenizer chat_template: \n{tokenizer_template}\n")
         )",
             py::globals(), locals);
-        // need to check if chat template directory contains gguf file
-        std::string pythonChatTemplate = locals["chat_template"].cast<std::string>();
-        SPDLOG_TRACE("Python chat template: {}", pythonChatTemplate);
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
         properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
         properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
-        SPDLOG_ERROR("ER");
     } catch (const pybind11::error_already_set& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
@@ -356,7 +312,6 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
     // if is directory or file with .gguf extension then it is ok
-    // FIXME gguf format with parts
     if (std::filesystem::is_directory(outPath) || endsWith(outPath, ".gguf")) {
         return StatusCode::OK;
     }
