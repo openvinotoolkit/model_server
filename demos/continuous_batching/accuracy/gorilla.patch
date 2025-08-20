@@ -1,8 +1,8 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index 73731c0..864e7de 100644
+index 73731c0..31dc189 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-@@ -2060,6 +2060,17 @@ third_party_inference_model_map = {
+@@ -2060,6 +2060,28 @@ third_party_inference_model_map = {
          is_fc_model=True,
          underscore_to_dot=False,
      ),
@@ -12,6 +12,17 @@ index 73731c0..864e7de 100644
 +        org="ovms",
 +        license="apache-2.0",
 +        model_handler=OpenAICompletionsHandler,
++        input_price=None,
++        output_price=None,
++        is_fc_model=True,
++        underscore_to_dot=True,
++    ),
++    "ovms_model_stream": ModelConfig(
++        model_name="ovms_model_stream",
++        display_name="ovms_model_stream",
++        org="ovms",
++        license="apache-2.0",
++        model_handler=QwenAPIHandler,
 +        input_price=None,
 +        output_price=None,
 +        is_fc_model=True,
@@ -33,3 +44,31 @@ index 8665234..734b47c 100644
  
      def decode_ast(self, result, language="Python"):
          if "FC" in self.model_name or self.is_fc_model:
+diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
+index 9ce4e7d..076e706 100644
+--- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
++++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
+@@ -21,8 +21,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+         super().__init__(model_name, temperature)
+         self.model_style = ModelStyle.OpenAI_Completions
+         self.client = OpenAI(
+-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+-            api_key=os.getenv("QWEN_API_KEY"),
++            base_url=os.getenv("OPENAI_BASE_URL", "https://localhost:8000/v3"),
++            api_key=os.getenv("QWEN_API_KEY", "not_used"),
+         )
+ 
+     #### FC methods ####
+@@ -38,9 +38,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+             model=self.model_name.replace("-FC", ""),
+             tools=tools,
+             parallel_tool_calls=True,
+-            extra_body={
+-                "enable_thinking": True
+-            },
++            extra_body={ "chat_template_kwargs": {
++                "enable_thinking": False
++            }},
+             stream=True,
+             stream_options={
+                 "include_usage": True
