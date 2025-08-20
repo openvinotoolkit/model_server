@@ -437,6 +437,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
 }
 
 TEST_F(GraphCreationTest, positiveGGUF) {
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     ovms::HFSettingsImpl hfSettings;
     hfSettings.ggufFilename = "PRETTY_GOOD_GGUF_MODEL.gguf";
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
