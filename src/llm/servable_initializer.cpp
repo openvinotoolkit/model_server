@@ -61,6 +61,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 #endif
 }
 
+#if (PYTHON_DISABLE == 0)
 static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
     if (!std::filesystem::exists(chatTemplatePath))
         return false;
@@ -100,7 +101,6 @@ static std::pair<std::optional<std::string>, std::optional<std::string>> getBosA
     return std::make_pair(bosToken, eosToken);
 }
 
-#if (PYTHON_DISABLE == 0)
 void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
