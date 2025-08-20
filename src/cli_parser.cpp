@@ -555,7 +555,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
-        // FIXME add validation for ggufpull as well
+        // There's no reason to exclude GGUF pulling from OV organization as long as there is one. So far no GGUF model was uploaded
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }
