@@ -40,8 +40,10 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
         return;
     }
 
-    if (generatedTokens[0] != this->botTokenId) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
+    // In regular parsing, the parser will consume entire model output only if the first generated token is the beginning of tools token.
+    // In immediate parsing, the parser will consume entire model output regardless of the first token.
+    if (generatedTokens[0] != this->botTokenId && !immediateParsingEnabled) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Begin of tools token has not been found in the model output. Exiting parser.");
         return;
     }
 
