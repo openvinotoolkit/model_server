@@ -145,15 +145,13 @@ INSTANTIATE_TEST_SUITE_P(
         std::replace(paramName.begin(), paramName.end(), ':', '_');
         std::replace(paramName.begin(), paramName.end(), '.', '_');
         return paramName;
-    }
-);
+    });
 #else
 INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelTests,
     GGUFDownloaderPullHfModelParameterized,
     ::testing::ValuesIn(ggufParams),
-    nullptr
-);
+    nullptr);
 #endif
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
