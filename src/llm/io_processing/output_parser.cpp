@@ -19,6 +19,7 @@
 #include "llama3/tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"
+#include "mistral/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
 
 namespace ovms {
@@ -46,6 +47,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Hermes3ToolParser>(tokenizer);
     } else if (toolParserName == "phi4") {
         toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
+    } else if (toolParserName == "mistral") {
+        toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
