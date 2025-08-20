@@ -23,7 +23,7 @@
 #include "../config.hpp"
 #include "libgit2.hpp"
 #include "optimum_export.hpp"
-#include "gguf_export.hpp"
+#include "gguf_downloader.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -137,7 +137,7 @@ Status HfPullModelModule::clone() const {
         if (!status.ok()) {
             return status;
         }
-        graphDirectory = ggufDownloader.getModelPath();
+        graphDirectory = ggufDownloader.getGraphDirectory();
         SPDLOG_ERROR("GGUF graphDirectory: {}", graphDirectory);
         // FIXME need to use gguffilename
     } else {

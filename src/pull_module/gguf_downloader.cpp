@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "gguf_export.hpp"
+#include "gguf_downloader.hpp"
 
 #include <string>
 #include <memory>
@@ -31,8 +31,8 @@
 #include "../version.hpp"
 
 namespace ovms {
-std::string GGUFDownloader::getModelPath() {
-    return FileSystem::joinPath({this->downloadPath, this->hfSettings.ggufFilename.value()});
+std::string GGUFDownloader::getGraphDirectory() {
+    return this->downloadPath;
 }
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
     auto lfstatus = StatusCode::OK;
@@ -47,13 +47,13 @@ static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const 
             SPDLOG_DEBUG("Path deleted: {}", path);
         }
     }
-
     return lfstatus;
 }
 
 GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
     hfSettings(hfSettings),
     hfEndpoint(hfEndpoint) {
+    // TODO shared loggic across all pullers
     this->downloadPath = FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel});
 }
 
@@ -73,7 +73,6 @@ Status GGUFDownloader::downloadModel() {
     }
     std::filesystem::create_directories(this->downloadPath);
     ovms::Status status;
-    // auto status = checkIfOverwriteAndRemove(this->downloadPath);
     if (!status.ok()) {
         return status;
     }
@@ -88,19 +87,6 @@ Status GGUFDownloader::downloadModel() {
     }
     return StatusCode::OK;
 }
-
-/*static void print_download_info(const char* filename, size_t bytes)
-{
-    double recv_len = (double)bytes;
-    size_t recv_unit_idx = 0;
-    const char *recv_units[] = { "B", "KiB", "MiB", "GiB", "TiB", NULL };
-    while (recv_len > 1024 && recv_units[recv_unit_idx + 1]) {
-        recv_len /= 1024.0;
-        recv_unit_idx++;
-    }
-    printf("\nDownloading lfs size: %.2f %s file: %s\n", recv_len, recv_units[recv_unit_idx], 
-           filename);
-}*/
 
 static const char* rate_units[] = {"B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL};
 
@@ -143,7 +129,6 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
     }
     printf("] %.2f%% of %.2f %s", progress * 100, totalSize, sizeUnits[totalSizeUnitId]);
     print_download_speed_info(count, elapsed_time);
-    // FIXME
     if (progress == 1.0)
         printf("\n");
     fflush(stdout);
@@ -163,12 +148,11 @@ void fileClose(FILE* file) {
 static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void* stream) {
     struct FtpFile* out = (struct FtpFile*)stream;
     if (!out->stream) {
-        /* open file for writing */
         out->stream = fopen(out->filename, "wb");
         if (!out->stream) {
             fprintf(stderr, "failure, cannot open file to write: %s\n",
                 out->filename);
-            return 0; /* failure, cannot open file to write */
+            return 0;
         }
     }
     return fwrite(buffer, size, nmemb, out->stream);
@@ -194,7 +178,6 @@ int progress_callback(void* clientp,
     curl_off_t ultotal,
     curl_off_t ulnow) {
     ProgressData* pcs = reinterpret_cast<ProgressData*>(clientp);
-    // FIXME nullptr handle
     if (dlnow == 0) {
         pcs->started_download = time(NULL);
         pcs->last_print_time = time(NULL);
@@ -205,14 +188,14 @@ int progress_callback(void* clientp,
     }
     // SPDLOG_DEBUG("Progress callback called with dltotal: {}, dlnow: {}, ultotal: {}, ulnow: {}", dltotal, dlnow, ultotal, ulnow);
     if ((dltotal == dlnow) && dltotal < 1000) {
-        // Usually with first messages we don't get the full size and
-        // we don't want to print progress bar
+        // Usually with first messages we don't get the full size and we don't want to print progress bar
+        // so we assume that until dltotal is less than 1000 we don't have full size
+        // otherwise we would print 100% progress bar
         pcs->last_print_time = currentTime;
         return 0;
     }
     // called multiple times, so we want to print progress bar only once reached 100%
     if (pcs->fullDownloadPrinted) {
-        // If we already printed full download, we don't want to print it again
         return 0;
     }
     print_progress(dlnow, dltotal, (dlnow == 0), currentTime - pcs->started_download);
@@ -234,7 +217,7 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
     CURL* curl = nullptr;
-    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));  // TODO error
+    CHECK_CURL_CALL(curl_global_init(CURL_GLOBAL_DEFAULT));
     auto globalCurlGuard = std::unique_ptr<void, void (*)(void*)>(
         nullptr, [](void*) { curl_global_cleanup(); });
     curl = curl_easy_init();
@@ -263,5 +246,4 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     SPDLOG_TRACE("cURL download completed for model: {} to path: {}", modelName, filePath);
     return StatusCode::OK;
 }
-
 }  // namespace ovms

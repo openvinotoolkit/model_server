@@ -27,14 +27,14 @@ public:
     virtual ~IModelDownloader() = default;
 
     virtual Status downloadModel() = 0;
-    virtual std::string getModelPath() = 0;
+    virtual std::string getGraphDirectory() = 0;
 };
 
 class GGUFDownloader : public IModelDownloader {
 public:
     GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings);
     Status downloadModel() override;
-    std::string getModelPath() override;
+    std::string getGraphDirectory() override;
     static Status downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath);
 
 protected:

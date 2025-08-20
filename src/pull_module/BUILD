@@ -41,9 +41,9 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "gguf_export",
-    srcs = ["gguf_export.cpp"],
-    hdrs = ["gguf_export.hpp"],
+    name = "gguf_downloader",
+    srcs = ["gguf_downloader.cpp"],
+    hdrs = ["gguf_downloader.hpp"],
     deps =  [
         "//third_party:curl",
         "@nlohmann_json//:json",
@@ -82,7 +82,7 @@ ovms_cc_library(
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
         ":libgit2",
-        "gguf_export",
+        "gguf_downloader",
         ":optimum_export",
         "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",

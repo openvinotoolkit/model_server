@@ -2816,7 +2816,7 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         ":test_utils",
         ":test_gguf_environment",
-        "//src/pull_module:gguf_export",
+        "//src/pull_module:gguf_downloader",
         "//src:ovms_lib",
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
