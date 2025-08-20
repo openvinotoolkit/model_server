@@ -129,7 +129,7 @@ public:
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 received_batch_size = strings->size();
                 ov::AnyMap params = {};
-                if(cc->Options<EmbeddingsCalculatorOVOptions>().truncate()){
+                if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate()) {
                     params = {{"max_length", max_context_length}};
                 }
                 tokens = embeddings_session->getTokenizer().encode(*strings, params);
