@@ -90,7 +90,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
             }
             auto generatedTensor = hermes3Tokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);  // Tools not available in the request
+            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
             EXPECT_EQ(parsedOutput.content, testInput);
             EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -117,7 +117,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
             }
             auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);  // Tools not available in the request
+            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
             EXPECT_EQ(parsedOutput.content, "");
             EXPECT_EQ(parsedOutput.reasoning, "");
 
@@ -164,7 +164,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
             }
             auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);  // Tools not available in the request
+            ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
             EXPECT_EQ(parsedOutput.content, "");
             EXPECT_EQ(parsedOutput.reasoning, "");
 
