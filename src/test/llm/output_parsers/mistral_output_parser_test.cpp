@@ -35,133 +35,156 @@ static ov::genai::Tokenizer mistralTokenizer(tokenizerPath);
 
 class MistralOutputParserTest : public ::testing::Test {
 protected:
-    std::unique_ptr<OutputParser> outputParser;
+    std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
+    std::unique_ptr<OutputParser> outputParserWithImmediateToolParsing;
 
     void SetUp() override {
-        outputParser = std::make_unique<OutputParser>(mistralTokenizer, "mistral", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(mistralTokenizer, "mistral", "");
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(mistralTokenizer, "mistral", "");
+        outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    for (bool immediateParsing : {false, true}) {
+        std::string testInput = input;
+        if (immediateParsing) {
+            testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
+        }
+        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    }
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
                         "{\"name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
                         "{\"name\": \"third_tool\", \"arguments\": {\"key\": \"value\"}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-    auto firstToolCallId = parsedOutput.toolCalls[0].id;
-
-    EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
-    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);  // ID should be generated
-    auto secondToolCallId = parsedOutput.toolCalls[1].id;
-    EXPECT_NE(firstToolCallId, secondToolCallId);  // IDs should be different
-
-    EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
-    EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);  // ID should be generated
-    auto thirdToolCallId = parsedOutput.toolCalls[2].id;
-    EXPECT_NE(firstToolCallId, thirdToolCallId);   // IDs should be different
-    EXPECT_NE(secondToolCallId, thirdToolCallId);  // IDs should be different
+    for (bool immediateParsing : {false, true}) {
+        std::string testInput = input;
+        if (immediateParsing) {
+            testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
+        }
+        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+        auto firstToolCallId = parsedOutput.toolCalls[0].id;
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "another_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"param1\":\"data\",\"param2\":true}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
+        auto secondToolCallId = parsedOutput.toolCalls[1].id;
+        EXPECT_NE(firstToolCallId, secondToolCallId);
+        EXPECT_EQ(parsedOutput.toolCalls[2].name, "third_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"key\":\"value\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);
+        auto thirdToolCallId = parsedOutput.toolCalls[2].id;
+        EXPECT_NE(firstToolCallId, thirdToolCallId);
+        EXPECT_NE(secondToolCallId, thirdToolCallId);
+    }
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInvalid) {
     std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}},"
                         "{\"tool_name\": \"another_tool\", \"arguments\": {\"param1\": \"data\", \"param2\": true}},"
                         "{\"name\": \"third_tool\", \"options\": {\"key\": \"value\"}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    // Only the first tool call is valid, the second one has an invalid name field and the third one has an invalid arguments
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
-    auto firstToolCallId = parsedOutput.toolCalls[0].id;
+    for (bool immediateParsing : {false, true}) {
+        std::string testInput = input;
+        if (immediateParsing) {
+            testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
+        }
+        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\",\"arg2\":42}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+        auto firstToolCallId = parsedOutput.toolCalls[0].id;
+    }
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
-    EXPECT_EQ(parsedOutput.reasoning, "");
+    for (bool immediateParsing : {false, true}) {
+        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+        EXPECT_EQ(parsedOutput.reasoning, "");
+    }
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    for (bool immediateParsing : {false, true}) {
+        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    }
 }
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentOnBothSidesAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s> This is a content part after tool call.";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}] This is a content part after tool call.");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    for (bool immediateParsing : {false, true}) {
+        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}] This is a content part after tool call.");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    }
 }
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithMultipleToolCallsReturnsContentOnly) {
     std::string input = "[TOOL_CALLS][{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}]</s> \n\nThis is some content\n\n[TOOL_CALLS][{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    // Content after 'TOOL_CALLS' cannot be parsed as array of JSON objects, so it is treated as content
-    EXPECT_EQ(parsedOutput.content, "[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}] \n\nThis is some content\n\n [{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);  // No valid tool calls parsed
+    for (bool immediateParsing : {false, true}) {
+        std::string testInput = input;
+        if (immediateParsing) {
+            testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
+        }
+        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        // Same expected content as tokenizer does not add special tokens
+        EXPECT_EQ(parsedOutput.content, "[{\"name\": \"tool1\", \"arguments\": {\"a\": 1}}] \n\nThis is some content\n\n [{\"name\": \"tool2\", \"arguments\": {\"b\": 2}}]");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    }
 }
 
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithArrayArguments) {
     std::string input = "[TOOL_CALLS][{\"name\": \"extractLastTransactionId\", \"arguments\": { \"filepath\": \"/var/log/db.log\", \"status\": [\"completed\", \"failed\"], \"encoding\": \"utf-8\", \"processFunction\": \"processFunction\"}}]</s>";
-    auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
-    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
-    EXPECT_EQ(parsedOutput.content, "");
-    EXPECT_EQ(parsedOutput.reasoning, "");
-
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "extractLastTransactionId");
-    // Parser removes whitespaces, so we expect arguments value to be without spaces
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"filepath\":\"/var/log/db.log\",\"status\":[\"completed\",\"failed\"],\"encoding\":\"utf-8\",\"processFunction\":\"processFunction\"}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    for (bool immediateParsing : {false, true}) {
+        std::string testInput = input;
+        if (immediateParsing) {
+            testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
+        }
+        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        EXPECT_EQ(parsedOutput.content, "");
+        EXPECT_EQ(parsedOutput.reasoning, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "extractLastTransactionId");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"filepath\":\"/var/log/db.log\",\"status\":[\"completed\",\"failed\"],\"encoding\":\"utf-8\",\"processFunction\":\"processFunction\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    }
 }
