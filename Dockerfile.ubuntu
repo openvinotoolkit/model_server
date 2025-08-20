@@ -127,7 +127,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             rm -rf /var/lib/apt/lists/*
 # on ubuntu 24.04 python3.12 is used as default python for ovms build and release
 # TF build needs python3.10 with numpy as it does not support python3.12
-RUN python3.10 -m pip install "numpy<2.0.0" "gguf_parser==0.1.1" --no-cache-dir
+RUN python3.10 -m pip install "numpy<2.0.0" --no-cache-dir
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
@@ -426,10 +426,6 @@ COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-i
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=build /usr/local/lib/python3.*/dist-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=build /usr/local/lib/python3.*/dist-packages/markupsafe /ovms/python_deps/markupsafe
-COPY --from=build /usr/local/lib/python3.*/dist-packages/gguf_parser /ovms/python_deps/gguf_parser
-COPY --from=build /usr/local/lib/python3.*/dist-packages/gguf_parser-0.1.1.dist-info /ovms/python_deps/gguf_parser-0.1.1.dist-info
-COPY --from=build /usr/local/lib/python3.*/dist-packages/argparse-1.4.0.dist-info /ovms/python_deps/argparse-1.4.0.dist-info
-COPY --from=build /usr/local/lib/python3.*/dist-packages/argparse.py /ovms/python_deps/argparse.py
 
 # For image with Python enabled install Python library
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
