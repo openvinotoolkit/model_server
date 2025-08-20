@@ -153,9 +153,8 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     }
 #endif
     // clang-format on
-    std::string fullPath = directoryPath;
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
     SPDLOG_ERROR("ER: fullPath: {}, directoryPath: {}, ggufFilename: {}", fullPath, directoryPath, ggufFilename.value_or("std::nullopt"));
-    fullPath = FileSystem::joinPath({fullPath, "graph.pbtxt"});
     return FileSystem::createFileOverwrite(fullPath, oss.str());
 }
 
