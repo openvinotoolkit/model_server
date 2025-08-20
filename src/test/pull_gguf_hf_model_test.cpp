@@ -126,13 +126,11 @@ std::vector<std::tuple<std::string, std::string, std::string, std::string, size_
     std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568)),
     std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568))};
 
+#ifndef _WIN32
 INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelTests,
     GGUFDownloaderPullHfModelParameterized,
-    ::testing::ValuesIn(ggufParams)
-// due to windows not being able to handle long file names do not add printer if _WIN32
-#ifndef _WIN32
-        ,
+    ::testing::ValuesIn(ggufParams),
     [](const ::testing::TestParamInfo<GGUFDownloaderPullHfModelParameterized::ParamType>& info) {
         auto paramTuple = info.param;
         std::string paramName = ovms::joins({
@@ -148,8 +146,15 @@ INSTANTIATE_TEST_SUITE_P(
         std::replace(paramName.begin(), paramName.end(), '.', '_');
         return paramName;
     }
-#endif
 );
+#else
+INSTANTIATE_TEST_SUITE_P(
+    GGUFDownloaderPullHfModelTests,
+    GGUFDownloaderPullHfModelParameterized,
+    ::testing::ValuesIn(ggufParams),
+    nullptr
+);
+#endif
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     // curl -L   -H "Authorization: Bearer $HF_TOKEN"   -o DeepSeek‑R1‑Distill‑Qwen‑7B‑Q4_K_M.gguf   https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf
