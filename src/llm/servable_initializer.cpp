@@ -107,9 +107,14 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         bool isGGUFModel = checkIfGGUFModel(chatTemplateDirectory);
         // we need to pass tokenizer template and bos/eos tokens to python code
         // if we have GGUF model, we will use them to create a template object
-        std::string tokenizerTemplate = properties->tokenizer.get_chat_template();
-        std::string tokenizerBosToken = properties->tokenizer.get_bos_token();
-        std::string tokenizerEosToken = properties->tokenizer.get_eos_token();
+        std::string tokenizerTemplate;
+        std::string tokenizerBosToken;
+        std::string tokenizerEosToken;
+        if (isGGUFModel) {
+            tokenizerTemplate = properties->tokenizer.get_chat_template();
+            tokenizerBosToken = properties->tokenizer.get_bos_token();
+            tokenizerEosToken = properties->tokenizer.get_eos_token();
+        }
         // time measure following if statement
         std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
         // Workaround for CVS-172426
@@ -117,20 +122,17 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
             std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
             tokens = getBosAndEosTokenFromTokenizerVocab(std::make_shared<ov::genai::Tokenizer>(properties->tokenizer));
-            SPDLOG_TRACE("Tokens bos: {}, eos: {}", tokens.first.has_value() ? tokens.first.value() : "None", tokens.second.has_value() ? tokens.second.value() : "None");
             if (tokens.first.has_value()) {
                 tokenizerBosToken = tokens.first.value();
             }
             if (tokens.second.has_value()) {
                 tokenizerEosToken = tokens.second.value();
             }
+            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{}",
+                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel);
         }
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
-        auto& tokenizer = properties->tokenizer;
-        std::string bosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_bos_token_id()}), {ov::genai::skip_special_tokens(false)});
-        std::string eosToken = tokenizer.decode(std::vector<int64_t>({properties->tokenizer.get_eos_token_id()}), {ov::genai::skip_special_tokens(false)});
-        SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {}, decoded bos: {} decoded eos:{} isGGUF:{}", tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), bosToken, eosToken, isGGUFModel);
         auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
             "tokenizer_bos_token"_a = tokenizerBosToken,
             "tokenizer_eos_token"_a = tokenizerEosToken,
