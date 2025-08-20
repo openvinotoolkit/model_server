@@ -88,9 +88,10 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
+
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", parsedOutput.content);
     if (reasoningParser) {
         reasoningParser->parse(parsedOutput, generatedTokens);
     }
