@@ -1055,7 +1055,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
         if (outputParser != nullptr) {
             //print finish reason
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Finish reason: {}", static_cast<int>(finishReason));
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable());
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 return "";
             }

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/generation_handle.hpp>
 #include <unordered_set>
 #include <string>
 #include <optional>
@@ -78,7 +79,7 @@ public:
 
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
-    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;
+    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason fr) = 0;
 
     // Get the tag that marks the beginning of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should start processing the content.

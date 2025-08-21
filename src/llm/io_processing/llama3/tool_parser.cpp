@@ -112,7 +112,7 @@ void Llama3ToolParser::next() {
     argumentsDelayWindow[1].clear();
 }
 
-std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
     // todo: sometimes there is 'parameters' and sometimes there is 'arguments', however, 'parameters' more often
 
     SPDLOG_INFO("Hello: [{}]", chunk);
@@ -163,14 +163,24 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             argumentsDelayWindow[0] = argumentsDelayWindow[1];
         }
 
+        if (static_cast<int>(fr) == 1) {
+            end=true;
+            size_t lastClosingBrace = modifiedChunk.find_last_of('}');
+            if (lastClosingBrace != std::string::npos) {
+                modifiedChunk.insert(lastClosingBrace, "\"");
+                argumentsDelayWindow[0] += modifiedChunk;
+            }
+        }
+
         // If we are closing the tool call, we need to add closing quote after the last closing brace that we assume is present in the chunk processed in the last call.
         // Otherwise we just store the chunk in the second element of the delay array to be handled in the next call.
-        if (modifiedChunk.find(separator) != std::string::npos) {
+        else if (modifiedChunk.find(separator) != std::string::npos) {
             end=true;
             size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
             if (lastClosingBrace != std::string::npos) {
                 argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
             }
+            //SPDLOG_INFO("This is the end. We are closing the tool call. [{}] [{}] [{}]", argumentsDelayWindow[0], argumentsDelayWindow[1], modifiedChunk);
         } else {
             argumentsDelayWindow[1] = modifiedChunk;
         }

@@ -80,7 +80,7 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
-std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> MistralToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
     // Not implemented
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "MistralToolParser::parseChunk is not implemented");
     return std::nullopt;

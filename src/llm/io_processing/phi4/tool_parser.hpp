@@ -42,7 +42,7 @@ public:
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) override;
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
