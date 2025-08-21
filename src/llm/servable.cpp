@@ -212,7 +212,6 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
 }
 std::string getBodyString(const ovms::HttpPayload& payload) {
     if (spdlog::default_logger_raw()->level() == spdlog::level::debug) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Body string");
         auto& json = payload.parsedJson;
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
