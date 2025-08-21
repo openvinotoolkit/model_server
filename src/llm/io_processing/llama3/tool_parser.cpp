@@ -136,7 +136,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     bool end=false;
 
     // JSON already contains 'parameters' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
-    if (lastJson.HasMember("parameters")) {
+    if (lastJson.HasMember("arguments") || lastJson.HasMember("parameters")) {
         std::string modifiedChunk = chunk;
         // Escaping double quotes in the parameters string
         for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
@@ -199,22 +199,29 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
 
     } catch (const std::exception& e) {
         (void)e;  // Suppress unused variable warning on Windows
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
         // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
         throw std::runtime_error("Generated tool call structure is not valid");
     }
 
     rapidjson::Document doc;
     // Case 1: 'parameters' has just appeared in the current chunk. If so, we return first delta.
-    if (newJson.HasMember("parameters") && !lastJson.HasMember("parameters")) {
+    if ((newJson.HasMember("parameters") || newJson.HasMember("arguments")) && !(lastJson.HasMember("arguments") || lastJson.HasMember("parameters"))) {
         std::string functionName;
+        if (newJson.HasMember("parameters")) {
+            SPDLOG_INFO("HAD PARAMETERS, COPYING TO ARGUMENTS");
+            // change key to "arguments"
+            newJson.AddMember("arguments", newJson["parameters"], newJson.GetAllocator());
+            newJson.RemoveMember("parameters");
+
+        }
         if (lastJson.HasMember("name") && lastJson["name"].IsString()) {
             functionName = lastJson["name"].GetString();
         } else if (newJson.HasMember("name") && newJson["name"].IsString()) {
             // We received big chunk with both full function name and parameters, so we get function name from the new JSON
             functionName = newJson["name"].GetString();
         } else {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
             throw std::runtime_error("Tool call name is missing in generated output");
         }
         // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
@@ -222,8 +229,16 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
         return doc;
         // Case 2: 'parameters' already exists in the last JSON, we compute delta and return it.
-    } else if (lastJson.HasMember("parameters")) {
+    } else if (lastJson.HasMember("arguments") || lastJson.HasMember("parameters")) {
+        if (newJson.HasMember("parameters")) {
+            SPDLOG_INFO("HAD PARAMETERS, COPYING TO ARGUMENTS");
+            // change key to "arguments"
+            newJson.AddMember("arguments", newJson["parameters"], newJson.GetAllocator());
+            newJson.RemoveMember("parameters");
+
+        }
         rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
+
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
         // If delta is empty or contains only null or empty string values, we don't stream anything.
         if (delta.ObjectEmpty()) {

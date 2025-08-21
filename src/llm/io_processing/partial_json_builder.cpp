@@ -211,7 +211,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         Document doc;
         doc.Parse(buffer.c_str());
         if (doc.HasParseError()) {
-            throw std::runtime_error("Invalid JSON.");
+            throw std::runtime_error("Invalid JSON. " + buffer);
         }
         return doc;
     }
@@ -257,7 +257,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     }
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
-        throw std::runtime_error("Invalid JSON.");
+        throw std::runtime_error("Invalid JSON. " + closedInput);
     }
     return doc;
 }
