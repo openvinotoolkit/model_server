@@ -45,7 +45,7 @@ JOBS ?= $(CORES_TOTAL)
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
 # Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
-BASE_OS ?= ubuntu22
+BASE_OS ?= ubuntu24
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
@@ -160,7 +160,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "25.27.34303"
+	INSTALL_DRIVER_VERSION ?= "25.31.34666"
 	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.3.0-19515-3b7248ef6de/openvino_toolkit_ubuntu24_2025.3.0.dev20250716_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
