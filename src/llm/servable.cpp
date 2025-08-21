@@ -218,7 +218,7 @@ std::string getBodyString(const ovms::HttpPayload& payload) {
         json->Accept(writer);
         return buffer.GetString();
     }
-    
+
     return payload.body;
 }
 #pragma GCC diagnostic pop
