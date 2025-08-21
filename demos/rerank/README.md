@@ -144,6 +144,56 @@ index 1, relevance_score 0.09138210117816925
 ```
 :::
 
+:::{dropdown} **Requesting rerank score with model that requires template applying on query and documents**
+tomaarsen/Qwen3-Reranker-0.6B-seq-cls is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
+
+```bash
+pip3 install requests
+```
+```bash
+echo '
+import requests
+
+prefix = "<|im_start|>system\nJudge whether the Document meets the requirements based on the Query and the Instruct provided. Note that the answer can only be \"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n"
+suffix = "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+
+query_template = "{prefix}<Instruct>: {instruction}\n<Query>: {query}\n"
+document_template = "<Document>: {doc}{suffix}"
+
+instruction = (
+    "Given a web search query, retrieve relevant passages that answer the query"
+)
+
+query = "welcome"
+
+documents = [
+    "good morning",
+    "farewell",
+]
+
+query = query_template.format(prefix=prefix, instruction=instruction, query=query)
+
+documents = [
+    document_template.format(doc=doc, suffix=suffix) for doc in documents
+]
+
+response = requests.post("http://127.0.0.1:8125/v3/rerank",
+                         json={
+                             "model": "tomaarsen/Qwen3-Reranker-0.6B-seq-cls",
+                             "query": query,
+                             "documents": documents,
+                         }).json()
+
+print(response)' > rerank_client.py
+
+python rerank_client.py
+```
+It will return response similar to:
+```
+{'results': [{'index': 0, 'relevance_score': 0.024518223479390144}, {'index': 1, 'relevance_score': 0.0026006349362432957}]}
+```
+:::
+
 ## Comparison with Hugging Faces
 
 ```bash
@@ -202,6 +252,7 @@ BAAI/bge-reranker-large
 BAAI/bge-reranker-v2-m3
 BAAI/bge-reranker-base
 cross-encoder/msmarco-MiniLM-L6-en-de-v1
+tomaarsen/Qwen3-Reranker-0.6B-seq-cls
 ```
 
 ## Integration with Langchain

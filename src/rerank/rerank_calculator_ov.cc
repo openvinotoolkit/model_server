@@ -163,9 +163,9 @@ public:
             std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
             auto tokens = rerank_session->getTokenizer().encode(data);
             if(tokens.input_ids.get_shape().size() != 2){
-                throw std::runtime_error("error");  // should never happen
+                throw std::runtime_error("Tokens shape invalid.");  // should never happen
             }
-            if(this->max_position_embeddings > tokens.input_ids.get_shape()[1]){
+            if(this->max_position_embeddings < tokens.input_ids.get_shape()[1]){
                 throw std::runtime_error("Query tokens count tokens count of longest document exceeds max_position_embeddings. For this model chunking is not supported.");
             }
             return std::make_pair(tokens.input_ids, tokens.attention_mask);
