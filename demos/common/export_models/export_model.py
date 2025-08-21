@@ -464,25 +464,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
 
-    if template_parameters.get("tool_parser") is not None:
-        print("Adding tuned chat template")
-        template_mapping = {
-            "phi4": "tool_chat_template_phi4_mini.jinja",
-            "llama3": "tool_chat_template_llama3.1_json.jinja",
-            "hermes3": "tool_chat_template_hermes.jinja",
-            "mistral": "tool_chat_template_mistral_parallel.jinja",
-            "qwen3": None
-            }
-        template_name = template_mapping[task_parameters.get("tool_parser")]
-        if template_name is not None:
-            template_path = os.path.join(model_repository_path, model_name, "template.jinja")
-            import requests
-            response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
-            print(response.raise_for_status())
-            with open(template_path, "wb") as f:
-                f.write(response.content)
-            print(f"Downloaded tuned chat template to {template_path}")
-
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
