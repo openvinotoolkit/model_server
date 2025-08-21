@@ -26,6 +26,12 @@ void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 
+    // For now the only specific part is related to tools, so if there are no tools provided in the request
+    // we can exit early
+    if (request.toolNameSchemaMap.empty()) {
+        return;
+    }
+
     // Set tool guided generation config specific to Phi-4 model as described in template from:
     // https://github.com/vllm-project/vllm/blob/v0.9.2/examples/tool_chat_template_phi4_mini.jinja
     ov::genai::StructuralTagsConfig structuralTagsConfig;

@@ -14,6 +14,10 @@
         "graph_path":"/ovms/src/test/llm/lm_cb_regular.pbtxt"
     },
     {
+        "name":"lm_cb_with_tool_parser",
+        "graph_path":"/ovms/src/test/llm/lm_cb_with_tool_parser.pbtxt"
+    },
+    {
         "name":"lm_legacy_regular",
         "graph_path":"/ovms/src/test/llm/lm_legacy_regular.pbtxt"
     }
