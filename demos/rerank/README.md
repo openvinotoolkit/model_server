@@ -145,6 +145,7 @@ index 1, relevance_score 0.09138210117816925
 :::
 
 :::{dropdown} **Requesting rerank score with model that requires template applying on query and documents**
+
 tomaarsen/Qwen3-Reranker-0.6B-seq-cls is a copy of the Qwen3-Reranker-0.6B model (original model is not supported in OVMS) modified as a sequence classification model instead. It requires applying template on input, here is example client that does it:
 
 ```bash
