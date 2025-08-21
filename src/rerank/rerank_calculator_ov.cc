@@ -127,7 +127,7 @@ public:
         }
 
         // post-validation
-        if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
+        if (rerank_session->addBosToken && (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS)) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
             return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
         }
@@ -166,7 +166,9 @@ public:
                 throw std::runtime_error("Tokens shape invalid.");  // should never happen
             }
             if (this->max_position_embeddings < tokens.input_ids.get_shape()[1]) {
-                throw std::runtime_error("Query tokens count tokens count of longest document exceeds max_position_embeddings. For this model chunking is not supported.");
+                std::ostringstream msg;
+                msg << "The requests length of " << tokens.input_ids.get_shape()[1] << " tokens exceeds the model context of " << max_position_embeddings;
+                throw std::runtime_error(msg.str());
             }
             return std::make_pair(tokens.input_ids, tokens.attention_mask);
         }
