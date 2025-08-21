@@ -60,13 +60,69 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             global json
             import json
             from pathlib import Path
+            global datetime
+            import datetime
+
+            global contextmanager
+            from contextlib import contextmanager
 
             global jinja2
             import jinja2
+            global ImmutableSandboxedEnvironment
             from jinja2.sandbox import ImmutableSandboxedEnvironment
+            from jinja2.ext import Extension
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
+            
+            # Appears in some of mistral chat templates
+            def strftime_now(format):
+                return datetime.datetime.now().strftime(format)
+            
+            # Following the logic from:
+            # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
+            class AssistantTracker(Extension):
+                # This extension is used to track the indices of assistant-generated tokens in the rendered chat
+                tags = {"generation"}
+
+                def __init__(self, environment: ImmutableSandboxedEnvironment):
+                    # The class is only initiated by jinja.
+                    super().__init__(environment)
+                    environment.extend(activate_tracker=self.activate_tracker)
+                    self._rendered_blocks = None
+                    self._generation_indices = None
+
+                def parse(self, parser: jinja2.parser.Parser) -> jinja2.nodes.CallBlock:
+                    lineno = next(parser.stream).lineno
+                    body = parser.parse_statements(["name:endgeneration"], drop_needle=True)
+                    return jinja2.nodes.CallBlock(self.call_method("_generation_support"), [], [], body).set_lineno(lineno)
+
+                @jinja2.pass_eval_context
+                def _generation_support(self, context: jinja2.nodes.EvalContext, caller: jinja2.runtime.Macro) -> str:
+                    rv = caller()
+                    if self.is_active():
+                        # Only track generation indices if the tracker is active
+                        start_index = len("".join(self._rendered_blocks))
+                        end_index = start_index + len(rv)
+                        self._generation_indices.append((start_index, end_index))
+                    return rv
+
+                def is_active(self) -> bool:
+                    return self._rendered_blocks or self._generation_indices
+
+                @contextmanager
+                def activate_tracker(self, rendered_blocks: list[int], generation_indices: list[int]):
+                    try:
+                        if self.is_active():
+                            raise ValueError("AssistantTracker should not be reused before closed")
+                        self._rendered_blocks = rendered_blocks
+                        self._generation_indices = generation_indices
+
+                        yield
+                    finally:
+                        self._rendered_blocks = None
+                        self._generation_indices = None
+
 
             # Default chat template accepts only single message and outputs only it's 'content'
             # effectively turning it into a regular prompt. 
@@ -81,18 +137,22 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             tool_template = None
 
             # Try to read template from template.jinja file
-            jinja_file = Path(templates_directory + "/template.jinja")
+            jinja_file = Path(templates_directory + "/chat_template.jinja")
+            jinja_file_legacy = Path(templates_directory + "/template.jinja")
             template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
-            jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, loader=template_loader)
+            jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-            jinja_env.globals["raise_exception"] = raise_exception     
+            jinja_env.globals["raise_exception"] = raise_exception
+            jinja_env.globals["strftime_now"] = strftime_now
             if jinja_file.is_file():
+                template = jinja_env.get_template("chat_template.jinja")
+            elif jinja_file_legacy.is_file():
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
-                f = open(templates_directory + "/tokenizer_config.json")
+                f = open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8")
                 data = json.load(f)
                 bos_token = data.get("bos_token", "")
                 bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.

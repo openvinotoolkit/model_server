@@ -20,10 +20,11 @@
 #include <gtest/gtest.h>
 
 #include "test_utils.hpp"
-#include "../filesystem.hpp"
-#include "../status.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
+#include "../filesystem.hpp"
+#include "../status.hpp"
+#include "../version.hpp"
 
 const std::string expectedOneSettingPluginGraphContents = R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -124,7 +125,9 @@ const std::string expectedGraphContentsWithResponseParser = R"(
             plugin_config: '{ }',
             enable_prefix_caching: true,
             cache_size: 10,
-            response_parser: "RESPONSE_PARSER",
+            reasoning_parser: "REASONING_PARSER",
+            tool_parser: "TOOL_PARSER",
+            enable_tool_guided_generation: true,
         }
     }
     input_stream_handler {
@@ -231,7 +234,8 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "/model1/path",
             normalize_embeddings: false,
-            mean_pooling: true,
+            truncate: true,
+            pooling: LAST,
             target_device: "GPU",
             plugin_config: '{ "NUM_STREAMS": "2"}',
         }
@@ -252,7 +256,8 @@ node {
         [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
             models_path: "./",
             normalize_embeddings: true,
-            mean_pooling: false,
+            truncate: false,
+            pooling: CLS,
             target_device: "CPU",
             plugin_config: '{ "NUM_STREAMS": "1"}',
         }
@@ -311,7 +316,76 @@ protected:
     void TearDown() {
         TestWithTempDir::TearDown();
     }
+
+    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
+    // This string differs per build and setup
+    std::string removeVersionString(std::string input) {
+        return input.erase(0, input.find("\n") + 1);
+    }
+
+    std::string getVersionString() {
+        std::stringstream expected;
+        expected << "# File created with: " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
+        return expected.str();
+    }
 };
+
+TEST_F(GraphCreationTest, positiveDefaultWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedDefaultGraphContents;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveReranktWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::RERANK_GRAPH;
+    ovms::RerankGraphSettingsImpl rerankGraphSettings;
+    hfSettings.graphSettings = std::move(rerankGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedRerankGraphContentsDefault;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveEmbeddingsWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings;
+    hfSettings.graphSettings = std::move(embeddingsGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedEmbeddingsGraphContentsDefault;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
+
+TEST_F(GraphCreationTest, positiveImageGenWithVersionString) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    ovms::ImageGenerationGraphSettingsImpl imageGenerationGraphSettings;
+    hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
+    std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
+    std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
+    auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+
+    std::string graphContents = GetFileContents(graphPath);
+    std::string expected = getVersionString() + expectedImageGenerationGraphContentsDefault;
+    ASSERT_EQ(expected, graphContents) << graphContents;
+}
 
 TEST_F(GraphCreationTest, positiveDefault) {
     ovms::HFSettingsImpl hfSettings;
@@ -321,7 +395,7 @@ TEST_F(GraphCreationTest, positiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedDefaultGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedDefaultGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
@@ -336,13 +410,12 @@ TEST_F(GraphCreationTest, rerankPositiveNonDefault) {
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedRerankGraphContentsNonDefault, graphContents) << graphContents;
+    ASSERT_EQ(expectedRerankGraphContentsNonDefault, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, rerankPositiveDefault) {
@@ -352,13 +425,12 @@ TEST_F(GraphCreationTest, rerankPositiveDefault) {
     hfSettings.graphSettings = std::move(rerankGraphSettings);
 
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedRerankGraphContentsDefault, graphContents) << graphContents;
+    ASSERT_EQ(expectedRerankGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
@@ -370,7 +442,6 @@ TEST_F(GraphCreationTest, rerankCreatedPbtxtInvalid) {
     rerankGraphSettings.numStreams = 2;
     hfSettings.graphSettings = std::move(rerankGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
-    std::string subconfigPath = ovms::FileSystem::appendSlash(this->directoryPath) + "subconfig.json";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
 #if (MEDIAPIPE_DISABLE == 0)
@@ -389,7 +460,8 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.modelPath = "/model1/path";
     embeddingsGraphSettings.numStreams = 2;
     embeddingsGraphSettings.normalize = "false";
-    embeddingsGraphSettings.meanPooling = "true";
+    embeddingsGraphSettings.truncate = "true";
+    embeddingsGraphSettings.pooling = "LAST";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     std::string graphPath = ovms::FileSystem::appendSlash(this->directoryPath) + "graph.pbtxt";
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
@@ -397,7 +469,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedEmbeddingsGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedEmbeddingsGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
@@ -411,7 +483,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedEmbeddingsGraphContentsDefault, graphContents) << graphContents;
+    ASSERT_EQ(expectedEmbeddingsGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
@@ -422,7 +494,7 @@ TEST_F(GraphCreationTest, embeddingsCreatedPbtxtInvalid) {
     embeddingsGraphSettings.modelName = "myModel\"";
     embeddingsGraphSettings.numStreams = 2;
     embeddingsGraphSettings.normalize = "true";
-    embeddingsGraphSettings.meanPooling = "false";
+    embeddingsGraphSettings.pooling = "CLS";
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     std::unique_ptr<ovms::GraphExport> graphExporter = std::make_unique<ovms::GraphExport>();
     auto status = graphExporter->createServableConfig(this->directoryPath, hfSettings);
@@ -448,13 +520,15 @@ TEST_F(GraphCreationTest, positivePluginConfigAll) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedFullPluginGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedFullPluginGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(GraphCreationTest, positiveWithResponseParser) {
+TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     ovms::HFSettingsImpl hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.responseParser = "RESPONSE_PARSER";
+    graphSettings.reasoningParser = "REASONING_PARSER";
+    graphSettings.toolParser = "TOOL_PARSER";
+    graphSettings.enableToolGuidedGeneration = "true";
 
     hfSettings.graphSettings = std::move(graphSettings);
 
@@ -464,7 +538,7 @@ TEST_F(GraphCreationTest, positiveWithResponseParser) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedGraphContentsWithResponseParser, graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContentsWithResponseParser, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
@@ -479,7 +553,7 @@ TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedOneSettingPluginGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedOneSettingPluginGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, negativeCreateFileWrongDirectoryPaths) {
@@ -547,7 +621,7 @@ TEST_F(GraphCreationTest, imageGenerationPositiveDefault) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, graphContents) << graphContents;
+    ASSERT_EQ(expectedImageGenerationGraphContentsDefault, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
@@ -568,5 +642,5 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string graphContents = GetFileContents(graphPath);
-    ASSERT_EQ(expectedImageGenerationGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
 }

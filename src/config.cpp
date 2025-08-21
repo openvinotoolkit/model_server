@@ -27,6 +27,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
+#include "stringutils.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {
@@ -114,7 +115,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
 }
 
 bool Config::validate() {
-    if (this->serverSettings.serverMode == HF_PULL_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
         if (!serverSettings.hfSettings.sourceModel.size()) {
             std::cerr << "source_model parameter is required for pull mode";
             return false;
@@ -127,7 +128,7 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
+        if (serverSettings.hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
             std::cerr << "For now only OpenVINO models are supported in pulling mode";
             return false;
         }
@@ -173,8 +174,16 @@ bool Config::validate() {
                 std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
         }
-        return true;
+        // No more validation needed
+        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+            return true;
+        }
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {

@@ -9,8 +9,7 @@ With the rise of AI PC capabilities, hosting own Visual Studio code assistant is
 - Intel Meteor Lake, Lunar Lake, Arrow Lake or newer Intel CPU.
 
 ## Prepare Code Chat/Edit Model 
-We need to use medium size model in order to keep 50ms/word for human to feel the chat responsive.
-This will work in streaming mode, meaning we will see the chat response/code diff generation slowly roll out in real-time.
+We need to use medium size model to get reliable responses but also to fit it to the available memory on the host or discrete GPU.
 
 Download export script, install its dependencies and create directory for the models:
 ```console
@@ -22,10 +21,10 @@ mkdir models
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
 ```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
 ```
 
-> **Note:** Use `--target_device GPU` for Intel GPU or omit this parameter to run on Intel CPU
+> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
 
 ## Prepare Code Completion Model
 For this task we need smaller, lighter model that will produce code quicker than chat task.
@@ -104,10 +103,16 @@ Please refer to OpenVINO Model Server installation first: [link](../../docs/depl
 ovms --rest_port 8000 --config_path ./models/config_all.json
 ```
 
-### Linux: via Docker
+### Linux: via Docker with GPU
+```bash
+docker run -d --rm --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
+```
+
+### Linux: via Docker with NPU
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
-  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:2025.2 --rest_port 8000 --config_path /workspace/models/config_all.json
+  -p 8000:8000 -v $(pwd)/:/workspace/ openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/models/config_all.json
 ```
 
 ## Set Up Visual Studio Code

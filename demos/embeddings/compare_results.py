@@ -28,6 +28,8 @@ parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', hel
                     dest='model_name')
 parser.add_argument('--input', default=[], help='List of strings to query. default: []',
                     dest='input', action='append')
+parser.add_argument('--pooling', default="CLS", choices=["CLS", "LAST"], help='Embeddings pooling mode', dest='pooling')
+
 args = vars(parser.parse_args())
 
 model_id = args['model_name']
@@ -43,8 +45,14 @@ def run_model():
         start_time = datetime.datetime.now()
         input = tokenizer(text, padding=True, truncation=True, return_tensors='pt')
         model_output = model_pt(**input)
-        embeddings = model_output.last_hidden_state[:, 0]
-        embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        if args['pooling'] == "LAST":
+            sequence_lengths = input['attention_mask'].sum(dim=1) - 1
+            batch_size = model_output.last_hidden_state.shape[0]
+            embeddings = model_output.last_hidden_state[torch.arange(batch_size, device=model_output.last_hidden_state.device), sequence_lengths]
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        else:
+            embeddings = model_output.last_hidden_state[:, 0]
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
         end_time = datetime.datetime.now()
         duration = (end_time - start_time).total_seconds() * 1000
         print("HF Duration:", duration, "ms", type(model_pt).__name__)

@@ -236,6 +236,29 @@ TEST_F(MetricsConfigTest, InitOnce) {
     ASSERT_EQ(metricConfig2.isFamilyEnabled(METRIC_NAME_REQUESTS_FAIL), false);
 }
 
+TEST_F(MetricsConfigTest, StartSingleGraphWithMetrics) {
+    ConstructorEnabledModelManager manager;
+
+    // Serve mediapipe graph with metrics enabled
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli").c_str(),
+        (char*)"--model_name",
+        (char*)"some_name",
+        (char*)"--rest_port",
+        (char*)"8080",
+        (char*)"--metrics_enable"};
+    int arg_count = 8;
+    ovms::Config::instance().parse(arg_count, n_argv);
+
+    auto status = manager.startFromConfig();
+    ASSERT_TRUE(status.ok());
+
+    const auto& metricConfig = manager.getMetricConfig();
+    ASSERT_EQ(metricConfig.metricsEnabled, true);
+}
+
 static const char* modelMetricsAllEnabledConfig = R"(
 {
     "model_config_list": [

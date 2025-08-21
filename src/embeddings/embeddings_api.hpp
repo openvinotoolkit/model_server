@@ -36,6 +36,11 @@
 
 namespace ovms {
 
+enum class PoolingMode {
+    CLS,
+    LAST
+};
+
 struct EmbeddingsRequest {
     enum class EncodingFormat {
         FLOAT,
@@ -60,7 +65,7 @@ public:
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
-    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings);
+    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode = PoolingMode::CLS, const std::optional<ov::Tensor>& attentionMask = std::nullopt);
     void setPromptTokensUsage(int promptTokens);
 };
 }  // namespace ovms
