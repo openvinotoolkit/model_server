@@ -49,7 +49,7 @@ void EmbeddingsGraphCLIParser::createOptions() {
             cxxopts::value<std::string>()->default_value("true"),
             "NORMALIZE")
         ("truncate",
-            "Truncate input when exceeds model context.",
+            "Truncate input when it exceeds model context length.",
             cxxopts::value<std::string>()->default_value("false"),
             "truncate")
         ("pooling",
