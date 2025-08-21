@@ -4,7 +4,7 @@
 --pre
 optimum-intel
 openvino-tokenizers<=2025.3.0.0.dev20250812
-openvino<=2025.3.0.dev20250812
+openvino<=2025.3.0.dev20250814
 nncf>=2.11.0 
 sentence_transformers
 sentencepiece==0.2.0
