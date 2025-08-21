@@ -30,38 +30,24 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Hermes3ToolParser : public BaseOutputParser {
-protected:
-    const std::string toolCallStartTag = "<tool_call>";
-    const std::string toolCallEndTag = "</tool_call>";
-
-    const std::string parsingStartTag = toolCallStartTag;
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string parsingEndTag = "";
-
-    // Streaming required members
-    rapidjson::Document lastJson;
-    PartialJsonBuilder jsonBuilder;
-    // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
-    int toolCallIndex = -1;
-    // Storing last two chunks of arguments to return delta with delay.
-    // We do this to properly close arguments when tool call end tag is received.
-    // With support for more models this could be moved to the base class.
-    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+class MistralToolParser : public BaseOutputParser {
+    const int64_t botTokenId = 5;  // [TOOL_CALLS]
 
 public:
-    Hermes3ToolParser() = delete;
-    explicit Hermes3ToolParser(ov::genai::Tokenizer& tokenizer) :
+    MistralToolParser() = delete;
+    explicit MistralToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
     const std::string& getParsingStartTag() const override {
-        return parsingStartTag;
+        static const std::string toolCallStartTag = "[TOOL_CALLS]";
+        return toolCallStartTag;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
+        static const std::string toolCallEndTag = "";
+        return toolCallEndTag;
     }
 };
 }  // namespace ovms

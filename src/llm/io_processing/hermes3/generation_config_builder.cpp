@@ -26,6 +26,12 @@ void Hermes3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComp
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 
+    // For now the only specific part is related to tools, so if there are no tools provided in the request
+    // we can exit early
+    if (request.toolNameSchemaMap.empty()) {
+        return;
+    }
+
     // Set tool guided generation config specific to Hermes3 and Qwen3 models
     ov::genai::StructuralTagsConfig structuralTagsConfig;
     static const std::string toolCallTrigger = "<tool_call>";
