@@ -25,10 +25,8 @@
 
 namespace ovms {
 
-struct RerankServable : SidepacketServable {
+struct RerankServable : SidepacketServable { 
     bool addBosToken = true;
-
-public:
     RerankServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
         SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {
         std::filesystem::path tokenizerConfigPath = (parsedModelsPath / "tokenizer_config.json");
@@ -50,9 +48,6 @@ public:
             SPDLOG_DEBUG("Rerank model add_bos_token set to false");
             addBosToken = false;
         }
-    }
-    bool getAddBosToken() const {
-        return addBosToken;
     }
 };
 
