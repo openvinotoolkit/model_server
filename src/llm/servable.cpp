@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
@@ -37,8 +39,7 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    std::string requestBody = getBodyWithDecodedContent(payload);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", requestBody);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", getBodyString(payload));
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
@@ -161,7 +162,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     std::stringstream ss;
     executionContext->textStreamer->write(generationOutput.generated_ids);
-    ss << executionContext->lastStreamerCallbackOutput;
+    ss << " 0 " << executionContext->lastStreamerCallbackOutput;
     // OpenVINO GenAI TextStreamer dose not trigger callback if text is empty: https://github.com/openvinotoolkit/openvino.genai/blob/434c2a9494fb1ee83ca7a36fe8315cfc2691c232/src/cpp/src/text_streamer.cpp#L102-L108
     // Reset lastStreamerCallbackOutput as "" to avoid repeated sending previous text if lastStreamerCallbackOutput not updated by callback
     executionContext->lastStreamerCallbackOutput = "";
@@ -170,9 +171,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
-            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+            std::string serializedChunk = " 1 " + executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
             if (!serializedChunk.empty()) {
-                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+                executionContext->response = " 2 " + wrapTextInServerSideEventMessage(serializedChunk);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
             }
         }
@@ -208,25 +209,17 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     ss << "data: " << text << "\n\n";
     return ss.str();
 }
-std::string getBodyWithDecodedContent(const ovms::HttpPayload& payload) {
-    auto json = payload.parsedJson;
-    std::string requestContent;
-    if (json->HasMember("messages") && (*json)["messages"].IsArray() && !(*json)["messages"].Empty()) {
-        const auto& message = (*json)["messages"][0];
-        if (message.HasMember("content") && message["content"].IsString()) {
-            requestContent = message["content"].GetString();
-        }
+std::string getBodyString(const ovms::HttpPayload& payload) {
+    if (spdlog::default_logger_raw()->level() == spdlog::level::debug) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Body string");
+        auto& json = payload.parsedJson;
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        json->Accept(writer);
+        return buffer.GetString();
     }
-    std::string requestBody = payload.body;
-    std::string contentKey = "\"content\":";
-    auto contentIdx = requestBody.find(contentKey);
-    if (contentIdx != std::string::npos) {
-        requestBody = requestBody.substr(0, contentIdx);
-        requestBody += contentKey;
-        requestBody += requestContent.empty() ? "null" : requestContent;
-        requestBody += payload.body.substr(contentIdx + contentKey.length() + requestContent.length() * 2 + 1);
-    }
-    return requestBody;
+    
+    return payload.body;
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)
