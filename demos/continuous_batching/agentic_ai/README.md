@@ -409,7 +409,7 @@ Run the agentic application:
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream --enable-thinking
 ```
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all

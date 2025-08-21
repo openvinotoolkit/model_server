@@ -87,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("--stream", action="store_true", help="Stream output from the agent")
     parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
     parser.add_argument("--tool-choice", type=str, default="auto", choices=["auto", "required"], help="Tool choice for the agent")
+    parser.add_argument("--enable-thinking", action="store_true", help="Enable agent thinking (default: False)")
     args = parser.parse_args()
     mcp_servers = []
     if args.mcp_server in ["all", "weather"]:
@@ -122,7 +123,7 @@ if __name__ == "__main__":
     agent = Agent(
         name="Assistant",
         mcp_servers=mcp_servers,
-        model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": False}}),
+        model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
     loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
