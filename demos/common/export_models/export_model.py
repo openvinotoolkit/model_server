@@ -142,6 +142,8 @@ node {
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
       {%- if pooling %}
       pooling: {{pooling}},{% endif %}
+      {%- if truncate %}
+      truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -523,10 +525,6 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
-        if truncate:
-            max_context_length = get_models_max_context(destination_path, 'config.json')
-            if max_context_length is not None:
-                set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
         if (os.system(convert_tokenizer_command)):

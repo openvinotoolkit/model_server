@@ -1686,13 +1686,15 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
         (char*)"GPU",
         (char*)"--normalize",
         (char*)"false",
+        (char*)"--truncate",
+        (char*)"true",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
         (char*)servingName.c_str(),
     };
 
-    int arg_count = 18;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1703,6 +1705,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
@@ -1728,6 +1731,8 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)"GPU",
         (char*)"--normalize",
         (char*)"false",
+        (char*)"--truncate",
+        (char*)"true",
         (char*)"--num_streams",
         (char*)"2",
         (char*)"--model_name",
@@ -1736,7 +1741,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
         (char*)"8080",
     };
 
-    int arg_count = 19;
+    int arg_count = 21;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1747,6 +1752,7 @@ TEST(OvmsGraphConfigTest, positiveAllChangedEmbeddingsStart) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "false");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "true");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "LAST");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 2);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "GPU");
@@ -1779,6 +1785,7 @@ TEST(OvmsGraphConfigTest, positiveDefaultEmbeddings) {
     ASSERT_EQ(hfSettings.task, ovms::EMBEDDINGS_GRAPH);
     ovms::EmbeddingsGraphSettingsImpl embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_EQ(embeddingsGraphSettings.normalize, "true");
+    ASSERT_EQ(embeddingsGraphSettings.truncate, "false");
     ASSERT_EQ(embeddingsGraphSettings.pooling, "CLS");
     ASSERT_EQ(embeddingsGraphSettings.numStreams, 1);
     ASSERT_EQ(embeddingsGraphSettings.targetDevice, "CPU");
