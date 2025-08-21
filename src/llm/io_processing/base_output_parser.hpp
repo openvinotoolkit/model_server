@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <unordered_set>
 #include <string>
 #include <optional>
 #include <vector>
@@ -83,6 +84,8 @@ public:
     // This method is used in streaming mode to determine if the parser should start processing the content.
     // If empty string is returned, it means that the parser will never start processing the content.
     virtual const std::string& getParsingStartTag() const = 0;
+
+    virtual const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should stop processing the content.

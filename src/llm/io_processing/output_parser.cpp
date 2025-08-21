@@ -76,6 +76,15 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     return parsedOutput;
 }
 
+static bool isAnyBeginningOnlyParsingStartTagPartOfNewChunk(const std::string& chunk, const std::unordered_set<std::string>& beginningOnlyParsingTags) {
+    for (const auto& tag : beginningOnlyParsingTags) {
+        if (chunk.find(tag) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable) {
     // Using appropriate parser based on the current processing phase
     // Call to this method should always return either result from parser parseChunk implementation or common parseContentChunk method.
@@ -91,7 +100,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         if (reasoningParserExistsAndSupportsStreaming && chunkResponse.find(reasoningParser->getParsingStartTag()) != std::string::npos) {
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse);
-        } else if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+        } else if (applyToolParser && (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos || isAnyBeginningOnlyParsingStartTagPartOfNewChunk(chunkResponse, toolParser->getBeginningOnlyParsingTags()))) {
             processingPhase = TOOL_CALLS;
             return toolParser->parseChunk(chunkResponse);
         } else {

@@ -58,6 +58,10 @@ public:
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
+    const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const override {
+        static const std::unordered_set<std::string> beginningOnlyTags = {};
+        return beginningOnlyTags;
+    }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;

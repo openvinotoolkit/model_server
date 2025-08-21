@@ -45,6 +45,10 @@ public:
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
+    const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const override {
+        static const std::unordered_set<std::string> beginningOnlyTags = {};
+        return beginningOnlyTags;
+    }
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;
     }
