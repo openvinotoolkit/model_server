@@ -137,7 +137,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("optimum-cli executable is not present. Please install python and demos/common/export_models/requirements.txt");
+        SPDLOG_ERROR("To download model {} you need the optimum-cli executable, which is not present. Please install python and demos/common/export_models/requirements.txt", this->hfSettings.sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
