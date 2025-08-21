@@ -75,7 +75,7 @@ curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8B/chat_template.jinja https:/
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```console
-python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser mistral --cache_size 2
+python export_model.py text_generation --source_model mistralai/Mistral-7B-Instruct-v0.3 --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser mistral --cache_size 2 --extra_quantization_params "--task text-generation-with-past"
 curl -L -o models/mistralai/Mistral-7B-Instruct-v0.3/chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral.jinja
 ```
 :::
