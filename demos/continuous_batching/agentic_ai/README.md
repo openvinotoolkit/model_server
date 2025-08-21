@@ -23,9 +23,7 @@ Currently supported models:
 - NousResearch/Hermes-3-Llama-3.1-8B
 - microsoft/Phi-4-mini-instruct
 
-
-::::{tab-set}
-:::{tab-item} Export using python script
+### Export using python script
 
 Download export script, install its dependencies and create directory for the models:
 ```console
@@ -35,45 +33,87 @@ mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
 
-Note: The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" or "https://www.modelscope.cn/models" before running the export script to connect to the HF Hub.
+> **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" or "https://www.modelscope.cn/models" before running the export script to connect to the HF Hub.
 
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```console
-mkdir models
-# Qwen/Qwen3-8B
 python export_model.py text_generation --source_model Qwen/Qwen3-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
-# Qwen/Qwen3-4B
+```
+:::
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```console
 python export_model.py text_generation --source_model Qwen/Qwen3-4B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
-# meta-llama/Llama-3.1-8B-Instruct
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```console
 python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.1-8B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.1_json.jinja
-# meta-llama/Llama-3.2-3B-Instruct
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```console
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-3B-Instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser llama3 --cache_size 2
 curl -L -o models/meta-llama/Llama-3.2-3B-Instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_llama3.2_json.jinja
-# NousResearch/Hermes-3-Llama-3.1-8B
+```
+:::
+:::{tab-item} Hermes-3-Llama-3.1-8B
+:sync: Hermes-3-Llama-3.1-8B
+```console
 python export_model.py text_generation --source_model NousResearch/Hermes-3-Llama-3.1-8B --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser hermes3 --cache_size 2
 curl -L -o models/NousResearch/Hermes-3-Llama-3.1-8B/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_hermes.jinja
-# microsoft/Phi-4-mini-instruct 
+```
+:::
+:::{tab-item} Phi-4-mini-instruct 
+:sync: microsoft/Phi-4-mini-instruct 
+```console
 python export_model.py text_generation --source_model microsoft/Phi-4-mini-instruct --weight-format int4 --config_file_path models/config.json --model_repository_path models --tool_parser phi4 --cache_size 2
 curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
-:::{tab-item} Direct pulling from HuggingFace from docker containers
+::::
+
+### Direct pulling from HuggingFace from docker containers
+
+This procedure can be used to pull preconfigured models from OpenVINO organization in HuggingFace Hub
+::::{tab-set}
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
 ```bash
-# OpenVINO/Qwen3-8B-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-# OpenVINO/Phi-4-mini-instruct-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
-:::{tab-item} Direct pulling from HuggingFace on Windows
+::::
+
+
+### Direct pulling from HuggingFace on Windows
+
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+::::{tab-set}
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
 ```bat
-# OpenVINO/Qwen3-8B-int4-ov
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-# OpenVINO/Phi-4-mini-instruct-int4-ov
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation
+ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation --tool_parser hermes3
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bash
+ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
 curl -L -o models\microsoft\Phi-4-mini-instruct\template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
@@ -89,98 +129,197 @@ You can use similar commands for different models. Change the source_model and t
 
 Select deployment option depending on how you prepared models in the previous step.
 
-::::{tab-set}
-:::{tab-item} Deploying on Windows with GPU
+
+### Deploying on Windows with GPU
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
-Run one of the commands below:
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```bat
 ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-8B --model_name Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-4B --model_name Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.1-8B-Instruct --model_name meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-3B-Instruct --model_name meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/microsoft/Phi-4-mini-instruct --model_name microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/OpenVINO/Qwen3-8B-int4-ov --model_name OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-
-ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-ov --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
-
 ```
 :::
-:::{tab-item} Deploying in a docker container on CPU
-Run one of the commands:
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```bat
+ovms.exe --rest_port 8000 --model_path models/Qwen/Qwen3-4B --model_name Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```bat
+ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.1-8B-Instruct --model_name meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```bat
+ovms.exe --rest_port 8000 --model_path models/meta-llama/Llama-3.2-3B-Instruct --model_name meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bat
+ovms.exe --rest_port 8000 --model_path models/microsoft/Phi-4-mini-instruct --model_name microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
+```bat
+ovms.exe --rest_port 8000 --model_path models/OpenVINO/Qwen3-8B-int4-ov --model_name OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bat
+ovms.exe --rest_port 8000 --model_path models/OpenVINO/Phi-4-mini-instruct-int4-ov --model_name OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
+```
+:::
+::::
+
+
+### Deploying in a docker container on CPU
+
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --cache_size 2 --task text_generation
-
-docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
---rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation
-
 ```
 :::
-:::{tab-item} Deploying in a docker container on GPU
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-4B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Qwen3-4B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Qwen3-4B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Hermes-3-Llama-3.1-8B
+:sync: Hermes-3-Llama-3.1-8B
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser hermes3 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --cache_size 2 --task text_generation
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bash
+docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
+--rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --cache_size 2 --task text_generation
+```
+:::
+::::
+
+
+### Deploying in a docker container on GPU
+
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```bash
-# Qwen/Qwen3-8B
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-# Qwen/Qwen3-4B
+```
+:::
+::::{tab-set}
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-# meta-llama/Llama-3.1-8B-Instruct
+```
+:::
+::::{tab-set}
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-# meta-llama/Llama-3.2-3B-Instruct
+```
+:::
+::::{tab-set}
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-# NousResearch/Hermes-3-Llama-3.1-8B
+```
+:::
+::::{tab-set}
+:::{tab-item} Hermes-3-Llama-3.1-8B
+:sync: Hermes-3-Llama-3.1-8B
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
-# microsoft/Phi-4-mini-instruct
+```
+:::
+::::{tab-set}
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/models--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
-# OpenVINO/Qwen3-8B-int4-ov
+```
+:::
+::::{tab-set}
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
-# OpenVINO/Phi-4-mini-instruct-int4-ov
+```
+:::
+::::{tab-set}
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) openvino/model_server:latest-gpu \
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-:::{tab-item} Deploy all models in a single container
+::::
+
+### Deploy all models in a single container
 Those steps deploy all the models exported earlier. The python script added the models to `models/config.json` so just the remaining models pulled directly from HuggingFace Hub are to be added:
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config /models --model_name OpenVINO/Phi-4-mini-instruct-int4-ov  --model_path OpenVINO/Phi-4-mini-instruct-int4-ov 
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro openvino/model_server:latest --rest_port 8000 --config_path /models/config.json
 ```
-:::
-::::
 
 
 ## Start MCP server with SSE interface
@@ -209,42 +348,52 @@ Run the agentic application:
 
 
 ::::{tab-set}
-:::{tab-item} Qwen3
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
+```
+```bash
+python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
+```
+:::
+:::{tab-item} Qwen3-4B 
+:sync: Qwen3-4B
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
 ```
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
-:::{tab-item} Hermes
-```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
-```
-```bash
-python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
-```
-:::
-:::{tab-item} Llama3.1
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.1-8B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
-:::{tab-item} Llama3.2
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
-:::{tab-item} Phi4
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
 ```console
 python openai_agent.py --query "What is the current weather in Tokyo?" --model microsoft/Phi-4-mini-instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
-:::{tab-item} OpenVINO
+:::{tab-item} Qwen3-8B-int4-ov
+:sync: Qwen3-8B-int4-ov
 ```bash
 python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Qwen3-8B-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
-
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+```
+:::
+:::{tab-item} Phi-4-mini-instruct-int4-ov
+:sync: Phi-4-mini-instruct-int4-ov
+```bash
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool_choice required
 ```
 :::
 ::::
