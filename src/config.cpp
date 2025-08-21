@@ -174,6 +174,11 @@ bool Config::validate() {
                 std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
         }
         // No more validation needed
         if (this->serverSettings.serverMode == HF_PULL_MODE) {

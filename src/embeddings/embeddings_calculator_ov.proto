@@ -34,4 +34,5 @@ message EmbeddingsCalculatorOVOptions {
       LAST = 1;
     }
     optional Pooling pooling = 5 [default = CLS];
+    optional bool truncate = 6 [default = false];
 }
