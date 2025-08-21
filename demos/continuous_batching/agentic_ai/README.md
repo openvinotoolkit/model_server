@@ -247,6 +247,7 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 In case you want to use GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)`
 to `docker run` command, use the image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
 It can be applied using the commands below:
+
 ::::{tab-set}
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
@@ -255,7 +256,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-8B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Qwen3-4B
 :sync: Qwen3-4B
 ```bash
@@ -263,7 +263,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model Qwen/Qwen3-4B --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Llama-3.1-8B-Instruct
 :sync: Llama-3.1-8B-Instruct
 ```bash
@@ -271,7 +270,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bash
@@ -279,7 +277,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Hermes-3-Llama-3.1-8B
 :sync: Hermes-3-Llama-3.1-8B
 ```bash
@@ -287,7 +284,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model NousResearch/Hermes-3-Llama-3.1-8B --tool_parser llama3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Phi-4-mini-instruct
 :sync: Phi-4-mini-instruct
 ```bash
@@ -295,7 +291,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000  -v $(pwd)/models:/mode
 --rest_port 8000 --model_repository_path models --source_model microsoft/Phi-4-mini-instruct --tool_parser phi4 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Qwen3-8B-int4-ov
 :sync: Qwen3-8B-int4-ov
 ```bash
@@ -303,7 +298,6 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 --rest_port 8000 --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --tool_parser hermes3 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
-::::{tab-set}
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
