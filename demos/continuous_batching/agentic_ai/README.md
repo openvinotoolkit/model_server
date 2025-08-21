@@ -25,8 +25,10 @@ Currently supported models:
 
 ### Export using python script
 
-Download export script, install its dependencies and create directory for the models:
+Use those steps to convert the model from HugginFace Hub to OpenVINO format and export it to a local storage.
+
 ```console
+# Download export script, install its dependencies and create directory for the models
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
@@ -78,7 +80,7 @@ curl -L -o models/microsoft/Phi-4-mini-instruct/template.jinja https://raw.githu
 :::
 ::::
 
-### Direct pulling from HuggingFace from docker containers
+### Direct pulling of pre-configured HuggingFace models from docker containers
 
 This procedure can be used to pull preconfigured models from OpenVINO organization in HuggingFace Hub
 ::::{tab-set}
@@ -98,7 +100,7 @@ curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/template.jinja https://ra
 ::::
 
 
-### Direct pulling from HuggingFace on Windows
+### Direct pulling of pre-configured HuggingFace models on Windows
 
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
 as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
@@ -121,13 +123,14 @@ curl -L -o models\microsoft\Phi-4-mini-instruct\template.jinja https://raw.githu
 
 You can use similar commands for different models. Change the source_model and the weights-format. 
 > **Note:** Some models give more reliable responses with tuned chat template.
-> **Note:** Currently are supported model with tools call format compatible with phi4, llama3 and hermes3.
+
+> **Note:** Currently are supported models with tools call format compatible with phi4, llama3 and hermes3.
 
 
 
 ## Start OVMS
 
-Select deployment option depending on how you prepared models in the previous step.
+This deployment procedure assumes the model was pulled or exported using the procedure above. The exception are models from OpenVINO organization if they support tools correctly with the default template like "OpenVINO/Qwen3-8B-int4-ov" - they can be deployed in a single command pulling and staring the server.
 
 
 ### Deploying on Windows with GPU
