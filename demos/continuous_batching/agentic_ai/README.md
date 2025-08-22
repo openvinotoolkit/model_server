@@ -146,7 +146,7 @@ curl -L -o models\microsoft\Phi-4-mini-instruct\chat_template.jinja https://raw.
 You can use similar commands for different models. Change the source_model and the weights-format. 
 > **Note:** Some models give more reliable responses with tuned chat template.
 
-> **Note:** Currently are supported models with tools call format compatible with phi4, llama3, mistral and hermes3.
+> **Note:** Currently models with tool calls format compatible with Phi4, Llama3, Mistral or Hermes3 are supported.
 
 
 
