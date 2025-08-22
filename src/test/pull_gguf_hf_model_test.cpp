@@ -150,8 +150,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelTests,
     GGUFDownloaderPullHfModelParameterized,
-    ::testing::ValuesIn(ggufParams),
-    nullptr);
+    ::testing::ValuesIn(ggufParams));
 #endif
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
