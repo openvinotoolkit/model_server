@@ -112,7 +112,7 @@ void Llama3ToolParser::next() {
     argumentsDelayWindow[1].clear();
 }
 
-std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
+std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     // todo: sometimes there is 'parameters' and sometimes there is 'arguments', however, 'parameters' more often
 
     SPDLOG_INFO("Hello: [{}]", chunk);
@@ -132,6 +132,9 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     if (toolCallIndex < 0) {
         this->next();
     }
+
+    // <|python_tag|>{   }  ;   {    }
+    // <tool_call> </tool_call><tool_call> </tool_call><tool_call> </tool_call><tool_call> </tool_call><tool_call> </tool_call>
 
     bool end=false;
 
@@ -163,7 +166,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             argumentsDelayWindow[0] = argumentsDelayWindow[1];
         }
 
-        if (static_cast<int>(fr) == 1) {
+        if (static_cast<int>(finishReason) == 1) {
             end=true;
             size_t lastClosingBrace = modifiedChunk.find_last_of('}');
             if (lastClosingBrace != std::string::npos) {

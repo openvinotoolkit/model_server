@@ -46,7 +46,7 @@ void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     }
 }
 
-std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
+std::optional<rapidjson::Document> Qwen3ReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ReasoningParser");
         return std::nullopt;

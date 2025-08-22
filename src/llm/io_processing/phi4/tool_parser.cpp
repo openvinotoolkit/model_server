@@ -80,7 +80,7 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
     }
 }
 
-std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
+std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     // Not implemented
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Phi4OutputParser::parseChunk is not implemented");
     return std::nullopt;

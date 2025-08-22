@@ -91,7 +91,7 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
-std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason fr) {
+std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Start and end tags in this phase modify state of the processing, but do not return any message.
     Otherwise we collect data until we have full function name - that's when we return the first delta.

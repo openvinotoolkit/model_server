@@ -76,16 +76,20 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     return parsedOutput;
 }
 
-static bool isAnyBeginningOnlyParsingStartTagPartOfNewChunk(const std::string& chunk, const std::unordered_set<std::string>& beginningOnlyParsingTags) {
+static inline bool isParsingTagPartOfChunk(const std::string& chunk, const std::string& parsingTag) {
+    return chunk.find(parsingTag) != std::string::npos;
+}
+
+static inline bool isAnyOfBeginningOnlyParsingTagPartOfChunk(const std::string& chunk, const std::unordered_set<std::string>& beginningOnlyParsingTags) {
     for (const auto& tag : beginningOnlyParsingTags) {
-        if (chunk.find(tag) != std::string::npos) {
+        if (isParsingTagPartOfChunk(chunk, tag)) {
             return true;
         }
     }
     return false;
 }
 
-std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason fr) {
+std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
     // Using appropriate parser based on the current processing phase
     // Call to this method should always return either result from parser parseChunk implementation or common parseContentChunk method.
     // If for any processing phase a nullopt should be returned, it should be done in the parser implementation.
@@ -97,34 +101,34 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
 
     if (processingPhase == UNKNOWN) {
         // If we are in the UNKNOWN phase, we need to determine if we should switch to CONTENT, REASONING, or TOOL_CALLS phase.
-        if (reasoningParserExistsAndSupportsStreaming && chunkResponse.find(reasoningParser->getParsingStartTag()) != std::string::npos) {
+        if (reasoningParserExistsAndSupportsStreaming && isParsingTagPartOfChunk(chunkResponse, reasoningParser->getParsingStartTag())) {
             processingPhase = REASONING;
-            return reasoningParser->parseChunk(chunkResponse, fr);
-        } else if (applyToolParser && (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos || isAnyBeginningOnlyParsingStartTagPartOfNewChunk(chunkResponse, toolParser->getBeginningOnlyParsingTags()))) {
+            return reasoningParser->parseChunk(chunkResponse, finishReason);
+        } else if (applyToolParser && (isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag()) || isAnyOfBeginningOnlyParsingTagPartOfChunk(chunkResponse, toolParser->getBeginningOnlyParsingTags()))) {
             processingPhase = TOOL_CALLS;
-            return toolParser->parseChunk(chunkResponse, fr);
+            return toolParser->parseChunk(chunkResponse, finishReason);
         } else {
             processingPhase = CONTENT;
             return parseContentChunk(chunkResponse);
         }
     } else if (processingPhase == REASONING) {
         // If we are in the REASONING phase, we check if parsing end tag is found and if so, switch to UNKNOWN phase.
-        if (chunkResponse.find(reasoningParser->getParsingEndTag()) != std::string::npos) {
+        if (isParsingTagPartOfChunk(chunkResponse, reasoningParser->getParsingEndTag())) {
             processingPhase = UNKNOWN;  // Switch back to UNKNOWN phase (we can have either CONTENT or TOOL_CALLS next)
         }
-        return reasoningParser->parseChunk(chunkResponse, fr);
+        return reasoningParser->parseChunk(chunkResponse, finishReason);
     } else if (processingPhase == CONTENT) {
         // If we are in the CONTENT phase, we check if tool parser start tag is found and if so, switch to TOOL_CALLS phase.
         // TOOL_CALLS is the only phase that can be processed after CONTENT.
-        if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+        if (applyToolParser && isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag())) {
             processingPhase = TOOL_CALLS;
-            return toolParser->parseChunk(chunkResponse, fr);
+            return toolParser->parseChunk(chunkResponse, finishReason);
         } else {
             return parseContentChunk(chunkResponse);
         }
     } else if (processingPhase == TOOL_CALLS) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
-        return toolParser->parseChunk(chunkResponse, fr);
+        return toolParser->parseChunk(chunkResponse, finishReason);
     } else {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Unexpected processing phase: {}", static_cast<int>(processingPhase));
         throw std::runtime_error("Unexpected error during stream output parsing");
