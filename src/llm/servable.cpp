@@ -162,7 +162,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     std::stringstream ss;
     executionContext->textStreamer->write(generationOutput.generated_ids);
-    ss << " 0 " << executionContext->lastStreamerCallbackOutput;
+    ss << executionContext->lastStreamerCallbackOutput;
     // OpenVINO GenAI TextStreamer dose not trigger callback if text is empty: https://github.com/openvinotoolkit/openvino.genai/blob/434c2a9494fb1ee83ca7a36fe8315cfc2691c232/src/cpp/src/text_streamer.cpp#L102-L108
     // Reset lastStreamerCallbackOutput as "" to avoid repeated sending previous text if lastStreamerCallbackOutput not updated by callback
     executionContext->lastStreamerCallbackOutput = "";
@@ -171,9 +171,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
-            std::string serializedChunk = " 1 " + executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
             if (!serializedChunk.empty()) {
-                executionContext->response = " 2 " + wrapTextInServerSideEventMessage(serializedChunk);
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
             }
         }
