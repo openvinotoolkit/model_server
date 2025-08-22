@@ -414,18 +414,6 @@ Check [documents reranking end to end demo](../demos/rerank/README.md).
 ### List models
 
 ::::{tab-set}
-:::{tab-item} python [Cohere] 
-:sync: python-cohere
-```python
-from openai import OpenAI
-client = OpenAI()
-
-print(client.models.list())
-```
-
-### List models
-
-::::{tab-set}
 :::{tab-item} python [OpenAI] 
 :sync: python-openai
 ```python
