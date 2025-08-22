@@ -16,8 +16,9 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
-#include <string>
 #include <optional>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 #pragma warning(push)

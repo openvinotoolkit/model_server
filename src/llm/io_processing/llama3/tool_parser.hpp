@@ -16,8 +16,9 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
-#include <string>
 #include <optional>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 #pragma warning(push)
@@ -50,7 +51,7 @@ protected:
     // With support for more models this could be moved to the base class.
     std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
 
-    void next();
+    void startNextToolCall();
 
 public:
     Llama3ToolParser() = delete;

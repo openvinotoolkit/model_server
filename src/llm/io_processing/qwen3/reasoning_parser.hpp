@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #pragma warning(push)

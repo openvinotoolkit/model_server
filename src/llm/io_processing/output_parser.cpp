@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <unordered_set>
 
 #include "../../logging.hpp"
 #include "output_parser.hpp"
