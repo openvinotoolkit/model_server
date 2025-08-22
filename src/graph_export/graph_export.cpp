@@ -58,6 +58,12 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
         modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
+#if _WIN32
+        // since windows path are incorreclty parsed by graph parser we need to replace \ with /
+        if (FileSystem::getOsSeparator() != "/") {
+            std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
+        }
+#endif
     } else {
         modelsPath = modelPath;
     }
