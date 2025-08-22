@@ -99,25 +99,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->schedulerConfig.use_cache_eviction = false;
     }
 
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SchedulerConfig: max_num_batched_tokens={}, cache_size={}, dynamic_split_fuse={}, max_num_seqs={}, enable_prefix_caching={}",
-        properties->schedulerConfig.max_num_batched_tokens,
-        properties->schedulerConfig.cache_size,
-        properties->schedulerConfig.dynamic_split_fuse,
-        properties->schedulerConfig.max_num_seqs,
-        properties->schedulerConfig.enable_prefix_caching);
-
-    if (properties->schedulerConfig.use_cache_eviction) {
-        const auto& cacheEvictionConfig = properties->schedulerConfig.cache_eviction_config;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "CacheEvictionConfig: start_size={}, recent_size={}, max_cache_size={}, aggregation_mode={}, apply_rotation={}",
-            cacheEvictionConfig.get_start_size(),
-            cacheEvictionConfig.get_recent_size(),
-            cacheEvictionConfig.get_max_cache_size(),
-            static_cast<int>(cacheEvictionConfig.aggregation_mode),
-            cacheEvictionConfig.apply_rotation);
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "CacheEvictionConfig is not used");
-    }
-
     properties->device = nodeOptions.device();
 
     if (!nodeOptions.draft_models_path().empty()) {
