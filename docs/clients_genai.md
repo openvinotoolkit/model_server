@@ -363,6 +363,45 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
 Check [image generation end to end demo](../demos/image_generation/README.md).
 
+### List models
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.list())
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models
+```
+:::
+::::
+
+### Retrieve model
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.retrieve("Qwen/Qwen3-Embedding-0.6B"))
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models/Qwen/Qwen3-Embedding-0.6B
+```
+:::
+::::
 
 ## Cohere Python Client
 
@@ -410,43 +449,3 @@ curl http://localhost:8000/v3/rerank \
 :::
 ::::
 Check [documents reranking end to end demo](../demos/rerank/README.md).
-
-### List models
-
-::::{tab-set}
-:::{tab-item} python [OpenAI] 
-:sync: python-openai
-```python
-from openai import OpenAI
-client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
-
-print(client.models.list())
-```
-:::
-:::{tab-item} curl
-:sync: curl
-```text
-curl http://localhost:8000/v3/models
-```
-:::
-::::
-
-### Retrieve model
-
-::::{tab-set}
-:::{tab-item} python [OpenAI] 
-:sync: python-openai
-```python
-from openai import OpenAI
-client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
-
-print(client.models.retrieve("Qwen/Qwen3-Embedding-0.6B"))
-```
-:::
-:::{tab-item} curl
-:sync: curl
-```text
-curl http://localhost:8000/v3/models/Qwen/Qwen3-Embedding-0.6B
-```
-:::
-::::
