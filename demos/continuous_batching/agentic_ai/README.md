@@ -235,14 +235,14 @@ docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/model
 ```
 :::
 :::{tab-item} Llama-3.1-8B-Instruct
-:sync: Qwen3-4B
+:sync: Llama-3.1-8B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.1-8B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
-:sync: Qwen3-4B
+:sync: Llama-3.2-3B-Instruct
 ```bash
 docker run -d --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest \
 --rest_port 8000 --model_repository_path models --source_model meta-llama/Llama-3.2-3B-Instruct --tool_parser llama3 --cache_size 2 --task text_generation
