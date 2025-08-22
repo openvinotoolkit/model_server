@@ -147,6 +147,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    SPDLOG_TRACE("Generated pbtxt: {}", oss.str());
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
