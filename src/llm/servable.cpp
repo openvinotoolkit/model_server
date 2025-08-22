@@ -17,14 +17,14 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <rapidjson/document.h>
-#include <rapidjson/prettywriter.h>
 
 #pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -202,7 +202,6 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
 #pragma warning(push)
 #pragma warning(disable : 4505)
-#pragma warning(disable : 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function";
 std::string wrapTextInServerSideEventMessage(const std::string& text) {
