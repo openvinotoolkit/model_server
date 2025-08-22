@@ -112,7 +112,7 @@ Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorill
 ```bash
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
-git checkout ac37049f00022af54cc44b6aa0cad4402c22d1a0
+git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64
 curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
 pip install -e . 
 ```
