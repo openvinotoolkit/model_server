@@ -43,7 +43,8 @@ protected:
     // Streaming required members
     rapidjson::Document lastJson;
     PartialJsonBuilder jsonBuilder;
-    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    int toolCallIndex = -1;
     // Storing last two chunks of arguments to return delta with delay.
     // We do this to properly close arguments when tool call end tag is received.
     // With support for more models this could be moved to the base class.

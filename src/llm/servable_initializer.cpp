@@ -137,13 +137,16 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             tool_template = None
 
             # Try to read template from template.jinja file
-            jinja_file = Path(templates_directory + "/template.jinja")
+            jinja_file = Path(templates_directory + "/chat_template.jinja")
+            jinja_file_legacy = Path(templates_directory + "/template.jinja")
             template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             if jinja_file.is_file():
+                template = jinja_env.get_template("chat_template.jinja")
+            elif jinja_file_legacy.is_file():
                 template = jinja_env.get_template("template.jinja")
 
             # Try to read data from tokenizer_config.json

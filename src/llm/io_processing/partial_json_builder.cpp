@@ -207,12 +207,15 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         }
     }
 
+    Document doc;
     if (state == IteratorState::END && openCloseStack.empty()) {
-        Document doc;
         doc.Parse(buffer.c_str());
         if (doc.HasParseError()) {
             throw std::runtime_error("Invalid JSON. Content:\n" + buffer);
         }
+        return doc;
+    } else if (state == IteratorState::BEGIN) {
+        doc.SetObject();
         return doc;
     }
 
@@ -250,7 +253,6 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         }
     }
 
-    Document doc;
     if (closedInput.empty()) {
         doc.SetObject();
         return doc;

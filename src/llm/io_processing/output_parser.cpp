@@ -61,10 +61,38 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     }
 }
 
+bool OutputParser::isToolParserAvailable() const {
+    return toolParser != nullptr;
+}
+
+bool OutputParser::isReasoningParserAvailable() const {
+    return reasoningParser != nullptr;
+}
+
+void OutputParser::enableImmediateToolParsing() {
+    if (toolParser) {
+        toolParser->enableImmediateParsing();
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool parser is not available, cannot enable zero trigger tool parsing");
+    }
+}
+
+std::string OutputParser::getToolParserStartTag() const {
+    if (toolParser) {
+        return toolParser->getParsingStartTag();
+    } else {
+        throw std::runtime_error("Tool parser is not available, cannot get start tag");
+    }
+}
+
 ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
+
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
+    }
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {
@@ -105,9 +133,20 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         if (reasoningParserExistsAndSupportsStreaming && isParsingTagPartOfChunk(chunkResponse, reasoningParser->getParsingStartTag())) {
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse, finishReason);
-        } else if (applyToolParser && (isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag()) || isAnyOfBeginningOnlyParsingTagPartOfChunk(chunkResponse, toolParser->getBeginningOnlyParsingTags()))) {
-            processingPhase = TOOL_CALLS;
-            return toolParser->parseChunk(chunkResponse, finishReason);
+        } else if (applyToolParser) {
+            if (isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag()) || isAnyOfBeginningOnlyParsingTagPartOfChunk(chunkResponse, toolParser->getBeginningOnlyParsingTags())) {
+                processingPhase = TOOL_CALLS;
+                return toolParser->parseChunk(chunkResponse, finishReason);
+            } else if (toolParser->isImmediateParsingEnabled()) {
+                // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt, but for the unified parsing logic,
+                // we still parse it to put parser in a proper state.
+                processingPhase = TOOL_CALLS;
+                toolParser->parseChunk(toolParser->getParsingStartTag(), finishReason);
+                return toolParser->parseChunk(chunkResponse, finishReason);
+            } else {
+                processingPhase = CONTENT;
+                return parseContentChunk(chunkResponse);
+            }
         } else {
             processingPhase = CONTENT;
             return parseContentChunk(chunkResponse);
