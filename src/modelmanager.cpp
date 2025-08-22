@@ -957,7 +957,7 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
 
         if (mediapipeItr == subconfigJson.MemberEnd() || !mediapipeItr->value.IsArray()) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have models property.");
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
             return StatusCode::JSON_INVALID;
         }
         std::string subconfigRootDirectoryPath;
@@ -981,7 +981,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     const auto itr = configJson.FindMember("model_config_list");
 
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have models property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
     std::set<std::string> modelsInConfigFile;
