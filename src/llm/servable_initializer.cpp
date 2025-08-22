@@ -128,8 +128,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             if (tokens.second.has_value()) {
                 tokenizerEosToken = tokens.second.value();
             }
-            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{}",
-                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel);
+            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
+                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel, tokenizerTemplate);
         }
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
@@ -231,6 +231,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 template = jinja_env.get_template("chat_template.jinja")
             elif jinja_file_legacy.is_file():
                 template = jinja_env.get_template("template.jinja")
+                print("Took chat template from template.jinja file")
 
             # Try to read data from tokenizer_config.json
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
@@ -254,6 +255,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 if is_gguf_model and (chat_template == default_chat_template):
                     # in this case we want to get chat template from tokenizer passed to script
                     template = jinja_env.from_string(tokenizer_template)
+                    print("Took chat template from tokenizer in GGUF model")
                     bos_token = tokenizer_bos_token
                     eos_token = tokenizer_eos_token
                 else:
@@ -262,9 +264,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
-            print(f"Tokenizer bos_token: {tokenizer_bos_token}")
-            print(f"Tokenizer eos_token: {tokenizer_eos_token}")
-            #print(f"Tokenizer chat_template: \n{tokenizer_template}\n")
         )",
             py::globals(), locals);
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
