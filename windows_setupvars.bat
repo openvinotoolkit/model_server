@@ -42,7 +42,7 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call C:\opt\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
 %openvinoBatch%

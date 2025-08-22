@@ -451,9 +451,9 @@ IF /I EXIST %curl_lib% (
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
 set "opencv_ver=4.12.0"
-set "opencv_dir=%opt_install_dir%\opencv_git"
-set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git"
-set "opencv_install=%opt_install_dir%\opencv"
+set "opencv_dir=%opt_install_dir%\opencv_git_%opencv_ver%"
+set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git_%opencv_ver%"
+set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
 set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_PTHREADS_PF=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...
