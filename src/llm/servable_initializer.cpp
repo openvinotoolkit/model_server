@@ -130,6 +130,8 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             }
             SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{}",
                 tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel);
+            properties->tokenizer.set_bos_token(tokenizerBosToken);
+            properties->tokenizer.set_eos_token(tokenizerEosToken);
         }
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
