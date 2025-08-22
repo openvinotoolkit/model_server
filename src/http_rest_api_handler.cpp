@@ -589,15 +589,24 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     bool exist = false;
     auto it = models.find(name);
-    if (it != models.end())
-        exist = true;
+    if (it != models.end()){
+        if(it->second->getDefaultModelInstance()->getStatus().getState() == ModelVersionState::AVAILABLE){
+            exist = true;
+        }
+    }
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
-        exist = true;
+    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end()){
+        if(modelManager.getPipelineFactory().findDefinitionByName(name)->getStatus().isAvailable()){
+            exist = true;
+        }
+    }
 #if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
-        exist = true;
+    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end()){
+        if(modelManager.getMediapipeFactory().findDefinitionByName(name)->getStatus().isAvailable()){
+            exist = true;
+        }
+    }
 #endif
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -635,16 +644,22 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("data");
     writer.StartArray();
     for (auto const& model : models) {
-        parseModel(writer, model.first, timestamp);
+        if(model.second->getDefaultModelInstance()->getStatus().getState() == ModelVersionState::AVAILABLE){
+            parseModel(writer, model.first, timestamp);
+        }
     }
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
     for (auto const& pipelineName : pipelinesNames) {
-        parseModel(writer, pipelineName, timestamp);
+        if(modelManager.getPipelineFactory().findDefinitionByName(pipelineName)->getStatus().isAvailable()){
+            parseModel(writer, pipelineName, timestamp);
+        }
     }
 #if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
     for (auto const& graphName : mediapipes) {
-        parseModel(writer, graphName, timestamp);
+        if(modelManager.getMediapipeFactory().findDefinitionByName(graphName)->getStatus().isAvailable()){
+            parseModel(writer, graphName, timestamp);
+        }
     }
 #endif
     writer.EndArray();
