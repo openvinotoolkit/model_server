@@ -22,8 +22,6 @@ ovms_cc_library(
     srcs = ["graph_export.cpp"],
     hdrs = ["graph_export.hpp"],
     deps =  [
-        "@ovms//src/config_export_module:config_export_types",
-        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",
@@ -33,6 +31,7 @@ ovms_cc_library(
         "@ovms//src:libovmslocalfilesystem",
         "@com_github_tencent_rapidjson//:rapidjson",
         "@ovms//src:libovmsschema",
+        "@ovms//src:libovms_version",
     ] + select({
             "//:not_disable_mediapipe": [
                 "@mediapipe//mediapipe/framework/port:parse_text_proto",
@@ -49,8 +48,6 @@ ovms_cc_library(
     srcs = ["graph_cli_parser.cpp"],
     hdrs = ["graph_cli_parser.hpp"],
     deps =  [
-        "@ovms//src/graph_export:graph_export_types",
-        "@ovms//src/config_export_module:config_export_types",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
@@ -64,7 +61,6 @@ ovms_cc_library(
     srcs = ["rerank_graph_cli_parser.cpp"],
     hdrs = ["rerank_graph_cli_parser.hpp"],
     deps =  [
-        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
@@ -79,7 +75,6 @@ ovms_cc_library(
     srcs = ["image_generation_graph_cli_parser.cpp"],
     hdrs = ["image_generation_graph_cli_parser.hpp"],
     deps =  [
-        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
@@ -95,20 +90,11 @@ ovms_cc_library(
     srcs = ["embeddings_graph_cli_parser.cpp"],
     hdrs = ["embeddings_graph_cli_parser.hpp"],
     deps =  [
-        "@ovms//src/graph_export:graph_export_types",
         "@ovms//src/graph_export:graph_cli_parser",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovms_server_settings",
         "@ovms//src:ovms_exit_codes",
         "@com_github_jarro2783_cxxopts//:cxxopts",
     ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "graph_export_types",
-    srcs = ["graph_export_types.cpp"],
-    hdrs = ["graph_export_types.hpp"],
-    deps =  [],
     visibility = ["//visibility:public"],
 )

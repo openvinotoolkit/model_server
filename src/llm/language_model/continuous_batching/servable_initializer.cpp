@@ -78,8 +78,12 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
     }
 
-    if (nodeOptions.has_response_parser()) {
-        properties->responseParserName = nodeOptions.response_parser();
+    if (nodeOptions.has_tool_parser()) {
+        properties->toolParserName = nodeOptions.tool_parser();
+    }
+
+    if (nodeOptions.has_reasoning_parser()) {
+        properties->reasoningParserName = nodeOptions.reasoning_parser();
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -154,6 +158,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
+    properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();
+
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
 
     return StatusCode::OK;

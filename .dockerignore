@@ -4,3 +4,4 @@
 out
 demos/continuous_batching
 demos/embeddings
+demos/common/export_models/models
