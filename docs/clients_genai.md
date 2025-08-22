@@ -23,6 +23,8 @@ OpenAI compatible endpoints:
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
 - [images/edit](./model_server_rest_api_image_edit.md)
+- /models
+- /models/{model}
 
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
@@ -408,3 +410,55 @@ curl http://localhost:8000/v3/rerank \
 :::
 ::::
 Check [documents reranking end to end demo](../demos/rerank/README.md).
+
+### List models
+
+::::{tab-set}
+:::{tab-item} python [Cohere] 
+:sync: python-cohere
+```python
+from openai import OpenAI
+client = OpenAI()
+
+print(client.models.list())
+```
+
+### List models
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.list())
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models
+```
+:::
+::::
+
+### Retrieve model
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.retrieve("Qwen/Qwen3-Embedding-0.6B"))
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models/Qwen/Qwen3-Embedding-0.6B
+```
+:::
+::::
