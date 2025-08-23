@@ -550,8 +550,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::RerankCalculatorOVOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<SidepacketServable> servable = std::make_shared<SidepacketServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
-            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<SidepacketServable>>(nodeName, std::move(servable)));
+            std::shared_ptr<RerankServable> servable = std::make_shared<RerankServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(servable)));
             rerankServablesCleaningGuard.disableCleaning();
         }
     }

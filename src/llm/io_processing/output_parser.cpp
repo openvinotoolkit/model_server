@@ -19,6 +19,7 @@
 #include "llama3/tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"
+#include "mistral/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
 
 namespace ovms {
@@ -46,6 +47,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Hermes3ToolParser>(tokenizer);
     } else if (toolParserName == "phi4") {
         toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
+    } else if (toolParserName == "mistral") {
+        toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
@@ -57,10 +60,38 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     }
 }
 
+bool OutputParser::isToolParserAvailable() const {
+    return toolParser != nullptr;
+}
+
+bool OutputParser::isReasoningParserAvailable() const {
+    return reasoningParser != nullptr;
+}
+
+void OutputParser::enableImmediateToolParsing() {
+    if (toolParser) {
+        toolParser->enableImmediateParsing();
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool parser is not available, cannot enable zero trigger tool parsing");
+    }
+}
+
+std::string OutputParser::getToolParserStartTag() const {
+    if (toolParser) {
+        return toolParser->getParsingStartTag();
+    } else {
+        throw std::runtime_error("Tool parser is not available, cannot get start tag");
+    }
+}
+
 ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
+
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
+    }
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {
@@ -88,9 +119,20 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         if (reasoningParserExistsAndSupportsStreaming && chunkResponse.find(reasoningParser->getParsingStartTag()) != std::string::npos) {
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse);
-        } else if (applyToolParser && chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
-            processingPhase = TOOL_CALLS;
-            return toolParser->parseChunk(chunkResponse);
+        } else if (applyToolParser) {
+            if (chunkResponse.find(toolParser->getParsingStartTag()) != std::string::npos) {
+                processingPhase = TOOL_CALLS;
+                return toolParser->parseChunk(chunkResponse);
+            } else if (toolParser->isImmediateParsingEnabled()) {
+                // If zero trigger parsing is enabled, we assume the start tag has been injected to the prompt, but for the unified parsing logic,
+                // we still parse it to put parser in a proper state.
+                processingPhase = TOOL_CALLS;
+                toolParser->parseChunk(toolParser->getParsingStartTag());
+                return toolParser->parseChunk(chunkResponse);
+            } else {
+                processingPhase = CONTENT;
+                return parseContentChunk(chunkResponse);
+            }
         } else {
             processingPhase = CONTENT;
             return parseContentChunk(chunkResponse);

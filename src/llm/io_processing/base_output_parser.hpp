@@ -57,12 +57,20 @@ enum ProcessingPhase {
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
+    // Flag indicating whether parsing start tag has been injected into the prompt
+    // if true, parser should assume start tag already appeared and start parsing immediately
+    bool immediateParsingEnabled = false;
 
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
     virtual ~BaseOutputParser() = default;
+
+    // Calling this method should put parser into immediate parsing mode where it starts parsing immediately, without seeking the start tag.
+    void enableImmediateParsing();
+
+    bool isImmediateParsingEnabled() const;
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
@@ -73,6 +81,7 @@ public:
 
     // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
     // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
+    // Parser is also responsible for removing extracted part from the parsedOutput.content if necessary.
     virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) = 0;
 
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.

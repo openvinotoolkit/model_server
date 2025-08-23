@@ -46,6 +46,12 @@ public:
     OutputParser() = delete;
     explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName);
 
+    bool isToolParserAvailable() const;
+    bool isReasoningParserAvailable() const;
+
+    void enableImmediateToolParsing();
+    std::string getToolParserStartTag() const;
+
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
     ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 
