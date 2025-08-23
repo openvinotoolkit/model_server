@@ -24,12 +24,11 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "31b2c55dadcbfb1e4413eeb32c355c81e5bd436a", # master 2025-07-29
+        commit = "f30c773bdde482dfd3b4e75075f855cc050771d8", # releases/2025/3 2025-08-21
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
         patch_args = ["-p1"],
-        patches = ["cb.patch"],
     )
     # when using local repository manually run: git submodule update --recursive 
     #native.new_local_repository(
@@ -66,6 +65,9 @@ def _impl(repository_ctx):
         "WIN32": "True",
         "X86_64": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_SAMPLES": "OFF",
+        "ENABLE_TOOLS": "OFF",
+        "ENABLE_TESTS": "OFF",
         "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Windows we do not need to specify number of jobs, it's set to all available cores number
@@ -82,6 +84,9 @@ def _impl(repository_ctx):
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "ENABLE_SYSTEM_ICU": "True",
         "BUILD_TOKENIZERS": "OFF",
+        "ENABLE_SAMPLES": "OFF",
+        "ENABLE_TOOLS": "OFF",
+        "ENABLE_TESTS": "OFF",
         "ENABLE_XGRAMMAR": "ON",
         """
         jobs_param = "\"-j 8\"" # on Linux we need to specify jobs number, by default it's set to 1

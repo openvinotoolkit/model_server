@@ -129,7 +129,7 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
         return absl::InvalidArgumentError("Image downloading failed");
     } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     }
     return absl::OkStatus();
 }
@@ -284,8 +284,8 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
     if (tool_choice_it != doc.MemberEnd() && !tool_choice_it->value.IsNull()) {
         if (tool_choice_it->value.IsString()) {
             tool_choice = tool_choice_it->value.GetString();
-            if (tool_choice != "none" && tool_choice != "auto")
-                return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto'");
+            if (tool_choice != "none" && tool_choice != "auto" && tool_choice != "required")
+                return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
         } else if (tool_choice_it->value.IsObject()) {
             auto tool_choice_functionIt = tool_choice_it->value.GetObject().FindMember("function");
             if (tool_choice_functionIt != tool_choice_it->value.GetObject().MemberEnd() && tool_choice_functionIt->value.IsObject()) {
@@ -302,7 +302,6 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-
     bool jsonChanged = false;
     if (tool_choice == "none") {
         // remove tools from the request
@@ -324,7 +323,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                     std::string functionName = nameIt->value.GetString();
                     // If tool_choice is set to "auto", we keep all tools
                     // If tool_choice is set to a specific function name, we keep only that tool
-                    if (tool_choice != "auto" && tool_choice != functionName) {
+                    if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
                         it->value.Erase(&obj);
                         jsonChanged = true;
                     } else {
@@ -347,7 +346,11 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 return absl::InvalidArgumentError("Function is not a valid JSON object");
             }
         }
+    } else {
+        tool_choice = "none";  // If tools are not provided, set tool_choice to "none"
     }
+
+    request.toolChoice = tool_choice;
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -721,6 +724,8 @@ StreamOptions OpenAIChatCompletionsHandler::getStreamOptions() const { return re
 
 bool OpenAIChatCompletionsHandler::isStream() const { return request.stream; }
 std::string OpenAIChatCompletionsHandler::getModel() const { return request.model; }
+std::string OpenAIChatCompletionsHandler::getToolChoice() const { return request.toolChoice; }
+const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;

@@ -56,18 +56,12 @@ set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2019_PRO% goto :msvc_pro
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
-:msvc_pro
-echo [INFO] Using MSVC %VS_2019_PRO%
-set BAZEL_VS=%VS_2019_PRO%
-goto :msvc_end
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
 set BAZEL_VS=%VS_2022_BT%
@@ -75,14 +69,14 @@ set BAZEL_VS=%VS_2022_BT%
 :: Bazel compilation settings end
 :msvc_end
 set "BAZEL_VC=%BAZEL_VS:"=%\VC"
-set "BAZEL_VC_FULL_VERSION=14.29.30133"
+set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 
 :: Set required libraries paths

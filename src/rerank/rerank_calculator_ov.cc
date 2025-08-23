@@ -42,7 +42,7 @@
 #include "../profiler.hpp"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 #include "src/rerank/rerank_utils.hpp"
-#include "../sidepacket_servable.hpp"
+#include "rerank_servable.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../executingstreamidguard.hpp"
 
@@ -77,7 +77,7 @@ class RerankCalculatorOV : public CalculatorBase {
     size_t max_allowed_chunks{0};  // Read from options in ::Open()
 
 protected:
-    std::shared_ptr<ovms::SidepacketServable> rerank_session{nullptr};
+    std::shared_ptr<ovms::RerankServable> rerank_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -127,7 +127,7 @@ public:
         }
 
         // post-validation
-        if (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS) {
+        if (rerank_session->addBosToken && (this->max_position_embeddings <= 2 * NUMBER_OF_SPECIAL_TOKENS)) {
             SPDLOG_LOGGER_ERROR(rerank_calculator_logger, "max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
             return absl::InvalidArgumentError("max_position_embeddings should be larger than 2 * NUMBER_OF_SPECIAL_TOKENS");
         }
@@ -153,7 +153,25 @@ public:
         // Validate batch size before tokenizing
         if (handler.getDocumentsList().size() > this->max_allowed_chunks)
             throw std::runtime_error("Number of documents exceeds max_allowed_chunks");
-
+        if (!rerank_session->addBosToken) {
+            auto batchSize = handler.getDocumentsList().size();
+            std::vector<std::string> data(batchSize);
+            for (int i = 0; i < batchSize; i++) {
+                data[i] += handler.getQuery() + handler.getDocumentsList()[i];
+            }
+            chunk_mapping.resize(batchSize);
+            std::iota(chunk_mapping.begin(), chunk_mapping.end(), 0);
+            auto tokens = rerank_session->getTokenizer().encode(data);
+            if (tokens.input_ids.get_shape().size() != 2) {
+                throw std::runtime_error("Tokens shape invalid.");  // should never happen
+            }
+            if (this->max_position_embeddings < tokens.input_ids.get_shape()[1]) {
+                std::ostringstream msg;
+                msg << "The requests length of " << tokens.input_ids.get_shape()[1] << " tokens exceeds the model context of " << max_position_embeddings;
+                throw std::runtime_error(msg.str());
+            }
+            return std::make_pair(tokens.input_ids, tokens.attention_mask);
+        }
         // Compute Query Tokens
         auto query_tokens = ComputeTokensForString(handler.getQuery());
 
@@ -289,8 +307,8 @@ public:
                 typeIds = ov::Tensor{ov::element::i64, input_ids.get_shape()};
                 std::fill_n(typeIds->data<int64_t>(), input_ids.get_size(), 0);
             }
-            // Compute scores using rerank model
             size_t batch_size = handler.getDocumentsList().size();
+            // Compute scores using rerank model
             auto scores = ComputeScoresUsingRerankModel(
                 input_ids,
                 attention_mask,

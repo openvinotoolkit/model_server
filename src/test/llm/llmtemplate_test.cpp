@@ -725,7 +725,7 @@ public:
         ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
         TestWithTempDir::SetUp();
         tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
-        jinjaConfigFilePath = directoryPath + "/template.jinja";
+        jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
         ovmsConfigFilePath = directoryPath + "/ovms_config.json";
         graphConfigFilePath = directoryPath + "/graph_config.pbtxt";
 

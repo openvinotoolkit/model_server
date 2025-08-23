@@ -611,14 +611,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     }
     time_t timestamp;
     time(&timestamp);
-    writer.StartObject();
-    writer.String("object");
-    writer.String("list");
-    writer.String("data");
-    writer.StartArray();
     parseModel(writer, name, timestamp);
-    writer.EndArray();
-    writer.EndObject();
     response = buffer.GetString();
     return StatusCode::OK;
 }

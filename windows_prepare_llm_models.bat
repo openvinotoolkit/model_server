@@ -38,8 +38,9 @@ set "QWEN3_MODEL=Qwen/Qwen3-8B"
 set "LLAMA3_MODEL=meta-llama/Llama-3.1-8B-Instruct"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
+set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL% %EMBEDDING_MODEL% %EMBEDDING_MODEL%\ov %RERANK_MODEL% %VLM_MODEL% %QWEN3_MODEL% %LLAMA3_MODEL% %HERMES3_MODEL% %PHI4_MODEL%
+set MODELS_LIST=%TEXT_GENERATION_MODEL% %EMBEDDING_MODEL% %EMBEDDING_MODEL%\ov %RERANK_MODEL% %VLM_MODEL% %QWEN3_MODEL% %LLAMA3_MODEL% %HERMES3_MODEL% %PHI4_MODEL% %MISTRAL_MODEL%
 
 set "ALL_EXIST=1"
 for %%M in ("%MODELS_LIST%") do (
@@ -149,6 +150,15 @@ if exist "%~1\%PHI4_MODEL%" (
   echo Downloading tokenizer and detokenizer for Phi-4 model to %~1\%PHI4_MODEL% directory.
   mkdir "%~1\%PHI4_MODEL%"
   convert_tokenizer "%PHI4_MODEL%" --with_detokenizer -o "%~1\%PHI4_MODEL%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
+if exist "%~1\%MISTRAL_MODEL%" (
+  echo Models directory %~1\%MISTRAL_MODEL% exists. Skipping downloading models.
+) else (
+  echo Downloading tokenizer and detokenizer for Mistral model to %~1\%MISTRAL_MODEL% directory.
+  mkdir "%~1\%MISTRAL_MODEL%"
+  convert_tokenizer "%MISTRAL_MODEL%" --with_detokenizer -o "%~1\%MISTRAL_MODEL%"
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
