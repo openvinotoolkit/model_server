@@ -74,11 +74,11 @@ FUZZER_BUILD ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
-OV_SOURCE_BRANCH ?= 71b56616e5d2214521196b0ba0e62fbe81c596e9 # master 2025/08/25
+OV_SOURCE_BRANCH ?= adf71207e69b43567397dabe6453bd4f4dda4f67 # dev/add-signature-property-and-use-in-hash-computation
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
 OV_TOKENIZERS_BRANCH ?= 0c1d501ac1c78de70574355640fb5e02caa4e93a # master 2025/08/25
 
-OV_SOURCE_ORG ?= openvinotoolkit
+OV_SOURCE_ORG ?= Quallyjiang
 OV_CONTRIB_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
