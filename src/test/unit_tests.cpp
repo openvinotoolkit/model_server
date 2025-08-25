@@ -16,12 +16,14 @@
 
 #include "environment.hpp"
 #include "gpuenvironment.hpp"
+#include "gguf_environment.hpp"
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::InitGoogleMock(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
     ::testing::AddGlobalTestEnvironment(new GPUEnvironment);
+    ::testing::AddGlobalTestEnvironment(new GGUFEnvironment);
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
     return RUN_ALL_TESTS();
 }

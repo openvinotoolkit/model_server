@@ -290,7 +290,7 @@ new file mode 100644
 index 000000000..cd3aa39fd
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,497 @@
+@@ -0,0 +1,500 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -643,7 +643,7 @@ index 000000000..cd3aa39fd
 +		/* Remove a header curl would otherwise add by itself */
 +		chunk = curl_slist_append(chunk, "Accept: application/vnd.git-lfs+json");
 +		/* Add a custom header */
-+		chunk = curl_slist_append(chunk, "Content-type: application/json");
++		chunk = curl_slist_append(chunk, "Content-Type: application/vnd.git-lfs+json");
 +		/* set our custom set of headers */
 +		curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk);
 +		/* First set the URL that is about to receive our POST. This URL
@@ -678,6 +678,7 @@ index 000000000..cd3aa39fd
 +		struct memory response = { 0 };
 +		curl_easy_setopt(
 +		        info_curl, CURLOPT_WRITEFUNCTION, write_callback);
++		curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
 +		curl_easy_setopt(
 +		        info_curl, CURLOPT_WRITEDATA, (void *)&response);
 +
@@ -711,7 +712,7 @@ index 000000000..cd3aa39fd
 +					   get_digit(la->lfs_size), 0,
 +			                   time(NULL), time(NULL) };
 +
-+		const char *href_regexp = "{\"href\":\"(.*)\"}}}]}";
++		const char *href_regexp = "\"download\"\\s*:\\s*\\{\\s*\"href\":\"([^\"]+)\"";
 +		if (get_lfs_info_match(&res_str, href_regexp) < 0) {
 +			/* always cleanup */
 +			curl_easy_cleanup(dl_curl);
@@ -724,6 +725,7 @@ index 000000000..cd3aa39fd
 +		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 +		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
 +		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
++		curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
 +		curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
 +		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
 +
@@ -762,6 +764,7 @@ index 000000000..cd3aa39fd
 +
 +on_error:
 +	git__free(payload);
++	fprintf(stderr, "LFS download failed for file %s\n", la->full_path);
 +	return;
 +}
 +

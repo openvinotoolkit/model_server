@@ -17,6 +17,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -38,6 +39,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../status.hpp"
 #include "../filesystem.hpp"
+#include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
 #include "language_model/continuous_batching/servable_initializer.hpp"
 #include "language_model/legacy/servable_initializer.hpp"
@@ -49,11 +51,96 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+static const std::string DEFAULT_CHAT_TEMPLATE = R"({% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }})";
+
+void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
+    loadPyTemplateProcessor(properties, chatTemplateDirectory);
+#else
+    loadDefaultTemplateProcessorIfNeeded(properties);
+#endif
+}
+
+#if (PYTHON_DISABLE == 0)
+static bool checkIfGGUFModel(const std::string& modelDirectoryPath) {
+    if (!std::filesystem::exists(modelDirectoryPath))
+        return false;
+
+    if (std::filesystem::is_regular_file(modelDirectoryPath) && (modelDirectoryPath.find(".gguf") != std::string::npos)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template path is a GGUF file: {}", modelDirectoryPath);
+        return true;
+    }
+    if (std::filesystem::is_directory(modelDirectoryPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(modelDirectoryPath)) {
+            if (entry.is_regular_file() && entry.path().filename().string().find(".gguf") != std::string::npos) {
+                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static std::pair<std::optional<std::string>, std::optional<std::string>> getBosAndEosTokenFromTokenizerVocab(const ov::genai::Tokenizer& tokenizer) {
+    auto vocab = tokenizer.get_vocab();
+    SPDLOG_TRACE("Tokenizer vocab size: {}", vocab.size());
+    auto bosTokenId = tokenizer.get_bos_token_id();
+    auto eosTokenId = tokenizer.get_eos_token_id();
+    std::optional<std::string> bosToken;
+    std::optional<std::string> eosToken;
+    // since tokenizer get_bos_token does not work for gguf we will search in map by value
+    for (const auto& [token, id] : vocab) {
+        // SPDLOG_TRACE("Tokenizer vocab token: {}, id: {}", token, id);
+        if (id == bosTokenId) {
+            bosToken = token;
+        }
+        if (id == eosTokenId) {
+            eosToken = token;
+        }
+        if ((bosToken != std::nullopt) && (eosToken != std::nullopt)) {
+            break;
+        }
+    }
+    return std::make_pair(bosToken, eosToken);
+}
+
 void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("templates_directory"_a = chatTemplateDirectory);
+        bool isGGUFModel = checkIfGGUFModel(chatTemplateDirectory);
+        // we need to pass tokenizer template and bos/eos tokens to python code
+        // if we have GGUF model, we will use them to create a template object
+        std::string tokenizerTemplate;
+        std::string tokenizerBosToken;
+        std::string tokenizerEosToken;
+        if (isGGUFModel) {
+            tokenizerTemplate = properties->tokenizer.get_chat_template();
+            tokenizerBosToken = properties->tokenizer.get_bos_token();
+            tokenizerEosToken = properties->tokenizer.get_eos_token();
+        }
+        // time measure following if statement
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        // Workaround for CVS-172426
+        if (isGGUFModel && (tokenizerBosToken.empty() || tokenizerEosToken.empty())) {
+            // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
+            std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
+            tokens = getBosAndEosTokenFromTokenizerVocab(properties->tokenizer);
+            if (tokens.first.has_value()) {
+                tokenizerBosToken = tokens.first.value();
+            }
+            if (tokens.second.has_value()) {
+                tokenizerEosToken = tokens.second.value();
+            }
+            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
+                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel, tokenizerTemplate);
+        }
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
+        auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
+            "tokenizer_bos_token"_a = tokenizerBosToken,
+            "tokenizer_eos_token"_a = tokenizerEosToken,
+            "templates_directory"_a = chatTemplateDirectory,
+            "is_gguf_model"_a = isGGUFModel);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -71,14 +158,13 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             global ImmutableSandboxedEnvironment
             from jinja2.sandbox import ImmutableSandboxedEnvironment
             from jinja2.ext import Extension
+            print("Loading chat template from directory:", templates_directory)
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
-            
             # Appears in some of mistral chat templates
             def strftime_now(format):
                 return datetime.datetime.now().strftime(format)
-            
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
@@ -148,6 +234,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 template = jinja_env.get_template("chat_template.jinja")
             elif jinja_file_legacy.is_file():
                 template = jinja_env.get_template("template.jinja")
+                print("Took chat template from template.jinja file")
 
             # Try to read data from tokenizer_config.json
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
@@ -168,14 +255,20 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                             elif template_entry.get("name") == "tool_use":
                                 tool_chat_template = template_entry.get("template")
             if template is None:
-                template = jinja_env.from_string(chat_template)
+                if is_gguf_model and (chat_template == default_chat_template):
+                    # in this case we want to get chat template from tokenizer passed to script
+                    template = jinja_env.from_string(tokenizer_template)
+                    print("Took chat template from tokenizer in GGUF model")
+                    bos_token = tokenizer_bos_token
+                    eos_token = tokenizer_eos_token
+                else:
+                    template = jinja_env.from_string(chat_template)
             if tool_chat_template is not None:
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
                 tool_template = template
         )",
             py::globals(), locals);
-
         properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
         properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
@@ -199,7 +292,7 @@ void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_
     const std::string modelChatTemplate = properties->tokenizer.get_chat_template();
     if (modelChatTemplate.empty()) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Could not load model chat template. Using default template.");
-        properties->tokenizer.set_chat_template("{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}");
+        properties->tokenizer.set_chat_template(DEFAULT_CHAT_TEMPLATE);
     }
 }
 #endif
@@ -220,12 +313,12 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} does not exist. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    if (!std::filesystem::is_directory(outPath)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory. ", outPath);
-        return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
+    // if is directory or file with .gguf extension then it is ok
+    if (std::filesystem::is_directory(outPath) || (outPath.find(".gguf") != std::string::npos)) {
+        return StatusCode::OK;
     }
-
-    return StatusCode::OK;
+    SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} is not a directory nor GGUF file ", outPath);
+    return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
 }
 
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
