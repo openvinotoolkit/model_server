@@ -1112,9 +1112,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
         }
     )";
 
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
@@ -1152,10 +1153,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         ]
     }
     )";
-
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {

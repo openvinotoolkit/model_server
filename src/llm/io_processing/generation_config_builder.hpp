@@ -59,13 +59,14 @@ public:
         return builder_impl->getConfig();
     }
 
-    // Validates the structured output configuration, if exists.
-    // Throws exception if validation fails.
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer) {
         builder_impl->validateStructuredOutputConfig(tokenizer);
     }
 
-    // Fills generation config with values read from OpenAI request
+    void unsetStructuredOutputConfig() {
+        builder_impl->unsetStructuredOutputConfig();
+    }
+
     void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
         builder_impl->parseConfigFromRequest(request);
     }
