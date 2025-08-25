@@ -541,7 +541,6 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             serverSettings.serverMode = HF_PULL_AND_START_MODE;
         }
         if (result->count("gguf_filename")) {
-            // should be validated in cli_parser/config?
             hfSettings.ggufFilename = result->operator[]("gguf_filename").as<std::string>();
             hfSettings.downloadType = GGUF_DOWNLOAD;
         }
@@ -555,7 +554,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
-        // There's no reason to exclude GGUF pulling from OV organization as long as there is one. So far no GGUF model was uploaded
+        // There's no reason to exclude GGUF pulling from OV organization.
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }

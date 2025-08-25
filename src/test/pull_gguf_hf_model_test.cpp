@@ -90,7 +90,7 @@ class GGUFDownloaderPullHfModel : public TestWithTempDir {
 protected:
     void TearDown() {
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
-        // TestWithTempDir::TearDown();
+        TestWithTempDir::TearDown();
     }
 };
 
