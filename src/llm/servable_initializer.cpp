@@ -62,16 +62,16 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 }
 
 #if (PYTHON_DISABLE == 0)
-static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
-    if (!std::filesystem::exists(chatTemplatePath))
+static bool checkIfGGUFModel(const std::string& modelDirectoryPath) {
+    if (!std::filesystem::exists(modelDirectoryPath))
         return false;
 
-    if (std::filesystem::is_regular_file(chatTemplatePath) && (chatTemplatePath.find(".gguf") != std::string::npos)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template path is a GGUF file: {}", chatTemplatePath);
+    if (std::filesystem::is_regular_file(modelDirectoryPath) && (modelDirectoryPath.find(".gguf") != std::string::npos)) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template path is a GGUF file: {}", modelDirectoryPath);
         return true;
     }
-    if (std::filesystem::is_directory(chatTemplatePath)) {
-        for (const auto& entry : std::filesystem::directory_iterator(chatTemplatePath)) {
+    if (std::filesystem::is_directory(modelDirectoryPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(modelDirectoryPath)) {
             if (entry.is_regular_file() && entry.path().filename().string().find(".gguf") != std::string::npos) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Chat template directory contains GGUF file: {}", entry.path().filename().string());
                 return true;
@@ -81,11 +81,11 @@ static bool checkIfGGUFModel(const std::string& chatTemplatePath) {
     return false;
 }
 
-static std::pair<std::optional<std::string>, std::optional<std::string>> getBosAndEosTokenFromTokenizerVocab(const std::shared_ptr<ov::genai::Tokenizer>& tokenizer) {
-    auto vocab = tokenizer->get_vocab();
+static std::pair<std::optional<std::string>, std::optional<std::string>> getBosAndEosTokenFromTokenizerVocab(const ov::genai::Tokenizer& tokenizer) {
+    auto vocab = tokenizer.get_vocab();
     SPDLOG_TRACE("Tokenizer vocab size: {}", vocab.size());
-    auto bosTokenId = tokenizer->get_bos_token_id();
-    auto eosTokenId = tokenizer->get_eos_token_id();
+    auto bosTokenId = tokenizer.get_bos_token_id();
+    auto eosTokenId = tokenizer.get_eos_token_id();
     std::optional<std::string> bosToken;
     std::optional<std::string> eosToken;
     // since tokenizer get_bos_token does not work for gguf we will search in map by value
@@ -96,6 +96,9 @@ static std::pair<std::optional<std::string>, std::optional<std::string>> getBosA
         }
         if (id == eosTokenId) {
             eosToken = token;
+        }
+        if ((bosToken != std::nullopt) && (eosToken != std::nullopt)) {
+            break;
         }
     }
     return std::make_pair(bosToken, eosToken);
@@ -121,7 +124,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         if (isGGUFModel && (tokenizerBosToken.empty() || tokenizerEosToken.empty())) {
             // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
             std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
-            tokens = getBosAndEosTokenFromTokenizerVocab(std::make_shared<ov::genai::Tokenizer>(properties->tokenizer));
+            tokens = getBosAndEosTokenFromTokenizerVocab(properties->tokenizer);
             if (tokens.first.has_value()) {
                 tokenizerBosToken = tokens.first.value();
             }

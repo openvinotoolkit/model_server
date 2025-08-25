@@ -53,13 +53,13 @@ static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const 
 GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
     hfSettings(hfSettings),
     hfEndpoint(hfEndpoint) {
-    // TODO shared loggic across all pullers
+    // TODO shared logic across all pullers
     this->downloadPath = FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel});
 }
 
 Status GGUFDownloader::downloadModel() {
     if (this->hfSettings.downloadType != GGUF_DOWNLOAD) {
-        SPDLOG_ERROR("Wrong download type selected. Expected optiumum-cli type.");
+        SPDLOG_ERROR("Wrong download type selected. Expected GGUF download type.");
         return StatusCode::INTERNAL_ERROR;
     }
     if (FileSystem::isPathEscaped(this->downloadPath)) {
@@ -206,7 +206,7 @@ int progress_callback(void* clientp,
 
 Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
     // construct url
-    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
+    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}, downloadPath:{}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
     std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
     SPDLOG_TRACE("Constructed URL: {}", url);
 

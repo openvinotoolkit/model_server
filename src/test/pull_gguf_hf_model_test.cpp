@@ -45,7 +45,7 @@ struct EnvGuard {
             SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
             originalValue = std::string(currentVal);
         } else {
-            SPDLOG_TRACE("Var:{} was not set");
+            SPDLOG_TRACE("Var:{} was not set", name);
         }
         if (originalValues.find(name) == originalValues.end()) {
             SPDLOG_TRACE("Var:{} value was not stored yet", name);
@@ -60,7 +60,7 @@ struct EnvGuard {
             SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
             originalValue = std::string(currentVal);
         } else {
-            SPDLOG_TRACE("Var:{} was not set");
+            SPDLOG_TRACE("Var:{} was not set", name);
         }
         if (originalValues.find(name) == originalValues.end()) {
             SPDLOG_TRACE("Var:{} value was not stored yet", name);
@@ -163,9 +163,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     const std::string ggufFileName = "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf";
     const std::string hfEndpoint = "https://huggingface.co/";
     // const std::string hfEndpoint = "https://www.modelscope.cn";
-    SPDLOG_ERROR("ER");
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
-    SPDLOG_ERROR("ER");
     ASSERT_TRUE(status.ok()) << status.string();
     // TODO check if file exists, its size
     std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
@@ -205,7 +203,7 @@ void find_file_in_tree(git_repository* repo, git_tree* tree,
 }
 
 TEST(libgit2, manuallyClonedRepoMetadataGetGGUFFiles) {
-    GTEST_SKIP() << "Assuming we could run git in shell we could retrievegguf files like this";
+    GTEST_SKIP() << "Assuming we could run git in shell we could retrieve gguf files like this";
     // git clone --filter=blob:none --no-checkout https://huggingface.co/unsloth/gpt-oss-120b-GGUF ./curl_test_repo
     git_libgit2_init();
     git_repository* repo = nullptr;
