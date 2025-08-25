@@ -11,6 +11,7 @@ Completions API <ovms_docs_rest_api_completion>
 Embeddings API <ovms_docs_rest_api_embeddings>
 Reranking API <ovms_docs_rest_api_rerank>
 Image generation API <ovms_docs_rest_api_image_generation>
+Image generation API <ovms_docs_rest_api_image_edit>
 ```
 ## Introduction
 Beside Tensorflow Serving API (`/v1`) and KServe API (`/v2`) frontends, the model server supports a range of endpoints for generative use cases (`v3`). They are extendible using MediaPipe graphs.
@@ -21,6 +22,9 @@ OpenAI compatible endpoints:
 - [completions](./model_server_rest_api_completions.md)
 - [embeddings](./model_server_rest_api_embeddings.md)
 - [images/generations](./model_server_rest_api_image_generation.md)
+- [images/edit](./model_server_rest_api_image_edit.md)
+- /models
+- /models/{model}
 
 Cohere Compatible endpoint:
 - [rerank](./model_server_rest_api_rerank.md)
@@ -359,6 +363,45 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
 Check [image generation end to end demo](../demos/image_generation/README.md).
 
+### List models
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.list())
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models
+```
+:::
+::::
+
+### Retrieve model
+
+::::{tab-set}
+:::{tab-item} python [OpenAI] 
+:sync: python-openai
+```python
+from openai import OpenAI
+client = OpenAI(api_key="unused",base_url="http://localhost:8000/v3")
+
+print(client.models.retrieve("Qwen/Qwen3-Embedding-0.6B"))
+```
+:::
+:::{tab-item} curl
+:sync: curl
+```text
+curl http://localhost:8000/v3/models/Qwen/Qwen3-Embedding-0.6B
+```
+:::
+::::
 
 ## Cohere Python Client
 

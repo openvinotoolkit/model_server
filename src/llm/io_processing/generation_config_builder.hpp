@@ -19,6 +19,7 @@
 #include <iostream>
 #include <string>
 #include <openvino/genai/generation_config.hpp>
+#include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
@@ -56,6 +57,12 @@ public:
 
     ov::genai::GenerationConfig& getConfig() {
         return builder_impl->getConfig();
+    }
+
+    // Validates the structured output configuration, if exists.
+    // Throws exception if validation fails.
+    void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer) {
+        builder_impl->validateStructuredOutputConfig(tokenizer);
     }
 
     // Fills generation config with values read from OpenAI request

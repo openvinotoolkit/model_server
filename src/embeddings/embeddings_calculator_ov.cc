@@ -40,7 +40,7 @@
 #include "../model_metric_reporter.hpp"
 #include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
-#include "../sidepacket_servable.hpp"
+#include "embeddings_servable.hpp"
 
 using namespace rapidjson;
 using namespace ovms;
@@ -63,7 +63,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     mediapipe::Timestamp timestamp{0};
 
 protected:
-    std::shared_ptr<ovms::SidepacketServable> embeddings_session{nullptr};
+    std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
@@ -128,7 +128,11 @@ public:
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
                 received_batch_size = strings->size();
-                tokens = embeddings_session->getTokenizer().encode(*strings);
+                ov::AnyMap params = {};
+                if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate()) {
+                    params = {{"max_length", max_context_length}};
+                }
+                tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
                 size_t input_ids_size = tokens.input_ids.get_shape()[1];
                 if (input_ids_size > max_context_length) {
@@ -148,10 +152,12 @@ public:
                     for (int i = 0; i < tokens.attention_mask.get_size(); i++) {
                         attendedTokens += reinterpret_cast<int32_t*>(tokens.attention_mask.data())[i];
                     }
-                } else {
+                } else if (tokens.attention_mask.get_element_type() == ov::element::Type_t::i8) {
                     for (int i = 0; i < tokens.attention_mask.get_byte_size(); i++) {
                         attendedTokens += reinterpret_cast<uint8_t*>(tokens.attention_mask.data())[i];
                     }
+                } else {
+                    return absl::InternalError("Attention mask element type invalid.");
                 }
                 handler.setPromptTokensUsage(attendedTokens);
             } else if (auto tokenized_documents = std::get_if<std::vector<std::vector<int64_t>>>(&input)) {
@@ -177,7 +183,7 @@ public:
                 try {
                     for (size_t i = 0; i < received_batch_size; i++) {
                         int64_t* input_ids_start = reinterpret_cast<int64_t*>(tokens.input_ids.data()) + i * token_count_of_longest_document;
-                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, embeddings_session->getPadToken());
+                        std::fill(input_ids_start, input_ids_start + token_count_of_longest_document, embeddings_session->getPadToken().value_or(0));
                         std::copy(tokenized_documents->at(i).data(), tokenized_documents->at(i).data() + tokenized_documents->at(i).size(), input_ids_start);
 
                         int64_t* attention_mask_start = reinterpret_cast<int64_t*>(tokens.attention_mask.data()) + i * token_count_of_longest_document;
@@ -241,7 +247,13 @@ public:
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings());
+        PoolingMode mode;
+        if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
+            mode = PoolingMode::LAST;
+        } else {
+            mode = PoolingMode::CLS;
+        }
+        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), mode, tokens.attention_mask);
         if (!status.ok()) {
             return status;
         }

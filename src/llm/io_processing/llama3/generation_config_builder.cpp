@@ -26,6 +26,12 @@ void Llama3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompl
     // Call the base class method to fill in common configuration
     BaseGenerationConfigBuilder::parseConfigFromRequest(request);
 
+    // For now the only specific part is related to tools, so if there are no tools provided in the request
+    // we can exit early
+    if (request.toolNameSchemaMap.empty()) {
+        return;
+    }
+
     // Set tool guided generation config specific to Llama-3 model
     ov::genai::StructuralTagsConfig structuralTagsConfig;
     static const std::string beginOfToolsString = "<|python_tag|>";

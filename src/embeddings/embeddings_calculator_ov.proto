@@ -27,7 +27,12 @@ message EmbeddingsCalculatorOVOptions {
     }
     required string models_path = 1;
     optional bool normalize_embeddings = 2 [default = true];
-    optional bool mean_pooling = 3 [default = false];
-    optional string target_device = 4 [default = "CPU"];
-    optional string plugin_config = 5 [default = ""];
+    optional string target_device = 3 [default = "CPU"];
+    optional string plugin_config = 4 [default = ""];
+    enum Pooling {
+      CLS = 0;
+      LAST = 1;
+    }
+    optional Pooling pooling = 5 [default = CLS];
+    optional bool truncate = 6 [default = false];
 }
