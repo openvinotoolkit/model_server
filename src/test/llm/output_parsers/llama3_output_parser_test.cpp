@@ -207,10 +207,10 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
         // closed main JSON, with the last chunk, now only return nullopt
     };
 
-    int64_t i = -1;
+    int64_t chunkIteration = -1;
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-        i++;
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, static_cast<size_t>(i) >= chunkToDeltaVec.size() ? ov::genai::GenerationFinishReason::STOP : ov::genai::GenerationFinishReason::NONE);
+        chunkIteration++;
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, static_cast<size_t>(chunkIteration) >= chunkToDeltaVec.size() ? ov::genai::GenerationFinishReason::STOP : ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }
@@ -242,18 +242,18 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
                 expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
                 EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
             } else {
-                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got[" << docStr << "] but expected [" << expected << "]" << i;
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
             }
         } else if (expectedDelta.has_value()) {
-            FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << i;
+            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
         } else if (doc.has_value()) {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc->Accept(writer);
             std::string docStr = buffer.GetString();
-            FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << i;
+            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
         } else {
-            FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] but expected nothing" << i;
+            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
         }
     }
 }
