@@ -99,7 +99,7 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcMemoryQuota, std::nullopt);
     EXPECT_EQ(serverSettings->filesystemPollWaitMilliseconds, 1000);
     EXPECT_EQ(serverSettings->sequenceCleanerPollWaitMinutes, 5);
-    EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 1);
+    EXPECT_EQ(serverSettings->resourcesCleanerPollWaitSeconds, 300);
     EXPECT_EQ(serverSettings->cacheDir, "");
 
     testDefaultSingleModelOptions(modelsSettings);
