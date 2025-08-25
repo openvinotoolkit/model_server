@@ -201,6 +201,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
             if (lastClosingBrace != std::string::npos) {
                 argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
+                //argumentsDelayWindow[0][lastClosingBrace] = '\"';
             }
         } else {
             argumentsDelayWindow[1] = modifiedChunk;
@@ -212,8 +213,10 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     try {
         if (!argumentsDelayWindow[0].empty()) {
             // Push delayed chunk to the JSON builder if we are processing parameters
+            SPDLOG_INFO("Adding 1 [{}]", argumentsDelayWindow[0]);
             newJson = jsonBuilder.add(argumentsDelayWindow[0]);
         } else {
+            SPDLOG_INFO("Adding 2 [{}]", chunk);
             // Otherwise just push the current chunk
             newJson = jsonBuilder.add(chunk);
         }
