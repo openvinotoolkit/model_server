@@ -11,6 +11,6 @@ ovms_demos_common_export
 
 ```
 
-Prepare model using OVMS [pull mode](./pull_hf_models.py).
+Prepare model using OVMS [pull mode](./pull_hf_models.md).
 
 Prepare models using [python script](../demos/common/export_models/README.md).
