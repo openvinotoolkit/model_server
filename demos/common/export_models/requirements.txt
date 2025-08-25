@@ -3,8 +3,8 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
 optimum-intel@git+https://github.com/huggingface/optimum-intel.git
-openvino-tokenizers==2025.3.0.0rc1
-openvino==2025.3.0rc1 
+openvino-tokenizers==2025.4
+openvino==2025.4
 nncf>=2.11.0 
 sentence_transformers
 sentencepiece==0.2.0

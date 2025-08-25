@@ -235,8 +235,8 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.3\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.3.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info/METADATA ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 # Build OpenVINO Model Server
@@ -276,13 +276,13 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.3.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.3' > /opt/intel/openvino/python/openvino-2025.3.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-4.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
 
-ARG PROJECT_VERSION="2025.3.0"
+ARG PROJECT_VERSION="2025.4.0"
 LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 
@@ -371,7 +371,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 FROM $RELEASE_BASE_IMAGE as release
 LABEL "name"="OVMS"
 LABEL "vendor"="Intel Corporation"
-LABEL "version"="2025.3.0"
+LABEL "version"="2025.4.0"
 LABEL "release"="2025"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
