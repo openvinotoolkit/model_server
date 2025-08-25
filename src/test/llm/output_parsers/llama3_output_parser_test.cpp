@@ -170,41 +170,41 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
     std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
-{"<|python_tag|>", std::nullopt},
-{"{\"", std::nullopt},
-{"name", std::nullopt},
-{"\":", std::nullopt},
-{" \"", std::nullopt},
-{"get", std::nullopt},
-{"_h", std::nullopt},
-{"umidity", std::nullopt},
-{"\",", std::nullopt},
-{" \"", std::nullopt},
-{"parameters", std::nullopt},//10
-{"\":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_humidity\"}}]}}"},
-{" {\"", std::nullopt},
-{"location", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
-{"\":", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
-{" \"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},//15
-{"Paris", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},//16
-{"\"}}", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
-{";", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},//18
-{" {\"", std::nullopt},
-{"name", std::nullopt},
-{"\":", std::nullopt},
-{" \"", std::nullopt},
-{"get", std::nullopt},
-{"_temperature", std::nullopt},
-{"\",", std::nullopt},
-{" \"", std::nullopt},
-{"parameters", std::nullopt},
-{"\":", R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_temperature"}}]}})"},//28
-{" {\"", std::nullopt},//29
-{"location", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\""}}]}})"},
-{"\":", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
-{" \"", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
-{"Paris\"}}", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
-                                              // closed main JSON, with the last chunk, now only return nullopt
+        {"<|python_tag|>", std::nullopt},
+        {"{\"", std::nullopt},
+        {"name", std::nullopt},
+        {"\":", std::nullopt},
+        {" \"", std::nullopt},
+        {"get", std::nullopt},
+        {"_h", std::nullopt},
+        {"umidity", std::nullopt},
+        {"\",", std::nullopt},
+        {" \"", std::nullopt},
+        {"parameters", std::nullopt},
+        {"\":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_humidity\"}}]}}"},
+        {" {\"", std::nullopt},
+        {"location", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
+        {"\":", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
+        {" \"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
+        {"Paris", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
+        {"\"}}", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
+        {";", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
+        {" {\"", std::nullopt},
+        {"name", std::nullopt},
+        {"\":", std::nullopt},
+        {" \"", std::nullopt},
+        {"get", std::nullopt},
+        {"_temperature", std::nullopt},
+        {"\",", std::nullopt},
+        {" \"", std::nullopt},
+        {"parameters", std::nullopt},
+        {"\":", R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_temperature"}}]}})"},
+        {" {\"", std::nullopt},
+        {"location", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\""}}]}})"},
+        {"\":", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
+        {" \"", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
+        {"Paris\"}}", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
+        // closed main JSON, with the last chunk, now only return nullopt
     };
 
     int64_t i = -1;

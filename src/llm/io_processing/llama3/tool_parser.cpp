@@ -122,7 +122,7 @@ static inline bool jsonHasArgumentsOrParameters(const rapidjson::Document& json)
     return json.HasMember("arguments") || json.HasMember("parameters");
 }
 
-static inline void ensureArgumentsInJson(rapidjson::Document& json) {
+static inline void changeParametersToArguments(rapidjson::Document& json) {
     if (json.HasMember("parameters")) {
         // change key to "arguments"
         json.AddMember("arguments", json["parameters"], json.GetAllocator());
@@ -131,7 +131,7 @@ static inline void ensureArgumentsInJson(rapidjson::Document& json) {
 }
 
 std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("CHUUNK: {}", chunk);
+    SPDLOG_INFO("CHUUNK: [{}]", chunk);
 
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Llama3ToolParser");
@@ -173,7 +173,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             if (firstNonWhitespaceCharacter != std::string::npos) {
                 modifiedChunk.insert(firstNonWhitespaceCharacter, "\"");
             } else {
-                // If the chunk is all whitespace, just insert at the end
+                // If the chunk is all whitespace, just insert closing quote at the end
                 modifiedChunk.append("\"");
             }
             argumentsDelayWindow[0] = modifiedChunk;
@@ -201,7 +201,6 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
             if (lastClosingBrace != std::string::npos) {
                 argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
-                //argumentsDelayWindow[0][lastClosingBrace] = '\"';
             }
         } else {
             argumentsDelayWindow[1] = modifiedChunk;
@@ -221,7 +220,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             newJson = jsonBuilder.add(chunk);
         }
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
         // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
         throw std::runtime_error("Generated tool call structure is not valid");  // re-throw
     }
@@ -230,7 +229,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     // Case 1: 'parameters'/'arguments' has just appeared in the current chunk. If so, we return first delta.
     if (jsonHasArgumentsOrParameters(newJson) && !jsonHasArgumentsOrParameters(lastJson)) {
         std::string functionName;
-        ensureArgumentsInJson(newJson);
+        changeParametersToArguments(newJson);
         if (lastJson.HasMember("name") && lastJson["name"].IsString()) {
             functionName = lastJson["name"].GetString();
         } else if (newJson.HasMember("name") && newJson["name"].IsString()) {
@@ -246,7 +245,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
         return doc;
         // Case 2: 'parameters' already exists in the last JSON, we compute delta and return it.
     } else if (lastJson.HasMember("arguments") || lastJson.HasMember("parameters")) {
-        ensureArgumentsInJson(newJson);
+        changeParametersToArguments(newJson);
         rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
         lastJson.CopyFrom(newJson, lastJson.GetAllocator());
         // If delta is empty or contains only null or empty string values, we don't stream anything.

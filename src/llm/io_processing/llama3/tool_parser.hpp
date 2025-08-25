@@ -50,6 +50,7 @@ protected:
     // We do this to properly close arguments when tool call end tag is received.
     // With support for more models this could be moved to the base class.
     std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+    int escapeLevel = 0;
 
     void startNextToolCall();
 
@@ -63,7 +64,7 @@ public:
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
-    const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const override {
+    const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> beginningOnlyTags = {"{"};
         return beginningOnlyTags;
     }

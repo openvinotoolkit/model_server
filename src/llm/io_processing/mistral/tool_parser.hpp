@@ -45,7 +45,7 @@ public:
         static const std::string toolCallStartTag = "[TOOL_CALLS]";
         return toolCallStartTag;
     }
-    const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const override {
+    const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> beginningOnlyTags = {};
         return beginningOnlyTags;
     }

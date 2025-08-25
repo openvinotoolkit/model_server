@@ -95,9 +95,9 @@ public:
     // If empty string is returned, it means that the parser will never start processing the content.
     virtual const std::string& getParsingStartTag() const = 0;
 
-    // During streaming, there might be tags which when appear at the beginning, always mean that this is tool parsing.
-    // This is other than ParsingStartTag, which is used at any point during streaming.
-    virtual const std::unordered_set<std::string>& getBeginningOnlyParsingTags() const = 0;
+    // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
+    // These tags are considered only if they the first output produced by the model.
+    virtual const std::unordered_set<std::string>& getSpecialParsingStartTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should stop processing the content.
