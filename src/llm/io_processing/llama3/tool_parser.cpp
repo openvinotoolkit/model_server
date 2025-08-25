@@ -131,6 +131,8 @@ static inline void ensureArgumentsInJson(rapidjson::Document& json) {
 }
 
 std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("CHUUNK: {}", chunk);
+
     if (chunk.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Llama3ToolParser");
         return std::nullopt;

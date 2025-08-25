@@ -165,3 +165,165 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
         }
     }
 }
+/*
+// Wrap everything in escaped {"X", std::nullopt},
+<|python_tag|>
+{"
+name
+":
+ "
+get
+_h
+umidity
+",
+ "
+parameters
+":
+ {"
+location
+":
+ "
+Paris
+"}}
+;
+ {"
+name
+":
+ "
+get
+_weather
+",
+ "
+parameters
+":
+ {"
+location
+":
+ "
+Paris"}}
+*/
+TEST_F(Llama3OutputParserTest, HolisticStreaming) {
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
+        // Tool call phase
+        // Starting first tool. Collecting chunk until full name is received. Don't return until then.
+{"<|python_tag|>", std::nullopt},
+{"{", std::nullopt},
+{"\"", std::nullopt},
+{"name", std::nullopt},
+{"\"", std::nullopt},
+{":", std::nullopt},
+{" ", std::nullopt},
+{"\"", std::nullopt},
+{"get", std::nullopt},
+{"_", std::nullopt},
+{"h", std::nullopt},
+{"umidity", std::nullopt},
+{"\"", std::nullopt},
+{",", std::nullopt},
+{" ", std::nullopt},
+{"\"", std::nullopt},
+{"parameters", std::nullopt},
+{"\"", std::nullopt},
+{":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_humidity\"}}]}}"},
+{" ", std::nullopt},
+{"{", std::nullopt},
+{"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]}}"},
+{"location", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"""}}]}})"},
+{"\"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
+{":", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\""}}]}})"},
+{" ", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":":"}}]}})"},
+{"\"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" "}}]}})"},
+{"Paris", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\""}}]}})"},
+{"\"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
+{"}", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\""}}]}})"},
+{"}", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"}}]}})"},
+{";", std::nullopt},
+{" ", std::nullopt},
+{"{", std::nullopt},
+{"\"", std::nullopt},
+{"name", std::nullopt},
+{"\"", std::nullopt},
+{":", std::nullopt},
+{" ", std::nullopt},
+{"\"", std::nullopt},
+{"get", std::nullopt},
+{"_", std::nullopt},
+{"weather", std::nullopt},
+{"\"", std::nullopt},
+{",", std::nullopt},
+{" ", std::nullopt},
+{"\"", std::nullopt},
+{"parameters", std::nullopt},
+{"\"", std::nullopt},
+{":", std::nullopt},
+{" ", std::nullopt},
+{"{", std::nullopt},
+{"\"", std::nullopt},
+{"location", std::nullopt},
+{"\"", std::nullopt},
+{":", std::nullopt},
+{" ", std::nullopt},
+{"\"", std::nullopt},
+{"Paris", std::nullopt},
+{"\"", std::nullopt},
+{"}", std::nullopt},
+{"}", std::nullopt},
+                                              // closed main JSON, with the last chunk, now only return nullopt
+    };
+
+    for (bool immediateParsing : {false, true}) {
+        if (immediateParsing) {
+            chunkToDeltaVec.erase(chunkToDeltaVec.begin(), chunkToDeltaVec.begin() + 4);
+            chunkToDeltaVec.insert(chunkToDeltaVec.begin(), {"\n", std::nullopt});
+        }
+        int i = -1;
+        for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
+            i++;
+            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE) : outputParserWithRegularToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+            if (!expectedDelta.has_value() && !doc.has_value()) {
+                continue;  // Both are nullopt, OK
+            }
+            if (expectedDelta.has_value() && doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+                std::string expected = expectedDelta.value();
+                std::string idKey = "\"id\":\"";
+                auto docIdPos = docStr.find(idKey);
+                auto expectedIdPos = expected.find(idKey);
+                if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                    auto docIdStart = docIdPos + idKey.size();
+                    auto docIdEnd = docStr.find("\"", docIdStart);
+                    auto expectedIdStart = expectedIdPos + idKey.size();
+                    auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                    ASSERT_NE(docIdEnd, std::string::npos);
+                    ASSERT_NE(expectedIdEnd, std::string::npos);
+                    std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                    std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                    EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                    EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                    // Compare everything except the id value
+                    std::string docStrNoId = docStr;
+                    std::string expectedNoId = expected;
+                    docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                    expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                    EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+                } else {
+                    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got[" << docStr << "] but expected [" << expected << "]" << i;
+                }
+            } else if (expectedDelta.has_value()) {
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] but got [" << expectedDelta.value() << "]" << i;
+            } else if (doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << i;
+            } else {
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: [" << chunk << "] but expected nothing" << i;
+            }
+        }
+    }
+}
