@@ -40,9 +40,18 @@ public:
 
     ov::genai::GenerationConfig& getConfig() { return config; }
 
-    // Validates the structured output configuration, if exists.
-    // Throws exception if validation fails.
+    /*
+    * Validates the structured output configuration, if exists.
+    * Throws exception if validation fails.
+    */
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer);
+
+    /*
+     * Unsets the structured output configuration, effectively disabling guided generation.
+     * Should be used when validateStructuredOutputConfig throws and we want to allow
+     * the request to proceed without guided generation.
+     */
+    void unsetStructuredOutputConfig();
 
     /*
      * Fills generation config with values read from OpenAI request.
