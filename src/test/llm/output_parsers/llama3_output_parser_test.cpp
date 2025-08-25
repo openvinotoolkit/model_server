@@ -257,3 +257,49 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
         }
     }
 }
+
+TEST_F(Llama3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
+        // Tool parser is available, but tools are not in the request so every chunk is just a regular content
+        {"<|python_tag|>", "{\"delta\":{\"content\":\"<|python_tag|>\"}}"},
+        {"{\"", "{\"delta\":{\"content\":\"{\\\"\"}}"},
+        {"name", "{\"delta\":{\"content\":\"name\"}}"},
+        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
+        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
+        {"super", "{\"delta\":{\"content\":\"super\"}}"},
+        {"_tool", "{\"delta\":{\"content\":\"_tool\"}}"},
+        {"_number", "{\"delta\":{\"content\":\"_number\"}}"},
+        {"_two", "{\"delta\":{\"content\":\"_two\"}}"},
+        {"\",", "{\"delta\":{\"content\":\"\\\",\"}}"},
+        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
+        {"arguments", "{\"delta\":{\"content\":\"arguments\"}}"},
+        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
+        {" {", "{\"delta\":{\"content\":\" {\"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"arg1", "{\"delta\":{\"content\":\"arg1\"}}"},
+        {"\": ", "{\"delta\":{\"content\":\"\\\": \"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"val{{{ue1", "{\"delta\":{\"content\":\"val{{{ue1\"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"}", "{\"delta\":{\"content\":\"}\"}}"},
+        {"}", "{\"delta\":{\"content\":\"}\"}}"},
+    };
+
+    for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
+        // Second argument is false as we simulate the case where tools have not been provided in the request
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+        } else {
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+        }
+    }
+}
