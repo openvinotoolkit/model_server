@@ -216,7 +216,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             newJson = jsonBuilder.add(chunk);
         }
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
         // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
         throw std::runtime_error("Generated tool call structure is not valid");  // re-throw
     }
@@ -232,7 +232,7 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
             // We received big chunk with both full function name and parameters, so we get function name from the new JSON
             functionName = newJson["name"].GetString();
         } else {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
             throw std::runtime_error("Tool call name is missing in generated output");
         }
         // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
