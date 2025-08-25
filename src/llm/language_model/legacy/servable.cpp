@@ -96,6 +96,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
     legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
+    try {
+        executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    }
     return absl::OkStatus();
 }
 
