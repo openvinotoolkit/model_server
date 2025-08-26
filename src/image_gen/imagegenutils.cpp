@@ -24,6 +24,10 @@
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -273,7 +277,10 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
         if (numImages > args.maxNumImagesPerPrompt) {
-            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
+            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
+        }
+        if (numImages <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n must be higher than 0"));
         }
     }
     it = requestOptions.find("num_inference_steps");
@@ -282,8 +289,25 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         if (numInferenceSteps > args.maxNumInferenceSteps) {
             return absl::InvalidArgumentError(absl::StrCat("num_inference_steps is greater than maxNumInferenceSteps: ", args.maxNumInferenceSteps));
         }
+        if (numInferenceSteps <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("num_inference_steps must be higher than 0"));
+        }
     } else {
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
+    }
+    it = requestOptions.find("width");
+    if (it != requestOptions.end()) {
+        auto width = it->second.as<int>();
+        if (width <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("width must be higher than 0"));
+        }
+    }
+    it = requestOptions.find("height");
+    if (it != requestOptions.end()) {
+        auto height = it->second.as<int>();
+        if (height <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
+        }
     }
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
