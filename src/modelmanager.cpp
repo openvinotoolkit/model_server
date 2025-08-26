@@ -173,10 +173,6 @@ Status ModelManager::start(const Config& config) {
     this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
-    if (resourcesCleanupIntervalMillisec < 1) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval_seconds has to be greater than 0. Applying default value(1 second)");
-        resourcesCleanupIntervalMillisec = 1000;
-    }
     Status status;
     this->startedWithConfigFile = (config.configPath() != "");
     if (isStartedWithConfigFile()) {
@@ -189,7 +185,9 @@ Status ModelManager::start(const Config& config) {
         return status;
     }
     startWatcher(isStartedWithConfigFile());
-    startCleaner();
+    if (sequenceCleaupIntervalMinutes > 0 || resourcesCleanupIntervalMillisec > 0)
+        startCleaner();
+
     return status;
 }
 
@@ -658,7 +656,7 @@ static Status processPipelineConfig(rapidjson::Document& configJson, const rapid
 Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
     const auto doc = configJson.FindMember("custom_node_library_config_list");
     if (doc == configJson.MemberEnd()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
         return StatusCode::OK;
     }
     std::set<std::string> librariesInConfig;
@@ -675,7 +673,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 #if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
         mediapipeFactory.retireOtherThan({}, *this);
         return StatusCode::OK;
     }
@@ -686,6 +684,8 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
             auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            } else {
+                mediapipeGraphConfig.logGraphConfigContent();
             }
         }
         mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
@@ -701,7 +701,7 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have pipelines property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have pipelines property.");
         pipelineFactory.retireOtherThan({}, *this);
         return StatusCode::OK;
     }
@@ -935,7 +935,6 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
     std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
     for (auto& mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
-        rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
@@ -943,14 +942,9 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
             std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
             ifs.open(subconfigModelMeshPath);
             if (!ifs.is_open()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig model mesh path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
-                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
                 continue;
             } else {
                 // Switch to model mesh path for subconfig
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from model mesh subconfig path: {} provided for graph: {}",
-                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
-
                 subconfigPath = subconfigModelMeshPath;
                 mediapipeConfig.setSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
             }
@@ -974,7 +968,7 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
 
         if (mediapipeItr == subconfigJson.MemberEnd() || !mediapipeItr->value.IsArray()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfiguration file doesn't have models property.");
             return StatusCode::JSON_INVALID;
         }
         std::string subconfigRootDirectoryPath;
@@ -998,7 +992,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     const auto itr = configJson.FindMember("model_config_list");
 
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
     std::set<std::string> modelsInConfigFile;
@@ -1238,18 +1232,20 @@ void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMiliseconds, 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
     uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
     uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
+    bool shouldCheckForResourceCleanup = resourcesCleanupInterval != 0;
     bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
     uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
     while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle begin");
 
-        currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
+        if (shouldCheckForResourceCleanup)
+            currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
         if (shouldCheckForSequenceCleanup)
             currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
         currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
-        if (currentResourcesWaitTime == resourcesCleanupInterval)
+        if (currentResourcesWaitTime == resourcesCleanupInterval && shouldCheckForResourceCleanup)
             functorResourcesCleaner.cleanup();
         if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
             functorSequenceCleaner.cleanup();
