@@ -47,13 +47,6 @@ struct ParsedOutput {
     std::string reasoning;
 };
 
-// Enum used to track current processing phase, used in streaming mode
-enum ProcessingPhase {
-    CONTENT,
-    REASONING,
-    TOOL_CALLS
-};
-
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
