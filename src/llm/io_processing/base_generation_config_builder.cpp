@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <limits>
+#include <string>
 #include <openvino/genai/generation_config.hpp>
 #include "base_generation_config_builder.hpp"
 
