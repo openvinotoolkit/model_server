@@ -79,6 +79,10 @@ public:
     Status revalidatePipelines(ModelManager&);
     const std::vector<std::string> getMediapipePipelinesNames() const;
     ~MediapipeFactory();
+
+    std::shared_mutex& getDefinitionsMtx() const {
+        return definitionsMtx;
+    }
 };
 
 }  // namespace ovms

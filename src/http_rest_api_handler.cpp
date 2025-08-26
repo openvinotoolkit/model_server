@@ -617,7 +617,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
 }
 
 Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     time_t timestamp;
@@ -627,18 +626,37 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("list");
     writer.String("data");
     writer.StartArray();
+
+    // Single Model
+    std::shared_lock lockSingleModels(modelManager.modelsMtx);
+    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     for (auto const& model : models) {
-        parseModel(writer, model.first, timestamp);
+        auto defaultModelInstance = model.second->getDefaultModelInstance();
+        if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
+            parseModel(writer, model.first, timestamp);
     }
+    lockSingleModels.unlock();
+    
+    // DAG
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    for (auto const& pipelineName : pipelinesNames) {
-        parseModel(writer, pipelineName, timestamp);
+    std::shared_lock lockDags(modelManager.getPipelineFactory().getDefinitionsMtx());
+    for (auto const& name : pipelinesNames) {
+        auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(name);
+        if (pipelineDefinition->getStatus().isAvailable())
+            parseModel(writer, name, timestamp);
     }
+    lockDags.unlock();
+
+    // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
+    std::shared_lock lockMediapipes(modelManager.getMediapipeFactory().getDefinitionsMtx());
     for (auto const& graphName : mediapipes) {
-        parseModel(writer, graphName, timestamp);
+        auto mediapipeGraphDefinition = modelManager.getMediapipeFactory().findDefinitionByName(graphName);
+        if (mediapipeGraphDefinition->getStatus().isAvailable())
+            parseModel(writer, graphName, timestamp);
     }
+    lockMediapipes.unlock();
 #endif
     writer.EndArray();
     writer.String("object");
