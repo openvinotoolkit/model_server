@@ -86,7 +86,7 @@ options:
                         Set pipeline to use prompt lookup decoding
   --reasoning_parser {qwen3}
                         Set the type of the reasoning parser for reasoning content extraction
-  --tool_parser {llama3,phi4,hermes3,qwen3}
+  --tool_parser {llama3,phi4,hermes3}
                         Set the type of the tool parser for tool calls extraction
   --enable_tool_guided_generation
                         Enables enforcing tool schema during generation. Requires setting tool_parser

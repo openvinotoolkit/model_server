@@ -299,7 +299,7 @@ new_local_repository(
 new_local_repository(
     name = "windows_opencv",
     build_file = "@//third_party/opencv:opencv_windows.BUILD",
-    path = "C:\\opt\\opencv",
+    path = "C:\\opt\\opencv_4.12.0",
 )
 
 new_local_repository(
@@ -547,12 +547,12 @@ google_cloud_cpp_common_deps()
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 grpc_deps()
-http_archive( # 1.60.0
+http_archive( # 1.74.1
     name = "com_github_grpc_grpc",
     urls = [
-        "https://github.com/grpc/grpc/archive/0ef13a7555dbaadd4633399242524129eef5e231.tar.gz",
+        "https://github.com/grpc/grpc/archive/893bdadd56dbb75fb156175afdaa2b0d47e1c15b.tar.gz",
     ],
-    strip_prefix = "grpc-0ef13a7555dbaadd4633399242524129eef5e231",
+    strip_prefix = "grpc-893bdadd56dbb75fb156175afdaa2b0d47e1c15b",
 )
 
 # cxxopts
