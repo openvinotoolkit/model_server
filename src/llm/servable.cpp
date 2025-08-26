@@ -227,7 +227,7 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     return ss.str();
 }
 void logRequestDetails(const ovms::HttpPayload& payload) {
-    if (spdlog::default_logger_raw()->level() != spdlog::level::debug)
+    if (spdlog::default_logger_raw()->level() > spdlog::level::debug)
         return;
 
     auto parsedJson = payload.parsedJson;
