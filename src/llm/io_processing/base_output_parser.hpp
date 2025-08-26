@@ -96,7 +96,7 @@ public:
     virtual const std::string& getParsingStartTag() const = 0;
 
     // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
-    // These tags are considered only if they the first output produced by the model.
+    // These tags are considered only if they are the first output produced by the model.
     virtual const std::unordered_set<std::string>& getSpecialParsingStartTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.

@@ -109,7 +109,7 @@ static inline bool isParsingTagPartOfChunk(const std::string& chunk, const std::
     return chunk.find(parsingTag) != std::string::npos;
 }
 
-static inline bool chunkContainsSpecialStartTag(const std::string& chunk, const std::unordered_set<std::string>& specialParsingTags) {
+static inline bool chunkContainsSpecialParsingTag(const std::string& chunk, const std::unordered_set<std::string>& specialParsingTags) {
     for (const auto& tag : specialParsingTags) {
         if (isParsingTagPartOfChunk(chunk, tag)) {
             return true;
@@ -134,7 +134,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
             processingPhase = REASONING;
             return reasoningParser->parseChunk(chunkResponse, finishReason);
         } else if (applyToolParser) {
-            if (isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag()) || chunkContainsSpecialStartTag(chunkResponse, toolParser->getSpecialParsingStartTags())) {
+            if (isParsingTagPartOfChunk(chunkResponse, toolParser->getParsingStartTag()) || chunkContainsSpecialParsingTag(chunkResponse, toolParser->getSpecialParsingStartTags())) {
                 processingPhase = TOOL_CALLS;
                 return toolParser->parseChunk(chunkResponse, finishReason);
             } else if (toolParser->isImmediateParsingEnabled()) {
