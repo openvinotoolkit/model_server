@@ -39,7 +39,9 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    logRequestDetails(payload);
+    if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
+        logRequestDetails(payload);
+    }
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
         return absl::InvalidArgumentError("Non-json request received in text generation calculator");
@@ -227,9 +229,6 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     return ss.str();
 }
 void logRequestDetails(const ovms::HttpPayload& payload) {
-    if (spdlog::default_logger_raw()->level() > spdlog::level::debug)
-        return;
-
     auto parsedJson = payload.parsedJson;
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
