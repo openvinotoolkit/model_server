@@ -167,8 +167,7 @@ std::vector<std::tuple<std::string, std::string, std::string, std::string, size_
     std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568))};
 
 std::vector<std::tuple<std::string, std::string, size_t>> ggufServerStartParams = {
-    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168))
-};
+    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168))};
 
 #ifndef _WIN32
 INSTANTIATE_TEST_SUITE_P(

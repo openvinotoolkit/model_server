@@ -818,7 +818,8 @@ void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::S
     server.setShutdownRequest(0);
     std::string port = "9133";
     randomizeAndEnsureFree(port);
-    char* argv[] = {(char*)"ovms",
+    char* argv[] = {
+        (char*)"ovms",
         (char*)"--port",
         (char*)port.c_str(),
         (char*)"--source_model",
