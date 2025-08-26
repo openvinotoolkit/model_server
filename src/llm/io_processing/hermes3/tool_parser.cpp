@@ -32,11 +32,32 @@
 namespace ovms {
 
 void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-    size_t pos = 0;
-    size_t firstToolCallPos = parsedOutput.content.find("<tool_call>", pos);
     const std::string startTag = "<tool_call>";
     const std::string endTag = "</tool_call>";
+    std::vector<std::string> tools;
+    size_t pos = 0;
+    size_t firstToolCallPos;
+
+    // If immediate parsing is enabled, we assume tool calls start from the beginning of the content.
+    // Otherwise, we search for the first occurrence of the tool call start tag.
+    if (!immediateParsingEnabled) {
+        firstToolCallPos = parsedOutput.content.find(startTag, pos);
+    } else {
+        // Read first tool call without opening tag
+        firstToolCallPos = 0;
+        size_t end = parsedOutput.content.find(endTag, firstToolCallPos);
+        std::string tool;
+        if (end != std::string::npos) {
+            tool = parsedOutput.content.substr(0, end);
+            pos = end + endTag.length();
+        } else {
+            tool = parsedOutput.content;
+            pos = parsedOutput.content.length();
+        }
+        if (!tool.empty()) {
+            tools.push_back(tool);
+        }
+    }
 
     while (true) {
         size_t start = parsedOutput.content.find(startTag, pos);
@@ -91,7 +112,7 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
-std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk) {
+std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
     Start and end tags in this phase modify state of the processing, but do not return any message.
     Otherwise we collect data until we have full function name - that's when we return the first delta.

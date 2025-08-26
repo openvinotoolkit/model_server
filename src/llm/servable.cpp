@@ -19,10 +19,12 @@
 #include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -37,8 +39,9 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
+        logRequestDetails(payload);
+    }
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
         return absl::InvalidArgumentError("Non-json request received in text generation calculator");
@@ -81,6 +84,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
     executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
     executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
+    try {
+        executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    }
     return absl::OkStatus();
 }
 
@@ -122,6 +131,18 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
     }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
+    if (executionContext->apiHandler->getToolChoice() == "required") {
+        const auto& outputParser = executionContext->apiHandler->getOutputParser();
+        if (outputParser != nullptr && outputParser->isToolParserAvailable()) {
+            // If tool parser is available, we add tool parser start tag to the input text
+            // to increase the chance of the model generating tool calls immediately.
+            outputParser->enableImmediateToolParsing();
+            inputText += outputParser->getToolParserStartTag();
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool parser trigger: {} at the end of the input.", outputParser->getToolParserStartTag());
+        } else {
+            return absl::InvalidArgumentError("Tool parser is not available, but tool_choice is set to 'required'");
+        }
+    }
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
@@ -206,6 +227,14 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     std::stringstream ss;
     ss << "data: " << text << "\n\n";
     return ss.str();
+}
+void logRequestDetails(const ovms::HttpPayload& payload) {
+    auto parsedJson = payload.parsedJson;
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    parsedJson->Accept(writer);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", buffer.GetString());
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)

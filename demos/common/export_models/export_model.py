@@ -52,7 +52,7 @@ parser_text.add_argument('--max_prompt_len', required=False, type=int, default=N
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
 parser_text.add_argument('--reasoning_parser', choices=["qwen3"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
-parser_text.add_argument('--tool_parser', choices=["llama3","phi4","hermes3", "qwen3"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
+parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
 parser_embeddings = subparsers.add_parser('embeddings', help='[deprecated] export model for embeddings endpoint with models split into separate, versioned directories')
@@ -142,6 +142,8 @@ node {
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
       {%- if pooling %}
       pooling: {{pooling}},{% endif %}
+      {%- if truncate %}
+      truncate: true,{% endif %}
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -464,24 +466,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
 
-    if template_parameters.get("tools_model_type") is not None:
-        print("Adding tuned chat template")
-        template_mapping = {
-            "phi4": "tool_chat_template_phi4_mini.jinja",
-            "llama3": "tool_chat_template_llama3.1_json.jinja",
-            "hermes3": "tool_chat_template_hermes.jinja",
-            "qwen3": None
-            }
-        template_name = template_mapping[task_parameters.get("tools_model_type")]
-        if template_name is not None:
-            template_path = os.path.join(model_repository_path, model_name, "template.jinja")
-            import requests
-            response = requests.get("https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/" + template_name)
-            print(response.raise_for_status())
-            with open(template_path, "wb") as f:
-                f.write(response.content)
-            print(f"Downloaded tuned chat template to {template_path}")
-
     add_servable_to_config(config_file_path, model_name, os.path.relpath( os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
 def export_embeddings_model(model_repository_path, source_model, model_name, precision, task_parameters, version, config_file_path, truncate=True):
@@ -541,10 +525,6 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
         optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
-        if truncate:
-            max_context_length = get_models_max_context(destination_path, 'config.json')
-            if max_context_length is not None:
-                set_max_context_length = "--max_length " + str(get_models_max_context(destination_path, 'config.json'))
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
         if (os.system(convert_tokenizer_command)):

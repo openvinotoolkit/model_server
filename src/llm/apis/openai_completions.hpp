@@ -104,6 +104,8 @@ public:
 
     bool isStream() const;
     std::string getModel() const;
+    std::string getToolChoice() const;
+    const std::unique_ptr<OutputParser>& getOutputParser() const;
 
     void setPromptTokensUsage(size_t promptTokens);
 

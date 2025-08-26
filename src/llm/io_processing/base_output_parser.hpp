@@ -16,6 +16,8 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/generation_handle.hpp>
+#include <unordered_set>
 #include <string>
 #include <optional>
 #include <vector>
@@ -47,22 +49,23 @@ struct ParsedOutput {
     std::string reasoning;
 };
 
-// Enum used to track current processing phase, used in streaming mode
-enum ProcessingPhase {
-    CONTENT,
-    REASONING,
-    TOOL_CALLS
-};
-
 class BaseOutputParser {
 protected:
     ov::genai::Tokenizer tokenizer;
+    // Flag indicating whether parsing start tag has been injected into the prompt
+    // if true, parser should assume start tag already appeared and start parsing immediately
+    bool immediateParsingEnabled = false;
 
 public:
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}
     virtual ~BaseOutputParser() = default;
+
+    // Calling this method should put parser into immediate parsing mode where it starts parsing immediately, without seeking the start tag.
+    void enableImmediateParsing();
+
+    bool isImmediateParsingEnabled() const;
 
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
@@ -73,16 +76,21 @@ public:
 
     // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
     // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
+    // Parser is also responsible for removing extracted part from the parsedOutput.content if necessary.
     virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) = 0;
 
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
-    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse) = 0;
+    virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
 
     // Get the tag that marks the beginning of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should start processing the content.
     // If empty string is returned, it means that the parser will never start processing the content.
     virtual const std::string& getParsingStartTag() const = 0;
+
+    // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
+    // These tags are considered only if they are the first output produced by the model.
+    virtual const std::unordered_set<std::string>& getSpecialParsingStartTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should stop processing the content.

@@ -77,7 +77,7 @@ copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4120.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -104,7 +104,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
 md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\opencv\etc\licenses\* %license_dest%
+copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
 if !errorlevel! neq 0 exit /b !errorlevel!

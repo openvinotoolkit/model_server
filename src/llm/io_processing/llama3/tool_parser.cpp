@@ -35,24 +35,30 @@ void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
     // and just extract substrings from the content and modify content in-place
 
-    auto toolCallsStartPosition = generatedTokens.end();
+    // If immediate trigger parsing is enabled, we assume botTokenId has been injected into the prompt and whole output are tool calls,
+    // otherwise we search for botTokenId in the generatedTokens to find tool calls start or check if the content starts with "{" (llama3 sometimes does not generate botTokenId)
+    auto toolCallsStartPosition = generatedTokens.begin();
+    if (!immediateParsingEnabled) {
+        toolCallsStartPosition = generatedTokens.end();
+        // Find botTokenId in generated_ids
+        auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
 
-    // Find botTokenId in generated_ids
-    auto botTokenIt = std::find(generatedTokens.begin(), generatedTokens.end(), botTokenId);
-
-    if (botTokenIt != generatedTokens.end()) {
-        // Decode the content before botTokenId
-        std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
-        parsedOutput.content = tokenizer.decode(contentTokens);
-        // Tokens after botTokenId will be treated as tool calls
-        toolCallsStartPosition = botTokenIt + 1;
-    } else {
-        // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
-        if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
-            // If model output starts with "{", treat it as a tool call
-            toolCallsStartPosition = generatedTokens.begin();
-            parsedOutput.content.clear();
+        if (botTokenIt != generatedTokens.end()) {
+            // Decode the content before botTokenId
+            std::vector<int64_t> contentTokens(generatedTokens.begin(), botTokenIt);
+            parsedOutput.content = tokenizer.decode(contentTokens);
+            // Tokens after botTokenId will be treated as tool calls
+            toolCallsStartPosition = botTokenIt + 1;
+        } else {
+            // If botTokenId is not found, check if model output starts with "{" and if so, assume it's a tool call"
+            if (!parsedOutput.content.empty() && parsedOutput.content[0] == '{') {
+                // If model output starts with "{", treat it as a tool call
+                toolCallsStartPosition = generatedTokens.begin();
+                parsedOutput.content.clear();
+            }
         }
+    } else {
+        parsedOutput.content.clear();
     }
 
     if (toolCallsStartPosition != generatedTokens.end()) {
@@ -104,9 +110,159 @@ void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64
     }
 }
 
-std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk) {
-    // Not implemented
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Llama3ToolParser::parseChunk is not implemented");
+void Llama3ToolParser::startNextToolCall() {
+    lastJson.Clear();
+    jsonBuilder.clear();
+    toolCallIndex++;
+    argumentsDelayWindow[0].clear();
+    argumentsDelayWindow[1].clear();
+}
+
+static inline bool jsonHasArgumentsOrParameters(const rapidjson::Document& json) {
+    return json.HasMember("arguments") || json.HasMember("parameters");
+}
+
+static inline void changeParametersToArguments(rapidjson::Document& json) {
+    if (json.HasMember("parameters")) {
+        // change key to "arguments"
+        json.AddMember("arguments", json["parameters"], json.GetAllocator());
+        json.RemoveMember("parameters");
+    }
+}
+
+std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    if (chunk.empty()) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Llama3ToolParser");
+        return std::nullopt;
+    }
+
+    // <|python_tag|> appears
+    if (chunk.find(parsingStartTag) != std::string::npos) {
+        this->startNextToolCall();
+        return std::nullopt;  // ignoring the special tag
+    }
+
+    // -1 means not started, we need to start it
+    if (toolCallIndex < 0) {
+        this->startNextToolCall();
+    }
+
+    // Cases to handle:
+    // <|python_tag|>{ ... parameters ... } ; { ... parameters ... }
+    // <|python_tag|>{ ... arguments ... } ; { ... arguments ... }
+    // { ... parameters ... } ; { ... parameters ... }
+    // { ... arguments ... } ; { ... arguments ... }
+
+    bool isCurrentToolCallParsingFinished = false;
+
+    // JSON already contains 'parameters'/'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
+    if (jsonHasArgumentsOrParameters(lastJson)) {
+        std::string modifiedChunk = chunk;
+        // Escaping all double quotes in the parameters/arguments string
+        for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
+            modifiedChunk.insert(pos, "\\");
+        }
+
+        // Handle the case when we are starting to collect parameters/arguments.
+        // Force parameters/arguments string type and fill first element of the delay array.
+        if (argumentsDelayWindow[0].empty()) {
+            // If we are starting to collect parameters/arguments, we add opening quote before the first non-whitespace character
+            size_t firstNonWhitespaceCharacter = modifiedChunk.find_first_not_of(" \t\n\r\f\v");
+            if (firstNonWhitespaceCharacter != std::string::npos) {
+                modifiedChunk.insert(firstNonWhitespaceCharacter, "\"");
+            } else {
+                // If the chunk is all whitespace, just insert closing quote at the end
+                modifiedChunk.append("\"");
+            }
+            argumentsDelayWindow[0] = modifiedChunk;
+            return std::nullopt;  // We don't return anything yet, we need to collect next chunk
+        }
+
+        if (!argumentsDelayWindow[1].empty()) {
+            // We already have two chunks, so we can move delay window forward
+            argumentsDelayWindow[0] = argumentsDelayWindow[1];
+        }
+
+        // If this is end of streaming, we need to manually add closing quote "
+        // We need to place it right before last closing brace
+        if (finishReason == ov::genai::GenerationFinishReason::STOP) {
+            isCurrentToolCallParsingFinished = true;
+            size_t lastClosingBrace = modifiedChunk.find_last_of('}');
+            if (lastClosingBrace != std::string::npos) {
+                modifiedChunk.insert(lastClosingBrace, "\"");
+                argumentsDelayWindow[0] += modifiedChunk;
+            }
+            // If this is end of one of the tool calls "in the middle" (; has been found), we need to manually add closing quote "
+            // We need to place it right before last closing brace
+        } else if (modifiedChunk.find(separator) != std::string::npos) {
+            isCurrentToolCallParsingFinished = true;
+            size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
+            if (lastClosingBrace != std::string::npos) {
+                argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
+            }
+        } else {
+            argumentsDelayWindow[1] = modifiedChunk;
+        }
+    }
+
+    rapidjson::Document newJson;
+    // Push delayed chunk to the JSON builder
+    try {
+        if (!argumentsDelayWindow[0].empty()) {
+            // Push delayed chunk to the JSON builder if we are processing parameters
+            newJson = jsonBuilder.add(argumentsDelayWindow[0]);
+        } else {
+            // Otherwise just push the current chunk
+            newJson = jsonBuilder.add(chunk);
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+        // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
+        throw std::runtime_error("Generated tool call structure is not valid");  // re-throw
+    }
+
+    rapidjson::Document doc;
+    // Case 1: 'parameters'/'arguments' has just appeared in the current chunk. If so, we return first delta.
+    if (jsonHasArgumentsOrParameters(newJson) && !jsonHasArgumentsOrParameters(lastJson)) {
+        std::string functionName;
+        changeParametersToArguments(newJson);
+        if (lastJson.HasMember("name") && lastJson["name"].IsString()) {
+            functionName = lastJson["name"].GetString();
+        } else if (newJson.HasMember("name") && newJson["name"].IsString()) {
+            // We received big chunk with both full function name and parameters, so we get function name from the new JSON
+            functionName = newJson["name"].GetString();
+        } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call name has not been generated and parameters already started");
+            throw std::runtime_error("Tool call name is missing in generated output");
+        }
+        // Wrap first delta in {"tool_calls":[{"id":<id>,"type":"function","index":<toolCallIndex>,"function":{"name": <functionName>}}]}
+        doc = wrapFirstDelta(functionName, toolCallIndex);
+        lastJson.CopyFrom(newJson, lastJson.GetAllocator());
+        return doc;
+        // Case 2: 'parameters' already exists in the last JSON, we compute delta and return it.
+    } else if (lastJson.HasMember("arguments") || lastJson.HasMember("parameters")) {
+        changeParametersToArguments(newJson);
+        rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
+        lastJson.CopyFrom(newJson, lastJson.GetAllocator());
+        // If delta is empty or contains only null or empty string values, we don't stream anything.
+        if (delta.ObjectEmpty()) {
+            return std::nullopt;
+        }
+        for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
+            if (it->value.IsNull() || (it->value.IsString() && std::string(it->value.GetString()).empty())) {
+                return std::nullopt;
+            }
+        }
+        // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
+        doc = wrapDelta(delta, toolCallIndex);
+        if (isCurrentToolCallParsingFinished) {
+            this->startNextToolCall();
+        }
+        return doc;
+        // Case 3: No 'parameters' exists or just appeared, so we keep building up until we have complete function name
+    } else {
+        lastJson.CopyFrom(newJson, lastJson.GetAllocator());
+    }
     return std::nullopt;
 }
 

@@ -246,7 +246,9 @@ TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
 }
 
 TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
-    std::string targetJson = R"({
+    std::string targetJson = R"(
+    
+    {
         "major_object": {
             "string": "OpenVINO",
             "minor_object": {
@@ -404,12 +406,12 @@ TEST_F(PartialJsonBuilderTest, NegativeCases) {
         {R"({"object": {"string":"1", "string",)", "Invalid JSON: Expected ':' after key."},
         {R"({"name": "get_weather",  1)", "Invalid JSON: Expected key to start with a quote or a proper object closure."},
         {R"({"name": a)", "Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'."},
-        {R"({"numbers": []])", "Invalid JSON."},         // invalid closure
-        {R"({"numbers": [1, 2, 3})", "Invalid JSON."},   // invalid closure
-        {R"({"numbers": [1, 2, 3b)", "Invalid JSON."},   // invalid value
-        {R"({"numbers": [1, 2, 3")", "Invalid JSON."},   // invalid value
-        {R"({"string": "string\""1)", "Invalid JSON."},  // invalid value
-        {R"({"bool": tak,)", "Invalid JSON."},           // invalid special value
+        {R"({"numbers": []])", "Invalid JSON. Content:\n{\"numbers\": []]}"},                    // invalid closure
+        {R"({"numbers": [1, 2, 3})", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3}]}"},       // invalid closure
+        {R"({"numbers": [1, 2, 3b)", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3b]}"},       // invalid value
+        {R"({"numbers": [1, 2, 3")", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3\"\"]}"},    // invalid value
+        {R"({"string": "string\""1)", "Invalid JSON. Content:\n{\"string\": \"string\\\"\"1}"},  // invalid value
+        {R"({"bool": tak,)", "Invalid JSON. Content:\n{\"bool\": tak}"},                         // invalid special value
     };
 
     for (const auto& [json, expectedError] : negativeCases) {

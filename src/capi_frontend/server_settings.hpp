@@ -114,6 +114,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     std::string normalize = "true";
+    std::string truncate = "false";
     std::string pooling = "CLS";
 };
 
@@ -177,7 +178,7 @@ struct ServerSettingsImpl {
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t sequenceCleanerPollWaitMinutes = 5;
-    uint32_t resourcesCleanerPollWaitSeconds = 1;
+    uint32_t resourcesCleanerPollWaitSeconds = 300;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;
