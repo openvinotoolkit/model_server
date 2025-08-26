@@ -968,7 +968,7 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
 
         if (mediapipeItr == subconfigJson.MemberEnd() || !mediapipeItr->value.IsArray()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfiguration file doesn't have models property.");
             return StatusCode::JSON_INVALID;
         }
         std::string subconfigRootDirectoryPath;
