@@ -405,11 +405,11 @@ RUN apt-get update ; \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
             curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.22.0/linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2204.tar.gz && \
             tar -xf linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2204.tar.gz && \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u22.04_amd64.deb && \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u22.04_amd64.deb ; \
         else \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u24.04_amd64.deb && \
             tar -xf linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2204.tar.gz && \
-            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u24.04_amd64.deb && \
+            curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u24.04_amd64.deb ; \
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \
     fi ; \
