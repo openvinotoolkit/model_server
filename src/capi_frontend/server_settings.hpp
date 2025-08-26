@@ -114,6 +114,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string modelName = "";
     uint32_t numStreams = 1;
     std::string normalize = "true";
+    std::string truncate = "false";
     std::string pooling = "CLS";
 };
 

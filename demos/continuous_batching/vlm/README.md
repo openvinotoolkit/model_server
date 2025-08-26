@@ -93,7 +93,7 @@ python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --w
 
 > **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
 
-> **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/SUPPORTED_MODELS.md#visual-language-models) with OpenVINO.
+> **Note:** You can change the model used in the demo out of any topology [tested](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms) with OpenVINO.
 Be aware that QwenVL models executed on GPU might experience execution errors with very high resolution images. In case of such behavior, it is recommended to reduce the parameter `max_pixels` in `preprocessor_config.json`.
 
 

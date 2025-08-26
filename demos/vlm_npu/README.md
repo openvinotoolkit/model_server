@@ -43,7 +43,7 @@ python export_model.py text_generation --source_model microsoft/Phi-3.5-vision-i
 
 Note that by default, NPU sets limitation on the prompt length (which in VLM also include image tokens) to 1024 tokens. You can modify that limit by using `--max_prompt_len` parameter.
 
-> **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/SUPPORTED_MODELS.md#visual-language-models) with OpenVINO.
+> **Note:** You can change the model used in the demo out of any topology [tested](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms) with OpenVINO.
 
 You should have a model folder like below:
 ```
@@ -129,7 +129,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 
 :::{dropdown} **Unary call with curl using image from local filesystem**
 
-Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](parameters.md) section) when starting docker container: 
+Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](../../docs/parameters.md) section) when starting docker container: 
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
 -p 8000:8000 -v $(pwd)/models:/workspace:ro -v $(pwd):/images:ro openvino/model_server:latest-gpu --rest_port 8000 --config_path /workspace/config.json --allowed_local_media_path /images

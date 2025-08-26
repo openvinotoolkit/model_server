@@ -24,10 +24,6 @@
 #include <openvino/genai/image_generation/text2image_pipeline.hpp>
 #include <openvino/genai/image_generation/image2image_pipeline.hpp>
 
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
-
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
