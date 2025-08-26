@@ -1,14 +1,15 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index 73731c0..31dc189 100644
+index 73731c0..e31add1 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-@@ -2060,6 +2060,28 @@ third_party_inference_model_map = {
+@@ -2060,6 +2060,30 @@ third_party_inference_model_map = {
          is_fc_model=True,
          underscore_to_dot=False,
      ),
-+    "ovms_model": ModelConfig(
-+        model_name="ovms_model",
-+        display_name="ovms_model",
++    "ovms-model": ModelConfig(
++        model_name="ovms-model",
++        display_name="ovms-model",
++        url="http://localhost:8000/v3",
 +        org="ovms",
 +        license="apache-2.0",
 +        model_handler=OpenAICompletionsHandler,
@@ -20,6 +21,7 @@ index 73731c0..31dc189 100644
 +    "ovms_model_stream": ModelConfig(
 +        model_name="ovms_model_stream",
 +        display_name="ovms_model_stream",
++        url="http://localhost:8000/v3",
 +        org="ovms",
 +        license="apache-2.0",
 +        model_handler=QwenAPIHandler,
@@ -32,7 +34,7 @@ index 73731c0..31dc189 100644
  
  
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
-index 8665234..734b47c 100644
+index 8665234..3f7a6c4 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 @@ -23,7 +23,7 @@ class OpenAICompletionsHandler(BaseHandler):
@@ -40,10 +42,18 @@ index 8665234..734b47c 100644
          super().__init__(model_name, temperature)
          self.model_style = ModelStyle.OpenAI_Completions
 -        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-+        self.client = OpenAI(base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY"),timeout=os.getenv("OPENAI_TIMEOUT", 600))
++        self.client = OpenAI(base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY", "not_used"),timeout=os.getenv("OPENAI_TIMEOUT", 1600))
  
      def decode_ast(self, result, language="Python"):
          if "FC" in self.model_name or self.is_fc_model:
+@@ -61,6 +61,7 @@ class OpenAICompletionsHandler(BaseHandler):
+             "messages": message,
+             "model": self.model_name.replace("-FC", ""),
+             "temperature": self.temperature,
++            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
+             "store": False,
+         }
+ 
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
 index 9ce4e7d..076e706 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
