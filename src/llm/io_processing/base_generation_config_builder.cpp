@@ -29,6 +29,10 @@ void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::Struc
     }
 }
 
+void BaseGenerationConfigBuilder::addStopString(const std::string& decodedStopString) {
+    config.stop_strings.insert(decodedStopString);
+}
+
 void BaseGenerationConfigBuilder::validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer) {
     if (config.structured_output_config.has_value()) {
         config.structured_output_config.value().validate(tokenizer);

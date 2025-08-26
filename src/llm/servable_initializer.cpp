@@ -117,25 +117,29 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             tokenizerTemplate = properties->tokenizer.get_chat_template();
             tokenizerBosToken = properties->tokenizer.get_bos_token();
             tokenizerEosToken = properties->tokenizer.get_eos_token();
-        }
-        // time measure following if statement
-        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-        // Workaround for CVS-172426
-        if (isGGUFModel && (tokenizerBosToken.empty() || tokenizerEosToken.empty())) {
-            // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
-            std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
-            tokens = getBosAndEosTokenFromTokenizerVocab(properties->tokenizer);
-            if (tokens.first.has_value()) {
-                tokenizerBosToken = tokens.first.value();
+
+            // Workaround for CVS-172426
+            if (tokenizerBosToken.empty() || tokenizerEosToken.empty()) {
+                // time measure following if statement
+                std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+                // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
+                std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
+                tokens = getBosAndEosTokenFromTokenizerVocab(properties->tokenizer);
+                if (tokens.first.has_value()) {
+                    tokenizerBosToken = tokens.first.value();
+                }
+                if (tokens.second.has_value()) {
+                    tokenizerEosToken = tokens.second.value();
+                }
+                SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
+                    tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel, tokenizerTemplate);
+
+                properties->ggufEosToken = tokenizerEosToken;
+                std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+                SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
             }
-            if (tokens.second.has_value()) {
-                tokenizerEosToken = tokens.second.value();
-            }
-            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
-                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel, tokenizerTemplate);
         }
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
+
         auto locals = py::dict("tokenizer_template"_a = tokenizerTemplate,
             "tokenizer_bos_token"_a = tokenizerBosToken,
             "tokenizer_eos_token"_a = tokenizerEosToken,
@@ -282,11 +286,16 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     } catch (const pybind11::key_error& e) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
-    } catch (...) {
+    } catch (const std::exception& e) {
+        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
+        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
+    }
+     catch (...) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
     }
 }
+
 #else
 void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
     const std::string modelChatTemplate = properties->tokenizer.get_chat_template();

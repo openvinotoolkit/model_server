@@ -87,6 +87,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to validate structured output config: {}", e.what());
         return absl::Status(absl::StatusCode::kInvalidArgument, "Invalid structured output config. Check if JSON schemas in your request are correct.");
     }
+
+    // Add gguf stop token if ggus optional has value in the properties
+    if (this->getProperties()->ggufEosToken.has_value()) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding GGUF model stop string: [{}]", this->getProperties()->ggufEosToken.value());
+        executionContext->generationConfigBuilder->addStopString(this->getProperties()->ggufEosToken.value());
+    }
     return absl::OkStatus();
 }
 

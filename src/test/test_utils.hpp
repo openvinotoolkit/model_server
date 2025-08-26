@@ -1086,13 +1086,18 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
- * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code = EXIT_SUCCESS, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
- *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ *  --source_model Qwen/Qwen3-8B-GGUF  --model_repository_path /models --gguf_filename Qwen3-8B-Q4_K_M.gguf
+ */
+void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& ggufFilename, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 4*SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
+ *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */
 void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
