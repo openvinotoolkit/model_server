@@ -43,7 +43,7 @@ public:
     ov::genai::GenerationConfig& getConfig() { return config; }
 
     void addStopString(const std::string& decodedStopString);
-    
+
     /*
     * Validates the structured output configuration, if exists.
     * Throws exception if validation fails.

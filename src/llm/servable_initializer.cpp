@@ -134,9 +134,15 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
                     tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGGUFModel, tokenizerTemplate);
 
-                properties->ggufEosToken = tokenizerEosToken;
                 std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
                 SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
+            }
+
+            if (tokenizerEosToken.empty()) {
+                SPDLOG_ERROR("Tokenizer eos token not found in tokenizer nor in vocabulary but required for GGUF models.");
+                throw std::runtime_error("Tokenizer eos token not found in tokenizer nor in vocabulary but required for GGUF models.");
+            } else {
+                properties->ggufEosToken = tokenizerEosToken;
             }
         }
 

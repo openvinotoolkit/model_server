@@ -91,7 +91,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
-    // Add gguf stop token if ggus optional has value in the properties
+    // Add gguf stop token if ggufEosToken optional has value in the properties
     if (this->getProperties()->ggufEosToken.has_value()) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding GGUF model stop string: [{}]", this->getProperties()->ggufEosToken.value());
         executionContext->generationConfigBuilder->addStopString(this->getProperties()->ggufEosToken.value());
