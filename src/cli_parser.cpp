@@ -28,12 +28,25 @@
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
+#include "localfilesystem.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
 namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
+
+std::string getConfigPath(const std::string& configPath){
+    bool isDir = false; 
+    auto status = LocalFileSystem::isDir(configPath, &isDir);
+    if (!status.ok()) {
+        throw std::logic_error("Invalid path for the config: " + configPath);
+    }
+    if (isDir) {
+        return FileSystem::joinPath({configPath, "config.json"});
+    }
+    return configPath;
+}
 
 void CLIParser::parse(int argc, char** argv) {
     try {
@@ -630,9 +643,9 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
     }
     if (result->count("add_to_config")) {
-        modelsSettings.configPath = result->operator[]("add_to_config").as<std::string>();
+        modelsSettings.configPath = ovms::getConfigPath(result->operator[]("add_to_config").as<std::string>());
     } else if (result->count("remove_from_config")) {
-        modelsSettings.configPath = result->operator[]("remove_from_config").as<std::string>();
+        modelsSettings.configPath = ovms::getConfigPath(result->operator[]("remove_from_config").as<std::string>());
     }
 }
 
