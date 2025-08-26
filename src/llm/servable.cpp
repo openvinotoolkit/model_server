@@ -39,7 +39,7 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", getBodyString(payload));
+    logRequestBody(payload.parsedJson);
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
@@ -227,16 +227,14 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     ss << "data: " << text << "\n\n";
     return ss.str();
 }
-std::string getBodyString(const ovms::HttpPayload& payload) {
-    if (spdlog::default_logger_raw()->level() == spdlog::level::debug) {
-        auto& json = payload.parsedJson;
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        json->Accept(writer);
-        return buffer.GetString();
-    }
+void logRequestBody(std::shared_ptr<rapidjson::Document> parsedJson) {
+    if (spdlog::default_logger_raw()->level() != spdlog::level::debug)
+        return;
 
-    return payload.body;
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    parsedJson->Accept(writer);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", buffer.GetString());
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)

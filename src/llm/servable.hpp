@@ -181,5 +181,5 @@ public:
 };
 std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
-std::string getBodyString(const ovms::HttpPayload& payload);
+void logRequestBody(std::shared_ptr<rapidjson::Document> parsedJson);
 }  // namespace ovms
