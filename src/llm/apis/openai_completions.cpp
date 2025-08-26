@@ -1058,7 +1058,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (outputParser != nullptr) {
-            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable());
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 return "";
             }

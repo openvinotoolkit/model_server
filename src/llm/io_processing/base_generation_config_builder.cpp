@@ -40,6 +40,10 @@ void BaseGenerationConfigBuilder::validateStructuredOutputConfig(ov::genai::Toke
     }
 }
 
+void BaseGenerationConfigBuilder::unsetStructuredOutputConfig() {
+    config.structured_output_config.reset();
+}
+
 void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
     // Generic
     config.apply_chat_template = false;  // template is applied on the serving side

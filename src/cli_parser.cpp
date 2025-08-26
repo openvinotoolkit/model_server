@@ -102,8 +102,8 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
-                "Time interval between two consecutive resources cleanup scans. Default is 1. Must be greater than 0.",
-                cxxopts::value<uint32_t>()->default_value("1"),
+                "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
+                cxxopts::value<uint32_t>()->default_value("300"),
                 "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into"
