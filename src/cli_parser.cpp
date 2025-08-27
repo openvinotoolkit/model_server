@@ -36,8 +36,8 @@ namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 
-std::string getConfigPath(const std::string& configPath){
-    bool isDir = false; 
+std::string getConfigPath(const std::string& configPath) {
+    bool isDir = false;
     auto status = LocalFileSystem::isDir(configPath, &isDir);
     if (!status.ok()) {
         throw std::logic_error("Invalid path for the config: " + configPath);
