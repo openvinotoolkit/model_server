@@ -461,7 +461,7 @@ public:
         // Default implementation from parent
         KserveGRPCPredictRequest::SetUp();
     }
-    
+
     void SetUpWithParams(std::string dataType, bool bufferInRequestRawInputContent) {
         SetUpTensorProto(dataType, bufferInRequestRawInputContent);
         float value = 1.0;
