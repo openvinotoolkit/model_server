@@ -234,11 +234,16 @@ bool Config::validate() {
             return false;
         }
         if (modelName().empty()) {
-            std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <name> --add_to_config <path> --model_repository_path <repo_path>" << std::endl
+                      << "  ovms --model_name <name> --remove_from_config <path>" << std::endl;
             return false;
         }
         if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
-            std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_path or model_repository_path and model_name with add_to_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <name> --add_to_config <path> --model_repository_path <repo_path>" << std::endl;
             return false;
         }
 
