@@ -34,6 +34,7 @@ enum GraphExportType : unsigned int {
 enum ModelDownlaodType : unsigned int {
     GIT_CLONE_DOWNLOAD,
     OPTIMUM_CLI_DOWNLOAD,
+    GGUF_DOWNLOAD,
     UNKNOWN_DOWNLOAD
 };
 
@@ -144,6 +145,7 @@ struct ImageGenerationGraphSettingsImpl {
 struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
+    std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
     bool overwriteModels = false;
     std::optional<std::string> extraQuantizationParams;

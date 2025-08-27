@@ -70,5 +70,9 @@ public:
     void parseConfigFromRequest(const OpenAIChatCompletionsRequest& request) {
         builder_impl->parseConfigFromRequest(request);
     }
+
+    void addStopString(const std::string& decodedStopString) {
+        builder_impl->addStopString(decodedStopString);
+    }
 };
 }  // namespace ovms

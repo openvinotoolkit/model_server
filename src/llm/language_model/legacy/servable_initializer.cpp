@@ -107,11 +107,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-#if (PYTHON_DISABLE == 0)
-    loadPyTemplateProcessor(properties, parsedModelsPath);
-#else
-    loadDefaultTemplateProcessorIfNeeded(properties);
-#endif
+    loadChatTemplate(properties, parsedModelsPath);
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
