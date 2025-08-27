@@ -287,7 +287,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                                 tool_chat_template = template_entry.get("template")
             if template is None:
                 if is_gguf_model and (chat_template == default_chat_template):
-                    # in this case we want to get chat template from tokenizer passed to script
+                    # GGUF model directory might not contain files with chat template and in that case we use template read from the tokenizer 
                     template = jinja_env.from_string(tokenizer_template)
                 else:
                     template = jinja_env.from_string(chat_template)
