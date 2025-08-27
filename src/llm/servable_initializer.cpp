@@ -351,7 +351,6 @@ Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node models_path: {} does not exist. ", outPath);
         return StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST;
     }
-    // if is directory or file with .gguf extension then it is ok
     if (std::filesystem::is_directory(outPath) || (outPath.find(".gguf") != std::string::npos)) {
         return StatusCode::OK;
     }
