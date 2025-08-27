@@ -529,6 +529,7 @@ http_archive(
     sha256 = "629cbfcc5bd581d38277ba8fa94a5b6591af1e0f6af0dab6d1d9ed796bf48b61",
     strip_prefix = "google-cloud-cpp-2.39.0",
     url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.39.0.tar.gz",
+    repo_mapping = {"@com_github_curl_curl" : "@curl"}
 )
 
 load("@google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
