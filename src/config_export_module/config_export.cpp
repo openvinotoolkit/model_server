@@ -192,6 +192,10 @@ Status DisableModel(const std::string& configFilePath, const ModelsSettingsImpl&
 
 Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
     std::string configFilePath = modelSettings.configPath;
+    if (configFilePath.empty()) {
+        SPDLOG_ERROR("Config path is empty.");
+        return StatusCode::PATH_INVALID;
+    }
     if (exportType == ENABLE_MODEL) {
         return EnableModel(configFilePath, modelSettings);
     } else if (exportType == DISABLE_MODEL) {
