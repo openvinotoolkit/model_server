@@ -835,7 +835,7 @@ protected:
         }
         std::filesystem::remove_all(directoryPath);
     }
-    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) {
+    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) const {
         std::vector<std::string> foundFiles;
         for (const auto& file : filesToSearch) {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
