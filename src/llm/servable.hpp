@@ -32,6 +32,7 @@
 
 #include "../http_payload.hpp"
 #include "apis/openai_completions.hpp"
+#include "io_processing/generation_config_builder.hpp"
 #if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
 #endif
@@ -64,6 +65,7 @@ struct GenAiServableExecutionContext {
     ovms::HttpPayload payload;
     Endpoint endpoint;
     std::shared_ptr<OpenAIChatCompletionsHandler> apiHandler;
+    std::shared_ptr<GenerationConfigBuilder> generationConfigBuilder;
     // Single tensor with inputIds for the model. This is considered general for all pipelines,
     // but depending on particular pipeline implementation it might be not required or on the other hand, insufficient.
     ov::Tensor inputIds;
@@ -75,14 +77,26 @@ struct GenAiServableExecutionContext {
     std::string lastStreamerCallbackOutput;
 };
 
+struct ExtraGenerationInfo {
+    std::string bosTokenFromTokenizer;
+    std::string bosTokenIdFromTokenizer;
+    std::string eosTokenFromTokenizer;
+    std::string eosTokenIdFromTokenizer;
+    std::string chatTemplateFromTokenizer;
+    std::string chatTemplateDirectory;
+    bool isGgufModel;
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
     ov::genai::GenerationConfig baseGenerationConfig;
-    std::string responseParserName;
+    std::string toolParserName;
+    std::string reasoningParserName;
     std::string device;
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
+    bool enableToolGuidedGeneration = false;
     // Sampling limits
     std::optional<uint32_t> maxTokensLimit;
     std::optional<uint32_t> maxModelLength;
@@ -91,6 +105,7 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
+    std::optional<std::string> ggufEosToken;  // TODO: Remove this once GGUF genai is fixed
 #endif
 };
 
@@ -177,4 +192,5 @@ public:
 };
 std::string wrapTextInServerSideEventMessage(const std::string& text);
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
+void logRequestDetails(const ovms::HttpPayload& payload);
 }  // namespace ovms

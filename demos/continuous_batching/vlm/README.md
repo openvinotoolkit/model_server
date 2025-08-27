@@ -30,7 +30,7 @@ Select deployment option depending on how you prepared models in the previous st
 Running this command starts the container with CPU only target device:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path /models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path /models --model_name OpenGVLab/InternVL2-2B --task text_generation --pipeline_type VLM
 ```
 **GPU**
 
@@ -39,7 +39,7 @@ to `docker run` command, use the image with GPU support.
 It can be applied using the commands below:
 ```bash
 mkdir -p models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --target_device GPU --pipeline_type VLM
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --task text_generation --target_device GPU --pipeline_type VLM
 ```
 :::
 
@@ -49,11 +49,11 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir models
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM --target_device CPU
+ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --task text_generation --pipeline_type VLM --target_device CPU
 ```
 or
 ```bat
-ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --pipeline_type VLM --target_device GPU
+ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenGVLab/InternVL2-2B --task text_generation --pipeline_type VLM --target_device GPU
 ```
 :::
 
@@ -61,6 +61,10 @@ ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repos
 
 ## Model preparation
 Use this step for models outside of OpenVINO organization.
+
+Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `## Pulling models outside of OpenVINO organization` in the [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
+
+Or you can use the python export_model.py script described below.
 
 Here, the original VLM model and its auxiliary models (tokenizer, vision encoder, embeddings model etc.) will be converted to IR format and optionally quantized.
 That ensures faster initialization time, better performance and lower memory consumption.
@@ -89,7 +93,7 @@ python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --w
 
 > **Note:** Change the `--weight-format` to quantize the model to `fp16` or `int8` precision to reduce memory consumption and improve performance.
 
-> **Note:** You can change the model used in the demo out of any topology [tested](https://github.com/openvinotoolkit/openvino.genai/blob/master/SUPPORTED_MODELS.md#visual-language-models) with OpenVINO.
+> **Note:** You can change the model used in the demo out of any topology [tested](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms) with OpenVINO.
 Be aware that QwenVL models executed on GPU might experience execution errors with very high resolution images. In case of such behavior, it is recommended to reduce the parameter `max_pixels` in `preprocessor_config.json`.
 
 

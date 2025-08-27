@@ -128,14 +128,6 @@ RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os
             dnf clean all
 
 WORKDIR /
-# hadolint ignore=DL3003
-RUN wget -nv https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
-tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
-git clone https://github.com/git-lfs/git-lfs && \
-    cd git-lfs && \
-    git checkout 9e751d16509c9d65bda15b53c7d30a583c66e0c8 && \
-    /usr/local/go/bin/go build . && \
-    cp git-lfs /usr/bin/git-lfs
 
 RUN python3 --version && python3 -m pip install numpy==1.21.0 --no-cache-dir
 
@@ -210,14 +202,6 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino_2025
 
-# update oneTBB
-RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
-tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
-rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
-cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
-rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
-ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
-
 # install sample apps including benchmark_app
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel && \
@@ -243,8 +227,8 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.2\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.2.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.2.dist-info/METADATA ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.3\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.3.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.3.dist-info/METADATA ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 # Build OpenVINO Model Server
@@ -284,8 +268,8 @@ WORKDIR /ovms/src/example/SampleCpuExtension/
 RUN make
 
 RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; \
-    mkdir -p /opt/intel/openvino/python/openvino-2025.2.dist-info && \
-    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.2' > /opt/intel/openvino/python/openvino-2025.2.dist-info/METADATA
+    mkdir -p /opt/intel/openvino/python/openvino-2025.3.dist-info && \
+    echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.3' > /opt/intel/openvino/python/openvino-2025.3.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
 WORKDIR /ovms
@@ -418,8 +402,6 @@ ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
 
 COPY --from=pkg /ovms_release /ovms
-# hadolint ignore=SC2114
-RUN mv /ovms/bin/git* /usr/bin
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
 COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
 COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info

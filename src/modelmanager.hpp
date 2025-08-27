@@ -399,6 +399,7 @@ public:
         return this->metricConfig;
     }
 
+    Status loadMetricsFromCLI(const Config& config);
     Status loadMetricsConfig(rapidjson::Document& configJson);
 
     /**

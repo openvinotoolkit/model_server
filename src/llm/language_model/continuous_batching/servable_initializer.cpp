@@ -77,9 +77,11 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (std::filesystem::exists(modelGenerationConfigPath)) {
         properties->baseGenerationConfig = ov::genai::GenerationConfig(modelGenerationConfigPath.string());
     }
-
-    if (nodeOptions.has_response_parser()) {
-        properties->responseParserName = nodeOptions.response_parser();
+    if (nodeOptions.has_tool_parser()) {
+        properties->toolParserName = nodeOptions.tool_parser();
+    }
+    if (nodeOptions.has_reasoning_parser()) {
+        properties->reasoningParserName = nodeOptions.reasoning_parser();
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -96,8 +98,11 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     properties->device = nodeOptions.device();
+    properties->bestOfLimit = nodeOptions.best_of_limit();
+    properties->enableToolGuidedGeneration = nodeOptions.enable_tool_guided_generation();
 
     if (!nodeOptions.draft_models_path().empty()) {
+        // draft models
         auto fsDraftModelsPath = std::filesystem::path(nodeOptions.draft_models_path());
         std::string draftPipelinePath;
         if (fsDraftModelsPath.is_relative()) {
@@ -143,17 +148,12 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-
-#if (PYTHON_DISABLE == 0)
-    loadPyTemplateProcessor(properties, parsedModelsPath);
-#else
-    loadDefaultTemplateProcessorIfNeeded(properties);
-#endif
+    loadChatTemplate(properties, parsedModelsPath);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
-    properties->bestOfLimit = nodeOptions.best_of_limit();
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
+
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline);
 
     return StatusCode::OK;

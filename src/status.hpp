@@ -21,6 +21,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include "logging.hpp"
+
 namespace ovms {
 
 enum class StatusCode {
@@ -278,6 +280,7 @@ enum class StatusCode {
     // LLM Nodes
     LLM_NODE_NAME_ALREADY_EXISTS,
     LLM_NODE_DIRECTORY_DOES_NOT_EXIST,
+    LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE,
     LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
     LLM_NODE_MISSING_OPTIONS,
     LLM_NODE_MISSING_NAME,
@@ -348,8 +351,8 @@ enum class StatusCode {
 
     // Huggingface model download errors for libgit2
     HF_FAILED_TO_INIT_LIBGIT2,
-    HF_FAILED_TO_INIT_GIT,
-    HF_FAILED_TO_INIT_GIT_LFS,
+    HF_FAILED_TO_INIT_OPTIMUM_CLI,
+    HF_RUN_OPTIMUM_CLI_EXPORT_FAILED,
     HF_GIT_CLONE_FAILED,
 
     PARTIAL_END,
@@ -443,3 +446,12 @@ public:
     }
 };
 }  // namespace ovms
+
+namespace fmt {
+template <>
+struct formatter<ovms::StatusCode> : formatter<std::string> {
+    auto format(ovms::StatusCode status, format_context& ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}", ovms::Status(status).string());
+    }
+};
+}  // namespace fmt

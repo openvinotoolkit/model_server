@@ -67,7 +67,7 @@ if /i "%with_python%"=="true" (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
-    .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
     if !errorlevel! neq 0 (
         echo Error during Python dependencies for LLM installation. The package will not be fully functional.
     )
@@ -77,7 +77,7 @@ copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4120.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -89,8 +89,6 @@ copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %dest_dir%\git-lfs.exe dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\libcurl-x64.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
@@ -99,26 +97,6 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-if exist "C:\Program Files\Git\mingw64\bin" (
-    copy /Y "C:\Program Files\Git\mingw64\bin\git.exe" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libiconv-2.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libintl-8.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libpcre2-8-0.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libwinpthread-1.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\zlib1.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-) else (
-    echo "C:\Program Files\Git\mingw64\bin" does not exist
-    exit /b -1
-)
-
-
-
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
@@ -126,7 +104,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
 md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\opencv\etc\licenses\* %license_dest%
+copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
 if !errorlevel! neq 0 exit /b !errorlevel!

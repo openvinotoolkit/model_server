@@ -19,10 +19,12 @@
 #include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
+#pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -37,8 +39,9 @@
 
 namespace ovms {
 absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext, const ovms::HttpPayload& payload) {
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", payload.body);
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
+    if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
+        logRequestDetails(payload);
+    }
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (payload.parsedJson->HasParseError()) {
         return absl::InvalidArgumentError("Non-json request received in text generation calculator");
@@ -59,7 +62,8 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->endpoint,
         std::chrono::system_clock::now(),
         getProperties()->tokenizer,
-        getProperties()->responseParserName);
+        getProperties()->toolParserName,
+        getProperties()->reasoningParserName);
     auto& config = ovms::Config::instance();
 
     auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath);
@@ -78,6 +82,22 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 
         executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
     }
+    executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
+    executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());
+    try {
+        executionContext->generationConfigBuilder->validateStructuredOutputConfig(getProperties()->tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
+    }
+
+#if (PYTHON_DISABLE == 0)
+    // Due to issues in GGUF models EOS token generation, we add EOS tag as a stop string to properly handle end of generation
+    if (this->getProperties()->ggufEosToken.has_value()) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding GGUF model stop string: [{}]", this->getProperties()->ggufEosToken.value());
+        executionContext->generationConfigBuilder->addStopString(this->getProperties()->ggufEosToken.value());
+    }
+#endif
     return absl::OkStatus();
 }
 
@@ -119,6 +139,18 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     }
     }
     bool encodeAddSpecialTokens = (executionContext->endpoint == Endpoint::COMPLETIONS);
+    if (executionContext->apiHandler->getToolChoice() == "required") {
+        const auto& outputParser = executionContext->apiHandler->getOutputParser();
+        if (outputParser != nullptr && outputParser->isToolParserAvailable()) {
+            // If tool parser is available, we add tool parser start tag to the input text
+            // to increase the chance of the model generating tool calls immediately.
+            outputParser->enableImmediateToolParsing();
+            inputText += outputParser->getToolParserStartTag();
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding tool parser trigger: {} at the end of the input.", outputParser->getToolParserStartTag());
+        } else {
+            return absl::InvalidArgumentError("Tool parser is not available, but tool_choice is set to 'required'");
+        }
+    }
     executionContext->inputIds = getProperties()->tokenizer.encode(inputText, ov::genai::add_special_tokens(encodeAddSpecialTokens)).input_ids;
     if (getProperties()->maxModelLength.has_value()) {
         if (executionContext->inputIds.get_size() > getProperties()->maxModelLength.value()) {
@@ -166,17 +198,24 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     if (finishReason == ov::genai::GenerationFinishReason::NONE) {  // continue
         if (lastTextChunk.size() > 0) {
-            executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+            if (!serializedChunk.empty()) {
+                executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated subsequent streaming response: {}", executionContext->response);
+            }
         }
         executionContext->sendLoopbackSignal = true;
     } else {  // finish generation
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         executionContext->textStreamer->end();
         // if streamer::put returned a value, streamer::end() result will not contain it, so we add it manually
-        if (!executionContext->lastStreamerCallbackOutput.empty())
+        if (!executionContext->lastStreamerCallbackOutput.empty()) {
             lastTextChunk = lastTextChunk + executionContext->lastStreamerCallbackOutput;
-        executionContext->response = wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason));
+        }
+        std::string serializedChunk = executionContext->apiHandler->serializeStreamingChunk(lastTextChunk, finishReason);
+        if (!serializedChunk.empty()) {
+            executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
+        }
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
@@ -196,6 +235,14 @@ std::string wrapTextInServerSideEventMessage(const std::string& text) {
     std::stringstream ss;
     ss << "data: " << text << "\n\n";
     return ss.str();
+}
+void logRequestDetails(const ovms::HttpPayload& payload) {
+    auto parsedJson = payload.parsedJson;
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    parsedJson->Accept(writer);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request body: {}", buffer.GetString());
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Request uri: {}", payload.uri);
 }
 #pragma GCC diagnostic pop
 #pragma warning(push)

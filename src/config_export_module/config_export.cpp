@@ -74,7 +74,7 @@ Status removeModelFromConfig(const std::string& fullPath, const ModelsSettingsIm
 
     auto modelsItr = configJson.FindMember("model_config_list");
     if (modelsItr == configJson.MemberEnd() || !modelsItr->value.IsArray()) {
-        SPDLOG_ERROR("Configuration file doesn't have models property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
 
@@ -115,7 +115,7 @@ Status updateConfigAddModel(const std::string& fullPath, const ModelsSettingsImp
 
     const auto modelsItr = configJson.FindMember("model_config_list");
     if (modelsItr == configJson.MemberEnd() || !modelsItr->value.IsArray()) {
-        SPDLOG_ERROR("Configuration file doesn't have models property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
 

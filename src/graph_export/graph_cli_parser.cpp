@@ -68,10 +68,18 @@ void GraphCLIParser::createOptions() {
             "Dynamic split fuse algorithm enabled. Default true.",
             cxxopts::value<std::string>()->default_value("true"),
             "DYNAMIC_SPLIT_FUSE")
-        ("response_parser",
-            "Response parser",
+        ("reasoning_parser",
+            "Reasoning parser",
             cxxopts::value<std::string>(),
-            "RESPONSE_PARSER");
+            "REASONING_PARSER")
+        ("tool_parser",
+            "Tool parser",
+            cxxopts::value<std::string>(),
+            "TOOL_PARSER")
+        ("enable_tool_guided_generation",
+            "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "ENABLE_TOOL_GUIDED_GENERATION");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -135,9 +143,13 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
             graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
         }
 
-        if (result->count("response_parser")) {
-            graphSettings.responseParser = result->operator[]("response_parser").as<std::string>();
+        if (result->count("reasoning_parser")) {
+            graphSettings.reasoningParser = result->operator[]("reasoning_parser").as<std::string>();
         }
+        if (result->count("tool_parser")) {
+            graphSettings.toolParser = result->operator[]("tool_parser").as<std::string>();
+        }
+        graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {

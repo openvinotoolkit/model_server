@@ -105,7 +105,9 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional uint32 max_tokens_limit` - max value of max_tokens parameter accepted by endpoint;
 -    `optional bool enable_prefix_caching` - enable caching of KV-blocks [default = false];
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
--    `optional string response_parser` - name of the response parser to use for processing model output before creating a response;
+-    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
+-    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
+-    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false]; 
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -149,19 +151,26 @@ Setting `max_num_seqs` might also be useful in providing certain level of genera
 
 **Note that the following options are ignored in Stateful servables (so in deployments on NPU): cache_size, dynamic_split_fuse, max_num_batched_tokens, max_num_seq, enable_prefix_caching**
 
-### Response parsing settings
+### Output parsing settings
 
-When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `response_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
+When using models with more complex templates and support for `tools` or `reasoning`, you need to pass `tool_parser` or `reasoning_parser` option that defines which parser should be used for processing model output and creating final response. Currently, model server supports following parsers: 
 
-- `hermes3`
+__Tool parsers:__
+- `hermes3` (also works for Qwen3 models)
 - `llama3`
 - `phi4`
+
+__Reasoning parsers:__
 - `qwen3`
 
 Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
 
 Note that using `tools` might require a chat template other than the original. 
 We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
+
+When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
+
+> **Note**: When `enable_tool_guided_generation` is set, but model server fails to load any tool schema from the request, the request will still be processed, but tool guided generation will be disabled.
 
 ### OpenVINO runtime settings
 
@@ -250,7 +259,7 @@ Errors during configuration files processing (access issue, corrupted file, inco
 
 Support for more diverse response structure requires processing model output for the purpose of extracting specific parts of the output and placing them in specific fields in the final response.
 
-When using `tools`, we need to distil `tool_calls` from model output and for reasoning - `reasoning_content`. In order to receive such response, you need to specify `response_parser` as stated in [response parsing settings](#response-parsing-settings).
+When using `tools`, we need to distil `tool_calls` from model output and for reasoning - `reasoning_content`. In order to receive such response, you need to specify `tool_parser` or `reasoning_parser` as stated in [output parsing settings](#output-parsing-settings).
 
 ## Limitations
 

@@ -1,4 +1,0 @@
-bs4
-requests
-selenium
-webdriver_manage

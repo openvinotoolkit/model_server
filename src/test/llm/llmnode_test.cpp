@@ -1031,6 +1031,134 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonLogprobs) {
     }
 }
 
+TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutput) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "temperature": 0.0,
+            "messages": [
+            {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
+            ],
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                            "type": "string"
+                            },
+                            "age": {
+                            "type": "integer"
+                            }
+                        },
+                        "required": ["name", "age"]
+                        }
+                    }
+                }
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        rapidjson::Document parsedContent;
+        parsedContent.Parse(choice["message"]["content"].GetString());
+        ASSERT_TRUE(parsedContent.IsObject());
+        ASSERT_TRUE(parsedContent.HasMember("name"));
+        ASSERT_TRUE(parsedContent["name"].IsString());
+        ASSERT_TRUE(parsedContent.HasMember("age"));
+        ASSERT_TRUE(parsedContent["age"].IsInt());
+    }
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "temperature": 0.0,
+            "messages": [
+            {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
+            ],
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                            "type": "string"
+                            },
+                            "age": {
+                            "type": "my_integer"
+                            }
+                        },
+                        "required": ["name", "age"]
+                        }
+                    }
+                }
+        }
+    )";
+
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
+    std::string requestBody = R"(
+    {
+        "model": "lm_cb_with_tool_parser",
+        "stream": false,
+        "temperature": 0,
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_horoscope",
+                    "description": "Get today's horoscope for an astrological sign.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "sign": {
+                                "type": "string_with_a_suffix",
+                                "description": "An astrological sign like Taurus or Aquarius"
+                            }
+                        },
+                        "required": [
+                            "sign"
+                        ]
+                    }
+                }
+            }
+        ],
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is my horoscope? I am an Aquarius."
+            }
+        ]
+    }
+    )";
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
@@ -2631,7 +2759,8 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
 #endif
 
     if (params.modelName.find("vlm") != std::string::npos) {
-        genAiTemplateParsing = true;  // VLM models always use GenAI template parsing
+        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);  // GenAI accepts such messages, so we expect a successful response
+        return;
     }
 
     if (genAiTemplateParsing) {
@@ -3140,9 +3269,15 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         }
     )";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    if (params.modelName.find("vlm") != std::string::npos) {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+            ovms::StatusCode::OK);  // GenAI supports such messages
+    } else {
+        ASSERT_EQ(
+            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    }
 }
 
 TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
@@ -3486,7 +3621,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE);
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {

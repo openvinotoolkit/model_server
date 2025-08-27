@@ -33,20 +33,30 @@
 
 namespace ovms {
 
-#define SET_TOKEN(token, token_id_name)                                                 \
-    if (modelConfig.HasMember(token_id_name) && modelConfig[token_id_name].IsInt64()) { \
-        token = modelConfig[token_id_name].GetInt64();                                  \
+#define SET_TOKEN_ID(token, token_id_name)                                                                                            \
+    if (modelConfig.HasMember(token_id_name) && modelConfig[token_id_name].IsInt64() && modelConfig[token_id_name].GetInt64() != 0) { \
+        token = modelConfig[token_id_name].GetInt64();                                                                                \
+    }
+
+#define SET_TOKEN(token)                                                                                                       \
+    if (!token.has_value()) {                                                                                                  \
+        if (tokenizerConfig.HasMember(#token) && tokenizerConfig[#token].IsString()) {                                         \
+            auto tokenizedInputs = tokenizer->encode(tokenizerConfig[#token].GetString());                                     \
+            if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64) \
+                token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];                                       \
+            else                                                                                                               \
+                SPDLOG_DEBUG("Parsing {} token from tokenizer_config.json failed", #token);                                    \
+        }                                                                                                                      \
     }
 
 SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
-    std::filesystem::path parsedModelsPath;
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
     } else {
         parsedModelsPath = fsModelsPath.string();
     }
-    std::filesystem::path configPath = (std::filesystem::path(graphPath) / fsModelsPath / "config.json");
+    std::filesystem::path configPath = (parsedModelsPath / "config.json");
     if (std::filesystem::exists(configPath)) {
         std::ifstream ifs(configPath.string());
         if (ifs.is_open()) {
@@ -63,9 +73,9 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
                         break;
                     }
                 }
-                SET_TOKEN(pad_token, "pad_token_id");
-                SET_TOKEN(eos_token, "eos_token_id");
-                SET_TOKEN(bos_token, "bos_token_id");
+                SET_TOKEN_ID(pad_token, "pad_token_id");
+                SET_TOKEN_ID(eos_token, "eos_token_id");
+                SET_TOKEN_ID(bos_token, "bos_token_id");
                 if (modelConfig.HasMember("sep_token_id") && modelConfig["sep_token_id"].IsInt64()) {
                     sep_token = modelConfig["sep_token_id"].GetInt64();
                 } else {
@@ -80,7 +90,35 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     if (!status.ok()) {
         SPDLOG_ERROR("Error during embeddings node plugin_config option parsing to JSON: {}", pluginConfig);
     }
-    tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath);
+    ov::AnyMap tokenizerProperties = {{"add_special_tokens", false}};
+    tokenizer = std::make_shared<ov::genai::Tokenizer>(parsedModelsPath, tokenizerProperties);
+    std::filesystem::path tokenizerConfigPath = (std::filesystem::path(graphPath) / fsModelsPath / "tokenizer_config.json");
+    if (std::filesystem::exists(tokenizerConfigPath)) {
+        std::ifstream ifs(tokenizerConfigPath.string());
+        if (ifs.is_open()) {
+            rapidjson::Document tokenizerConfig;
+            rapidjson::IStreamWrapper isw(ifs);
+            rapidjson::ParseResult parseResult = tokenizerConfig.ParseStream(isw);
+            if (parseResult.Code()) {
+                SPDLOG_ERROR("Parsing tokenizer_config.json failed: {}", rapidjson::GetParseError_En(parseResult.Code()));
+            } else {
+                SET_TOKEN(pad_token);
+                SET_TOKEN(eos_token);
+                SET_TOKEN(bos_token);
+                if (!sep_token.has_value()) {
+                    if (tokenizerConfig.HasMember("sep_token") && tokenizerConfig["sep_token"].IsString()) {
+                        auto tokenizedInputs = tokenizer->encode(tokenizerConfig["sep_token"].GetString());
+                        if (tokenizedInputs.input_ids.get_size() == 1 && tokenizedInputs.input_ids.get_element_type() == ov::element::i64)
+                            sep_token = reinterpret_cast<int64_t*>(tokenizedInputs.input_ids.data())[0];
+                        else
+                            SPDLOG_DEBUG("Parsing sep token from tokenizer_config.json failed");
+                    } else if (eos_token.has_value()) {
+                        sep_token = eos_token;
+                    }
+                }
+            }
+        }
+    }
 
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);

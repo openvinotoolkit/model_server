@@ -68,9 +68,9 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std:
     }
     return std::make_pair(leftInt.value(), rightInt.value());
 }
-std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::HttpPayload& payload) {
-    auto sizeIt = payload.parsedJson->FindMember("size");
-    if (sizeIt == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const rapidjson::Document& parser) {
+    auto sizeIt = parser.FindMember("size");
+    if (sizeIt == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!sizeIt->value.IsString()) {
@@ -78,10 +78,16 @@ std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms
     }
     return getDimensions(sizeIt->value.GetString());
 }
+std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const ovms::MultiPartParser& parser) {
+    std::string dimensions = parser.getFieldByName("size");
+    if (!dimensions.empty())
+        return getDimensions(dimensions);
+    return std::nullopt;
+}
 
-std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const rapidjson::Document& parser, const std::string& keyName) {
+    auto it = parser.FindMember(keyName.c_str());
+    if (it == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsString()) {
@@ -89,9 +95,24 @@ std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(cons
     }
     return std::string(it->value.GetString());
 }
-std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<std::string>> getStringFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string value = parser.getFieldByName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    return value;
+}
+// TODO: Test
+std::variant<absl::Status, std::optional<std::string_view>> getFileFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string_view value = parser.getFileContentByFieldName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    return value;
+}
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const rapidjson::Document& parser, const std::string& keyName) {
+    auto it = parser.FindMember(keyName.c_str());
+    if (it == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsFloat()) {
@@ -99,10 +120,21 @@ std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms:
     }
     return it->value.GetFloat();
 }
+std::variant<absl::Status, std::optional<float>> getFloatFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string value = parser.getFieldByName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    auto floatValue = ovms::stof(value);
+    if (!floatValue.has_value()) {
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a float"));
+    }
+    return floatValue.value();
+}
 
-std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const rapidjson::Document& parser, const std::string& keyName) {
+    auto it = parser.FindMember(keyName.c_str());
+    if (it == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsInt64()) {
@@ -110,9 +142,20 @@ std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovm
     }
     return it->value.GetInt64();
 }
-std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<int64_t>> getInt64FromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string value = parser.getFieldByName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    auto intValue = ovms::stoi64(value);
+    if (!intValue.has_value()) {
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int64"));
+    }
+    return intValue.value();
+}
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const rapidjson::Document& parser, const std::string& keyName) {
+    auto it = parser.FindMember(keyName.c_str());
+    if (it == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsInt()) {
@@ -120,15 +163,37 @@ std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::Htt
     }
     return it->value.GetInt();
 }
-std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::HttpPayload& payload, const std::string& keyName) {
-    auto it = payload.parsedJson->FindMember(keyName.c_str());
-    if (it == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::optional<int>> getIntFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string value = parser.getFieldByName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    auto intValue = ovms::stoi32(value);
+    if (!intValue.has_value()) {
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a int32"));
+    }
+    return intValue.value();
+}
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const rapidjson::Document& parser, const std::string& keyName) {
+    auto it = parser.FindMember(keyName.c_str());
+    if (it == parser.MemberEnd()) {
         return std::nullopt;
     }
     if (!it->value.IsUint64()) {
         return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a size_t"));
     }
     return it->value.GetUint64();
+}
+std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
+    std::string value = parser.getFieldByName(keyName);
+    if (value.empty()) {
+        return std::nullopt;
+    }
+    auto intValue = ovms::stou64(value);
+    if (!intValue.has_value()) {
+        return absl::InvalidArgumentError(absl::StrCat(keyName, " field is not a size_t"));
+    }
+    return intValue.value();
 }
 
 #define INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(KEY, VALUE)                                                            \
@@ -138,8 +203,8 @@ std::variant<absl::Status, std::optional<size_t>> getSizetFromPayload(const ovms
         }                                                                                                         \
     }
 
-#define SET_OPTIONAL_KEY_OR_RETURN(TYPE, FUNCTION)                     \
-    SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(payload, key)); \
+#define SET_OPTIONAL_KEY_OR_RETURN(TYPE, FUNCTION)                    \
+    SET_OR_RETURN(std::optional<TYPE>, value, FUNCTION(parser, key)); \
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL(key, value);
 
 absl::Status ensureAcceptableForStatic(const ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
@@ -208,7 +273,10 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
         if (numImages > args.maxNumImagesPerPrompt) {
-            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
+            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n is greater than maxNumImagesPerPrompt: ", args.maxNumImagesPerPrompt));
+        }
+        if (numImages <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n must be higher than 0"));
         }
     }
     it = requestOptions.find("num_inference_steps");
@@ -217,8 +285,25 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         if (numInferenceSteps > args.maxNumInferenceSteps) {
             return absl::InvalidArgumentError(absl::StrCat("num_inference_steps is greater than maxNumInferenceSteps: ", args.maxNumInferenceSteps));
         }
+        if (numInferenceSteps <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("num_inference_steps must be higher than 0"));
+        }
     } else {
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
+    }
+    it = requestOptions.find("width");
+    if (it != requestOptions.end()) {
+        auto width = it->second.as<int>();
+        if (width <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("width must be higher than 0"));
+        }
+    }
+    it = requestOptions.find("height");
+    if (it != requestOptions.end()) {
+        auto height = it->second.as<int>();
+        if (height <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
+        }
     }
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
@@ -232,7 +317,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     return absl::OkStatus();
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/create 15/05/2025
@@ -266,7 +351,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // generator ov::genaiGenerator NO
     // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
     ov::AnyMap requestOptions{};
-    SET_OR_RETURN(std::optional<resolution_t>, dimensionsOpt, getDimensions(payload));
+    SET_OR_RETURN(std::optional<resolution_t>, dimensionsOpt, getDimensions(parser));
     if (dimensionsOpt.has_value()) {
         auto& dimensions = dimensionsOpt.value();
         requestOptions.insert({"width", dimensions.first});
@@ -277,12 +362,12 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     for (auto key : {"prompt_2", "prompt_3", "negative_prompt", "negative_prompt_2", "negative_prompt_3"}) {
         SET_OPTIONAL_KEY_OR_RETURN(std::string, getStringFromPayload);
     }
-    SET_OR_RETURN(std::optional<std::string>, responseFormatOpt, getStringFromPayload(payload, "response_format"));
+    SET_OR_RETURN(std::optional<std::string>, responseFormatOpt, getStringFromPayload(parser, "response_format"));
     if (responseFormatOpt.has_value() && responseFormatOpt.value() != "b64_json") {
         return absl::InvalidArgumentError(absl::StrCat("Unsupported response_format: ", responseFormatOpt.value(), ". Only b64_json is supported."));
     }
     // now get optional int parameters
-    SET_OR_RETURN(std::optional<int>, nOpt, getIntFromPayload(payload, "n"));
+    SET_OR_RETURN(std::optional<int>, nOpt, getIntFromPayload(parser, "n"));
     INSERT_IF_HAS_VALUE_RETURN_IF_FAIL("num_images_per_prompt", nOpt);
     for (auto key : {"num_images_per_prompt", "max_sequence_length"}) {
         SET_OPTIONAL_KEY_OR_RETURN(int, getIntFromPayload);
@@ -303,8 +388,8 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     // background/moderation/output_compression/output_format/quality/style
     // TODO possibly to be handled outside since output_compresiont/format are nonGenai
     for (auto key : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
-        auto it = payload.parsedJson->FindMember(key);
-        if (it != payload.parsedJson->MemberEnd()) {
+        auto it = parser.FindMember(key);
+        if (it != parser.MemberEnd()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", key));
         }
     }
@@ -330,7 +415,7 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
         "n", "num_images_per_prompt",
         "response_format",  // allowed, however only b64_json is supported
         "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
-    for (auto it = payload.parsedJson->MemberBegin(); it != payload.parsedJson->MemberEnd(); ++it) {
+    for (auto it = parser.MemberBegin(); it != parser.MemberEnd(); ++it) {
         if (acceptedFields.find(it->name.GetString()) == acceptedFields.end()) {
             return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", it->name.GetString()));
         }
@@ -349,20 +434,21 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ov
     return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
+std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::MultiPartParser& parser, const ovms::ImageGenPipelineArgs& args) {
     // NO -not handled yet
     // OpenAI parameters
     // https://platform.openai.com/docs/api-reference/images/createEdit 20/05/2025
-    // prompt REQUIRED DONE
-    // image string or array REQUIRED NO
+    // prompt REQUIRED
+    // image string (REQUIRED) or array (NOT SUPPORTED)
     // background  REJECTED string NO optional default=auto
     // mask file NO
     // model string NO optional default=dall-e-2
-    // n NO optional default=1   ----> num_images_per_prompt
+    // n optional default=1   ----> num_images_per_prompt
+    // output_compression REJECTED  int NO optional default=100
+    // output_format REJECTED  string NO optional default=png
     // quality string REJECTED  NO optional default=auto
     // response_format string NO optional default=url
-    // size DONE optional default=1024x1024
-    // user string REJECTED optional
+    // style string REJECTED optional default=vivid
 
     // GenAI parameters
     // https://github.com/openvinotoolkit/openvino.genai/blob/3c28e8279ca168ba28a79b50c62ec3b2f61d9f29/src/cpp/include/openvino/genai/image_generation/generation_config.hpp 15/05/2025
@@ -381,50 +467,108 @@ std::variant<absl::Status, ov::AnyMap> getImageEditRequestOptions(const ovms::Ht
     // guidance_scale float DONE
     // generator ov::genaiGenerator NO
     // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
+    ov::AnyMap requestOptions{};
+    SET_OR_RETURN(std::optional<resolution_t>, dimensionsOpt, getDimensions(parser));
+    if (dimensionsOpt.has_value()) {
+        auto& dimensions = dimensionsOpt.value();
+        requestOptions.insert({"width", dimensions.first});
+        requestOptions.insert({"height", dimensions.second});
+    }
+
+    // now get optional string parameters
+    for (auto key : {"prompt_2", "prompt_3", "negative_prompt", "negative_prompt_2", "negative_prompt_3"}) {
+        SET_OPTIONAL_KEY_OR_RETURN(std::string, getStringFromPayload);
+    }
+    SET_OR_RETURN(std::optional<std::string>, responseFormatOpt, getStringFromPayload(parser, "response_format"));
+    if (responseFormatOpt.has_value() && responseFormatOpt.value() != "b64_json") {
+        return absl::InvalidArgumentError(absl::StrCat("Unsupported response_format: ", responseFormatOpt.value(), ". Only b64_json is supported."));
+    }
+    // now get optional int parameters
+    SET_OR_RETURN(std::optional<int>, nOpt, getIntFromPayload(parser, "n"));
+    INSERT_IF_HAS_VALUE_RETURN_IF_FAIL("num_images_per_prompt", nOpt);
+    for (auto key : {"num_images_per_prompt", "max_sequence_length"}) {
+        SET_OPTIONAL_KEY_OR_RETURN(int, getIntFromPayload);
+    }
+    // now get optional float parameters
+    for (auto key : {"guidance_scale", "strength"}) {
+        SET_OPTIONAL_KEY_OR_RETURN(float, getFloatFromPayload);
+    }
+    // now get optional int64_t parameters
+    for (auto key : {"width", "height"}) {
+        SET_OPTIONAL_KEY_OR_RETURN(int64_t, getInt64FromPayload);
+    }
+    // now get optional size_t parameters
+    for (auto key : {"num_inference_steps", "rng_seed"}) {
+        SET_OPTIONAL_KEY_OR_RETURN(size_t, getSizetFromPayload);
+    }
+    // return error on unhandled parameters
+    // background/moderation/output_compression/output_format/quality/style
+    // TODO possibly to be handled outside since output_compresiont/format are nonGenai
+    for (auto key : {"background", "moderation", "output_compression", "output_format", "quality", "style"}) {
+        auto value = parser.getFieldByName(key);
+        if (!value.empty()) {
+            return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", key));
+        }
+    }
+    // now insert default values if not already populated ?
+    if (args.defaultResolution.has_value()) {
+        if (requestOptions.find("height") == requestOptions.end()) {
+            requestOptions.insert({"height", args.defaultResolution->second});
+        }
+        if (requestOptions.find("width") == requestOptions.end()) {
+            requestOptions.insert({"width", args.defaultResolution->first});
+        }
+    }
+    // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
+    // accepted are: prompt, prompt_2, prompt_3, negative_prompt, negative_prompt_2, negative_prompt_3,
+    // num_images_per_prompt, max_sequence_length, height, width, rng_seed, num_inference_steps,
+    // strength, guidance_scale, size
+    // if we have any other fields return error
+    static std::set<std::string> acceptedFields{
+        "prompt", "prompt_2", "prompt_3",
+        "image",
+        "negative_prompt", "negative_prompt_2", "negative_prompt_3",
+        "size", "height", "width",
+        "n", "num_images_per_prompt",
+        "response_format",  // allowed, however only b64_json is supported
+        "num_inference_steps", "rng_seed", "strength", "guidance_scale", "max_sequence_length", "model"};
+    auto fieldNames = parser.getAllFieldNames();
+    for (const auto& fieldName : fieldNames) {
+        if (acceptedFields.find(fieldName) == acceptedFields.end()) {
+            return absl::InvalidArgumentError(absl::StrCat("Unhandled parameter: ", fieldName));
+        }
+    }
+    auto status = ensureAcceptableAndDefaultsSetRequestOptions(requestOptions, args);
+    if (!status.ok()) {
+        return status;
+    }
+    // prepare log in string stream of ov::anymap
+    std::ostringstream oss;
+    for (const auto& [key, value] : requestOptions) {
+        oss << key << ": " << value.as<std::string>() << " (type: " << value.type_info().name() << ")" << std::endl;
+    }
+    SPDLOG_DEBUG("Image generation request options: \n{}", oss.str());
+
+    return std::move(requestOptions);
 }
 
-std::variant<absl::Status, ov::AnyMap> getImageVariationRequestOptions(const ovms::HttpPayload& payload, const ovms::ImageGenPipelineArgs& args) {
-    // NO -not handled yet
-    // OpenAI parameters
-    // https://platform.openai.com/docs/api-reference/images/createVariation 20/05/2025
-    // image string or array NO
-    // model string NO optional default=dall-e-2
-    // n NO optional default=1   ----> num_images_per_prompt
-    // quality string REJECTED  NO optional default=auto
-    // response_format string NO optional default=url
-    // size DONE optional default=auto
-    // user string REJECTED optional default=vivid
-
-    // GenAI parameters
-    // https://github.com/openvinotoolkit/openvino.genai/blob/3c28e8279ca168ba28a79b50c62ec3b2f61d9f29/src/cpp/include/openvino/genai/image_generation/generation_config.hpp 15/05/2025
-    // prompt_2 string DONE
-    // prompt_3 string DONE
-    // negative_prompt string DONE
-    // negative_prompt_2 string DONE
-    // negative_prompt_3 string DONE
-    // num_images_per_prompt int DONE
-    // max_sequence_length int DONE
-    // height int64_t DONE
-    // width int64_t DONE
-    // rng_seed size_t DONE
-    // num_inference_steps size_t DONE
-    // strength float DONE
-    // guidance_scale float DONE
-    // generator ov::genaiGenerator NO
-    // callback std::function<bool(size_t, size_t, ov::Tensor&) NO
-    return getImageGenerationRequestOptions(payload, args);  // so far no differences in logic
-}
-
-std::variant<absl::Status, std::string> getPromptField(const HttpPayload& payload) {
-    auto promptIt = payload.parsedJson->FindMember("prompt");
-    if (promptIt == payload.parsedJson->MemberEnd()) {
+std::variant<absl::Status, std::string> getPromptField(const rapidjson::Document& parser) {
+    auto promptIt = parser.FindMember("prompt");
+    if (promptIt == parser.MemberEnd()) {
         return absl::InvalidArgumentError("prompt field is missing in JSON body");
     }
     if (!promptIt->value.IsString()) {
         return absl::InvalidArgumentError("prompt field is not a string");
     }
     return promptIt->value.GetString();
+}
+
+std::variant<absl::Status, std::string> getPromptField(const ovms::MultiPartParser& parser) {
+    std::string prompt = parser.getFieldByName("prompt");
+    if (prompt.empty()) {
+        return absl::InvalidArgumentError("prompt field is missing in multipart body");
+    }
+    return prompt;
 }
 
 std::variant<absl::Status, std::unique_ptr<std::string>> generateJSONResponseFromOvTensor(const ov::Tensor& tensor) {

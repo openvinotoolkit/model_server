@@ -16,5 +16,5 @@
 @echo off
 set "OVMS_DIR=%~dp0"
 set "PYTHONHOME=%OVMS_DIR%\python"
-set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PATH%"
+set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
 echo "OpenVINO Model Server Environment Initialized"

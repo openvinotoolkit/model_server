@@ -73,6 +73,7 @@ const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logC
 const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
+std::string getOvmsTestExecutablePath();
 
 #ifdef _WIN32
 const std::string getWindowsRepoRootPath();
@@ -813,10 +814,42 @@ protected:
 
     void TearDown() override {
         SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
+        // search for files from filesToPrintInCaseOfFailure in directoryPath and
+        // then print its path with filename and contents
+        // search for files recursively in directoryPath
+        // in case of gtest failure print the contents of the files
+        // check if this test failed and if yes print contents of the files
+        if (::testing::Test::HasFailure()) {
+            auto filePathsToPrint = searchFilesRecursively(directoryPath, filesToPrintInCaseOfFailure);
+            for (const auto& filePath : filePathsToPrint) {
+                std::stringstream content;
+                std::ifstream file(filePath);
+                if (file.is_open()) {
+                    content << file.rdbuf();
+                    SPDLOG_ERROR("File:{} Contents:\n{}", filePath, content.str());
+                } else {
+                    SPDLOG_ERROR("Could not open file: {}", filePath);
+                    continue;
+                }
+            }
+        }
         std::filesystem::remove_all(directoryPath);
+    }
+    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) const {
+        std::vector<std::string> foundFiles;
+        for (const auto& file : filesToSearch) {
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
+                if (entry.is_regular_file() && entry.path().filename() == file) {
+                    foundFiles.push_back(entry.path().string());
+                    SPDLOG_DEBUG("Found file: {}", entry.path().string());
+                }
+            }
+        }
+        return foundFiles;
     }
 
     std::string directoryPath;
+    std::vector<std::string> filesToPrintInCaseOfFailure;
 };
 
 /**
@@ -1040,7 +1073,6 @@ static const std::vector<ovms::Precision> UNSUPPORTED_CAPI_INPUT_PRECISIONS_TENS
 
 void randomizeAndEnsureFree(std::string& port);
 void randomizeAndEnsureFrees(std::string& port1, std::string& port2);
-std::string getOvmsTestExecutablePath();
 
 extern const int64_t SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS;
 
@@ -1054,13 +1086,18 @@ void EnsureServerStartedWithTimeout(ovms::Server& server, int timeoutSeconds);
 void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int timeoutSeconds);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded
- * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ * --pull --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code = EXIT_SUCCESS, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
- *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov --download_path c:\download
+ *  --source_model Qwen/Qwen3-8B-GGUF  --model_repository_path /models --gguf_filename Qwen3-8B-Q4_K_M.gguf
+ */
+void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& ggufFilename, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 4 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
+/*
+ *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
+ *  --source_model OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov  --model_repository_path /models
  */
 void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
