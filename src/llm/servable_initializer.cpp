@@ -63,17 +63,28 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 }
 
 #if (PYTHON_DISABLE == 0)
+// Helper function for case-insensitive comparison of file extensions
+static bool hasGGUFExtension(const std::filesystem::path& path) {
+    auto ext = path.extension().string();
+    if (ext.size() != 5) // ".gguf" is 5 characters
+        return false;
+    // Compare case-insensitively
+    return std::equal(ext.begin(), ext.end(), ".gguf",
+        [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+}
+
 static bool checkIfGGUFModel(const std::string& modelDirectoryPath) {
     if (!std::filesystem::exists(modelDirectoryPath))
         return false;
 
-    if (std::filesystem::is_regular_file(modelDirectoryPath) && (modelDirectoryPath.find(".gguf") != std::string::npos)) {
+    std::filesystem::path modelPath(modelDirectoryPath);
+    if (std::filesystem::is_regular_file(modelPath) && hasGGUFExtension(modelPath)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model path is a GGUF file: {}", modelDirectoryPath);
         return true;
     }
-    if (std::filesystem::is_directory(modelDirectoryPath)) {
-        for (const auto& entry : std::filesystem::directory_iterator(modelDirectoryPath)) {
-            if (entry.is_regular_file() && entry.path().filename().string().find(".gguf") != std::string::npos) {
+    if (std::filesystem::is_directory(modelPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(modelPath)) {
+            if (entry.is_regular_file() && hasGGUFExtension(entry.path())) {
                 SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model path is a directory that contains GGUF file: {}", entry.path().filename().string());
                 return true;
             }
