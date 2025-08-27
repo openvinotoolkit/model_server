@@ -599,7 +599,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
             if (mediapipeGraphDefinition->getStatus().isAvailable())
                 available = true;
         }
-        lockMediapipes.unlock();
     }
 #endif
 
@@ -614,7 +613,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
             if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
                 available = true;
         }
-        lockSingleModels.unlock();
     }
     // DAG (deprecated)
     if (!found) {
@@ -625,7 +623,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
             if (pipelineDefinition->getStatus().isAvailable())
                 available = true;
         }
-        lockDags.unlock();
     }
 
     rapidjson::StringBuffer buffer;
