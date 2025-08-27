@@ -548,13 +548,13 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
+            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
             if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/")) &&
                 (hfSettings.ggufFilename == std::nullopt)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
-        // There's no reason to exclude GGUF pulling from OV organization.
+
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }

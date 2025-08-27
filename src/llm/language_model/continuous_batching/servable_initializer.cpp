@@ -128,7 +128,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         SPDLOG_ERROR("Draft model path is not provided, but draft scheduler options are set.");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    // pluginConfig
+
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
     if (!status.ok()) {
         SPDLOG_ERROR("Error during llm node plugin_config option parsing to JSON: {}", nodeOptions.plugin_config());

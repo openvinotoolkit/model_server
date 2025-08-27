@@ -186,7 +186,7 @@ int progress_callback(void* clientp,
     if (currentTime - pcs->last_print_time < 1) {
         return 0;
     }
-    // SPDLOG_DEBUG("Progress callback called with dltotal: {}, dlnow: {}, ultotal: {}, ulnow: {}", dltotal, dlnow, ultotal, ulnow);
+
     if ((dltotal == dlnow) && dltotal < 1000) {
         // Usually with first messages we don't get the full size and we don't want to print progress bar
         // so we assume that until dltotal is less than 1000 we don't have full size

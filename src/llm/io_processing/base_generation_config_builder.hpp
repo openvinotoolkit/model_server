@@ -42,6 +42,9 @@ public:
 
     ov::genai::GenerationConfig& getConfig() { return config; }
 
+    /*
+    * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
+    */
     void addStopString(const std::string& decodedStopString);
 
     /*

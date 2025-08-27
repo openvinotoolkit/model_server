@@ -71,7 +71,6 @@ public:
         builder_impl->parseConfigFromRequest(request);
     }
 
-    // Add stop string to config
     void addStopString(const std::string& decodedStopString) {
         builder_impl->addStopString(decodedStopString);
     }
