@@ -53,6 +53,7 @@ class LLMChatTemplateTest : public TestWithTempDir {
 protected:
     std::string tokenizerConfigFilePath;
     std::string jinjaConfigFilePath;
+    std::shared_ptr<GenAiServable> servable;
 
     static void SetUpTestSuite() {
         py::initialize_interpreter();
@@ -60,6 +61,13 @@ protected:
 
     static void TearDownTestSuite() {
         py::finalize_interpreter();
+    }
+
+    void LoadTemplateProcessor() {
+        servable = std::make_shared<ContinuousBatchingServable>();
+        servable->getProperties()->modelsPath = directoryPath;
+        ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(servable->getProperties(), directoryPath);
+        GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
     }
 
     void SetUp() {
@@ -82,12 +90,7 @@ public:
 };
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = "";
     ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, servable->getProperties()->modelsPath, payloadBody, finalPrompt), false);
@@ -96,12 +99,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyBody) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -116,12 +114,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -135,12 +128,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMessageWithEmptyObject) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -153,12 +141,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateDefault) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -171,12 +154,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateMultiMessage) {
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    // default_chat_template = "{% if messages|length != 1 %} {{ raise_exception('This servable accepts only single message requests') }}{% endif %}{{ messages[0]['content'] }}"
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -193,10 +171,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComplexMessage) {
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+    LoadTemplateProcessor();
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -214,11 +189,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateJinjaUppercase) {
 TEST_F(LLMChatTemplateTest, ChatTemplateJinjaException) {
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[3]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -238,10 +209,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerDefault) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
+    LoadTemplateProcessor();
 
     std::string finalPrompt = "";
     std::string payloadBody = R"(
@@ -262,11 +230,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosNull) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -287,11 +251,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerBosDict) {
     "eos_token": "</s>"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -312,11 +272,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerEosNull) {
     "eos_token": null
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -337,11 +293,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerException) {
     "eos_token": "</s>",
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -362,11 +314,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerUpperCase) {
     "chat_template": "{{ \"Hi, \" + messages[0]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -387,11 +335,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateException) {
     "chat_template": "{{ \"Hi, \" + messages[3]['content'] | upper }}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -412,11 +356,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTokenizerTemplateBadVariable) {
     "chat_template": {}
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -439,12 +379,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTwoConfigs) {
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
     std::string jinjaTemplate = R"( {{ "Hi, " + messages[0]['content'] | upper }} )";
     ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
-
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody = R"(
         {
@@ -465,9 +400,6 @@ TEST_F(LLMChatTemplateTest, ChatTemplateComparePythonAndGenAiProcessors) {
     "chat_template": "{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\\n' + system_message + '\\n<</SYS>>\\n\\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ '<s>' + '[INST] ' + content.strip() + ' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' '  + content.strip() + ' </s>' }}{% endif %}{% endfor %}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
 
     std::string pythonProcessorOutput = "";
     std::string payloadBody = R"(
@@ -531,11 +463,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateKwargsPositive) {
     "chat_template": "{% if enable_thinking %}Thinking is on{% else %}Thinking is off{% endif %}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     std::string finalPrompt = "";
     std::string payloadBody;
     std::string expectedOutput;
@@ -588,11 +516,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateKwargsNegative) {
     "chat_template": "{% if enable_thinking %}Thinking is on{% else %}Thinking is off{% endif %}"
     })";
     ASSERT_EQ(CreateTokenizerConfig(tokenizerJson), true);
-    std::shared_ptr<GenAiServable> servable = std::make_shared<ContinuousBatchingServable>();
-
-    servable->getProperties()->modelsPath = directoryPath;
-    GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), servable->getProperties()->modelsPath);
-
+    LoadTemplateProcessor();
     // chat_template_kwargs must be an object
     // This is a negative test case to ensure that the template processor correctly handles invalid chat_template
     std::string finalPrompt = "";

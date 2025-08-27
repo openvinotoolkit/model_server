@@ -77,6 +77,16 @@ struct GenAiServableExecutionContext {
     std::string lastStreamerCallbackOutput;
 };
 
+struct ExtraGenerationInfo {
+    std::string bosTokenFromTokenizer;
+    std::string bosTokenIdFromTokenizer;
+    std::string eosTokenFromTokenizer;
+    std::string eosTokenIdFromTokenizer;
+    std::string chatTemplateFromTokenizer;
+    std::string chatTemplateDirectory;
+    bool isGgufModel;
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -95,6 +105,7 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
+    std::optional<std::string> ggufEosToken;  // TODO: Remove this once GGUF genai is fixed
 #endif
 };
 

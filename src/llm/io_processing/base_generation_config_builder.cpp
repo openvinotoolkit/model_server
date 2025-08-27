@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <limits>
+#include <string>
 #include <openvino/genai/generation_config.hpp>
 #include "base_generation_config_builder.hpp"
 
@@ -27,6 +28,10 @@ void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::Struc
         structuredOutputConfig.structural_tags_config = structuralTagsConfig;
         config.structured_output_config = structuredOutputConfig;
     }
+}
+
+void BaseGenerationConfigBuilder::addStopString(const std::string& decodedStopString) {
+    config.stop_strings.insert(decodedStopString);
 }
 
 void BaseGenerationConfigBuilder::validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer) {

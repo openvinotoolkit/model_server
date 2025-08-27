@@ -176,6 +176,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "HF source model path",
                 cxxopts::value<std::string>(),
                 "HF_SOURCE")
+            ("gguf_filename",
+                "Name of the GGUF file",
+                cxxopts::value<std::string>(),
+                "GGUF_FILENAME")
             ("overwrite_models",
                 "Overwrite the model if it already exists in the models repository",
                 cxxopts::value<bool>()->default_value("false"),
@@ -459,7 +463,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_name");
     }
-
     if (result->count("max_sequence_number")) {
         modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
         modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
@@ -537,13 +540,17 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         } else {
             serverSettings.serverMode = HF_PULL_AND_START_MODE;
         }
-
+        if (result->count("gguf_filename")) {
+            hfSettings.ggufFilename = result->operator[]("gguf_filename").as<std::string>();
+            hfSettings.downloadType = GGUF_DOWNLOAD;
+        }
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
+            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
+            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/")) &&
+                (hfSettings.ggufFilename == std::nullopt)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }

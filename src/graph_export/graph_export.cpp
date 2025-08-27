@@ -54,9 +54,30 @@ namespace ovms {
 
 static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings) {
+static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
+    std::string modelsPath;
+    if (ggufFilenameOpt.has_value()) {
+        modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
+#if _WIN32
+        // On Windows, file paths use backslashes ('\') as separators. However, the graph parser used in this project expects Unix-style paths with forward slashes ('/').
+        // If Windows-style backslashes are present, the parser may fail to locate files or misinterpret the path. To ensure compatibility, we replace all backslashes with forward slashes.
+        // This is safe because Windows APIs accept forward slashes in file paths.
+        if (FileSystem::getOsSeparator() != "/") {
+            std::replace(modelsPath.begin(), modelsPath.end(), '\\', '/');
+        }
+#endif
+    } else {
+        modelsPath = modelPath;
+    }
+    SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
+    return modelsPath;
+}
+
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings, const std::optional<std::string> ggufFilename) {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
+    std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
+    SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -80,7 +101,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             device: ")"
         << graphSettings.targetDevice << R"(",
             models_path: ")"
-        << graphSettings.modelPath << R"(",
+        << modelsPath << R"(",
             plugin_config: ')"
         << GraphExport::createPluginString(graphSettings.pluginConfig) << R"(',
             enable_prefix_caching: )"
@@ -134,6 +155,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
 #if (MEDIAPIPE_DISABLE == 0)
     ::mediapipe::CalculatorGraphConfig config;
     bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    SPDLOG_TRACE("Generated pbtxt: {}", oss.str());
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
@@ -325,20 +347,20 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     auto status = LocalFileSystem::exists(directoryPath, &exists);
     if (!status.ok())
         return status;
+    if (!hfSettings.ggufFilename.has_value()) {
+        bool is_dir = false;
+        status = LocalFileSystem::isDir(directoryPath, &is_dir);
+        if (!status.ok())
+            return status;
 
-    bool is_dir = false;
-    status = LocalFileSystem::isDir(directoryPath, &is_dir);
-    if (!status.ok())
-        return status;
-
-    if (!is_dir) {
-        SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
-        return StatusCode::PATH_INVALID;
+        if (!is_dir) {
+            SPDLOG_ERROR("Graph path is not a directory: {}", directoryPath);
+            return StatusCode::PATH_INVALID;
+        }
     }
-
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
         if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings));
+            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings), hfSettings.ggufFilename);
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;
