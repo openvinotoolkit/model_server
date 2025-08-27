@@ -543,10 +543,6 @@ load("@google_cloud_cpp//bazel:workspace2.bzl", "gl_cpp_workspace2")
 
 gl_cpp_workspace2()
 
-# load("@google_cloud_cpp//bazel:workspace3.bzl", "gl_cpp_workspace3")
-
-# gl_cpp_workspace3()
-
 load("@google_cloud_cpp//bazel:workspace4.bzl", "gl_cpp_workspace4")
 
 gl_cpp_workspace4()
