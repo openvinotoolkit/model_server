@@ -51,7 +51,7 @@ std::string getConfigPath(const std::string& configPath) {
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> \n  ovms --remove_from_config <CONFIG_PATH> --model_name <MODEL_NAME>", CONFIG_MANAGEMENT_HELP_GROUP);
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> \n  ovms --remove_from_config <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -264,7 +264,7 @@ void CLIParser::parse(int argc, char** argv) {
                 "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
-
+        configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",
                 "Directive to show available servables in models repository",
