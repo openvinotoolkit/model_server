@@ -1215,7 +1215,7 @@ ovms_cc_library(
             "gcsfilesystem.cpp",
     ],
     deps = [
-        "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",
+        "@google_cloud_cpp//:storage",
         "libovmsfilesystem",
         "libovmslogging",
         "libovmsstring_utils",
