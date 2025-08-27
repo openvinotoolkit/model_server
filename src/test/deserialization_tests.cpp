@@ -458,7 +458,7 @@ TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
 class KserveGRPCPredictRequestNegative : public KserveGRPCPredictRequest {
 public:
     void SetUp() override {
-        // Default implementation from parent
+        // Default implementation from parent - avoid compilation error
         KserveGRPCPredictRequest::SetUp();
     }
 
