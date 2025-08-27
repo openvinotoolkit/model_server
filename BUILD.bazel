@@ -53,7 +53,7 @@ cc_library(
                 "@azure//:storage",
                 "@cpprest//:sdk",
                 "@boost//:boost",
-                "@google_cloud_cpp//:storage",],
+                "@com_github_googleapis_google_cloud_cpp//google/cloud/storage:storage_client",],
             "//:disable_cloud": []
             })
          + select({

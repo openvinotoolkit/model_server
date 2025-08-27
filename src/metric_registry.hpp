@@ -17,7 +17,7 @@
 
 #include <memory>
 #include <string>
-#include <stdexcept>
+
 #include <prometheus/registry.h>
 
 namespace ovms {
