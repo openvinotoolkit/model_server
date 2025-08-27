@@ -157,7 +157,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         if (extraGenInfo.eosTokenFromTokenizer.empty()) {
             SPDLOG_ERROR("Tokenizer eos token not found in tokenizer nor in vocabulary but required for GGUF models.");
             errorFound = true;
-        } 
+        }
         if (extraGenInfo.bosTokenFromTokenizer.empty()) {
             SPDLOG_ERROR("Tokenizer bos token not found in tokenizer nor in vocabulary but required for GGUF models.");
             errorFound = true;
@@ -297,7 +297,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 tool_template = template
         )",
             py::globals(), locals);
-            
+
         if (extraGenInfo.isGgufModel) {
             properties->templateProcessor.bosToken = extraGenInfo.bosTokenFromTokenizer;
             properties->templateProcessor.eosToken = extraGenInfo.eosTokenFromTokenizer;
