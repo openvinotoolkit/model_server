@@ -50,7 +50,7 @@ public:
     static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
 #if (PYTHON_DISABLE == 0)
     // Use Python Jinja module for template processing
-    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, ExtraGenerationInfo extraGenInfo);
+    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
     static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
 #else
     // In C++ only version we use GenAI for template processing, but to have the same behavior as in Python-enabled version

@@ -66,7 +66,7 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 // Helper function for case-insensitive comparison of file extensions
 static bool hasGGUFExtension(const std::filesystem::path& path) {
     auto ext = path.extension().string();
-    if (ext.size() != 5) // ".gguf" is 5 characters
+    if (ext.size() != 5)  // ".gguf" is 5 characters
         return false;
     // Compare case-insensitively
     return std::equal(ext.begin(), ext.end(), ".gguf",
