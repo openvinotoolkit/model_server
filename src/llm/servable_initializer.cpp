@@ -150,7 +150,7 @@ ExtraGenerationInfo GenAiServableInitializer::readExtraGenerationInfo(std::share
     return extraGenInfo;
 }
 
-void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, ExtraGenerationInfo extraGenInfo) {
+void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo) {
     // GGUF models specific validation
     if (extraGenInfo.isGgufModel) {
         bool errorFound = false;
