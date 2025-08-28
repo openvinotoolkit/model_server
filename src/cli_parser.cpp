@@ -279,11 +279,11 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<std::string>(),
                 "REMOVE_FROM_CONFIG")
             ("model_repository_path",
-                "Relative path(from the config directory) to the model repository",
+                "Absolute or relative path from the config directory to the model repository",
                 cxxopts::value<std::string>(),
                 "MODEL_REPOSITORY_PATH")
             ("model_path",
-                "Relative path(from the config directory) to the model",
+                "Absolute or relative path from the config directory to the model. By default is a combination of the model_repository_path and model_name.",
                 cxxopts::value<std::string>(),
                 "MODEL_PATH")
             ("model_name",
