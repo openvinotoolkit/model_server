@@ -191,8 +191,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             global json
             import json
             from pathlib import Path
-            global datetime
-            import datetime
 
             global contextmanager
             from contextlib import contextmanager
@@ -207,7 +205,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                 raise jinja2.exceptions.TemplateError(message)
             # Appears in some of mistral chat templates
             def strftime_now(format):
+                import datetime
                 return datetime.datetime.now().strftime(format)
+
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
