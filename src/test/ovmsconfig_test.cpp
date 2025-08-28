@@ -695,7 +695,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableButMissingModelPath) {
         "--add_to_config",
         "/config/path"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name either with model_path or model_repository_path with add_to_config");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableWithBadAdditionalParameters) {
@@ -719,7 +719,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelName) {
         "--remove_from_config",
         "/config/path"};
     int arg_count = 3;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
@@ -730,7 +730,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigEnableMissingModelName) {
         "--add_to_config",
         "/config/path"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 
 TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
@@ -741,7 +741,7 @@ TEST_F(OvmsConfigDeathTest, modifyModelConfigDisableMissingModelNameWithPath) {
         "--add_to_config",
         "/config/path"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config, remove_from_config");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Set model_name with add_to_config/remove_from_config");
 }
 TEST_F(OvmsConfigDeathTest, hfBadImageGenerationGraphNoPull) {
     char* n_argv[] = {
