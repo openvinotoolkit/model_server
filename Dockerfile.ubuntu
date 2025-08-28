@@ -193,21 +193,22 @@ RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel
 ENV OpenVINO_DIR=/opt/intel/openvino/runtime/cmake
 ENV OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 WORKDIR /openvino_tokenizers/
-# Install the openvino_tokenizers python bindings and use a symlink to point
-# to the shared object in it's final location.
-RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
-    cp -r python/* /opt/intel/openvino/python/ ; \
-    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
-    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
-    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
-    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
 
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
-WORKDIR /openvino_tokenizers/build
 RUN cmake .. -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE && cmake --build . --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+
+# Install the openvino_tokenizers python bindings and use a symlink to point
+# to the shared object in it's final location.
+RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
+    cp -r python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+    cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
+    mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
+    echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
+    # ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
+    fi
 
 # Add Nvidia dev tool if needed
 RUN apt-get update ; \
