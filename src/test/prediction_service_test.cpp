@@ -175,7 +175,7 @@ public:
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + (i % 3)), 10}, ovms::Precision::FP32}}});
                         threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
+                            std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future()));
                     }));
         }
         for (auto i = 0u; i < waitingBeforePerformInferenceCount; ++i) {
@@ -189,7 +189,7 @@ public:
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{initialBatchSize, 10}, ovms::Precision::FP32}}});
                         threadsWaitingBeforePerformInferenceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request, nullptr,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future())));
+                            std::make_unique<std::future<void>>(releaseWaitBeforePerformInference[i].get_future()));
                     }));
         }
         // sleep to allow all threads to initialize
@@ -233,7 +233,7 @@ public:
                                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{(initialBatchSize + i), 10}, ovms::Precision::FP32}}});
                         threadsWaitingBeforeGettingModelInstanceStarted[i].set_value();
                         performPredict(config.getName(), config.getVersion(), request,
-                            std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future())));
+                            std::make_unique<std::future<void>>(releaseWaitBeforeGettingModelInstance[i].get_future()));
                     }));
         }
         // sleep to allow all threads to initialize
@@ -812,13 +812,13 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceInProgress) {
         [this, &requestBs1, &releaseWaitBeforePerformInferenceBs1, &thread1Started]() {
             thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1, nullptr,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs1.get_future())));
+                std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs1.get_future()));
         });
     std::thread t2(
         [this, &requestBs2, &releaseWaitBeforeGetModelInstanceBs2, &thread2Started]() {
             thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs2.get_future())),
+                std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs2.get_future()),
                 nullptr);
         });
     thread1Started.get_future().get();
@@ -852,14 +852,14 @@ TYPED_TEST(TestPredict, SuccesfullReloadWhen1InferenceAboutToStart) {
         [this, &requestBs1, &releaseWaitBeforeGetModelInstanceBs1, &thread1Started]() {
             thread1Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs1,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs1.get_future())),
+                std::make_unique<std::future<void>>(releaseWaitBeforeGetModelInstanceBs1.get_future()),
                 nullptr);
         });
     std::thread t2(
         [this, &requestBs2, &releaseWaitBeforePerformInferenceBs2, &thread2Started]() {
             thread2Started.set_value();
             this->performPredict(this->config.getName(), this->config.getVersion(), requestBs2, nullptr,
-                std::move(std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs2.get_future())));
+                std::make_unique<std::future<void>>(releaseWaitBeforePerformInferenceBs2.get_future()));
         });
     thread1Started.get_future().get();
     thread2Started.get_future().get();
