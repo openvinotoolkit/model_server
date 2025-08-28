@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #pragma warning(push)
@@ -41,9 +42,13 @@ public:
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
-    std::optional<rapidjson::Document> parseChunk(const std::string& chunk) override;
+    std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
+    }
+    const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
+        static const std::unordered_set<std::string> specialParsingStartTags = {};
+        return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;

@@ -428,6 +428,89 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledOpenAIFields) {
     EXPECT_EQ(options.at("height").as<int64_t>(), 1024);
     EXPECT_EQ(options.at("num_images_per_prompt").as<int>(), 4);
 }
+TEST(Text2ImageTest, getImageGenerationRequestOptionsNumInferenceSteps0) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // write request with prompt, size 512x1024, n=4 model=test_model
+    payload.parsedJson->Parse(R"({
+        "prompt": "test prompt",
+        "size": "512x1024",
+        "n": 4,
+        "model":"test model",
+        "num_inference_steps": 0
+    })");
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    auto& err = std::get<absl::Status>(requestOptions);
+    EXPECT_EQ(err.message(), "num_inference_steps must be higher than 0");
+}
+TEST(Text2ImageTest, getImageGenerationRequestOptionsWidth0) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // write request with prompt, size 512x1024, n=4 model=test_model
+    payload.parsedJson->Parse(R"({
+        "prompt": "test prompt",
+        "n": 4,
+        "model":"test model",
+        "width": 0,
+        "height": 512
+    })");
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    auto& err = std::get<absl::Status>(requestOptions);
+    EXPECT_EQ(err.message(), "width must be higher than 0");
+}
+TEST(Text2ImageTest, getImageGenerationRequestOptionsHeight0) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // write request with prompt, size 512x1024, n=4 model=test_model
+    payload.parsedJson->Parse(R"({
+        "prompt": "test prompt",
+        "n": 4,
+        "model":"test model",
+        "width": 512,
+        "height": 0
+    })");
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    auto& err = std::get<absl::Status>(requestOptions);
+    EXPECT_EQ(err.message(), "height must be higher than 0");
+}
+TEST(Text2ImageTest, getImageGenerationRequestOptionsN0) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // write request with prompt, size 512x1024, n=4 model=test_model
+    payload.parsedJson->Parse(R"({
+        "prompt": "test prompt",
+        "size": "512x1024",
+        "n": 0,
+        "model":"test model"
+    })");
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    auto& err = std::get<absl::Status>(requestOptions);
+    EXPECT_EQ(err.message(), "num_images_per_prompt/n must be higher than 0");
+}
+TEST(Text2ImageTest, getImageGenerationRequestOptionsNumImagesPerPrompt0) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    // write request with prompt, size 512x1024, n=4 model=test_model
+    payload.parsedJson->Parse(R"({
+        "prompt": "test prompt",
+        "size": "512x1024",
+        "num_images_per_prompt": 0,
+        "model":"test model"
+    })");
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    auto& err = std::get<absl::Status>(requestOptions);
+    EXPECT_EQ(err.message(), "num_images_per_prompt/n must be higher than 0");
+}
 TEST(Text2ImageTest, getImageGenerationRequestOptionsAllHandledGenAIFields) {
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();

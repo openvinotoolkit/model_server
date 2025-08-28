@@ -165,3 +165,141 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
         }
     }
 }
+
+TEST_F(Llama3OutputParserTest, HolisticStreaming) {
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
+        // Tool call phase
+        // Starting first tool. Collecting chunk until full name is received. Don't return until then.
+        {"<|python_tag|>", std::nullopt},
+        {"{\"", std::nullopt},
+        {"name", std::nullopt},
+        {"\":", std::nullopt},
+        {" \"", std::nullopt},
+        {"get", std::nullopt},
+        {"_h", std::nullopt},
+        {"umidity", std::nullopt},
+        {"\",", std::nullopt},
+        {" \"", std::nullopt},
+        {"parameters", std::nullopt},
+        {"\":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_humidity\"}}]}}"},
+        {" {\"", std::nullopt},
+        {"location", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
+        {"\":", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
+        {" \"", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
+        {"Paris", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
+        {"\"}}", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
+        {";", R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
+        {" {\"", std::nullopt},
+        {"name", std::nullopt},
+        {"\":", std::nullopt},
+        {" \"", std::nullopt},
+        {"get", std::nullopt},
+        {"_temperature", std::nullopt},
+        {"\",", std::nullopt},
+        {" \"", std::nullopt},
+        {"parameters", std::nullopt},
+        {"\":", R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_temperature"}}]}})"},
+        {" {\"", std::nullopt},
+        {"location", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\""}}]}})"},
+        {"\":", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
+        {" \"", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
+        {"Paris\"}}", R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
+        // closed main JSON, with the last chunk, now only return nullopt
+    };
+
+    int64_t chunkIteration = -1;
+    for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
+        chunkIteration++;
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, true, static_cast<size_t>(chunkIteration) >= chunkToDeltaVec.size() ? ov::genai::GenerationFinishReason::STOP : ov::genai::GenerationFinishReason::NONE);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
+            }
+        } else if (expectedDelta.has_value()) {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
+        } else if (doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
+        } else {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
+        }
+    }
+}
+
+TEST_F(Llama3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
+        // Tool parser is available, but tools are not in the request so every chunk is just a regular content
+        {"<|python_tag|>", "{\"delta\":{\"content\":\"<|python_tag|>\"}}"},
+        {"{\"", "{\"delta\":{\"content\":\"{\\\"\"}}"},
+        {"name", "{\"delta\":{\"content\":\"name\"}}"},
+        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
+        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
+        {"super", "{\"delta\":{\"content\":\"super\"}}"},
+        {"_tool", "{\"delta\":{\"content\":\"_tool\"}}"},
+        {"_number", "{\"delta\":{\"content\":\"_number\"}}"},
+        {"_two", "{\"delta\":{\"content\":\"_two\"}}"},
+        {"\",", "{\"delta\":{\"content\":\"\\\",\"}}"},
+        {" \"", "{\"delta\":{\"content\":\" \\\"\"}}"},
+        {"arguments", "{\"delta\":{\"content\":\"arguments\"}}"},
+        {"\":", "{\"delta\":{\"content\":\"\\\":\"}}"},
+        {" {", "{\"delta\":{\"content\":\" {\"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"arg1", "{\"delta\":{\"content\":\"arg1\"}}"},
+        {"\": ", "{\"delta\":{\"content\":\"\\\": \"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"val{{{ue1", "{\"delta\":{\"content\":\"val{{{ue1\"}}"},
+        {"\"", "{\"delta\":{\"content\":\"\\\"\"}}"},
+        {"}", "{\"delta\":{\"content\":\"}\"}}"},
+        {"}", "{\"delta\":{\"content\":\"}\"}}"},
+    };
+
+    for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
+        // Second argument is false as we simulate the case where tools have not been provided in the request
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            std::string expected = expectedDelta.value();
+            EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+        } else {
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+        }
+    }
+}

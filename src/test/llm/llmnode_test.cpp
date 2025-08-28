@@ -1112,9 +1112,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
         }
     )";
 
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
@@ -1152,10 +1153,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         ]
     }
     )";
-
+    // Request should be processed correctly with guided generation implicitly disabled due to bad schema
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+        ovms::StatusCode::OK);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
@@ -3620,7 +3621,7 @@ TEST_F(LLMConfigHttpTest, LLMNodeWorkspacePathToFileNotDir) {
     ovms::MediapipeGraphConfig mgc{"mediaDummy", "", ""};
     DummyMediapipeGraphDefinition mediapipeDummy("mediaDummy", mgc, testPbtxt, nullptr);
     mediapipeDummy.inputConfig = testPbtxt;
-    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST);
+    ASSERT_EQ(mediapipeDummy.validate(manager), StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE);
 }
 
 class LLMConfigHttpTestParameterized : public ::testing::Test, public ::testing::WithParamInterface<std::tuple<std::string, ovms::StatusCode>> {
