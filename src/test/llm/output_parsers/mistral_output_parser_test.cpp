@@ -31,16 +31,30 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/mistralai/Mistral-7B-Instruct-v0.3/";
 #endif
 
-static ov::genai::Tokenizer mistralTokenizer(tokenizerPath);
+static std::unique_ptr<ov::genai::Tokenizer> mistralTokenizer;
 
 class MistralOutputParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
     std::unique_ptr<OutputParser> outputParserWithImmediateToolParsing;
 
+    static void SetUpTestSuite() {
+        try {
+            mistralTokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
+        } catch (const std::exception& e) {
+            FAIL() << "Failed to initialize mistral tokenizer: " << e.what();
+        } catch (...) {
+            FAIL() << "Failed to initialize mistral tokenizer due to unknown error.";
+        }
+    }
+
+    static void TearDownTestSuite() {
+        mistralTokenizer.reset();
+    }
+
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(mistralTokenizer, "mistral", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(mistralTokenizer, "mistral", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "");
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "");
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
@@ -52,7 +66,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
         if (immediateParsing) {
             testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
         }
-        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -73,7 +87,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
         if (immediateParsing) {
             testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
         }
-        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -106,7 +120,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInv
         if (immediateParsing) {
             testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
         }
-        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
@@ -122,7 +136,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithOneValidToolCallAndTwoInv
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
     for (bool immediateParsing : {false, true}) {
-        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
@@ -134,7 +148,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     for (bool immediateParsing : {false, true}) {
-        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]");
@@ -145,7 +159,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithContentOnBothSidesAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s> This is a content part after tool call.";
     for (bool immediateParsing : {false, true}) {
-        auto generatedTensor = mistralTokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.\n\n [{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}] This is a content part after tool call.");
@@ -160,7 +174,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithMultipleToolCallsReturnsC
         if (immediateParsing) {
             testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
         }
-        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         // Same expected content as tokenizer does not add special tokens
@@ -177,7 +191,7 @@ TEST_F(MistralOutputParserTest, ParseToolCallOutputWithArrayArguments) {
         if (immediateParsing) {
             testInput = testInput.substr(std::string("[TOOL_CALLS]").length());
         }
-        auto generatedTensor = mistralTokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+        auto generatedTensor = mistralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
         EXPECT_EQ(parsedOutput.content, "");
