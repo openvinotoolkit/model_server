@@ -37,6 +37,7 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     int workers = config.restWorkers() ? config.restWorkers() : 10;
 
     SPDLOG_INFO("Will start {} REST workers", workers);
+    SPDLOG_INFO("Hello World");
 #if (USE_DROGON == 0)
     netHttpServer = ovms::createAndStartNetHttpServer(config.restBindAddress(), config.restPort(), workers, this->ovmsServer);
     if (netHttpServer == nullptr) {
