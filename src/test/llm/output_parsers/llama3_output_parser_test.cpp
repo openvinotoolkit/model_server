@@ -31,7 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
 #endif
 
-static ov::genai::Tokenizer llama3Tokenizer(tokenizerPath);
+static std::unique_ptr<ov::genai::Tokenizer> llama3Tokenizer;
 
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
 constexpr int64_t botTokenId = 128010;
@@ -41,16 +41,30 @@ protected:
     std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
     std::unique_ptr<OutputParser> outputParserWithImmediateToolParsing;
 
+    static void SetUpTestSuite() {
+        try {
+            llama3Tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
+        } catch (const std::exception& e) {
+            FAIL() << "Failed to initialize llama3 tokenizer: " << e.what();
+        } catch (...) {
+            FAIL() << "Failed to initialize llama3 tokenizer due to unknown error.";
+        }
+    }
+
+    static void TearDownTestSuite() {
+        llama3Tokenizer.reset();
+    }
+
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(llama3Tokenizer, "llama3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(llama3Tokenizer, "llama3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "");
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "");
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
 
 TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     generatedTokens.insert(generatedTokens.begin(), botTokenId);
     for (bool immediateParsing : {false, true}) {
@@ -66,7 +80,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
 
 TEST_F(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
@@ -79,7 +93,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
 //  Tool parser assumes entire output are tool calls since it starts with "{", but it's not the case
 TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
     std::string input = "{\"name\": \"Jane Doe\", \"location\": \"unknown\"}";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
@@ -92,7 +106,7 @@ TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
 // Tool parser is available, but there are no tools in the request, so all output should be treated as content
 TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputNoToolsInTheRequest) {
     std::string input = "{\"name\": \"Jane Doe\", \"location\": \"unknown\"}";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
@@ -105,7 +119,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     std::string input = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}};"
                         "{\"name\": \"another_tool\", \"parameters\": {\"param1\": \"data\", \"param2\": true}};"
                         "{\"name\": \"third_tool\", \"parameters\": {\"key\": \"value\"}}";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
@@ -132,7 +146,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
 
 TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = llama3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
         ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
@@ -145,9 +159,9 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string content = "This is a content part and next will be a tool call.";
     std::string toolCall = "{\"name\": \"example_tool\", \"parameters\": {\"arg1\": \"value1\", \"arg2\": 42}}";
-    auto generatedContentTensor = llama3Tokenizer.encode(content, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedContentTensor = llama3Tokenizer->encode(content, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedContentTokens(generatedContentTensor.data<int64_t>(), generatedContentTensor.data<int64_t>() + generatedContentTensor.get_size());
-    auto generatedToolCallTensor = llama3Tokenizer.encode(toolCall, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedToolCallTensor = llama3Tokenizer->encode(toolCall, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedToolCallTokens(generatedToolCallTensor.data<int64_t>(), generatedToolCallTensor.data<int64_t>() + generatedToolCallTensor.get_size());
     std::vector<int64_t> generatedTokens;
     generatedTokens.insert(generatedTokens.end(), generatedContentTokens.begin(), generatedContentTokens.end());
