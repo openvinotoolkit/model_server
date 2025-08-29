@@ -185,13 +185,13 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
 
         // If this is end of streaming, we need to manually add closing quote "
         // We need to place it right before last closing brace
-        if (finishReason == ov::genai::GenerationFinishReason::STOP) {
+        if (finishReason != ov::genai::GenerationFinishReason::NONE) {
             isCurrentToolCallParsingFinished = true;
             size_t lastClosingBrace = modifiedChunk.find_last_of('}');
             if (lastClosingBrace != std::string::npos) {
                 modifiedChunk.insert(lastClosingBrace, "\"");
-                argumentsDelayWindow[0] += modifiedChunk;
             }
+            argumentsDelayWindow[0] += modifiedChunk;
             // If this is end of one of the tool calls "in the middle" (; has been found), we need to manually add closing quote "
             // We need to place it right before last closing brace
         } else if (modifiedChunk.find(separator) != std::string::npos) {
