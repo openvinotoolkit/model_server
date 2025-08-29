@@ -305,6 +305,7 @@ ovms_cc_library(
         "libovms_server_settings",
         "libovms_version",
         "libovmsfilesystem",
+        "libovmslocalfilesystem",
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
