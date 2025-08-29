@@ -587,36 +587,28 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
     bool available = false;
-    bool found = false;
 
     // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
-    if (!found) {
+    if (!available) {
         auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
         if (std::find(names.begin(), names.end(), name) != names.end()) {
-            found = true;
             available = true;
         }
     }
 #endif
 
     // Single Model
-    if (!found) {
-        std::shared_lock lockSingleModels(modelManager.modelsMtx);
-        const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
-        auto it = models.find(name);
-        if (it != models.end()) {
-            found = true;
-            auto defaultModelInstance = it->second->getDefaultModelInstance();
-            if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
-                available = true;
+    if (!available) {
+        auto availableModelNames = modelManager.getNamesOfAvailableModels();
+        if (std::find(availableModelNames.begin(), availableModelNames.end(), name) != availableModelNames.end()) {
+            available = true;
         }
     }
     // DAG (deprecated)
-    if (!found) {
+    if (!available) {
         auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
         if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
-            found = true;
             available = true;
         }
     }
@@ -650,35 +642,23 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.StartArray();
 
     // Single Model
-    std::shared_lock lockSingleModels(modelManager.modelsMtx);
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
-    for (auto const& model : models) {
-        auto defaultModelInstance = model.second->getDefaultModelInstance();
-        if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
-            parseModel(writer, model.first, timestamp);
+    auto availableModelNames = modelManager.getNamesOfAvailableModels();
+    for (auto const& name : availableModelNames) {
+        parseModel(writer, name, timestamp);
     }
-    lockSingleModels.unlock();
 
     // DAG
-    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    std::shared_lock lockDags(modelManager.getPipelineFactory().getDefinitionsMtx());
-    for (auto const& name : pipelinesNames) {
-        auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(name);
-        if (pipelineDefinition->getStatus().isAvailable())
-            parseModel(writer, name, timestamp);
+    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
+    for (auto const& name : availableModels) {
+        parseModel(writer, name, timestamp);
     }
-    lockDags.unlock();
 
     // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
-    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    std::shared_lock lockMediapipes(modelManager.getMediapipeFactory().getDefinitionsMtx());
-    for (auto const& graphName : mediapipes) {
-        auto mediapipeGraphDefinition = modelManager.getMediapipeFactory().findDefinitionByName(graphName);
-        if (mediapipeGraphDefinition->getStatus().isAvailable())
-            parseModel(writer, graphName, timestamp);
+    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+    for (auto const& graphName : availableMediapipes) {
+        parseModel(writer, graphName, timestamp);
     }
-    lockMediapipes.unlock();
 #endif
     writer.EndArray();
     writer.String("object");

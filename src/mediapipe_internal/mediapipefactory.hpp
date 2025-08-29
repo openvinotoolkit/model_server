@@ -80,10 +80,6 @@ public:
     const std::vector<std::string> getMediapipePipelinesNames() const;
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     ~MediapipeFactory();
-
-    std::shared_mutex& getDefinitionsMtx() const {
-        return definitionsMtx;
-    }
 };
 
 }  // namespace ovms
