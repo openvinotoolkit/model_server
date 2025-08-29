@@ -23,11 +23,11 @@ In this demo OpenVINO Model Server is deployed on Linux with CPU using Docker an
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
-This demo tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
+This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
 
 ### Step 1: Preparation
 
-Download export script, install it's dependencies and create directory for the models:
+Download export script, install its dependencies and create directory for the models:
 
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
@@ -151,7 +151,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 ### Step 4: Chat with RAG
 
 1. Click **New Chat**. Enter `#` symbol
-2. Select documents that appears above the chat box for retrieval. Document icons will appears above **Send a message**
+2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a message**
 3. Enter a query and sent
 
 ![chat with RAG demo](./chat_with_RAG_demo.png)
@@ -189,7 +189,7 @@ The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1
 python export_model.py image_generation --source_model dreamlike-art/dreamlike-anime-1.0 --weight-format int8 --config_file_path models/config.json
 ```
 
-Keep the model server running or restart it. Here is the basic call to check if it work:
+Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```bash
 curl http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\":\"dreamlike-art/dreamlike-anime-1.0\",\"prompt\":\"anime\",\"num_inference_steps\":1,\"size\":\"256x256\",\"response_format\":\"b64_json\"}"
@@ -233,7 +233,7 @@ Method 2:
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenGVLab/InternVL2–2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run export script to download and quantize the model:
+The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run export script to download and quantize the model:
 
 ```bash
 python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json
@@ -247,7 +247,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenGVLab/InternVL2–2B`.
+1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`.
 2. Click **+more** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model\_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
