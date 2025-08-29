@@ -239,7 +239,7 @@ The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://
 python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json
 ```
 
-Keep the model server running or restart it. Here is the basic call to check if it work:
+Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```bash
 curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
