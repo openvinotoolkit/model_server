@@ -140,6 +140,16 @@ const std::vector<std::string> MediapipeFactory::getMediapipePipelinesNames() co
     }
     return names;
 }
+const std::vector<std::string> MediapipeFactory::getNamesOfAvailableMediapipePipelines() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(definitionsMtx);
+    for (auto& [name, definition] : definitions) {
+        if (definition->getStatus().isAvailable()) {
+            names.push_back(definition->getName());
+        }
+    }
+    return names;
+}
 
 MediapipeFactory::~MediapipeFactory() = default;
 }  // namespace ovms

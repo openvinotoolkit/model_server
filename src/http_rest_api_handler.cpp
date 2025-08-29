@@ -592,12 +592,10 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
     if (!found) {
-        std::shared_lock lockMediapipes(modelManager.getMediapipeFactory().getDefinitionsMtx());
-        auto mediapipeGraphDefinition = modelManager.getMediapipeFactory().findDefinitionByName(name);
-        if (mediapipeGraphDefinition != nullptr) {
+        auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+        if (std::find(names.begin(), names.end(), name) != names.end()) {
             found = true;
-            if (mediapipeGraphDefinition->getStatus().isAvailable())
-                available = true;
+            available = true;
         }
     }
 #endif
@@ -616,12 +614,10 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     }
     // DAG (deprecated)
     if (!found) {
-        std::shared_lock lockDags(modelManager.getPipelineFactory().getDefinitionsMtx());
-        auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(name);
-        if (pipelineDefinition != nullptr) {
+        auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
+        if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
             found = true;
-            if (pipelineDefinition->getStatus().isAvailable())
-                available = true;
+            available = true;
         }
     }
 
