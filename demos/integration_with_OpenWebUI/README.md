@@ -16,7 +16,7 @@ The goal of this demo is to integrate Open-WebUI with [OpenVINO Model Server](ht
 
 In this demo OpenVINO Model Server is deployed on Linux with CPU using Docker and Open WebUI is installed via Python pip. Requirements to follow this demo:
 
-* [Docker Engine](https://docs.docker.com/engine/) installed.
+* [Docker Engine](https://docs.docker.com/engine/) installed
 * host with x86_64 architecture
 * Linux, macOS, or Windows via [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
 * Python 3.11 with pip 
