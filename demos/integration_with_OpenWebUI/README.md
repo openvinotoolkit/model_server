@@ -16,10 +16,11 @@ The goal of this demo is to integrate Open-WebUI with [OpenVINO Model Server](ht
 
 In this demo OpenVINO Model Server is deployed on Linux with CPU using Docker and Open WebUI is installed via Python pip. Requirements to follow this demo:
 
-* [Docker Engine](https://docs.docker.com/engine/) installed
-* Intel® Core™ processor (6-13th gen.) or Intel® Xeon® processor (1st to 4th gen.)
+* [Docker Engine](https://docs.docker.com/engine/) installed.
+* host with x86_64 architecture
 * Linux, macOS, or Windows via [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
-* Python 3.11 with pip and a Hugging Face account
+* Python 3.11 with pip 
+* Hugging Face account to pull the models
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
@@ -30,8 +31,8 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 Download export script, install its dependencies and create directory for the models:
 
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -124,7 +125,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 1. Go to **Admin Panel** → **Settings** → **Documents** ([http://localhost:8080/admin/settings/documents](http://localhost:8080/admin/settings/documents))
 2. Select **OpenAI** for **Embedding Model Engine**
-   * URL: `http://localhost:8000/v3`
+   * URL: `http://localhost:8000/v3/embeddings`
    * Embedding Model: `sentence-transformers/all-MiniLM-L6-v2`
    * Put anything in API key
 3. Enable **Hybrid Search**
