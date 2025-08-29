@@ -313,6 +313,8 @@ public:
         return models;
     }
 
+    const std::vector<std::string> getNamesOfAvailableModels() const;
+
     /**
      * @brief Starts monitoring cleanup as new thread
      */

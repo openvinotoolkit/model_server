@@ -1687,6 +1687,17 @@ const CustomNodeLibraryManager& ModelManager::getCustomNodeLibraryManager() cons
     return *customNodeLibraryManager;
 }
 
+const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(modelsMtx);
+    for (auto& [name, model] : models) {
+        if (model->getDefaultModelInstance() && model->getDefaultModelInstance()->getStatus().getState() == ModelVersionState::AVAILABLE) {
+            names.push_back(model->getName());
+        }
+    }
+    return names;
+}
+
 Status ModelManager::createPipeline(std::shared_ptr<MediapipeGraphExecutor>& graph,
     const std::string& name) {
 #if (MEDIAPIPE_DISABLE == 0)
