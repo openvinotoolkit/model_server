@@ -3,19 +3,22 @@
     {
       "config": {
         "name": "clip",
-        "base_path": "/saved_mod/clip"
+        "base_path": "/saved_mod/clip",
+        "target_device": "GPU"
       }
     },
     {
       "config": {
         "name": "dino",
-        "base_path": "/saved_mod/dino"
+        "base_path": "/saved_mod/dino",
+        "target_device": "GPU"
       }
     },
     {
       "config": {
         "name": "laion",
-        "base_path": "/saved_mod/laion"
+        "base_path": "/saved_mod/laion",
+        "target_device": "GPU"
       }
     }
   ],
