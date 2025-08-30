@@ -15,19 +15,17 @@
 #
 
 load("//:common_settings.bzl",
-     "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "PYBIND_DEPS")
+     "ovms_cc_library")
 
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
+ovms_cc_library(
+    name = "cmd_exec",
+    srcs = ["cmd_exec.cpp"],
+    hdrs = ["cmd_exec.hpp"],
+    deps =  [],
+    visibility = ["//visibility:public"],
+)
 
-LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
-    "//conditions:default": [],
-    "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
-})
-
-cc_library(
+ovms_cc_library(
     name = "libgit2",
     srcs = ["libgit2.cpp"],
     hdrs = ["libgit2.hpp"],
@@ -38,19 +36,54 @@ cc_library(
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmsfilesystem",
         "@ovms//src:libovmslocalfilesystem",
+        ":cmd_exec",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
+)
+ovms_cc_library(
+    name = "gguf_downloader",
+    srcs = ["gguf_downloader.cpp"],
+    hdrs = ["gguf_downloader.hpp"],
+    deps =  [
+        "//third_party:curl",
+        "@nlohmann_json//:json",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovmsfilesystem",
+        "@ovms//src:libovmslocalfilesystem",
+        "@ovms//src:libovms_version",
+    ],
+    visibility = ["//visibility:public"],
 )
 
-cc_library(
+
+ovms_cc_library(
+    name = "optimum_export",
+    srcs = ["optimum_export.cpp"],
+    hdrs = ["optimum_export.hpp"],
+    deps =  [
+        ":cmd_exec",
+        ":libgit2",
+        "@ovms//src:libovmslogging",
+        "@ovms//src:libovmsstatus",
+        "@ovms//src:libovmsstring_utils",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:libovmsfilesystem",
+        "@ovms//src:libovmslocalfilesystem",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "hf_pull_model_module",
     srcs = ["hf_pull_model_module.cpp"],
     hdrs = ["hf_pull_model_module.hpp"],
     deps =  [
         ":libgit2",
+        "gguf_downloader",
+        ":optimum_export",
         "@ovms//src/graph_export:graph_export",
         "@ovms//src:cpp_headers",
         "@ovms//src:libovmsstring_utils",
@@ -59,7 +92,4 @@ cc_library(
         "@ovms//src:libovms_module",
     ],
     visibility = ["//visibility:public"],
-    copts = COPTS_ADJUSTED,
-    linkopts = LINKOPTS_ADJUSTED,
-    local_defines = COMMON_LOCAL_DEFINES,
 )

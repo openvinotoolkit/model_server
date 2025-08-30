@@ -47,6 +47,7 @@ class OvmsBaseType(Enum):
     REDHAT_PYTHON = "redhat_python"
     REDHAT_GPU = "redhat_gpu"
     WINDOWS = "windows"
+    WINDOWS_PYTHON = "windows_python"
 
 
 # Libraries listed by ldd /ovms/bin/ovms
@@ -117,6 +118,7 @@ libraries = {
         'libopenvino_hetero_plugin.so',
         'libopenvino_intel_cpu_plugin.so',
         'libopenvino_intel_gpu_plugin.so',
+        'libopenvino_intel_npu_plugin.so',
         'libopenvino_ir_frontend.so',
         'libopenvino_onnx_frontend.so',
         'libopenvino_paddle_frontend.so',
@@ -127,24 +129,18 @@ libraries = {
         'libtbb.so',
     },
     OvmsBaseType.UBUNTU: set(),
-    OvmsBaseType.UBUNTU22: {'libopenvino_intel_npu_plugin.so',},
-    OvmsBaseType.UBUNTU24: {'libopenvino_intel_npu_plugin.so',},
+    OvmsBaseType.UBUNTU22: set(),
+    OvmsBaseType.UBUNTU24: set(),
     OvmsBaseType.UBUNTU20_PYTHON: set(),
     OvmsBaseType.UBUNTU22_PYTHON: set(),
     OvmsBaseType.UBUNTU24_PYTHON: set(),
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
-        'git.exe',
         'git2.dll',
-        'git-lfs.exe',
         'icudt70.dll',
         'icuuc70.dll',
         'libcurl-x64.dll',
-        'libiconv-2.dll',
-        'libintl-8.dll',
-        'libpcre2-8-0.dll',
-        'libssp-0.dll',
         'opencv_world4100.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
@@ -164,7 +160,35 @@ libraries = {
         'openvino_tensorflow_lite_frontend.dll',
         'openvino_tokenizers.dll',
         'tbb12.dll',
-        'zlib1.dll',
+    },
+    OvmsBaseType.WINDOWS_PYTHON: {
+        'cli.exe',
+        'cli-32.exe',
+        'cli-64.exe',
+        'cli-arm64.exe',
+        'gui.exe',
+        'gui-32.exe',
+        'gui-64.exe',
+        'gui-arm64.exe',
+        'libcrypto-3.dll',
+        'libffi-8.dll',
+        'libssl-3.dll',
+        'pip.exe',
+        'pip3.exe',
+        'pip3.12.exe',
+        'python.exe',
+        'python3.dll',
+        'python312.dll',
+        'pythonw.exe',
+        'sqlite3.dll',
+        't32.exe',
+        't64.exe',
+        't64-arm.exe',
+        'w32.exe',
+        'w64.exe',
+        'w64-arm.exe',
+        'vcruntime140.dll',
+        'vcruntime140_1.dll',
     },
 }
 
@@ -178,7 +202,7 @@ whitelisted_libraries = {
     OvmsType.UBUNTU24_NGINX: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU24]},
     OvmsType.REDHAT: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT]},
     OvmsType.REDHAT_GPU: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT]},
-    OvmsType.WINDOWS: {"default": libraries[OvmsBaseType.WINDOWS]},
+    OvmsType.WINDOWS: {"default": libraries[OvmsBaseType.WINDOWS], "python": libraries[OvmsBaseType.WINDOWS_PYTHON]},
 }
 
 # Apt/yum packages
@@ -250,7 +274,6 @@ packages = {
         'libkrb5-3',
         'libgssapi-krb5-2',
         'nginx',
-        'nginx-common',
     },
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: {

@@ -17,19 +17,20 @@
 #include "openai_completions.hpp"
 
 #include <cmath>
+#include <memory>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
+#include <set>
 
-#define STB_IMAGE_IMPLEMENTATION
+#include "openai_json_response.hpp"
+
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "../../filesystem.hpp"
 #pragma warning(push)
-#pragma warning(disable : 6262)
-#include "stb_image.h"  // NOLINT
-#pragma warning(default : 6262)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -37,6 +38,7 @@
 
 #include <curl/curl.h>
 #include <regex>
+#include "../../image_conversion.hpp"  // TODO: Rename to stbi_conversions?
 
 using namespace rapidjson;
 
@@ -90,38 +92,6 @@ absl::Status OpenAIChatCompletionsHandler::parseCompletionsPart() {
     return absl::OkStatus();
 }
 
-ov::Tensor loadImageStbi(unsigned char* image, const int x, const int y, const int desiredChannels) {
-    if (!image) {
-        std::stringstream errorMessage;
-        errorMessage << stbi_failure_reason();
-        throw std::runtime_error{errorMessage.str()};
-    }
-    struct SharedImageAllocator {
-        unsigned char* image;
-        int channels, height, width;
-        void* allocate(size_t bytes, size_t) const {
-            if (image && channels * height * width == bytes) {
-                return image;
-            }
-            throw std::runtime_error{"Unexpected number of bytes was requested to allocate."};
-        }
-        void deallocate(void*, size_t bytes, size_t) {
-            if (channels * height * width != bytes) {
-                throw std::runtime_error{"Unexpected number of bytes was requested to deallocate."};
-            }
-            if (image != nullptr) {
-                stbi_image_free(image);
-                image = nullptr;
-            }
-        }
-        bool is_equal(const SharedImageAllocator& other) const noexcept { return this == &other; }
-    };
-    return ov::Tensor(
-        ov::element::u8,
-        ov::Shape{1, size_t(y), size_t(x), size_t(desiredChannels)},
-        SharedImageAllocator{image, desiredChannels, y, x});
-}
-
 static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nmemb,
     void* image) {
     size_t realsize = size * nmemb;
@@ -136,6 +106,12 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
 
 static absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
+    if (!curl_handle) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to initialize curl handle");
+        return absl::InternalError("Image downloading failed");
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
+
     auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &image))
@@ -153,28 +129,9 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
         return absl::InvalidArgumentError("Image downloading failed");
     } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", decoded.size());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     }
-    curl_easy_cleanup(curl_handle);
     return absl::OkStatus();
-}
-
-ov::Tensor loadImageStbiFromMemory(const std::string& imageBytes) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load_from_memory(
-        (const unsigned char*)imageBytes.data(), imageBytes.size(),
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
-}
-
-ov::Tensor loadImageStbiFromFile(char const* filename) {
-    int x = 0, y = 0, channelsInFile = 0;
-    constexpr int desiredChannels = 3;
-    unsigned char* image = stbi_load(
-        filename,
-        &x, &y, &channelsInFile, desiredChannels);
-    return loadImageStbi(image, x, y, desiredChannels);
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
@@ -190,7 +147,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         auto& obj = it->value.GetArray()[i];
         if (!obj.IsObject())
             return absl::InvalidArgumentError("Message is not a JSON object");
-        // Add new message to chat history
+        // Add new message to chat history. Note that chat history contains only messages with "role" and "content" fields
+        // Other values are not stored in chat history, but are still present in the request object
         request.chatHistory.push_back({});
         for (auto member = obj.MemberBegin(); member != obj.MemberEnd(); member++) {
             if (!member->name.IsString())
@@ -248,7 +206,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             } else if (std::regex_match(url.c_str(), std::regex("^(http|https|ftp|sftp|)://(.*)"))) {
@@ -258,19 +216,24 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 if (status != absl::OkStatus()) {
                                     return status;
                                 }
-                                curl_global_cleanup();
                                 try {
                                     tensor = loadImageStbiFromMemory(decoded);
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError("Image parsing failed");
                                 }
 
                             } else {
                                 if (!allowedLocalMediaPath.has_value()) {
                                     return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
+                                }
+                                if (FileSystem::isPathEscaped(url)) {
+                                    std::stringstream ss;
+                                    ss << "Path " << url.c_str() << " escape with .. is forbidden.";
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+                                    return absl::InvalidArgumentError(ss.str());
                                 }
                                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
                                 const auto firstMissmatch = std::mismatch(url.begin(), url.end(), allowedLocalMediaPath.value().begin(), allowedLocalMediaPath.value().end());
@@ -282,7 +245,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                                 } catch (std::runtime_error& e) {
                                     std::stringstream ss;
                                     ss << "Image file " << url.c_str() << " parsing failed: " << e.what();
-                                    SPDLOG_LOGGER_ERROR(llm_calculator_logger, ss.str());
+                                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
                                     return absl::InvalidArgumentError(ss.str());
                                 }
                             }
@@ -302,8 +265,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             }
         }
         const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("content") == lastMessage.end() || lastMessage.find("role") == lastMessage.end()) {
-            return absl::InvalidArgumentError("Every message must have both 'content' and 'role' fields");
+        if (lastMessage.find("role") == lastMessage.end()) {
+            return absl::InvalidArgumentError("Every message must have 'role' field");
         }
     }
     if (jsonChanged) {
@@ -318,11 +281,11 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
 absl::Status OpenAIChatCompletionsHandler::parseTools() {
     auto tool_choice_it = doc.FindMember("tool_choice");
     std::string tool_choice{"auto"};
-    if (tool_choice_it != doc.MemberEnd()) {
+    if (tool_choice_it != doc.MemberEnd() && !tool_choice_it->value.IsNull()) {
         if (tool_choice_it->value.IsString()) {
             tool_choice = tool_choice_it->value.GetString();
-            if (tool_choice != "none" && tool_choice != "auto")
-                return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto'");
+            if (tool_choice != "none" && tool_choice != "auto" && tool_choice != "required")
+                return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
         } else if (tool_choice_it->value.IsObject()) {
             auto tool_choice_functionIt = tool_choice_it->value.GetObject().FindMember("function");
             if (tool_choice_functionIt != tool_choice_it->value.GetObject().MemberEnd() && tool_choice_functionIt->value.IsObject()) {
@@ -339,17 +302,14 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-
     bool jsonChanged = false;
-    if (tool_choice == "auto")  // for now, with auto choice we don't need to do anything
-        return absl::OkStatus();
     if (tool_choice == "none") {
         // remove tools from the request
         doc.RemoveMember("tools");
         jsonChanged = true;
     }
     auto it = doc.FindMember("tools");
-    if (it != doc.MemberEnd()) {
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
         if (!it->value.IsArray())
             return absl::InvalidArgumentError("Tools are not an array");
         for (size_t i = 0; i < it->value.GetArray().Size();) {
@@ -361,11 +321,23 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                 auto nameIt = functionIt->value.GetObject().FindMember("name");
                 if (nameIt != functionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
                     std::string functionName = nameIt->value.GetString();
-                    if (tool_choice != functionName) {
+                    // If tool_choice is set to "auto", we keep all tools
+                    // If tool_choice is set to a specific function name, we keep only that tool
+                    if (tool_choice != "auto" && tool_choice != "required" && tool_choice != functionName) {
                         it->value.Erase(&obj);
                         jsonChanged = true;
                     } else {
                         i++;
+                        // If we keep the tool, add tool name and schema to the request
+                        auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
+                        if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // Dump parameters object to string since this is the schema format expected by GenAI
+                            rapidjson::StringBuffer buffer;
+                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                            parametersIt->value.Accept(writer);
+                            std::string parametersStr = buffer.GetString();
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                        }
                     }
                 } else {
                     return absl::InvalidArgumentError("Function object does not contain a valid name field");
@@ -373,9 +345,12 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
             } else {
                 return absl::InvalidArgumentError("Function is not a valid JSON object");
             }
-            // Add new tool to tools list - TBD
         }
+    } else {
+        tool_choice = "none";  // If tools are not provided, set tool_choice to "none"
     }
+
+    request.toolChoice = tool_choice;
     if (jsonChanged) {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -383,6 +358,14 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
         request.processedJson = buffer.GetString();
     }
     return absl::OkStatus();
+}
+
+const bool OpenAIChatCompletionsHandler::areToolsAvailable() const {
+    return !request.toolNameSchemaMap.empty();
+}
+
+const OpenAIChatCompletionsRequest& OpenAIChatCompletionsHandler::getRequest() const {
+    return request;
 }
 
 const std::string& OpenAIChatCompletionsHandler::getProcessedJson() const {
@@ -398,6 +381,10 @@ ov::genai::ChatHistory& OpenAIChatCompletionsHandler::getChatHistory() {
 
 std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
     return request.maxTokens;
+}
+
+std::optional<std::string> OpenAIChatCompletionsHandler::getResponseSchema() const {
+    return request.responseSchema;
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
@@ -435,6 +422,45 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
     // specific part of max_tokens validation due to echo dependency
     if (request.maxTokens == 0) {
         return absl::InvalidArgumentError("max_tokens value should be greater than 0");
+    }
+
+    // parse response_format
+    it = doc.FindMember("response_format");
+    if (it != doc.MemberEnd()) {
+        if (it->value.IsNull())
+            return absl::OkStatus();
+        if (!it->value.IsObject())
+            return absl::InvalidArgumentError("response_format is not an object");
+        auto responseFormat = it->value.GetObject();
+        auto typeIt = responseFormat.FindMember("type");
+        if (typeIt != responseFormat.MemberEnd()) {
+            if (!typeIt->value.IsString())
+                return absl::InvalidArgumentError("response_format.type is not a string");
+            if (std::string(typeIt->value.GetString()) != "json_schema") {
+                return absl::InvalidArgumentError("response_format.type can be only json_schema");
+            } else {
+                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
+                if (jsonSchemaIt != responseFormat.MemberEnd()) {
+                    if (!jsonSchemaIt->value.IsObject())
+                        return absl::InvalidArgumentError("response_format.json_schema is not an object");
+                    auto jsonSchema = jsonSchemaIt->value.GetObject();
+                    auto schemaIt = jsonSchema.FindMember("schema");
+                    if (schemaIt == jsonSchema.MemberEnd())
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
+                    if (!schemaIt->value.IsObject())
+                        return absl::InvalidArgumentError("response_format.json_schema.schema is not an object");
+                    // Convert schema value to a JSON string and assign to optional string responseSchema
+                    StringBuffer schemaBuffer;
+                    Writer<StringBuffer> schemaWriter(schemaBuffer);
+                    schemaIt->value.Accept(schemaWriter);
+                    request.responseSchema = std::make_optional<std::string>(schemaBuffer.GetString());
+                } else {
+                    return absl::InvalidArgumentError("response_format.json_schema is missing");
+                }
+            }
+        } else {
+            return absl::InvalidArgumentError("response_format.type is missing");
+        }
     }
 
     return absl::OkStatus();
@@ -698,6 +724,8 @@ StreamOptions OpenAIChatCompletionsHandler::getStreamOptions() const { return re
 
 bool OpenAIChatCompletionsHandler::isStream() const { return request.stream; }
 std::string OpenAIChatCompletionsHandler::getModel() const { return request.model; }
+std::string OpenAIChatCompletionsHandler::getToolChoice() const { return request.toolChoice; }
+const std::unique_ptr<OutputParser>& OpenAIChatCompletionsHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIChatCompletionsHandler::setPromptTokensUsage(size_t promptTokens) {
     usage.promptTokens = promptTokens;
@@ -707,10 +735,6 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
     processedTokens += numTokens;
     if (!request.echo || processedTokens > usage.promptTokens)
         usage.completionTokens += numTokens;
-}
-
-ov::genai::GenerationConfig OpenAIChatCompletionsHandler::createGenerationConfig() const {
-    return request.createGenerationConfig();
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
@@ -727,191 +751,142 @@ absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> 
     return status;
 }
 
+void updateUsage(CompletionUsageStatistics& usage, const std::vector<int64_t>& generatedIds, bool echoPrompt) {
+    OVMS_PROFILE_FUNCTION();
+    usage.completionTokens += generatedIds.size();
+    if (echoPrompt)
+        usage.completionTokens -= usage.promptTokens;
+}
+
+ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector<int64_t>& generatedIds) {
+    OVMS_PROFILE_FUNCTION();
+    ParsedOutput parsedOutput;
+    if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
+        parsedOutput.content = tokenizer.decode(generatedIds);
+    } else {
+        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
+    }
+    return parsedOutput;
+}
+
 std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vector<ov::genai::GenerationOutput>& generationOutputs) {
     OVMS_PROFILE_FUNCTION();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-
-    writer.StartObject();  // {
+    OpenAiJsonResponse jsonResponse;
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    writer.String("choices");
-    writer.StartArray();  // [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = 0;
     for (const ov::genai::GenerationOutput& generationOutput : generationOutputs) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", generationOutput.generated_ids);
-        usage.completionTokens += generationOutput.generated_ids.size();
-        if (request.echo)
-            usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(generationOutput.generated_ids);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
-        writer.StartObject();  // {
+
+        updateUsage(usage, generationOutput.generated_ids, request.echo);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(generationOutput.generated_ids);
+
+        jsonResponse.StartObject();
         // finish_reason: string;
         // "stop" => natural stop point due to stopping criteria
         // "length" => due to reaching max_tokens parameter
-        writer.String("finish_reason");
+
+        std::string finishReason;
         switch (generationOutput.finish_reason) {
         case ov::genai::GenerationFinishReason::STOP:
-            writer.String("stop");
+            finishReason = "stop";
             break;
         case ov::genai::GenerationFinishReason::LENGTH:
-            writer.String("length");
+            finishReason = "length";
             break;
         default:
-            writer.Null();
+            finishReason = "unknown";
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unknown finish reason: {}", static_cast<int>(generationOutput.finish_reason));
+            break;
         }
+        jsonResponse.FinishReason(finishReason);
+
         // index: integer; Choice index, only n=1 supported anyway
-        writer.String("index");
-        writer.Int(index++);
+        jsonResponse.Index(index++);
+
         // logprobs: object/null; Log probability information for the choice. TODO
-        writer.String("logprobs");
         if (this->request.logprobschat || this->request.logprobs) {
+            jsonResponse.StartObject("logprobs");
             if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-                writer.StartObject();  // {
-                writer.String("content");
-                writer.StartArray();  // [
+                jsonResponse.StartArray("content");
 
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    writer.StartObject();  // {
-
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
-                    writer.String("token");
-                    writer.String(token.c_str());
-
                     float logprob = generationOutput.generated_log_probs[i];
-                    writer.String("logprob");
-                    writeLogprob(writer, logprob);
-                    writer.String("bytes");
-                    writer.StartArray();  // [
-                    // Assuming tokenizer returned UTF-8 encoded string
-                    const unsigned char* tokenBytes = reinterpret_cast<const unsigned char*>(token.c_str());
-                    for (int j = 0; tokenBytes[j] != 0; j++)
-                        writer.Int(tokenBytes[j]);
-                    writer.EndArray();  // ]
-
-                    // top_logprobs are currently hardcoded to return empty array to comply with the API
-                    // for full support significant changes on GenAI side are required
-                    writer.String("top_logprobs");
-                    writer.StartArray();  // [
-                                          /*                  
-                    Commented out due to supported only top_logprobs 1
-                    writer.StartObject();  // {
-
-                    writer.String("token");
-                    writer.String(token.c_str());
-
-                    writer.String("logprob");
-                    writeLogprob(writer, logprob);
-                    writer.String("bytes");
-                    writer.StartArray();  // [
-                    for (int j = 0; tokenBytes[j] != 0; j++)
-                        writer.Int(tokenBytes[j]);
-                    writer.EndArray();  // ]
-
-                    writer.EndObject();  // } */
-                    writer.EndArray();    // ]
-
-                    writer.EndObject();  // }
+                    jsonResponse.LogprobObject(token, logprob);
                 }
-                writer.EndArray();   // ]
-                writer.EndObject();  // }
+                jsonResponse.EndArray();
             }
             if (endpoint == Endpoint::COMPLETIONS) {
-                writer.StartObject();  // {
-                writer.String("tokens");
-                writer.StartArray();  // [
+                jsonResponse.StartArray("tokens");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
-                    writer.String(token.c_str());
+                    jsonResponse.String(token);
                 }
-                writer.EndArray();  // ]
+                jsonResponse.EndArray();
 
-                writer.String("token_logprobs");
-                writer.StartArray();  // [
+                jsonResponse.StartArray("token_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     float logprob = generationOutput.generated_log_probs[i];
-                    writeLogprob(writer, logprob);
+                    jsonResponse.LogprobValue(logprob);
                 }
-                writer.EndArray();  // ]
+                jsonResponse.EndArray();
 
-                writer.String("top_logprobs");
-                writer.StartArray();  // [
+                jsonResponse.StartArray("top_logprobs");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
-                    writer.StartObject();  // {
+                    jsonResponse.StartObject();
                     std::string token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids[i]}));
-                    writer.String(token.c_str());
                     float logprob = generationOutput.generated_log_probs[i];
-                    writeLogprob(writer, logprob);
-                    writer.EndObject();  // }
+                    jsonResponse.Logprob(token, logprob);
+                    jsonResponse.EndObject();
                 }
-                writer.EndArray();  // ]
+                jsonResponse.EndArray();
 
-                writer.String("text_offset");
-                writer.StartArray();  // [
+                jsonResponse.StartArray("text_offset");
                 for (int i = 0; i < generationOutput.generated_ids.size(); i++) {
                     if (i == 0) {
-                        writer.Int(0);
+                        jsonResponse.TextOffsetValue(0);
                     } else {
                         std::string text_before_token = tokenizer.decode(std::vector<int64_t>({generationOutput.generated_ids.begin(), generationOutput.generated_ids.begin() + i}));
-                        writer.Uint(text_before_token.size());
+                        jsonResponse.TextOffsetValue(text_before_token.size());
                     }
                 }
-                writer.EndArray();   // ]
-                writer.EndObject();  // }
+                jsonResponse.EndArray();
             }
+            jsonResponse.EndObject();
         } else {
-            writer.Null();
-        }
-        // message: object
-        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            writer.String("message");
-            writer.StartObject();  // {
-            // content: string; Actual content of the text produced
-            writer.String("content");
-            writer.String(completeResponse.c_str());
-            // role: string; Role of the text producer
-            // Will make sense once we have chat templates? TODO(atobisze)
-            writer.String("role");
-            writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
-            writer.EndObject();  // }
-        } else if (endpoint == Endpoint::COMPLETIONS) {
-            writer.String("text");
-            writer.String(completeResponse.c_str());
+            jsonResponse.Null("logprobs");  // "logprobs": null
         }
 
-        writer.EndObject();  // }
+        if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+            jsonResponse.MessageObject(parsedOutput);
+        } else if (endpoint == Endpoint::COMPLETIONS) {
+            jsonResponse.Text(parsedOutput);
+        }
+
+        // finish message object
+        jsonResponse.EndObject();
     }
-    writer.EndArray();  // ]
+    // finish choices array
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    writer.String("model");
-    writer.String(request.model.c_str());
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("object");
-        writer.String("chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("object");
-        writer.String("text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    writer.String("usage");
-    writer.StartObject();  // {
-    writer.String("prompt_tokens");
-    writer.Int(usage.promptTokens);
-    writer.String("completion_tokens");
-    writer.Int(usage.completionTokens);
-    writer.String("total_tokens");
-    writer.Int(usage.calculateTotalTokens());
-    writer.EndObject();  // }
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -920,86 +895,57 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const std::vect
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    writer.EndObject();  // }
-    return buffer.GetString();
+    // finish response object
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::EncodedResults& results) {
     OVMS_PROFILE_FUNCTION();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-
-    writer.StartObject();  // {
+    OpenAiJsonResponse jsonResponse;
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    writer.String("choices");
-    writer.StartArray();  // [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = 0;
     for (int i = 0; i < results.tokens.size(); i++) {
         const std::vector<int64_t>& tokens = results.tokens[i];
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-        usage.completionTokens += tokens.size();
-        if (request.echo)
-            usage.completionTokens -= usage.promptTokens;
-        std::string completeResponse = tokenizer.decode(tokens);
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded response: {}", completeResponse);
-        writer.StartObject();  // {
-        writer.String("finish_reason");
-        writer.String("stop");
+        updateUsage(usage, tokens, request.echo);
+        ParsedOutput parsedOutput = parseOutputIfNeeded(tokens);
+        jsonResponse.StartObject();
+        // finish_reason: string; always "stop" for this method
+        jsonResponse.FinishReason("stop");
         // index: integer; Choice index, only n=1 supported anyway
-        writer.String("index");
-        writer.Int(index++);
-        // logprobs: object/null; Log probability information for the choice. TODO
-        // message: object
+        jsonResponse.Index(index++);
+
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            writer.String("message");
-            writer.StartObject();  // {
-            // content: string; Actual content of the text produced
-            writer.String("content");
-            writer.String(completeResponse.c_str());
-            // role: string; Role of the text producer
-            // Will make sense once we have chat templates? TODO(atobisze)
-            writer.String("role");
-            writer.String("assistant");  // TODO - hardcoded
-            // TODO: tools_call
-            // TODO: function_call (deprecated)
-            writer.EndObject();  // }
+            jsonResponse.MessageObject(parsedOutput);
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            writer.String("text");
-            writer.String(completeResponse.c_str());
+            jsonResponse.Text(parsedOutput);
         }
 
-        writer.EndObject();  // }
+        // finish message object
+        jsonResponse.EndObject();
     }
-    writer.EndArray();  // ]
+    // finish choices array
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    writer.String("model");
-    writer.String(request.model.c_str());
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("object");
-        writer.String("chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("object");
-        writer.String("text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    writer.String("usage");
-    writer.StartObject();  // {
-    writer.String("prompt_tokens");
-    writer.Int(usage.promptTokens);
-    writer.String("completion_tokens");
-    writer.Int(usage.completionTokens);
-    writer.String("total_tokens");
-    writer.Int(usage.calculateTotalTokens());
-    writer.EndObject();  // }
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -1008,81 +954,62 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    writer.EndObject();  // }
-    return buffer.GetString();
+    // finish response object
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
-std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {  // TODO separate common part with function implemented above
+std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai::VLMDecodedResults& results, size_t completionTokens) {
     OVMS_PROFILE_FUNCTION();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-
-    writer.StartObject();  // {
+    OpenAiJsonResponse jsonResponse;
+    jsonResponse.StartObject();
 
     // choices: array of size N, where N is related to n request parameter
-    writer.String("choices");
-    writer.StartArray();  // [
+    jsonResponse.StartArray("choices");
     int index = 0;
     usage.completionTokens = completionTokens;
     for (int i = 0; i < results.texts.size(); i++) {
-        const std::string& texts = results.texts[i];
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated tokens: {}", tokens);
-        writer.StartObject();  // {
-        writer.String("finish_reason");
-        writer.String("stop");
+        const std::string& text = results.texts[i];
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Generated text: {}", text);
+        jsonResponse.StartObject();
+        // finish_reason: string; always "stop" for this method
+        jsonResponse.FinishReason("stop");
         // index: integer; Choice index, only n=1 supported anyway
-        writer.String("index");
-        writer.Int(index++);
+        jsonResponse.Index(index++);
         // logprobs: object/null; Log probability information for the choice. TODO
+
         // message: object
         if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-            writer.String("message");
-            writer.StartObject();  // {
-            // content: string; Actual content of the text produced
-            writer.String("content");
-            writer.String(texts.c_str());
-            // role: string; Role of the text producer
-            // Will make sense once we have chat templates? TODO(atobisze)
-            writer.String("role");
-            writer.String("assistant");  // TODO - hardcoded
+            jsonResponse.StartObject("message");
+            jsonResponse.String("content", text);
+            jsonResponse.String("role", "assistant");  // TODO - hardcoded
             // TODO: tools_call
             // TODO: function_call (deprecated)
-            writer.EndObject();  // }
+            jsonResponse.EndObject();
         } else if (endpoint == Endpoint::COMPLETIONS) {
-            writer.String("text");
-            writer.String(texts.c_str());
+            jsonResponse.String("text", text);
         }
 
-        writer.EndObject();  // }
+        // finish message object
+        jsonResponse.EndObject();
     }
-    writer.EndArray();  // ]
+    // finish choices array
+    jsonResponse.EndArray();
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    jsonResponse.Int("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
 
     // model: string; copied from the request
-    writer.String("model");
-    writer.String(request.model.c_str());
+    jsonResponse.String("model", request.model);
 
     // object: string; defined that the type is unary rather than streamed chunk
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("object");
-        writer.String("chat.completion");
+        jsonResponse.String("object", "chat.completion");
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("object");
-        writer.String("text_completion");
+        jsonResponse.String("object", "text_completion");
     }
 
-    writer.String("usage");
-    writer.StartObject();  // {
-    writer.String("prompt_tokens");
-    writer.Int(usage.promptTokens);
-    writer.String("completion_tokens");
-    writer.Int(usage.completionTokens);
-    writer.String("total_tokens");
-    writer.Int(usage.calculateTotalTokens());
-    writer.EndObject();  // }
+    jsonResponse.UsageObject(usage);
 
     // TODO
     // id: string; A unique identifier for the chat completion.
@@ -1091,20 +1018,23 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(const ov::genai
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    writer.EndObject();  // }
-    return buffer.GetString();
+    // finish response object
+    jsonResponse.EndObject();
+    return jsonResponse.ToString();
 }
 
 std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) {
     OVMS_PROFILE_FUNCTION();
-    StringBuffer buffer;
-    Writer<StringBuffer> writer(buffer);
-    writer.StartObject();  // {
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+
+    Value choices(kArrayType);
+    Value choice(kObjectType);
 
     // choices: array of size N, where N is related to n request parameter
-    writer.String("choices");
-    writer.StartArray();   // [
-    writer.StartObject();  // {
+    choices.SetArray();
+    choice.SetObject();
     // finish_reason: string or null; "stop"/"length"/"content_filter"/"tool_calls"/"function_call"(deprecated)/null
     // "stop" => natural stop point due to stopping criteria
     // "length" => due to reaching max_tokens parameter
@@ -1112,61 +1042,59 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // "tool_calls" => generation stopped and waiting for tool output (not supported)
     // "function_call" => deprecated
     // null - natural scenario when the generation has not completed yet
-    writer.String("finish_reason");
     switch (finishReason) {
     case ov::genai::GenerationFinishReason::STOP:
-        writer.String("stop");
+        choice.AddMember("finish_reason", "stop", allocator);
         break;
     case ov::genai::GenerationFinishReason::LENGTH:
-        writer.String("length");
+        choice.AddMember("finish_reason", "length", allocator);
         break;
     default:
-        writer.Null();
+        choice.AddMember("finish_reason", Value(), allocator);
     }
     // index: integer; Choice index, only n=1 supported anyway
-    writer.String("index");
-    writer.Int(0);
+    choice.AddMember("index", 0, allocator);
     // logprobs: object/null; Log probability information for the choice. TODO
-    writer.String("logprobs");
-    writer.Null();
+    choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("delta");
-        writer.StartObject();  // {
-        writer.String("content");
-        // writer.String("role");
-        // writer.String("assistant");
-        // role: string; Role of the text producer
-        writer.String(chunkResponse.c_str());
-        writer.EndObject();  // }
+        if (outputParser != nullptr) {
+            std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
+            if (!delta.has_value()) {
+                return "";
+            }
+            if (delta->HasMember("delta")) {
+                // Deep copy the "delta" member value into the choice object
+                choice.AddMember("delta", Value((*delta)["delta"], allocator), allocator);
+            }
+
+        } else {
+            Value delta(kObjectType);
+            delta.SetObject();
+            delta.AddMember("content", Value(chunkResponse.c_str(), allocator), allocator);
+            choice.AddMember("delta", delta, allocator);
+        }
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("text");
-        writer.String(chunkResponse.c_str());
+        choice.AddMember("text", Value(chunkResponse.c_str(), allocator), allocator);
     }
-    // TODO: tools_call
-    // TODO: function_call (deprecated)
-    writer.EndObject();  // }
-    writer.EndArray();   // ]
+
+    choices.PushBack(choice, allocator);
+    doc.AddMember("choices", choices, allocator);
 
     // created: integer; Unix timestamp (in seconds) when the MP graph was created.
-    writer.String("created");
-    writer.Int(std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count());
+    doc.AddMember("created", std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count(), allocator);
 
     // model: string; copied from the request
-    writer.String("model");
-    writer.String(request.model.c_str());
+    doc.AddMember("model", Value(request.model.c_str(), allocator), allocator);
 
     // object: string; defined that the type streamed chunk rather than complete response
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
-        writer.String("object");
-        writer.String("chat.completion.chunk");
+        doc.AddMember("object", Value("chat.completion.chunk", allocator), allocator);
     } else if (endpoint == Endpoint::COMPLETIONS) {
-        writer.String("object");
-        writer.String("text_completion.chunk");
+        doc.AddMember("object", Value("text_completion.chunk", allocator), allocator);
     }
 
     if (request.streamOptions.includeUsage) {
-        writer.String("usage");
-        writer.Null();
+        doc.AddMember("usage", Value(), allocator);
     }
 
     // TODO
@@ -1176,7 +1104,9 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     // system_fingerprint: string; This fingerprint represents the backend configuration that the model runs with.
     // Can be used in conjunction with the seed request parameter to understand when backend changes have been made that might impact determinism.
 
-    writer.EndObject();  // }
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
     return buffer.GetString();
 }
 
@@ -1220,14 +1150,5 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
 
     writer.EndObject();  // }
     return buffer.GetString();
-}
-
-void OpenAIChatCompletionsHandler::writeLogprob(Writer<StringBuffer>& writer, float logprob) {
-    // genai returns logaritm of probability per token which should be in the range of -inf-0
-    // other values could be potentially invalid and should be treated as such
-    if (logprob <= 0.0)
-        writer.Double(logprob);
-    else
-        writer.Null();
 }
 }  // namespace ovms

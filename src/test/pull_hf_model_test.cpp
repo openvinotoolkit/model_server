@@ -24,9 +24,11 @@
 #include "../filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
+#include "src/pull_module/optimum_export.hpp"
 #include "src/servables_config_manager_module/listmodels.hpp"
 #include "src/modelextensions.hpp"
 
+#include "../module.hpp"
 #include "../server.hpp"
 #include "../status.hpp"
 #include "src/stringutils.hpp"
@@ -105,6 +107,12 @@ protected:
         RemoveReadonlyFileAttributeFromDir(this->directoryPath);
         TestWithTempDir::TearDown();
     }
+
+    // Removes # OpenVINO Model Server REPLACE_PROJECT_VERSION comment added for debug purpose in graph export at the begging of graph.pbtxt
+    // This string differs per build and setup
+    std::string removeVersionString(std::string input) {
+        return input.erase(0, input.find("\n") + 1);
+    }
 };
 
 const std::string expectedGraphContents = R"(
@@ -146,6 +154,7 @@ const std::string expectedGraphContents = R"(
 )";
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
+    GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
@@ -160,15 +169,42 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
     std::string graphContents = GetFileContents(graphPath);
 
-    ASSERT_EQ(expectedGraphContents, graphContents) << graphContents;
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
 TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
+    // EnvGuard guard;
+    // guard.set("HF_ENDPOINT", "https://modelscope.cn");
+    // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
     this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
+
+class TestOptimumDownloader : public ovms::OptimumDownloader {
+public:
+    TestOptimumDownloader(const ovms::HFSettingsImpl& inHfSettings) :
+        ovms::OptimumDownloader(inHfSettings) {}
+    std::string getExportCmd() { return ovms::OptimumDownloader::getExportCmd(); }
+    std::string getGraphDirectory() { return ovms::OptimumDownloader::getGraphDirectory(); }
+    void setExportCliCheckCommand(const std::string& input) { this->OPTIMUM_CLI_CHECK_COMMAND = input; }
+    void setExportCliExportCommand(const std::string& input) { this->OPTIMUM_CLI_EXPORT_COMMAND = input; }
+    ovms::Status checkRequiredToolsArePresent() { return ovms::OptimumDownloader::checkRequiredToolsArePresent(); }
+};
 
 class TestHfDownloader : public ovms::HfDownloader {
 public:
@@ -197,8 +233,8 @@ TEST(HfDownloaderClassTest, Methods) {
 
     EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
-    ASSERT_EQ(hfDownloader->GetRepoUrl(), "https://www.new_hf.com/model/name");
-    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "https://123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
+    ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
 
     std::string expectedPath = downloadPath + "/" + modelName;
 #ifdef _WIN32
@@ -208,10 +244,153 @@ TEST(HfDownloaderClassTest, Methods) {
     ASSERT_EQ(hfDownloader->getGraphDirectory(), expectedPath);
 }
 
+class TestOptimumDownloaderSetup : public ::testing::Test {
+public:
+    ovms::HFSettingsImpl inHfSettings;
+    std::string cliMockPath;
+    void SetUp() override {
+        inHfSettings.sourceModel = "model/name";
+        inHfSettings.downloadPath = "/path/to/Download";
+        inHfSettings.precision = "fp64";
+        inHfSettings.extraQuantizationParams = "--param --param value";
+        inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+        inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
+#ifdef _WIN32
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+#else
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+#endif
+    }
+};
+
+TEST_F(TestOptimumDownloaderSetup, Methods) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedPath = inHfSettings.downloadPath + "/" + inHfSettings.sourceModel;
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --param --param value \\path\\to\\Download\\model\\name";
+#ifdef _WIN32
+    std::replace(expectedPath.begin(), expectedPath.end(), '/', '\\');
+#endif
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getGraphDirectory(), expectedPath);
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+}
+
+TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
+    inHfSettings.task = ovms::RERANK_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+}
+
+TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
+    inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+}
+
+TEST_F(TestOptimumDownloaderSetup, EmbeddingsExportCmd) {
+    inHfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string expectedCmd = "optimum-cli export openvino --disable-convert-tokenizer --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+#ifdef __linux__
+    std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+#endif
+    ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+}
+
+TEST_F(TestOptimumDownloaderSetup, UnknownExportCmd) {
+    inHfSettings.task = ovms::UNKNOWN_GRAPH;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    ASSERT_EQ(optimumDownloader->getExportCmd(), "");
+}
+
+TEST_F(TestOptimumDownloaderSetup, NegativeWrongPath) {
+    inHfSettings.downloadPath = "../path/to/Download";
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::PATH_INVALID);
+}
+
+TEST_F(TestOptimumDownloaderSetup, NegativeWrongDownloadType) {
+    inHfSettings.downloadType = ovms::GIT_CLONE_DOWNLOAD;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST_F(TestOptimumDownloaderSetup, NegativeUnknownDownloadType) {
+    inHfSettings.downloadType = ovms::UNKNOWN_DOWNLOAD;
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::INTERNAL_ERROR);
+}
+
+TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    optimumDownloader->setExportCliCheckCommand("ls");
+#ifdef _WIN32
+    optimumDownloader->setExportCliCheckCommand("dir");
+#endif
+    optimumDownloader->setExportCliExportCommand("NonExistingCommand22");
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED);
+}
+
+TEST_F(TestOptimumDownloaderSetup, NegativeCheckOptimumExistsCommandFailed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    optimumDownloader->setExportCliCheckCommand("NonExistingCommand33");
+    ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI);
+}
+
+TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    cliMockPath += " -h";
+    optimumDownloader->setExportCliCheckCommand(cliMockPath);
+    ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::OK);
+}
+
+TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    std::string cliCheckCommand = cliMockPath += " -h";
+    optimumDownloader->setExportCliCheckCommand(cliCheckCommand);
+    cliMockPath += " export";
+    optimumDownloader->setExportCliExportCommand(cliMockPath);
+    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::OK);
+}
+
+TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
+    std::string modelName = "model/name";
+    std::string downloadPath = "/path/to/Download";
+    std::string hfEndpoint = "www.new_hf.com/";
+    std::string hfToken = "";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    hfEndpoint = "https://www.new_hf.com/";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    hfEndpoint = "www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "http://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "git://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "ssh://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    hfEndpoint = "what_ever_is_here://www.new_hf.com/";
+    hfToken = "123!$token";
+    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+}
+
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-
     EXPECT_EQ(TestHfDownloader("name/test", this->directoryPath, "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
@@ -249,7 +428,7 @@ TEST_F(HfDownloaderHfEnvTest, Methods) {
 
     std::string endpoint = "www.new_hf.com";
     this->guard.unset(endpoint_env);
-    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "huggingface.co/");
+    ASSERT_EQ(testHfPullModelModule->GetHfEndpoint(), "https://huggingface.co/");
     this->guard.set(endpoint_env, endpoint);
 
     std::string hfEndpoint = testHfPullModelModule->GetHfEndpoint();
@@ -274,9 +453,11 @@ TEST_F(HfDownloadModelModule, TestInvalidProxyTimeout) {
         (char*)modelName.c_str(),
         (char*)"--model_repository_path",
         (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
         nullptr};
 
-    int arg_count = 6;
+    int arg_count = 8;
     ConstructorEnabledConfig config;
     {
         EnvGuard eGuard;
@@ -331,4 +512,97 @@ TEST(Libgit2Framework, TimeoutTestProxy) {
     }
 
     git_libgit2_shutdown();
+}
+
+class DefaultEmptyValuesConfig : public ovms::Config {
+public:
+    DefaultEmptyValuesConfig() :
+        Config() {
+        std::string port{"9000"};
+        randomizeAndEnsureFree(port);
+        this->serverSettings.grpcPort = std::stoul(port);
+    }
+
+    ovms::ServerSettingsImpl& getServerSettings() {
+        return this->serverSettings;
+    }
+
+    ovms::ModelsSettingsImpl& getModelSettings() {
+        return this->modelsSettings;
+    }
+};
+
+class ServerShutdownGuard {
+    ovms::Server& ovmsServer;
+
+public:
+    ServerShutdownGuard(ovms::Server& ovmsServer) :
+        ovmsServer(ovmsServer) {}
+    ~ServerShutdownGuard() {
+        ovmsServer.shutdownModules();
+    }
+};
+
+TEST(ServerModulesBehaviorTests, ListModelErrorAndExpectSuccessAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::LIST_MODELS_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][listmodels.cpp:121] Path is not a directory:
+    EXPECT_TRUE(retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::GRPC_SERVER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, ModifyConfigErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::MODIFY_CONFIG_MODE;
+    auto retCode = server.startModules(config);
+    // Empty modelSettings.configPath
+    // [error][config_export.cpp:197] Directory path empty:
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
+}
+
+TEST(ServerModulesBehaviorTests, PullAndStartModeErrorAndExpectFailAndNoOtherModulesStarted) {
+    std::unique_ptr<ServerShutdownGuard> serverGuard;
+    ovms::Server& server = ovms::Server::instance();
+    DefaultEmptyValuesConfig config;
+    config.getServerSettings().serverMode = ovms::HF_PULL_AND_START_MODE;
+    auto retCode = server.startModules(config);
+    // Empty config.getServerSettings().hfSettings.downloadPath
+    // [error][libit2.cpp:336] Libgit2 clone error: 6 message: cannot pick working directory for non-bare repository that isn't a '.git' directory
+    EXPECT_TRUE(!retCode.ok()) << retCode.string();
+    serverGuard = std::make_unique<ServerShutdownGuard>(server);
+    EXPECT_TRUE(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME) != nullptr);
+    ASSERT_EQ(server.getModule(ovms::HF_MODEL_PULL_MODULE_NAME)->getState(), ovms::ModuleState::INITIALIZED);
+    ASSERT_EQ(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME), nullptr);
+    ASSERT_EQ(server.getModule(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME), nullptr);
 }

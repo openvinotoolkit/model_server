@@ -35,13 +35,13 @@ ov::Tensor makeTensor(const InferenceTensor& requestInput,
         OV_LOGGER("ov::Tensor({}, shape)", toString(ovms::ovElementTypeToOvmsPrecision(precision)));
         return ov::Tensor(precision, shape);
     }
-    // TODO FIXME validation shouldn't allow setting unsupported memory types
+    // TODO validation shouldn't allow setting unsupported memory types
     // in inputs/outputs for particular device
     // validation shouldn't allow unsupporeted buffer types
     // write test
     auto it = factories.find(requestInput.getBuffer()->getBufferType());
     if (it == factories.end()) {
-        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", requestInput.getBuffer()->getBufferType());
+        SPDLOG_ERROR("Could not find appropriate tensor factory for buffer type:{}", (unsigned int)requestInput.getBuffer()->getBufferType());
         throw std::runtime_error("Could not find appropriate tensor factory");
     }
     IOVTensorFactory* factory = it->second.get();

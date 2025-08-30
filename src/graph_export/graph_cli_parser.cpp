@@ -67,7 +67,19 @@ void GraphCLIParser::createOptions() {
         ("dynamic_split_fuse",
             "Dynamic split fuse algorithm enabled. Default true.",
             cxxopts::value<std::string>()->default_value("true"),
-            "DYNAMIC_SPLIT_FUSE");
+            "DYNAMIC_SPLIT_FUSE")
+        ("reasoning_parser",
+            "Reasoning parser",
+            cxxopts::value<std::string>(),
+            "REASONING_PARSER")
+        ("tool_parser",
+            "Tool parser",
+            cxxopts::value<std::string>(),
+            "TOOL_PARSER")
+        ("enable_tool_guided_generation",
+            "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "ENABLE_TOOL_GUIDED_GENERATION");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -101,7 +113,7 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
     return  result->unmatched();
 }
 
-void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName, const std::string& modelPath) {
+void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
     graphSettings.targetDevice = hfSettings.targetDevice;
     // Deduct model name
@@ -109,10 +121,6 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         graphSettings.modelName = modelName;
     } else {
         graphSettings.modelName = hfSettings.sourceModel;
-    }
-    // Set model path
-    if (modelPath != "") {
-        graphSettings.modelPath = modelPath;
     }
 
     if (nullptr == result) {
@@ -134,6 +142,14 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("max_num_batched_tokens")) {
             graphSettings.maxNumBatchedTokens = result->operator[]("max_num_batched_tokens").as<uint32_t>();
         }
+
+        if (result->count("reasoning_parser")) {
+            graphSettings.reasoningParser = result->operator[]("reasoning_parser").as<std::string>();
+        }
+        if (result->count("tool_parser")) {
+            graphSettings.toolParser = result->operator[]("tool_parser").as<std::string>();
+        }
+        graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
 
         // Plugin configuration
         if (result->count("max_prompt_len")) {

@@ -304,7 +304,10 @@ Status Server::startModules(ovms::Config& config) {
     Status status;
     bool inserted = false;
     auto it = modules.end();
-
+    if (config.getServerSettings().serverMode == UNKNOWN_MODE) {
+        SPDLOG_ERROR("Server mode is not set.");
+        return StatusCode::INTERNAL_ERROR;
+    }
     if (config.getServerSettings().serverMode == LIST_MODELS_MODE || config.getServerSettings().serverMode == MODIFY_CONFIG_MODE) {
         INSERT_MODULE(SERVABLES_CONFIG_MANAGER_MODULE_NAME, it);
         START_MODULE(it);
@@ -318,8 +321,8 @@ Status Server::startModules(ovms::Config& config) {
         }
         auto hfModule = dynamic_cast<const HfPullModelModule*>(it->second.get());
         status = hfModule->clone();
-        // Return from modules only in --pull mode, otherwise start the rest of modules
-        if (config.getServerSettings().serverMode == HF_PULL_MODE)
+        // Return from modules only in --pull mode or error, otherwise start the rest of modules
+        if (config.getServerSettings().serverMode == HF_PULL_MODE || !status.ok())
             return status;
     }
 
@@ -394,6 +397,7 @@ void Server::shutdownModules() {
 #endif
     // we need to be able to quickly start grpc or start it without port
     // this is because the OS can have a delay between freeing up port before it can be requested and used again
+    std::shared_lock lock(modulesMtx);
     modules.clear();
 }
 
@@ -458,7 +462,8 @@ Status Server::start(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* mod
         if (!config.parse(serverSettings, modelsSettings))
             return StatusCode::OPTIONS_USAGE_ERROR;
         configure_logger(config.logLevel(), config.logPath());
-        logConfig(config);
+        if (serverSettings->serverMode == HF_PULL_AND_START_MODE || serverSettings->serverMode == SERVING_MODELS_MODE)
+            logConfig(config);
         return this->startModules(config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());

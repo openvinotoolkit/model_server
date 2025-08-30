@@ -21,6 +21,35 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("//:distro.bzl", "distro_flag")
+
+# cc_library rule wrapper that will accept the same arguments but if user will not provide
+# copts, linkopts, local_defines it will set them to the defaults
+# COMMON_STATIC_LIBS_COPTS & COMMON_STATIC_LIBS_LINKOPTS
+def ovms_cc_library(**kwargs):
+    """
+    Wrapper for cc_library that sets default copts and linkopts if not provided.
+    """
+    if "copts" not in kwargs:
+        kwargs["copts"] = COMMON_STATIC_LIBS_COPTS + select({
+            "//conditions:default": [],
+            "//:fuzzer_build": COMMON_FUZZER_COPTS,
+        })
+    if "linkopts" not in kwargs:
+        kwargs["linkopts"] = COMMON_STATIC_LIBS_LINKOPTS + select({
+            "//conditions:default": [],
+            "//:fuzzer_build": COMMON_FUZZER_LINKOPTS,
+        })
+    if "local_defines" not in kwargs:
+        kwargs["local_defines"] = COMMON_LOCAL_DEFINES
+    if "additional_copts" in kwargs:
+        kwargs["copts"] += kwargs.pop("additional_copts")
+    if "additional_linkopts" in kwargs:
+        kwargs["linkopts"] += kwargs.pop("additional_linkopts")
+
+    native.cc_library(
+        **kwargs
+    )
+
 def create_config_settings():
     distro_flag()
     native.config_setting(
@@ -132,6 +161,19 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
                     "-Werror", 
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
                     "-Wno-deprecated-declarations",
+                    "-Werror",
+                    "-Wimplicit-fallthrough",
+                    "-fcf-protection=full",
+                    "-Wformat",
+                    "-Wformat-security",
+                    "-Werror=format-security",
+                    "-Wl,-z,noexecstack",
+                    "-fPIC",
+                    #"-D_GLIBCXX_ASSERTIONS", - causes errors on gpu
+                    "-Wl,-z,relro",
+                    "-Wl,-z,relro,-z,now",
+                    "-Wl,-z,nodlopen",
+                    "-fstack-protector-strong",
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
@@ -145,6 +187,8 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/GS",
                         "/DYNAMICBASE",
                         "/Qspectre",
+                        "/wd4305",  # abseil after switch to build tools 22
+                        "/wd4324",  # genai after switch to build tools 22
                         "/wd4068",
                         "/wd4458",
                         "/wd4100",
@@ -157,6 +201,12 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/wd4702",
                         "/wd4267",
                         "/wd4996",
+                        "/wd6240", 
+                        "/wd6326",
+                        "/wd6385",
+                        "/wd6294",
+                        "/guard:cf",
+                        "/utf-8",
 ]
 
 COMMON_STATIC_LIBS_COPTS = select({
@@ -179,6 +229,7 @@ COMMON_STATIC_TEST_COPTS = select({
                         "-W0",
                         "-Isrc",
                         "/wd4996",
+                        "/utf-8",
                     ],
                 })
 

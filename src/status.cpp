@@ -233,6 +233,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     // LLM Nodes
     {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
     {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},
+    {StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE, "The LLM Node workspace path does not exist and not gguf model file"},
     {StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "The LLM Node resource initialization failed"},
     {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
     {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},
@@ -337,8 +338,15 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
 
     // Huggingface model download errors for libgit2
     {StatusCode::HF_FAILED_TO_INIT_LIBGIT2, "Failed to initialize libgit2 library"},
+    {StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI, "Failed to run optimum-cli executable"},
+    {StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED, "Failed to run optimum-cli export command"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
 
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
+    {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
+    {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},
+    {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
+    {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
+    {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
 };
 }  // namespace ovms

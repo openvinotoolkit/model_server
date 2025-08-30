@@ -63,6 +63,9 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
+            if (it->value.GetArray().Size() == 0) {
+                return "input array should not be empty";
+            }
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
@@ -122,9 +125,10 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     // TODO: user (optional)
     if (input_strings.size() > 0) {
         request.input = input_strings;
-    }
-    if (input_tokens.size() > 0) {
+    } else if (input_tokens.size() > 0) {
         request.input = input_tokens;
+    } else {
+        return "input field is required";
     }
     return request;
 }
@@ -158,7 +162,7 @@ void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
 
 #pragma warning(push)
 #pragma warning(disable : 4267)
-absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings) {
+absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode, const std::optional<ov::Tensor>& attentionMask) {
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
 
@@ -167,7 +171,6 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
 
     writer.String("data");
     writer.StartArray();
-    // TODO: mean pooling
 
     ov::Shape outputShape = embeddingsTensor.get_shape();
     if (outputShape.size() != 3) {
@@ -175,7 +178,35 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     }
     size_t batchSize = outputShape[0];
     for (size_t batchIterator = 0; batchIterator < batchSize; batchIterator++) {
-        size_t stride = batchIterator * outputShape[1] * outputShape[2];
+        size_t stride;
+        if (poolingMode == PoolingMode::LAST) {
+            size_t attendedTokens = 0;
+            if (!attentionMask.has_value()) {
+                return absl::InvalidArgumentError("Last token pooling mode requires attention mask");
+            }
+            auto maxNumberOfTokens = attentionMask->get_shape()[1];
+            if (attentionMask->get_element_type() == ov::element::Type_t::i64) {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<int64_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            } else if (attentionMask->get_element_type() == ov::element::Type_t::i32) {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<int32_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            } else if (attentionMask->get_element_type() == ov::element::Type_t::i8) {
+                for (int i = 0; i < maxNumberOfTokens; i++) {
+                    attendedTokens += reinterpret_cast<uint8_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
+                }
+            } else {
+                return absl::InternalError("Attention mask element type invalid.");
+            }
+            if (!(attendedTokens <= outputShape[1])) {
+                return absl::InternalError("Embeddings output and attention mask shape mismatch");
+            }
+            stride = batchIterator * outputShape[1] * outputShape[2] + (attendedTokens - 1) * outputShape[2];
+        } else {
+            stride = batchIterator * outputShape[1] * outputShape[2];
+        }
         size_t size = outputShape[2];
         float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
         float* dataPtrEnd = dataPtr + size;

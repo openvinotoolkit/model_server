@@ -46,12 +46,16 @@ void EmbeddingsGraphCLIParser::createOptions() {
             "NUM_STREAMS")
         ("normalize",
             "Normalize the embeddings.",
-            cxxopts::value<std::string>()->default_value("false"),
+            cxxopts::value<std::string>()->default_value("true"),
             "NORMALIZE")
-        ("model_version",
-            "Version of the model.",
-            cxxopts::value<uint32_t>()->default_value("1"),
-            "MODEL_VERSION");
+        ("truncate",
+            "Truncate input when it exceeds model context length.",
+            cxxopts::value<std::string>()->default_value("false"),
+            "truncate")
+        ("pooling",
+            "Mean pooling option.",
+            cxxopts::value<std::string>()->default_value("CLS"),
+            "POOLING");
 }
 
 void EmbeddingsGraphCLIParser::printHelp() {
@@ -91,7 +95,11 @@ void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl
     } else {
         embeddingsGraphSettings.numStreams = result->operator[]("num_streams").as<uint32_t>();
         embeddingsGraphSettings.normalize = result->operator[]("normalize").as<std::string>();
-        embeddingsGraphSettings.version = result->operator[]("model_version").as<std::uint32_t>();
+        embeddingsGraphSettings.truncate = result->operator[]("truncate").as<std::string>();
+        embeddingsGraphSettings.pooling = result->operator[]("pooling").as<std::string>();
+    }
+    if (!(embeddingsGraphSettings.pooling == "CLS" || embeddingsGraphSettings.pooling == "LAST")){
+        throw std::invalid_argument("Only CLS and LAST pooling modes are supported");
     }
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
 }

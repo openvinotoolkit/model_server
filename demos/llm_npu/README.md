@@ -27,8 +27,8 @@ LLM engine parameters will be defined inside the `graph.pbtxt` file.
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -38,7 +38,7 @@ Run `export_model.py` script to download and quantize the model:
 
 **LLM**
 ```console
-python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --ov_cache_dir ./models/.ov_cache --model_repository_path models  --overwrite_models
+python export_model.py text_generation --source_model meta-llama/Llama-3.1-8B-Instruct --target_device NPU --config_file_path models/config.json --ov_cache_dir ./models/.ov_cache --model_repository_path models --overwrite_models
 ```
 **Note:** The parameter `--ov_cache` stores the model compilation cache to speedup initialization time for sequential startup. Drop this parameter if you don't want to store the compilation cache.
 
@@ -207,6 +207,7 @@ client = OpenAI(
 response = client.chat.completions.create(
     model="meta-llama/Llama-3.1-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
+    max_tokens=100,
     stream=False,
 )
 print(response.choices[0].message.content)
@@ -232,6 +233,7 @@ client = OpenAI(
 response = client.completions.create(
     model="meta-llama/Llama-3.1-8B-Instruct",
     prompt="Say this is a test.",
+    max_tokens=100,
     stream=False,
 )
 print(response.choices[0].text)
@@ -262,6 +264,7 @@ client = OpenAI(
 stream = client.chat.completions.create(
     model="meta-llama/Llama-3.1-8B-Instruct",
     messages=[{"role": "user", "content": "Say this is a test"}],
+    max_tokens=100,
     stream=True,
 )
 for chunk in stream:
@@ -289,6 +292,7 @@ client = OpenAI(
 stream = client.completions.create(
     model="meta-llama/Llama-3.1-8B-Instruct",
     prompt="Say this is a test.",
+    max_tokens=100,
     stream=True,
 )
 for chunk in stream:

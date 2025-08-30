@@ -44,6 +44,17 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+:: Bazel compilation settings
+set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+
+:msvc_error
+echo [ERROR] Required MSVC compiler not installed
+goto :exit_build_error
+:msvc_bt
+echo [INFO] Using MSVC %VS_2022_BT%
+set BAZEL_VS=%VS_2022_BT%
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
 IF /I EXIST %BAZEL_SHORT_PATH% (
@@ -119,14 +130,21 @@ IF /I EXIST %bash_path% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean ::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
-set "genai_dir=openvino_genai_windows_2025.2.0.0rc1_x86_64"
-set "genai_ver=openvino_genai_windows_2025.2.0.0rc1_x86_64.zip"
-set "genai_http=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.2.0.0rc1/"
+:: Set default GENAI_PACKAGE_URL if not set
+if "%GENAI_PACKAGE_URL%"=="" (
+    set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2025.3.0.0rc2/openvino_genai_windows_2025.3.0.0rc2_x86_64.zip"
+)
+
+:: Extract genai_ver from GENAI_PACKAGE_URL (filename)
+for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
+
+:: Extract genai_dir from genai_ver (filename without extension)
+for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -138,12 +156,12 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %genai_http%%genai_ver%
+    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
@@ -171,6 +189,8 @@ if "!output_user_root!" neq "opt" (
     powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+:: Remove genai headers to be replaced by the ones from openvino_genai repository
+rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -178,7 +198,7 @@ echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"
 set "opencl_ver=v2024.10.24"
-set "opencl_dir=%BAZEL_SHORT_PATH%\opencl"
+set "opencl_dir=%opt_install_dir%\opencl"
 
 :: Clone OpenCL
 IF /I EXIST %opencl_dir% (
@@ -248,68 +268,9 @@ IF /I EXIST %bazel_path% (
 )
 echo [INFO] Bazel installed: %bazel_file%
 
-
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: git-lfs - reinstalled per worker
-set "gitlfs_dir=git-lfs-3.6.1"
-set "gitlfs_short_dir="
-set "gitlfs_ver=git-lfs-windows-amd64-v3.6.1.zip"
-set "gitlfs_http=https://github.com/git-lfs/git-lfs/releases/download/v3.6.1/"
-
-set "gitlfs_zip=%opt_install_dir%\%gitlfs_ver%"
-
-echo [INFO] Installing git-lfs: %gitlfs_dir% ...
-:: Download git-lfs
-IF /I EXIST %gitlfs_zip% (
-    if %expunge% EQU 1 (
-        del /S /Q %gitlfs_zip%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %gitlfs_zip% )
-    
-) ELSE (
-    %wget_path% -P %opt_install_dir%\ %gitlfs_http%%gitlfs_ver%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-:: Extract git-lfs
-IF /I EXIST %opt_install_dir%\%gitlfs_dir% (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] directory exists %opt_install_dir%\%gitlfs_dir% )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:: Check git-lfs.exe
-IF /I EXIST %opt_install_dir%\%gitlfs_dir%\git-lfs.exe (
-     if %expunge% EQU 1 (
-        rmdir /S /Q %opt_install_dir%\%gitlfs_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] file exists %opt_install_dir%\%gitlfs_dir%\git-lfs.exe )
-    
-) ELSE (
-    C:\Windows\System32\tar.exe -xf "%gitlfs_zip%" -C %opt_install_dir%
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-
-:: Create git-lfs link - always to make sure it points to latest version
-IF /I EXIST %opt_install_dir%\git-lfs.exe (
-    del /Q %opt_install_dir%\git-lfs.exe
-)
-mklink %opt_install_dir%\git-lfs.exe %opt_install_dir%\%gitlfs_dir%\git-lfs.exe
-if !errorlevel! neq 0 exit /b !errorlevel!
-
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.9"
+set "python_version=3.12.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -318,7 +279,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.9/python-3.12.9-amd64.exe
+::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
@@ -422,13 +383,13 @@ exit /b 0
 :::::::::::::::::::::: Uninstall function end
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Install curl
+::::::::::::::::::::::: Install curl ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :install_curl
 echo [INFO] Installing curl ...
 
-set "curl_dir=curl-8.13.0_1-win64-mingw"
-set "curl_ver=curl-8.13.0_1-win64-mingw.zip"
-set "curl_http=https://curl.se/windows/dl-8.13.0_1/"
+set "curl_dir=curl-8.14.1_1-win64-mingw"
+set "curl_ver=curl-8.14.1_1-win64-mingw.zip"
+set "curl_http=https://curl.se/windows/dl-8.14.1_1/"
 
 set "curl_zip=%opt_install_dir%\%curl_ver%"
 
@@ -459,15 +420,40 @@ IF /I EXIST %opt_install_dir%\%curl_dir% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
+:: Create lib file for libgit2 linking
+set "curl_lib=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.lib"
+IF /I EXIST %curl_lib% (
+    echo [INFO] file exists %curl_lib% 
+) ELSE (
+    set "CURL_LIB_PATH=%BAZEL_VS:"=%\VC\Tools\MSVC\*"
+    echo !CURL_LIB_PATH!
+    for /d %%F in ("!CURL_LIB_PATH!") do (
+        echo Matched directory: %%F
+        set "LIB_EXE=%%F\bin\Hostx64\x64\lib.exe"
+        goto :create_lib
+    )
+    echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+    exit /b
+    :create_lib
+	IF /I EXIST !LIB_EXE! (
+		set "curl_def=C:\opt\curl-8.14.1_1-win64-mingw\bin\libcurl-x64.def"
+		"!LIB_EXE!" /def:!curl_def! /out:%curl_lib% /MACHINE:x64
+		if !errorlevel! neq 0 exit /b !errorlevel!
+        echo [INFO] !LIB_EXE! created.
+	) else (
+		echo [ERROR] Required \bin\Hostx64\x64\lib.exe not found
+	)
+)
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCV
 :install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"
 set "opencv_contrib=https://github.com/opencv/opencv_contrib.git"
-set "opencv_ver=4.10.0"
-set "opencv_dir=%opt_install_dir%\opencv_git"
-set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git"
-set "opencv_install=%opt_install_dir%\opencv"
+set "opencv_ver=4.12.0"
+set "opencv_dir=%opt_install_dir%\opencv_git_%opencv_ver%"
+set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git_%opencv_ver%"
+set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
 set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_PTHREADS_PF=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...

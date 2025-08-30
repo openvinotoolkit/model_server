@@ -15,15 +15,67 @@
 // limitations under the License.
 //*****************************************************************************
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
 
-#include "../graph_export/graph_export_types.hpp"
-#include "../config_export_module/config_export_types.hpp"
-
 namespace ovms {
+
+enum GraphExportType : unsigned int {
+    TEXT_GENERATION_GRAPH,
+    RERANK_GRAPH,
+    EMBEDDINGS_GRAPH,
+    IMAGE_GENERATION_GRAPH,
+    UNKNOWN_GRAPH
+};
+
+enum ModelDownlaodType : unsigned int {
+    GIT_CLONE_DOWNLOAD,
+    OPTIMUM_CLI_DOWNLOAD,
+    GGUF_DOWNLOAD,
+    UNKNOWN_DOWNLOAD
+};
+
+const std::map<GraphExportType, std::string> typeToString = {
+    {TEXT_GENERATION_GRAPH, "text_generation"},
+    {RERANK_GRAPH, "rerank"},
+    {EMBEDDINGS_GRAPH, "embeddings"},
+    {IMAGE_GENERATION_GRAPH, "image_generation"},
+    {UNKNOWN_GRAPH, "unknown_graph"}};
+
+const std::map<std::string, GraphExportType> stringToType = {
+    {"text_generation", TEXT_GENERATION_GRAPH},
+    {"rerank", RERANK_GRAPH},
+    {"embeddings", EMBEDDINGS_GRAPH},
+    {"image_generation", IMAGE_GENERATION_GRAPH},
+    {"unknown_graph", UNKNOWN_GRAPH}};
+
+std::string enumToString(GraphExportType type);
+GraphExportType stringToEnum(const std::string& inString);
+
+enum ConfigExportType : int {
+    ENABLE_MODEL,
+    DISABLE_MODEL,
+    DELETE_MODEL,
+    UNKNOWN_MODEL
+};
+
+const std::map<ConfigExportType, std::string> configExportTypeToString = {
+    {ENABLE_MODEL, "ENABLE_MODEL"},
+    {DISABLE_MODEL, "DISABLE_MODEL"},
+    {DELETE_MODEL, "DELETE_MODEL"},
+    {UNKNOWN_MODEL, "UNKNOWN_MODEL"}};
+
+const std::map<std::string, ConfigExportType> stringToConfigExportType = {
+    {"ENABLE_MODEL", ENABLE_MODEL},
+    {"DISABLE_MODEL", DISABLE_MODEL},
+    {"DELETE_MODEL", DELETE_MODEL},
+    {"UNKNOWN_MODEL", UNKNOWN_MODEL}};
+
+std::string enumToString(ConfigExportType type);
+ConfigExportType stringToConfigExportEnum(const std::string& inString);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,
@@ -41,7 +93,7 @@ struct PluginConfigSettingsImpl {
 };
 
 struct TextGenGraphSettingsImpl {
-    std::string modelPath = "./";  // FIXME: this should be set in ovms or based on download_path? current dir or can user put it ?
+    std::string modelPath = "./";
     std::string modelName = "";
     uint32_t maxNumSeqs = 256;
     std::string targetDevice = "CPU";
@@ -52,30 +104,38 @@ struct TextGenGraphSettingsImpl {
     std::optional<uint32_t> maxNumBatchedTokens;
     std::optional<std::string> draftModelDirName;
     std::optional<std::string> pipelineType;
+    std::optional<std::string> reasoningParser;
+    std::optional<std::string> toolParser;
+    std::string enableToolGuidedGeneration = "false";
 };
 
 struct EmbeddingsGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t version = 1;  // FIXME: export_embeddings_tokenizer python method - not supported currently?
-    std::string normalize = "false";
+    std::string normalize = "true";
+    std::string truncate = "false";
+    std::string pooling = "CLS";
 };
 
 struct RerankGraphSettingsImpl {
+    std::string modelPath = "./";
     std::string targetDevice = "CPU";
     std::string modelName = "";
     uint32_t numStreams = 1;
-    uint32_t maxDocLength = 16000;  // FIXME: export_rerank_tokenizer python method - not supported currently?
-    uint32_t version = 1;           // FIXME: export_rerank_tokenizer python method - not supported currently?
+    uint64_t maxAllowedChunks = 10000;
 };
 
 struct ImageGenerationGraphSettingsImpl {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
+    std::string resolution = "";
     std::string maxResolution = "";
     std::string defaultResolution = "";
+    std::optional<uint32_t> numImagesPerPrompt;
+    std::optional<float> guidanceScale;
     std::optional<uint32_t> maxNumberImagesPerPrompt;
     std::optional<uint32_t> defaultNumInferenceSteps;
     std::optional<uint32_t> maxNumInferenceSteps;
@@ -85,8 +145,12 @@ struct ImageGenerationGraphSettingsImpl {
 struct HFSettingsImpl {
     std::string targetDevice = "CPU";
     std::string sourceModel = "";
+    std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
     bool overwriteModels = false;
+    std::optional<std::string> extraQuantizationParams;
+    std::string precision = "int8";
+    ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
@@ -105,6 +169,10 @@ struct ServerSettingsImpl {
     std::optional<std::string> allowedLocalMediaPath;
     std::string logLevel = "INFO";
     std::string logPath;
+    bool allowCredentials = false;
+    std::string allowedOrigins{"*"};
+    std::string allowedMethods{"*"};
+    std::string allowedHeaders{"*"};
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif
@@ -112,7 +180,7 @@ struct ServerSettingsImpl {
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t sequenceCleanerPollWaitMinutes = 5;
-    uint32_t resourcesCleanerPollWaitSeconds = 1;
+    uint32_t resourcesCleanerPollWaitSeconds = 300;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;

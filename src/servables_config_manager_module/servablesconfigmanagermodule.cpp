@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "servablesconfigmanagermodule.hpp"
 
+#include <iostream>
+#include <filesystem>
 #include <string>
 #include <sstream>
 
@@ -31,9 +33,9 @@ ServablesConfigManagerModule::ServablesConfigManagerModule() {}
 
 Status ServablesConfigManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} starting", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} started", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     if (config.getServerSettings().serverMode == LIST_MODELS_MODE) {
         const auto& repositoryPath = config.getServerSettings().hfSettings.downloadPath;
         auto map = listServables(repositoryPath);
@@ -41,9 +43,15 @@ Status ServablesConfigManagerModule::start(const ovms::Config& config) {
         for (const auto& [k, v] : map) {
             ss << k << std::endl;
         }
-        SPDLOG_INFO("Available servables to serve from path: {} are:\n{}", repositoryPath, ss.str());
+        std::cout << ss.str();
     } else {
-        return updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
+        auto status = updateConfig(config.getModelSettings(), config.getServerSettings().exportConfigType);
+        if (status.ok()) {
+            std::cout << "Config updated: " << config.getModelSettings().configPath << std::endl;
+        } else {
+            std::cout << config.getModelSettings().configPath << " error on config update : " << status.string() << std::endl;
+        }
+        return status;
     }
     return StatusCode::OK;
 }
@@ -52,9 +60,9 @@ void ServablesConfigManagerModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} shutting down", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
+    SPDLOG_TRACE("{} shutdown", SERVABLES_CONFIG_MANAGER_MODULE_NAME);
 }
 
 ServablesConfigManagerModule::~ServablesConfigManagerModule() {

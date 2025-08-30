@@ -73,7 +73,7 @@ message LLMCalculatorOptions {
 
     optional bool enable_prefix_caching = 10 [default = false];
 
-    // speculative decoding - draft model config (ignore below fields if you don't want to use speculative decoding)
+    // Speculative decoding - draft model config (ignore below fields if you don't want to use speculative decoding)
     // when draft_models_path is set, the pipeline will use speculative decoding
     // other values are by default inherited from the main model when speculative decoding is enabled, but can be overridden
     optional string draft_models_path = 11;
@@ -90,7 +90,15 @@ message LLMCalculatorOptions {
 
     optional bool draft_dynamic_split_fuse = 17;
 
+    // End of speculative decoding config
+
     optional PipelineType pipeline_type = 18 [default = AUTO];
 
     optional CacheEvictionConfig cache_eviction_config = 19;
+
+    optional string tool_parser = 20;
+
+    optional string reasoning_parser = 21;
+
+    optional bool enable_tool_guided_generation = 22 [default = false];
 }

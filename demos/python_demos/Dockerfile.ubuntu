@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-ARG  IMAGE_NAME=openvino/model_server:latest
+ARG IMAGE_NAME=openvino/model_server:latest
 FROM ${IMAGE_NAME}
 USER root
 ENV LD_LIBRARY_PATH=/ovms/lib
@@ -21,6 +21,7 @@ ENV PYTHONPATH=/ovms/lib/python
 RUN apt update && apt install -y python3-pip git
 COPY requirements.txt .
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
-RUN pip3 install -r requirements.txt
+RUN BUILD_CUDA_EXT=0 pip3 install -r requirements.txt --no-cache-dir
+RUN opt_in_out --opt_out
 USER ovms
 ENTRYPOINT [ "/ovms/bin/ovms" ]

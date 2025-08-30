@@ -28,8 +28,8 @@ NUMA node5 CPU(s):                    160-191,352-383
 
 Download the export_model.py script and install python dependencies:
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/1/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Use the export_model.py script:
@@ -137,10 +137,10 @@ python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B
 ```
 Start the Model Server instances:
 ```bash
-docker run --device /dev/dri/renderD128 -d --rm -p 8003:8003 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8003 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
-docker run --device /dev/dri/renderD129 -d --rm -p 8004:8004 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8004 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
-docker run --device /dev/dri/renderD130 -d --rm -p 8005:8005 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8005 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
-docker run --device /dev/dri/renderD131 -d --rm -p 8006:8006 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest --rest_port 8006 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD128 -d --rm -p 8003:8003 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8003 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD129 -d --rm -p 8004:8004 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8004 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD130 -d --rm -p 8005:8005 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8005 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
+docker run --device /dev/dri/renderD131 -d --rm -p 8006:8006 -u 0 -v $(pwd)/models/Meta-Llama-3-8B-Instruct_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8006 --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path /model
 ```
 Confirm in logs if the containers loaded the models successfully.
 
@@ -211,11 +211,12 @@ Continuous batching with Multi GPU configuration will be added soon.
 
 Export the model:
 ```bash
-python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_name DeepSeek-R1-Distill-Qwen-32B_INT4 --weight-format int4 --model_repository_path models --target_device HETERO:GPU.0,GPU.1 --pipeline_type LM
+python export_model.py text_generation --source_model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_name DeepSeek-R1-Distill-Qwen-32B_INT4 --weight-format int4 --model_repository_path models --target_device HETERO:GPU.0,GPU.1 --pipeline_type LM_CB
 ```
+> **Note**: Using the pipeline type LM_CB which includes continuous batching, requires OVMS version 2025.3. Build it from source before the publication.
 
 ```bash
-docker run --device /dev/dri -d --rm -p 8000:8000 -u 0 -v $(pwd)/models/DeepSeek-R1-Distill-Qwen-32B_INT4:/model:ro openvino/model_server:latest --rest_port 8000 --model_name deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_path /model
+docker run --device /dev/dri -d --rm -p 8000:8000 -u 0 -v $(pwd)/models/DeepSeek-R1-Distill-Qwen-32B_INT4:/model:ro openvino/model_server:latest-gpu --rest_port 8000 --model_name deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --model_path /model
 ```
 
 ### Testing the scalability

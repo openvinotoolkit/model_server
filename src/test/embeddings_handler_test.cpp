@@ -358,6 +358,23 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
     ASSERT_EQ(strings->at(2), "three");
 }
 
+TEST(EmbeddingsDeserialization, emptyInputArray) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "input": [  ],
+            "encoding_format": "float"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "input array should not be empty");
+}
+
 TEST(EmbeddingsSerialization, simplePositive) {
     bool normalieEmbeddings = false;
     rapidjson::StringBuffer buffer;
@@ -424,4 +441,48 @@ TEST(EmbeddingsSerialization, positiveUsage) {
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":50,"total_tokens":50}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(EmbeddingsSerialization, positiveLastTokenPooling) {
+    bool normalieEmbeddings = false;
+    rapidjson::StringBuffer buffer;
+    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27};
+    std::vector<size_t> embeddingsTensorShape{3, 3, 3};
+    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, embeddingsTensorShape, tensorsData.data());
+    std::vector<int8_t> attentionMaskData{1, 1, 0, 1, 1, 1, 1, 0, 0};
+    std::vector<size_t> attentionMaskShape{3, 3};
+    ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
+    rapidjson::Document notUsed;
+    ovms::EmbeddingsHandler handler(notUsed);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
+    ASSERT_TRUE(status.ok());
+    std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[4.0,5.0,6.0],"index":0},{"object":"embedding","embedding":[16.0,17.0,18.0],"index":1},{"object":"embedding","embedding":[19.0,20.0,21.0],"index":2}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
+    EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
+}
+
+TEST(EmbeddingsSerialization, lastTokenPoolingMissingAttentionMask) {
+    bool normalieEmbeddings = false;
+    rapidjson::StringBuffer buffer;
+    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18};
+    std::vector<size_t> shape{2, 3, 3};
+    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
+    rapidjson::Document notUsed;
+    ovms::EmbeddingsHandler handler(notUsed);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST);
+    ASSERT_EQ(status, absl::InvalidArgumentError("Last token pooling mode requires attention mask"));
+}
+
+TEST(EmbeddingsSerialization, lastTokenPoolingInvalidAttentionMask) {
+    bool normalieEmbeddings = false;
+    rapidjson::StringBuffer buffer;
+    std::vector<float> tensorsData{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27};
+    std::vector<size_t> embeddingsTensorShape{3, 3, 3};
+    ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, embeddingsTensorShape, tensorsData.data());
+    std::vector<int8_t> attentionMaskData{1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0};
+    std::vector<size_t> attentionMaskShape{3, 5};
+    ov::Tensor attentionMask = ov::Tensor(ov::element::Type_t::i8, attentionMaskShape, attentionMaskData.data());
+    rapidjson::Document notUsed;
+    ovms::EmbeddingsHandler handler(notUsed);
+    auto status = handler.parseResponse(buffer, embeddingsTensor, normalieEmbeddings, ovms::PoolingMode::LAST, attentionMask);
+    ASSERT_EQ(status, absl::InternalError("Embeddings output and attention mask shape mismatch"));
 }

@@ -2,13 +2,14 @@
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
 --pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git@69311c0f11c92aff670bc08a3ab0a4653213e25c
-openvino-tokenizers[transformers]<=2025.2.0.0rc1
-openvino<=2025.2.0rc1
-nncf>=2.11.0 
-sentence_transformers==3.1.1 
-openai 
-transformers<4.52
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+openvino-tokenizers==2025.3.0.0rc2
+openvino==2025.3.0rc2
+nncf>=2.11.0
+sentence_transformers
+sentencepiece==0.2.0
+openai
+transformers<4.54
 einops
 torchvision
 timm==1.0.15

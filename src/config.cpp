@@ -19,6 +19,7 @@
 #include <limits>
 #include <regex>
 #include <thread>
+#include <vector>
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
@@ -26,6 +27,7 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "modelconfig.hpp"
+#include "stringutils.hpp"
 #include "systeminfo.hpp"
 
 namespace ovms {
@@ -85,8 +87,35 @@ bool Config::check_hostname_or_ip(const std::string& input) {
     }
 }
 
+bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings) {
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
+    for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
+        bool isAllowed = false;
+        for (const std::string& allowedSetting : allowedUserSettings) {
+            if (userSetting == allowedSetting)
+                isAllowed = true;
+        }
+
+        if (!isAllowed)
+            usedButDisallowedUserSettings.push_back(userSetting);
+    }
+
+    if (!usedButDisallowedUserSettings.empty()) {
+        std::string arguments = "";
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
+            arguments += userSetting + ", ";
+        }
+        std::cerr << "Adding or removing models from the configuration file, allows passing only model_name and model_path parameters. Invalid parameters passed: " << arguments << std::endl;
+
+        return false;
+    }
+
+    return true;
+}
+
 bool Config::validate() {
-    if (this->serverSettings.serverMode == HF_PULL_MODE) {
+    if (this->serverSettings.serverMode == HF_PULL_MODE || this->serverSettings.serverMode == HF_PULL_AND_START_MODE) {
         if (!serverSettings.hfSettings.sourceModel.size()) {
             std::cerr << "source_model parameter is required for pull mode";
             return false;
@@ -99,8 +128,8 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.sourceModel.rfind("OpenVINO/", 0) != 0) {
-            std::cerr << "For now only OpenVINO models are supported in pulling mode";
+        if (serverSettings.hfSettings.downloadType == GIT_CLONE_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
+            std::cerr << "For now only OpenVINO models are supported in pulling mode with git clone. Please use optimum download or gguf models instead." << std::endl;
             return false;
         }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
@@ -131,13 +160,6 @@ bool Config::validate() {
                 std::cerr << "dynamic_split_fuse: " << settings.dynamicSplitFuse << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
-
-            if (settings.targetDevice != "NPU") {
-                if (settings.pluginConfig.maxPromptLength.has_value()) {
-                    std::cerr << "max_prompt_len is only supported for NPU target device";
-                    return false;
-                }
-            }
         }
 
         if (this->serverSettings.hfSettings.task == EMBEDDINGS_GRAPH) {
@@ -152,8 +174,16 @@ bool Config::validate() {
                 std::cerr << "normalize: " << settings.normalize << " is not allowed. Supported values: true, false" << std::endl;
                 return false;
             }
+
+            if (std::find(allowedBoolValues.begin(), allowedBoolValues.end(), settings.truncate) == allowedBoolValues.end()) {
+                std::cerr << "truncate: " << settings.truncate << " is not allowed. Supported values: true, false" << std::endl;
+                return false;
+            }
         }
-        return true;
+        // No more validation needed
+        if (this->serverSettings.serverMode == HF_PULL_MODE) {
+            return true;
+        }
     }
     if (this->serverSettings.serverMode == LIST_MODELS_MODE) {
         if (this->serverSettings.hfSettings.downloadPath.empty()) {
@@ -200,17 +230,27 @@ bool Config::validate() {
         }
     } else {
         if (configPath().empty()) {
-            std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set config_path with add_to_config/remove_from_config" << std::endl;
             return false;
         }
         if (modelName().empty()) {
-            std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_name with add_to_config/remove_from_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --remove_from_config <config_path>" << std::endl;
             return false;
         }
         if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
-            std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl;
             return false;
         }
+
+        if (!Config::validateUserSettingsInConfigAddRemoveModel(this->modelsSettings))
+            return false;
     }
 
     // check rest_workers value
@@ -316,6 +356,10 @@ const std::string& Config::grpcChannelArguments() const { return this->serverSet
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::sequenceCleanerPollWaitMinutes() const { return this->serverSettings.sequenceCleanerPollWaitMinutes; }
 uint32_t Config::resourcesCleanerPollWaitSeconds() const { return this->serverSettings.resourcesCleanerPollWaitSeconds; }
+bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
+const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
+const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
+const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
 
 }  // namespace ovms

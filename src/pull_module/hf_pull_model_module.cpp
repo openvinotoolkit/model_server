@@ -15,12 +15,15 @@
 //*****************************************************************************
 #include "hf_pull_model_module.hpp"
 
+#include <iostream>
 #include <string>
 #include <utility>
 #include <variant>
 
 #include "../config.hpp"
 #include "libgit2.hpp"
+#include "optimum_export.hpp"
+#include "gguf_downloader.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
@@ -30,8 +33,9 @@
 namespace ovms {
 const std::string DEFAULT_EMPTY_ENV_VALUE{""};
 
-const std::string HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV{"GIT_SERVER_CONNECT_TIMEOUT_MS"};
-const std::string HfPullModelModule::GIT_SERVER_TIMEOUT_ENV{"GIT_SERVER_TIMEOUT_MS"};
+const std::string HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV{"GIT_OPT_SET_SERVER_CONNECT_TIMEOUT"};
+const std::string HfPullModelModule::GIT_SERVER_TIMEOUT_ENV{"GIT_OPT_SET_SERVER_TIMEOUT"};
+const std::string HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV{"GIT_OPT_SET_SSL_CERT_LOCATIONS"};
 // GIT_OPT_SET_SERVER_TIMEOUT
 
 static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, const std::string& defaultValue = DEFAULT_EMPTY_ENV_VALUE) {
@@ -57,7 +61,7 @@ HfPullModelModule::HfPullModelModule() {}
 
 static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     Libgit2Options opts;
-    std::string timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, "1000");
+    std::string timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_CONNECT_TIMEOUT_ENV, "4000");
     auto timeoutOpt = ovms::stoi32(timeoutString);
     if (!timeoutOpt.has_value()) {
         SPDLOG_ERROR("Set invalid value for libgit2 server connection timeout:{}", timeoutString);
@@ -70,13 +74,15 @@ static std::variant<ovms::Status, Libgit2Options> prepareLibgit2Opts() {
     } else {
         opts.serverConnectTimeoutMs = timeoutOpt.value();
     }
-    timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_TIMEOUT_ENV, "0");
+    timeoutString = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SERVER_TIMEOUT_ENV, "4000");
     timeoutOpt = ovms::stoi32(timeoutString);
     if (!timeoutOpt.has_value()) {
         SPDLOG_ERROR("Set invalid value for libgit2 server timeout:{}", timeoutString);
         return StatusCode::HF_FAILED_TO_INIT_LIBGIT2;
     }
     opts.serverTimeoutMs = timeoutOpt.value();
+
+    opts.sslCertificateLocation = getEnvReturnOrDefaultIfNotSet(HfPullModelModule::GIT_SSL_CERT_LOCATIONS_ENV, "");
     return opts;
 }
 
@@ -93,30 +99,57 @@ std::variant<ovms::Status, std::unique_ptr<Libgt2InitGuard>> createGuard() {
 
 Status HfPullModelModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
-    SPDLOG_INFO("{} starting", HF_MODEL_PULL_MODULE_NAME);
-    auto guardOrError = createGuard();
-    RETURN_IF_ERROR(guardOrError);
+    SPDLOG_TRACE("{} starting", HF_MODEL_PULL_MODULE_NAME);
+    if (config.getServerSettings().hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
+        auto guardOrError = createGuard();
+        RETURN_IF_ERROR(guardOrError);
+    }
     this->hfSettings = config.getServerSettings().hfSettings;
     state = ModuleState::INITIALIZED;
-    SPDLOG_INFO("{} started", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} started", HF_MODEL_PULL_MODULE_NAME);
     return StatusCode::OK;
 }
 
 Status HfPullModelModule::clone() const {
-    auto guardOrError = createGuard();
-    if (std::holds_alternative<Status>(guardOrError)) {
-        return std::get<Status>(guardOrError);
+    std::string graphDirectory = "";
+    if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
+        auto guardOrError = createGuard();
+        if (std::holds_alternative<Status>(guardOrError)) {
+            return std::get<Status>(guardOrError);
+        }
+
+        HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        auto status = hfDownloader.cloneRepository();
+        if (!status.ok()) {
+            return status;
+        }
+        graphDirectory = hfDownloader.getGraphDirectory();
+    } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
+        OptimumDownloader optimumDownloader(this->hfSettings);
+        auto status = optimumDownloader.cloneRepository();
+        if (!status.ok()) {
+            return status;
+        }
+        graphDirectory = optimumDownloader.getGraphDirectory();
+    } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
+        GGUFDownloader ggufDownloader(this->GetHfEndpoint(), this->hfSettings);
+        auto status = ggufDownloader.downloadModel();
+        if (!status.ok()) {
+            return status;
+        }
+        graphDirectory = ggufDownloader.getGraphDirectory();
+    } else {
+        SPDLOG_ERROR("Unsupported download type");
+        return StatusCode::INTERNAL_ERROR;
     }
-    HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-    auto status = hfDownloader.cloneRepository();
-    if (!status.ok()) {
-        return status;
-    }
+    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
     GraphExport graphExporter;
-    status = graphExporter.createServableConfig(hfDownloader.getGraphDirectory(), this->hfSettings);
+    auto status = graphExporter.createServableConfig(graphDirectory, this->hfSettings);
     if (!status.ok()) {
         return status;
     }
+    std::cout << "Graph: graph.pbtxt created in: " << graphDirectory << std::endl;
+
     return StatusCode::OK;
 }
 
@@ -129,7 +162,7 @@ const std::string HfPullModelModule::GetHfToken() const {
 }
 
 const std::string HfPullModelModule::GetHfEndpoint() const {
-    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet("HF_ENDPOINT", "huggingface.co");
+    std::string hfEndpoint = getEnvReturnOrDefaultIfNotSet("HF_ENDPOINT", "https://huggingface.co");
     if (!endsWith(hfEndpoint, "/")) {
         hfEndpoint.append("/");
     }
@@ -140,9 +173,9 @@ void HfPullModelModule::shutdown() {
     if (state == ModuleState::SHUTDOWN)
         return;
     state = ModuleState::STARTED_SHUTDOWN;
-    SPDLOG_INFO("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutting down", HF_MODEL_PULL_MODULE_NAME);
     state = ModuleState::SHUTDOWN;
-    SPDLOG_INFO("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
+    SPDLOG_TRACE("{} shutdown", HF_MODEL_PULL_MODULE_NAME);
 }
 
 HfPullModelModule::~HfPullModelModule() {

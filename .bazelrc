@@ -102,7 +102,6 @@ build:linux --cxxopt=-fstack-clash-protection
 build:linux --cxxopt=-Wformat
 build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
-
 # TODO: Add equivalent windows flag
 build:linux --force_pic
 
@@ -215,9 +214,6 @@ build:windows --host_copt=-DNOGDI
 build:windows --copt=/Zc:preprocessor
 build:windows --host_copt=/Zc:preprocessor
 
-# Misc build options we need for windows.
-build:windows --linkopt=/DEBUG
-build:windows --host_linkopt=/DEBUG
 build:windows --linkopt=/OPT:REF
 build:windows --host_linkopt=/OPT:REF
 build:windows --linkopt=/OPT:ICF
@@ -247,7 +243,7 @@ build:windows --define=MEDIAPIPE_DISABLE=0
 
 # Change this path alongside WORKSPACE:"windows_openvino" path for model_api cmake compilation.
 build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
-build:windows --action_env OpenCV_DIR="c:/opt/opencv"
+build:windows --action_env OpenCV_DIR="c:/opt/opencv_4.12.0"
 
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
 build:windows --define=USE_DROGON=1

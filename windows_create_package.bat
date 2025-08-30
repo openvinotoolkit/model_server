@@ -54,20 +54,20 @@ if /i "%with_python%"=="true" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 
     :: Prepare self-contained python
-    set "python_version=3.12.9"
+    set "python_version=3.12.10"
 
-    call %cd%\windows_prepare_python.bat %dest_dir% %python_version%
+    call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
     if !errorlevel! neq 0 (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
     :: Copy whole catalog to dist folder and install dependencies required by LLM pipelines
-    xcopy %dest_dir%\python-%python_version%-embed-amd64 dist\windows\ovms\python /E /I /H
+    xcopy %dest_dir%\python-!python_version!-embed-amd64 dist\windows\ovms\python /E /I /H
     if !errorlevel! neq 0 (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
-    .\dist\windows\ovms\python\python.exe -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
     if !errorlevel! neq 0 (
         echo Error during Python dependencies for LLM installation. The package will not be fully functional.
     )
@@ -77,7 +77,7 @@ copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4100.dll dist\windows\ovms
+copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world4120.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\icudt70.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -89,8 +89,6 @@ copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\wind
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\git2.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy /Y %dest_dir%\git-lfs.exe dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\libcurl-x64.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: Old package had core_tokenizers
@@ -99,26 +97,6 @@ if exist %cd%\bazel-out\x64_windows-opt\bin\src\core_tokenizers.dll (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-if exist "C:\Program Files\Git\mingw64\bin" (
-    copy /Y "C:\Program Files\Git\mingw64\bin\git.exe" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libiconv-2.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libintl-8.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libpcre2-8-0.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\libssp-0.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy /Y "C:\Program Files\Git\mingw64\bin\zlib1.dll" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-) else (
-    echo "C:\Program Files\Git\mingw64\bin" does not exist
-    exit /b -1
-)
-
-
-
 copy %cd%\setupvars.* dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
@@ -126,7 +104,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
 md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\opencv\etc\licenses\* %license_dest%
+copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -139,25 +117,27 @@ copy %cd%\release_files\thirdparty-licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\COPYING.txt %license_dest%LICENSE-CURL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\brotli\LICENSE.txt %license_dest%LICENSE-BROTIL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\cacert\LICENSE.url %license_dest%LICENSE-CACERT.url
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libpsl\COPYING.txt %license_dest%LICENSE-LIBPSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libressl\COPYING.txt %license_dest%LICENSE-LIBRESSL.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\libssh2\COPYING.txt %license_dest%LICENSE-LIBSSH2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp2\COPYING.txt %license_dest%LICENSE-NGHTTP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\nghttp3\COPYING.txt %license_dest%LICENSE-NGHTTP3.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\zlib\LICENSE.txt %license_dest%LICENSE-ZLIB.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\ngtcp2\COPYING.txt %license_dest%LICENSE-NGTCP2.txt
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\opt\curl-8.13.0_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zlibng\LICENSE.md %license_dest%LICENSE-ZLIBNG.md
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy C:\opt\curl-8.14.1_1-win64-mingw\dep\zstd\LICENSE.txt %license_dest%LICENSE-ZSTD.txt
 
 :: Add when CAPI enabled and tested
 ::mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include

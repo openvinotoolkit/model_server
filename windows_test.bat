@@ -40,31 +40,23 @@ set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 > win_full_t
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.13.0_1-win64-mingw\bin;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-8.14.1_1-win64-mingw\bin;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2019_PRO="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional"
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2019_PRO% goto :msvc_pro
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :mscv_error
-
-:mscv_error
+IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+:msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
-:msvc_pro
-echo [INFO] Using MSVC %VS_2019_PRO%
-set BAZEL_VS=%VS_2019_PRO%
-goto :msvc_end
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
 set BAZEL_VS=%VS_2022_BT%
 
 :: Bazel compilation settings end
-:msvc_end
 set "BAZEL_VC=%BAZEL_VS:"=%\VC"
-set "BAZEL_VC_FULL_VERSION=14.29.30133"
+set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
@@ -72,7 +64,7 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
-set "opencvBatch=call C:\opt\opencv\setup_vars_opencv4.cmd"
+set "opencvBatch=call C:\opt\opencv_4.12.0\setup_vars_opencv4.cmd"
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
 

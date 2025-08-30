@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "libgit2.hpp"
 
+#include <iostream>
 #include <string>
 #include <memory>
 
@@ -27,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "cmd_exec.hpp"
 #include "../filesystem.hpp"
 #include "../localfilesystem.hpp"
 #include "../logging.hpp"
@@ -44,62 +46,6 @@
 
 namespace ovms {
 
-// C-style callback functions section used in libgt2 library STARTS ********************************
-typedef struct progress_data {
-    git_indexer_progress fetch_progress;
-    size_t completed_steps;
-    size_t total_steps;
-    const char* path;
-} progress_data;
-
-static void print_progress(const progress_data* pd) {
-    int network_percent = pd->fetch_progress.total_objects > 0 ? (100 * pd->fetch_progress.received_objects) / pd->fetch_progress.total_objects : 0;
-    int index_percent = pd->fetch_progress.total_objects > 0 ? (100 * pd->fetch_progress.indexed_objects) / pd->fetch_progress.total_objects : 0;
-
-    int checkout_percent = pd->total_steps > 0
-                               ? (int)((100 * pd->completed_steps) / pd->total_steps)
-                               : 0;
-    size_t kbytes = pd->fetch_progress.received_bytes / 1024;
-
-    if (pd->fetch_progress.total_objects &&
-        pd->fetch_progress.received_objects == pd->fetch_progress.total_objects) {
-        printf("Resolving deltas %u/%u\r",
-            pd->fetch_progress.indexed_deltas,
-            pd->fetch_progress.total_deltas);
-    } else {
-        printf("net %3d%% (%4" PRIuZ " kb, %5u/%5u)  /  idx %3d%% (%5u/%5u)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ ")%s\n",
-            network_percent, kbytes,
-            pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
-            index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
-            checkout_percent,
-            pd->completed_steps, pd->total_steps,
-            pd->path);
-    }
-}
-
-static int sideband_progress(const char* str, int len, void* payload) {
-    (void)payload;  //  unused
-
-    printf("remote: %.*s", len, str);
-    fflush(stdout);
-    return 0;
-}
-
-static int fetch_progress(const git_indexer_progress* stats, void* payload) {
-    progress_data* pd = (progress_data*)payload;
-    pd->fetch_progress = *stats;
-    print_progress(pd);
-    return 0;
-}
-
-static void checkout_progress(const char* path, size_t cur, size_t tot, void* payload) {
-    progress_data* pd = (progress_data*)payload;
-    pd->completed_steps = cur;
-    pd->total_steps = tot;
-    pd->path = path;
-    print_progress(pd);
-}
-
 // Callback for clone authentication - will be used when password is not set in repo_url
 // Does not work with LFS download as it requires additional authentication when password is not set in repository url
 int cred_acquire_cb(git_credential** out,
@@ -110,7 +56,7 @@ int cred_acquire_cb(git_credential** out,
     char *username = NULL, *password = NULL;
     int error = -1;
 
-    fprintf(stdout, "Authentication is required for repository clone.\n");
+    fprintf(stdout, "Authentication is required for repository clone or model is missing.\n");
     if (allowed_types & GIT_CREDENTIAL_USERPASS_PLAINTEXT) {
         const char* env_cred = std::getenv("HF_TOKEN");
         if (env_cred) {
@@ -164,12 +110,19 @@ Libgt2InitGuard::Libgt2InitGuard(const Libgit2Options& opts) {
     SPDLOG_TRACE("Setting libgit2 server timeout:{}", opts.serverTimeoutMs);
     this->status = git_libgit2_opts(GIT_OPT_SET_SERVER_TIMEOUT, opts.serverTimeoutMs);
     IF_ERROR_SET_MSG_AND_RETURN();
+    if (opts.sslCertificateLocation != "") {
+        SPDLOG_TRACE("Setting libgit2 ssl certificate location:{}", opts.sslCertificateLocation);
+        this->status = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, opts.sslCertificateLocation.c_str());
+        IF_ERROR_SET_MSG_AND_RETURN();
+    }
 }
 
 Libgt2InitGuard::~Libgt2InitGuard() {
     SPDLOG_DEBUG("Shutdown libgit2");
     git_libgit2_shutdown();
 }
+
+const std::string PROTOCOL_SEPARATOR = "://";
 
 bool HfDownloader::CheckIfProxySet() {
     if (this->httpProxy != "")
@@ -178,20 +131,31 @@ bool HfDownloader::CheckIfProxySet() {
 }
 
 std::string HfDownloader::GetRepositoryUrlWithPassword() {
-    std::string passRepoUrl = "https://";
+    std::string repoPass = "";
     if (this->hfToken != "") {
-        passRepoUrl += this->hfToken + ":" + this->hfToken + "@";
+        repoPass += this->hfToken + ":" + this->hfToken + "@";
     } else {
         SPDLOG_DEBUG("HF_TOKEN environment variable not set");
+        return this->hfEndpoint + this->sourceModel;
     }
 
-    passRepoUrl += this->hfEndpoint + this->sourceModel;
+    std::string outputWithPass = "";
+    size_t match = this->hfEndpoint.find(PROTOCOL_SEPARATOR);
+    if (match != std::string::npos) {
+        // https://huggingface.co
+        // protocol[match]//address
+        std::string protocol = this->hfEndpoint.substr(0, match);
+        std::string address = this->hfEndpoint.substr(match + PROTOCOL_SEPARATOR.size());
+        outputWithPass = protocol + PROTOCOL_SEPARATOR + repoPass + address + this->sourceModel;
+    } else {
+        outputWithPass = repoPass + this->hfEndpoint + this->sourceModel;
+    }
 
-    return passRepoUrl;
+    return outputWithPass;
 }
 
 std::string HfDownloader::GetRepoUrl() {
-    std::string repoUrl = "https://";
+    std::string repoUrl = "";
     repoUrl += this->hfEndpoint + this->sourceModel;
     return repoUrl;
 }
@@ -261,7 +225,7 @@ Status HfDownloader::cloneRepository() {
 
     // Repository exists and we do not want to overwrite
     if (std::filesystem::is_directory(this->downloadPath) && !this->overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+        std::cout << "Path already exists on local filesystem. Skipping download to path: " << this->downloadPath << std::endl;
         return StatusCode::OK;
     }
 
@@ -271,21 +235,11 @@ Status HfDownloader::cloneRepository() {
     }
 
     SPDLOG_DEBUG("Downloading to path: {}", this->downloadPath);
-    progress_data pd = {{0}};
     git_repository* cloned_repo = NULL;
+    // clone_opts for progress reporting set in libgit2 lib by patch
     git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
-    git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-
-    /* Set up options */
-    checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-    checkout_opts.progress_cb = checkout_progress;
-    checkout_opts.progress_payload = &pd;
-    clone_opts.checkout_opts = checkout_opts;
-    clone_opts.fetch_opts.callbacks.sideband_progress = sideband_progress;
-    clone_opts.fetch_opts.callbacks.transfer_progress = &fetch_progress;
+    // Credential check function
     clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
-    clone_opts.fetch_opts.callbacks.payload = &pd;
-
     // Use proxy
     if (CheckIfProxySet()) {
         clone_opts.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
@@ -320,7 +274,6 @@ Status HfDownloader::cloneRepository() {
     if (!status.ok()) {
         return status;
     }
-
     return StatusCode::OK;
 }
 

@@ -173,13 +173,9 @@ Status ModelManager::start(const Config& config) {
     this->watcherIntervalMillisec = config.filesystemPollWaitMilliseconds();
     sequenceCleaupIntervalMinutes = config.sequenceCleanerPollWaitMinutes();
     resourcesCleanupIntervalMillisec = config.resourcesCleanerPollWaitSeconds() * 1000;
-    if (resourcesCleanupIntervalMillisec < 1) {
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Parameter: custom_node_resources_cleaner_interval_seconds has to be greater than 0. Applying default value(1 second)");
-        resourcesCleanupIntervalMillisec = 1000;
-    }
     Status status;
-    bool startFromConfigFile = (config.configPath() != "");
-    if (startFromConfigFile) {
+    this->startedWithConfigFile = (config.configPath() != "");
+    if (isStartedWithConfigFile()) {
         status = startFromFile(config.configPath());
     } else {
         status = startFromConfig();
@@ -188,8 +184,10 @@ Status ModelManager::start(const Config& config) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't start model manager");
         return status;
     }
-    startWatcher(startFromConfigFile);
-    startCleaner();
+    startWatcher(isStartedWithConfigFile());
+    if (sequenceCleaupIntervalMinutes > 0 || resourcesCleanupIntervalMillisec > 0)
+        startCleaner();
+
     return status;
 }
 
@@ -229,7 +227,11 @@ Status ModelManager::startFromConfig() {
     std::ifstream ifs(mpConfig.getGraphPath());
     if (ifs.is_open()) {
         // Single model with graph.pbtxt, check if user passed model unsupported model parameters in cmd arguments
-        status = validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        status = ModelManager::validateUserSettingsInSingleModelCliGraphStart(config.getModelSettings());
+        if (!status.ok())
+            return status;
+
+        status = loadMetricsFromCLI(config);
         if (!status.ok())
             return status;
 
@@ -268,16 +270,9 @@ Status ModelManager::startFromConfig() {
         return StatusCode::UNKNOWN_ERROR;
     }
 
-    // Reading metric config only once per server start
-    if (!this->metricConfigLoadedOnce) {
-        status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
-
-        this->metricConfigLoadedOnce = true;
-    } else {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
-        return StatusCode::INTERNAL_ERROR;
-    }
+    status = loadMetricsFromCLI(config);
+    if (!status.ok())
+        return status;
 
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Couldn't load metrics settings");
@@ -339,7 +334,8 @@ Status ModelManager::startFromConfig() {
 }
 
 Status ModelManager::startFromFile(const std::string& jsonFilename) {
-    Status status = loadConfig(jsonFilename);
+    this->configFilename = jsonFilename;
+    Status status = loadConfig();
     if (status == StatusCode::CONFIG_FILE_INVALID || status == StatusCode::JSON_INVALID || status == StatusCode::METRICS_REST_PORT_MISSING || status == StatusCode::INVALID_METRICS_ENDPOINT || status == StatusCode::INVALID_METRICS_FAMILY_NAME) {
         return status;
     }
@@ -431,18 +427,33 @@ bool ModelManager::CheckStartFromGraph(std::string inputPath, MediapipeGraphConf
         inputGraphDirectory += "1" + FileSystem::getOsSeparator();
     }
 
-    mpConfig.setBasePath(inputGraphDirectory);
-    mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
-    mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
-    mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    // Check already set members in case of loading based on config.json
+    if (mpConfig.getBasePath() == "" || checkModelMeshPath) {
+        mpConfig.setBasePath(inputGraphDirectory);
+    }
+    if (mpConfig.getGraphPath() == "" || checkModelMeshPath) {
+        mpConfig.setGraphPath(DEFAULT_GRAPH_FILENAME);
+    }
+    if (mpConfig.getSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setSubconfigPath(DEFAULT_SUBCONFIG_FILENAME);
+    }
+    if (mpConfig.getModelMeshSubconfigPath() == "" || checkModelMeshPath) {
+        mpConfig.setModelMeshSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
+    }
 
     std::ifstream ifs(mpConfig.getGraphPath());
-    return ifs.is_open();
+    if (ifs.is_open()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} exists", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        return true;
+    } else {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Graph: {} path: {} does not exist", mpConfig.getGraphName(), mpConfig.getGraphPath());
+        return false;
+    }
 }
 
 Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const ModelsSettingsImpl& modelsSettings) {
-    std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
-    std::vector<std::string> usedButdisallowedUserSettings;
+    static const std::vector<std::string> allowedUserSettings = {"model_name", "model_path"};
+    std::vector<std::string> usedButDisallowedUserSettings;
     for (const std::string& userSetting : modelsSettings.userSetSingleModelArguments) {
         bool isAllowed = false;
         for (const std::string& allowedSetting : allowedUserSettings) {
@@ -451,12 +462,12 @@ Status ModelManager::validateUserSettingsInSingleModelCliGraphStart(const Models
         }
 
         if (!isAllowed)
-            usedButdisallowedUserSettings.push_back(userSetting);
+            usedButDisallowedUserSettings.push_back(userSetting);
     }
 
-    if (!usedButdisallowedUserSettings.empty()) {
+    if (!usedButDisallowedUserSettings.empty()) {
         std::string arguments = "";
-        for (const std::string& userSetting : usedButdisallowedUserSettings) {
+        for (const std::string& userSetting : usedButDisallowedUserSettings) {
             arguments += userSetting + ", ";
         }
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Starting mediapipe graph with unsupported model settings: {}The settings should be set in subconfig.json file.", arguments);
@@ -645,7 +656,7 @@ static Status processPipelineConfig(rapidjson::Document& configJson, const rapid
 Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJson) {
     const auto doc = configJson.FindMember("custom_node_library_config_list");
     if (doc == configJson.MemberEnd()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have custom node libraries property.");
         return StatusCode::OK;
     }
     std::set<std::string> librariesInConfig;
@@ -662,7 +673,7 @@ Status ModelManager::loadCustomNodeLibrariesConfig(rapidjson::Document& configJs
 #if (MEDIAPIPE_DISABLE == 0)
 Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>& mediapipesInConfigFile) {
     if (mediapipesInConfigFile.size() == 0) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have mediapipe property.");
         mediapipeFactory.retireOtherThan({}, *this);
         return StatusCode::OK;
     }
@@ -673,6 +684,8 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
             auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
+            } else {
+                mediapipeGraphConfig.logGraphConfigContent();
             }
         }
         mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
@@ -688,7 +701,7 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
 Status ModelManager::loadPipelinesConfig(rapidjson::Document& configJson) {
     const auto itrp = configJson.FindMember("pipeline_config_list");
     if (itrp == configJson.MemberEnd() || !itrp->value.IsArray()) {
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Configuration file doesn't have pipelines property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have pipelines property.");
         pipelineFactory.retireOtherThan({}, *this);
         return StatusCode::OK;
     }
@@ -785,6 +798,20 @@ Status ModelManager::loadCustomLoadersConfig(rapidjson::Document& configJson) {
     auto& customloaders = ovms::CustomLoaders::instance();
     customloaders.finalize();
     return firstErrorStatus;
+}
+
+Status ModelManager::loadMetricsFromCLI(const Config& config) {
+    // Reading metric config only once per server start
+    if (!this->metricConfigLoadedOnce) {
+        this->metricConfigLoadedOnce = true;
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading metric cli settings only once per server start.");
+        auto status = this->metricConfig.loadFromCLIString(config.metricsEnabled(), config.metricsList());
+        return status;
+    } else {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Metric cli settings already loaded error.");
+        return StatusCode::INTERNAL_ERROR;
+    }
+    return StatusCode::OK;
 }
 
 Status ModelManager::loadMetricsConfig(rapidjson::Document& configJson) {
@@ -908,7 +935,6 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
     std::vector<MediapipeGraphConfig> subdirectoryMediapipesInConfigFile;
     for (auto& mediapipeConfig : mediapipesInConfigFile) {
         std::string subconfigPath = mediapipeConfig.getSubconfigPath();
-        rapidjson::Document mediapipeConfigJson;
         std::ifstream ifs(subconfigPath);
         if (!ifs.is_open()) {
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
@@ -916,14 +942,9 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
             std::string subconfigModelMeshPath = mediapipeConfig.getModelMeshSubconfigPath();
             ifs.open(subconfigModelMeshPath);
             if (!ifs.is_open()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfig model mesh path: {} provided for graph: {} does not exist. Loading subconfig models will be skipped.",
-                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
                 continue;
             } else {
                 // Switch to model mesh path for subconfig
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading subconfig models from model mesh subconfig path: {} provided for graph: {}",
-                    subconfigModelMeshPath, mediapipeConfig.getGraphName());
-
                 subconfigPath = subconfigModelMeshPath;
                 mediapipeConfig.setSubconfigPath(DEFAULT_MODELMESH_SUBCONFIG_FILENAME);
             }
@@ -947,7 +968,7 @@ Status ModelManager::loadMediapipeSubConfigModels(std::vector<ModelConfig>& gate
         const auto mediapipeItr = subconfigJson.FindMember("model_config_list");
 
         if (mediapipeItr == subconfigJson.MemberEnd() || !mediapipeItr->value.IsArray()) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Subconfiguration file doesn't have models property.");
             return StatusCode::JSON_INVALID;
         }
         std::string subconfigRootDirectoryPath;
@@ -971,7 +992,7 @@ Status ModelManager::loadModelsConfig(rapidjson::Document& configJson, std::vect
     const auto itr = configJson.FindMember("model_config_list");
 
     if (itr == configJson.MemberEnd() || !itr->value.IsArray()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Configuration file doesn't have models property.");
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Configuration file doesn't have models property.");
         return StatusCode::JSON_INVALID;
     }
     std::set<std::string> modelsInConfigFile;
@@ -1015,11 +1036,10 @@ Status ModelManager::tryReloadGatedModelConfigs(std::vector<ModelConfig>& gatedM
     return firstErrorStatus;
 }
 
-Status ModelManager::loadConfig(const std::string& jsonFilename) {
+Status ModelManager::loadConfig() {
     rapidjson::Document configJson;
     std::lock_guard<std::recursive_mutex> loadingLock(configMtx);
-    configFilename = jsonFilename;
-    Status status = parseConfig(jsonFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
+    Status status = parseConfig(this->configFilename, configJson, this->lastConfigFileMD5, WRONG_CONFIG_FILE_RETRY_DELAY_MS, MAX_CONFIG_JSON_READ_RETRY_COUNT);
     if (!status.ok()) {
         this->lastLoadConfigStatus = status;
         return this->lastLoadConfigStatus;
@@ -1044,7 +1064,7 @@ Status ModelManager::loadConfig(const std::string& jsonFilename) {
 
     Status firstErrorStatus = StatusCode::OK;
 
-    this->setRootDirectoryPath(jsonFilename);
+    this->setRootDirectoryPath(this->configFilename);
 
     // load the custom loader config, if available
     status = loadCustomLoadersConfig(configJson);
@@ -1186,7 +1206,7 @@ void ModelManager::watcher(std::future<void> exitSignal, bool watchConfigFile) {
             bool isNeeded;
             configFileReloadNeeded(isNeeded);
             if (isNeeded) {
-                loadConfig(configFilename);
+                loadConfig();
             }
         }
         updateConfigurationWithoutConfigFile();
@@ -1212,18 +1232,20 @@ void ModelManager::cleanerRoutine(uint32_t resourcesCleanupIntervalMiliseconds, 
 void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal) {
     uint32_t currentResourcesWaitTime = resourcesCleanupInterval;
     uint32_t currentSequenceWaitTime = sequenceCleanerInterval;
+    bool shouldCheckForResourceCleanup = resourcesCleanupInterval != 0;
     bool shouldCheckForSequenceCleanup = sequenceCleanerInterval != 0;
     uint32_t currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
     while (cleanerExitSignal.wait_for(std::chrono::milliseconds(currentWaitTime)) == std::future_status::timeout) {
         SPDLOG_LOGGER_TRACE(modelmanager_logger, "Cleanup check cycle begin");
 
-        currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
+        if (shouldCheckForResourceCleanup)
+            currentResourcesWaitTime = (currentResourcesWaitTime - currentWaitTime) == 0 ? resourcesCleanupInterval : currentResourcesWaitTime - currentWaitTime;
         if (shouldCheckForSequenceCleanup)
             currentSequenceWaitTime = (currentSequenceWaitTime - currentWaitTime) == 0 ? sequenceCleanerInterval : currentSequenceWaitTime - currentWaitTime;
         currentWaitTime = (!shouldCheckForSequenceCleanup || currentResourcesWaitTime < currentSequenceWaitTime) ? currentResourcesWaitTime : currentSequenceWaitTime;
 
-        if (currentResourcesWaitTime == resourcesCleanupInterval)
+        if (currentResourcesWaitTime == resourcesCleanupInterval && shouldCheckForResourceCleanup)
             functorResourcesCleaner.cleanup();
         if (currentSequenceWaitTime == sequenceCleanerInterval && shouldCheckForSequenceCleanup)
             functorSequenceCleaner.cleanup();

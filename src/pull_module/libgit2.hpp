@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#pragma once
 #include <string>
 #include <memory>
 
@@ -35,6 +36,7 @@ class Status;
 struct Libgit2Options {
     int serverConnectTimeoutMs = 0;
     int serverTimeoutMs = 0;
+    std::string sslCertificateLocation = "";
 };
 
 struct Libgt2InitGuard {
