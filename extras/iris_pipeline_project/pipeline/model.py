@@ -1,35 +1,36 @@
 import abc
+import time
 import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
+from sklearnex import patch_sklearn, unpatch_sklearn   
+import intel_extension_for_pytorch as ipex
 
 
 class ModelClass(abc.ABC):
     @abc.abstractmethod
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
-        """
-        Train the model and return a serializable trained object (could be self or something to export).
-        """
         pass
 
     @abc.abstractmethod
     def predict(self, X: np.ndarray):
-        """
-        Return predictions for X.
-        """
         pass
 
 
 class LogisticRegressionTorch(ModelClass):
-    def __init__(self):
+    def __init__(self, use_ipex=False):
         self.model = None
         self.device = torch.device("cpu")
+        self.use_ipex = True
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
         try:
-            import intel_extension_for_pytorch as ipex  
-            use_ipex = True
+            if self.use_ipex:
+                import intel_extension_for_pytorch as ipex  
+                use_ipex = True
+            else:
+                use_ipex = False
         except ImportError:
             use_ipex = False
 
@@ -48,6 +49,7 @@ class LogisticRegressionTorch(ModelClass):
         if use_ipex:
             self.model, optimizer = ipex.optimize(self.model, optimizer=optimizer, dtype=torch.float32)
 
+        start = time.perf_counter()
         self.model.train()
         for _ in range(epochs):
             optimizer.zero_grad()
@@ -55,30 +57,61 @@ class LogisticRegressionTorch(ModelClass):
             loss = criterion(outputs, y_tensor)
             loss.backward()
             optimizer.step()
+        end = time.perf_counter()
+
+        print(f"[Torch LogisticRegression] Training time (IPEX={use_ipex}): {end - start:.4f} sec")
         return self  
 
     def predict(self, X: np.ndarray):
         if self.model is None:
             raise RuntimeError("Model not trained")
+
+        X_tensor = torch.from_numpy(X).float().to(self.device)
+        start = time.perf_counter()
         self.model.eval()
-        X_tensor = torch.from_numpy(X).float()
         with torch.no_grad():
             logits = self.model(X_tensor)
             probs = torch.softmax(logits, dim=1)
             preds = torch.argmax(probs, dim=1).cpu().numpy()
+        end = time.perf_counter()
+
+        print(f"[Torch LogisticRegression] Inference time: {end - start:.4f} sec")
         return preds, probs.cpu().numpy()
 
+
 class KMeansSkLearn(ModelClass):
-    def __init__(self):
+    def __init__(self, use_onedal=False):
         self.model = None
+        self.use_onedal = use_onedal
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
+        if self.use_onedal:
+            patch_sklearn()   
+        else:
+            unpatch_sklearn() 
+
         n_clusters = params.get("n_clusters", 3)
         self.model = KMeans(n_clusters=n_clusters, random_state=42)
+
+        start = time.perf_counter()
         self.model.fit(X)
+        end = time.perf_counter()
+
+        print(f"[Sklearn KMeans] Training time (oneDAL={self.use_onedal}): {end - start:.4f} sec")
         return self
 
     def predict(self, X: np.ndarray):
         if self.model is None:
             raise RuntimeError("Model not trained")
-        return self.model.predict(X)
+
+        start = time.perf_counter()
+        labels = self.model.predict(X)
+        centroids = self.model.cluster_centers_
+        end = time.perf_counter()
+        print(f"[Sklearn KMeans] Inference time (oneDAL={self.use_onedal}): {end - start:.4f} sec")
+        return labels, centroids
+
+    def get_inertia(self):
+        if self.model is None:
+            raise RuntimeError("Model not trained")
+        return self.model.inertia_
