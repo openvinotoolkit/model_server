@@ -1,5 +1,5 @@
 from pyovms import Tensor
-from transformers import CLIPProcessor,AutoImageProcessor
+from transformers import CLIPProcessor, AutoImageProcessor
 from PIL import Image
 import numpy as np
 from io import BytesIO
