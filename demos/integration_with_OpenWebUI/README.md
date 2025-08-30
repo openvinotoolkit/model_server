@@ -125,7 +125,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 1. Go to **Admin Panel** → **Settings** → **Documents** ([http://localhost:8080/admin/settings/documents](http://localhost:8080/admin/settings/documents))
 2. Select **OpenAI** for **Embedding Model Engine**
-   * URL: `http://localhost:8000/v3/embeddings`
+   * URL: `http://localhost:8000/v3`
    * Embedding Model: `sentence-transformers/all-MiniLM-L6-v2`
    * Put anything in API key
 3. Enable **Hybrid Search**
@@ -198,7 +198,7 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 ### Step 2: Image Generation Setting
 
-1. Go to **Admin Panel** → **Settings** → **Images** ([http://localhost:8080/admin/settings/documents](http://localhost:8080/admin/settings/documents))
+1. Go to **Admin Panel** → **Settings** → **Images** ([http://localhost:8080/admin/settings/images](http://localhost:8080/admin/settings/images))
 2. Configure **OpenAI API**:
    * URL: `http://localhost:8000/v3`
    * Put anything in API key
