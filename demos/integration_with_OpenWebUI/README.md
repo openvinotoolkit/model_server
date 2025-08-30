@@ -85,7 +85,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 
 ## Chat
 
-### Step 1. Connections Setting
+### Step 1: Connections Setting
 
 1. Go to **Admin Panel** → **Settings** → **Connections** ([http://localhost:8080/admin/settings/connections](http://localhost:8080/admin/settings/connections))
 2. Click **+Add Connection** under **OpenAI API**
@@ -121,7 +121,7 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"model\":\"BAAI/bge-reranker-base\",\"query\":\"welcome\",\"documents\":[\"good morning\",\"farewell\"]}"
 ```
 
-### Step 2. Documents Setting
+### Step 2: Documents Setting
 
 1. Go to **Admin Panel** → **Settings** → **Documents** ([http://localhost:8080/admin/settings/documents](http://localhost:8080/admin/settings/documents))
 2. Select **OpenAI** for **Embedding Model Engine**
