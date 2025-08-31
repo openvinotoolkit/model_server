@@ -20,7 +20,7 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 * Host with x86_64 architecture
 * Linux, macOS, or Windows via [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
 * Python 3.11 with pip 
-* Hugging Face account to pull the models
+* HuggingFace account to download models
 
 There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
@@ -28,11 +28,11 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 
 ### Step 1: Preparation
 
-Download export script, install its dependencies and create directory for the models:
+Download export script, install its dependencies and create the directory for models:
 
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -109,7 +109,7 @@ Click **New Chat** and select the model to start chatting.
 
 ### Step 1: Model Preparation
 
-In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OVMS. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run export script to download and quantize the models:
+In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run export script to download and quantize the models:
 ```bash
 python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L6-v2 --weight-format int8 --config_file_path models/config.json
 python export_model.py rerank_ov --source_model BAAI/bge-reranker-base --weight-format int8 --config_file_path models/config.json
