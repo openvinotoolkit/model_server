@@ -586,22 +586,36 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
-    bool exist = false;
-    auto it = models.find(name);
-    if (it != models.end())
-        exist = true;
-    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
-        exist = true;
+    bool available = false;
+
+    // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
-    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
-        exist = true;
+    if (!available) {
+        auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+        if (std::find(names.begin(), names.end(), name) != names.end()) {
+            available = true;
+        }
+    }
 #endif
+
+    // Single Model
+    if (!available) {
+        auto availableModelNames = modelManager.getNamesOfAvailableModels();
+        if (std::find(availableModelNames.begin(), availableModelNames.end(), name) != availableModelNames.end()) {
+            available = true;
+        }
+    }
+    // DAG (deprecated)
+    if (!available) {
+        auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
+        if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
+            available = true;
+        }
+    }
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    if (!exist) {
+    if (!available) {
         writer.StartObject();
         writer.String("error");
         writer.String("Model not found");
@@ -617,7 +631,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
 }
 
 Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     time_t timestamp;
@@ -627,16 +640,23 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("list");
     writer.String("data");
     writer.StartArray();
-    for (auto const& model : models) {
-        parseModel(writer, model.first, timestamp);
+
+    // Single Model
+    auto availableModelNames = modelManager.getNamesOfAvailableModels();
+    for (auto const& name : availableModelNames) {
+        parseModel(writer, name, timestamp);
     }
-    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    for (auto const& pipelineName : pipelinesNames) {
-        parseModel(writer, pipelineName, timestamp);
+
+    // DAG
+    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
+    for (auto const& name : availableModels) {
+        parseModel(writer, name, timestamp);
     }
+
+    // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
-    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    for (auto const& graphName : mediapipes) {
+    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
+    for (auto const& graphName : availableMediapipes) {
         parseModel(writer, graphName, timestamp);
     }
 #endif

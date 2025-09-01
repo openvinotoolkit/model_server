@@ -42,13 +42,16 @@ enum class PipelineType {
 class Status;
 class GenAiServable;
 struct GenAiServableProperties;
+struct ExtraGenerationInfo;
 
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
+    static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
 #if (PYTHON_DISABLE == 0)
     // Use Python Jinja module for template processing
-    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
+    static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
 #else
     // In C++ only version we use GenAI for template processing, but to have the same behavior as in Python-enabled version
     // we use default template if model does not have its own, so that servable can also work on chat/completion endpoint.

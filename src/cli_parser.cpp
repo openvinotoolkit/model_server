@@ -28,6 +28,7 @@
 #include "graph_export/image_generation_graph_cli_parser.hpp"
 #include "ovms_exit_codes.hpp"
 #include "filesystem.hpp"
+#include "localfilesystem.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
 
@@ -35,9 +36,22 @@ namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
 
+std::string getConfigPath(const std::string& configPath) {
+    bool isDir = false;
+    auto status = LocalFileSystem::isDir(configPath, &isDir);
+    if (!status.ok()) {
+        throw std::logic_error("Invalid path for the config: " + configPath);
+    }
+    if (isDir) {
+        return FileSystem::joinPath({configPath, "config.json"});
+    }
+    return configPath;
+}
+
 void CLIParser::parse(int argc, char** argv) {
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> --model_repository_path <MODEL_REPO_PATH> \n  ovms --model_path <MODEL_PATH> --model_name <MODEL_NAME> --add_to_config <CONFIG_PATH> \n  ovms --remove_from_config <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -102,8 +116,8 @@ void CLIParser::parse(int argc, char** argv) {
                 cxxopts::value<uint32_t>()->default_value("5"),
                 "SEQUENCE_CLEANER_POLL_WAIT_MINUTES")
             ("custom_node_resources_cleaner_interval_seconds",
-                "Time interval between two consecutive resources cleanup scans. Default is 1. Must be greater than 0.",
-                cxxopts::value<uint32_t>()->default_value("1"),
+                "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
+                cxxopts::value<uint32_t>()->default_value("300"),
                 "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into"
@@ -176,6 +190,10 @@ void CLIParser::parse(int argc, char** argv) {
                 "HF source model path",
                 cxxopts::value<std::string>(),
                 "HF_SOURCE")
+            ("gguf_filename",
+                "Name of the GGUF file",
+                cxxopts::value<std::string>(),
+                "GGUF_FILENAME")
             ("overwrite_models",
                 "Overwrite the model if it already exists in the models repository",
                 cxxopts::value<bool>()->default_value("false"),
@@ -250,6 +268,33 @@ void CLIParser::parse(int argc, char** argv) {
                 "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
                 cxxopts::value<uint32_t>(),
                 "MAX_SEQUENCE_NUMBER");
+        configOptions->custom_help("");
+        configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
+            ("list_models",
+                "Directive to show available servables in models repository",
+                cxxopts::value<bool>()->default_value("false"),
+                "LIST_MODELS")
+            ("add_to_config",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to add specific model to. This parameter should be executed with --model_name and either with --model_path or --model_repository_path.",
+                cxxopts::value<std::string>(),
+                "ADD_TO_CONFIG")
+            ("remove_from_config",
+                "Either path to directory containing config.json file for OVMS, or path to ovms configuration file, to remove specific model from. This parameter should be executed with --model_name to specify which model we want to remove.",
+                cxxopts::value<std::string>(),
+                "REMOVE_FROM_CONFIG")
+            ("model_repository_path",
+                "Absolute or relative path from the config directory to the model repository",
+                cxxopts::value<std::string>(),
+                "MODEL_REPOSITORY_PATH")
+            ("model_path",
+                "Absolute or relative path from the config directory to the model. By default is a combination of the model_repository_path and model_name.",
+                cxxopts::value<std::string>(),
+                "MODEL_PATH")
+            ("model_name",
+                "Name of the model",
+                cxxopts::value<std::string>(),
+                "MODEL_NAME");
+
         result = std::make_unique<cxxopts::ParseResult>(options->parse(argc, argv));
 
         // HF pull mode or pull and start mode
@@ -354,7 +399,8 @@ void CLIParser::parse(int argc, char** argv) {
         }
 
         if (result->count("help") || result->arguments().size() == 0) {
-            std::cout << options->help({"", "multi model", "single model", "pull hf model", CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
+            std::cout << options->help({"", "multi model", "single model", "pull hf model"}) << std::endl;
+            std::cout << configOptions->help({CONFIG_MANAGEMENT_HELP_GROUP}) << std::endl;
             GraphCLIParser parser1;
             RerankGraphCLIParser parser2;
             EmbeddingsGraphCLIParser parser3;
@@ -457,9 +503,8 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     }
     if (result->count("model_path")) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
-        modelsSettings.userSetSingleModelArguments.push_back("model_name");
+        modelsSettings.userSetSingleModelArguments.push_back("model_path");
     }
-
     if (result->count("max_sequence_number")) {
         modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
         modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
@@ -537,13 +582,17 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         } else {
             serverSettings.serverMode = HF_PULL_AND_START_MODE;
         }
-
+        if (result->count("gguf_filename")) {
+            hfSettings.ggufFilename = result->operator[]("gguf_filename").as<std::string>();
+            hfSettings.downloadType = GGUF_DOWNLOAD;
+        }
         if (result->count("overwrite_models"))
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // FIXME: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
+            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
+            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/")) &&
+                (hfSettings.ggufFilename == std::nullopt)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
@@ -630,9 +679,9 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
     }
     if (result->count("add_to_config")) {
-        modelsSettings.configPath = result->operator[]("add_to_config").as<std::string>();
+        modelsSettings.configPath = ovms::getConfigPath(result->operator[]("add_to_config").as<std::string>());
     } else if (result->count("remove_from_config")) {
-        modelsSettings.configPath = result->operator[]("remove_from_config").as<std::string>();
+        modelsSettings.configPath = ovms::getConfigPath(result->operator[]("remove_from_config").as<std::string>());
     }
 }
 

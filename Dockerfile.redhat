@@ -202,14 +202,6 @@ RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; 
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino_2025
 
-# update oneTBB
-RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
-tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
-rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
-cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
-rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
-ENV TBB_DIR=/tmp/openvino_installer/oneapi-tbb-2021.13.0/lib/cmake/tbb
-
 # install sample apps including benchmark_app
 # hadolint ignore=DL3041
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel && \

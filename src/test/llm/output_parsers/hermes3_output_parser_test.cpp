@@ -31,17 +31,31 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Hermes-3-Llama-3.1-8B";
 #endif
 
-static ov::genai::Tokenizer hermes3Tokenizer(tokenizerPath);
+static std::unique_ptr<ov::genai::Tokenizer> hermes3Tokenizer;
 
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<OutputParser> outputParserWithRegularToolParsing;
     std::unique_ptr<OutputParser> outputParserWithImmediateToolParsing;
 
+    static void SetUpTestSuite() {
+        try {
+            hermes3Tokenizer = std::make_unique<ov::genai::Tokenizer>(tokenizerPath);
+        } catch (const std::exception& e) {
+            FAIL() << "Failed to initialize hermes3 tokenizer: " << e.what();
+        } catch (...) {
+            FAIL() << "Failed to initialize hermes3 tokenizer due to unknown error.";
+        }
+    }
+
+    static void TearDownTestSuite() {
+        hermes3Tokenizer.reset();
+    }
+
     void SetUp() override {
         // For Hermes3 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(hermes3Tokenizer, "hermes3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(hermes3Tokenizer, "hermes3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
@@ -59,7 +73,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
                 // Remove opening tag for immediate parsing
                 input = input.substr(std::string("<tool_call>").length());
             }
-            auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
             ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
             EXPECT_EQ(parsedOutput.content, "");
@@ -88,7 +102,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
                 // Remove opening tag for immediate parsing
                 testInput = testInput.substr(std::string("<tool_call>").length());
             }
-            auto generatedTensor = hermes3Tokenizer.encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+            auto generatedTensor = hermes3Tokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
             ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
             EXPECT_EQ(parsedOutput.content, testInput);
@@ -115,7 +129,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
             if (immediateParsing) {
                 input = input.substr(std::string("<tool_call>").length());
             }
-            auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
             ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
             EXPECT_EQ(parsedOutput.content, "");
@@ -162,7 +176,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
             if (immediateParsing) {
                 input = input.substr(std::string("<tool_call>").length());
             }
-            auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+            auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
             std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
             ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
             EXPECT_EQ(parsedOutput.content, "");
@@ -188,7 +202,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithTwoValidToolCallsAndOneIn
 
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     std::string input = "This is a regular model response without tool calls.";
-    auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
@@ -204,7 +218,7 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
 
 TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {
     std::string input = "This is a content part and next will be a tool call.\n\n<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
-    auto generatedTensor = hermes3Tokenizer.encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    auto generatedTensor = hermes3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     // generatedTokens should now contain content followed by bot token ID and then tool call
     ParsedOutput parsedOutput = outputParserWithRegularToolParsing->parse(generatedTokens, true);
@@ -297,7 +311,7 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
             chunkToDeltaVec.insert(chunkToDeltaVec.begin(), {"\n", std::nullopt});
         }
         for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true) : outputParserWithRegularToolParsing->parseChunk(chunk, true);
+            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE) : outputParserWithRegularToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }
@@ -368,7 +382,7 @@ TEST_F(Hermes3OutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
 
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         // Second argument is false as we simulate the case where tools have not been provided in the request
-        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false);
+        std::optional<rapidjson::Document> doc = outputParserWithRegularToolParsing->parseChunk(chunk, false, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {
             continue;  // Both are nullopt, OK
         }

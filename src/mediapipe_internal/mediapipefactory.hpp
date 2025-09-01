@@ -78,6 +78,7 @@ public:
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
     Status revalidatePipelines(ModelManager&);
     const std::vector<std::string> getMediapipePipelinesNames() const;
+    const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     ~MediapipeFactory();
 };
 

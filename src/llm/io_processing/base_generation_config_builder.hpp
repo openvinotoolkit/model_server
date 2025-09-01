@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <string>
+
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "../apis/openai_request.hpp"
@@ -40,9 +42,23 @@ public:
 
     ov::genai::GenerationConfig& getConfig() { return config; }
 
-    // Validates the structured output configuration, if exists.
-    // Throws exception if validation fails.
+    /*
+    * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
+    */
+    void addStopString(const std::string& decodedStopString);
+
+    /*
+    * Validates the structured output configuration, if exists.
+    * Throws exception if validation fails.
+    */
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer);
+
+    /*
+     * Unsets the structured output configuration, effectively disabling guided generation.
+     * Should be used when validateStructuredOutputConfig throws and we want to allow
+     * the request to proceed without guided generation.
+     */
+    void unsetStructuredOutputConfig();
 
     /*
      * Fills generation config with values read from OpenAI request.
