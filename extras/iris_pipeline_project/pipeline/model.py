@@ -22,7 +22,7 @@ class LogisticRegressionTorch(ModelClass):
     def __init__(self, use_ipex=False):
         self.model = None
         self.device = torch.device("cpu")
-        self.use_ipex = True
+        self.use_ipex = use_ipex
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
         try:
