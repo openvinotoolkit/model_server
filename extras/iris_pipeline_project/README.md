@@ -25,7 +25,7 @@ docker build --no-cache -t prototype_iris .
 ### 2.2. Run the OVMS Container
 
 ```bash
- docker run --rm -it -v $(pwd):/workspace -p 9000:9000 -p 8000:8000 prototype_iris --config_path /workspace/model_config.json --port 9000 --rest_port 8000 --log_level DEBUG
+ docker run --rm -it -v $(pwd):/workspace -p 9000:9000 prototype_iris --config_path /workspace/model_config.json --port 9000 --log_level DEBUG
 ```
 - **Note:** Adjust `$(pwd)` if you are running from a different working directory.
 
