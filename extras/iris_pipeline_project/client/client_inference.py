@@ -5,7 +5,6 @@ import json
 import sys
 import os
 import matplotlib.pyplot as plt
-import numpy as np
 SERVER_URL = "localhost:9000"
 MODEL_NAME = "pipeline"
 
