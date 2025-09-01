@@ -92,7 +92,7 @@ cd demos/python_demos/image_embeddings
 
 
 To use CPU
-``bash
+```bash
 docker run -it --rm \
 -p 9000:9000 -p 8000:8000 \
 -v ${PWD}/servable:/workspace \
