@@ -121,7 +121,7 @@ class OvmsPythonModel:
 
                     print(response, flush=True)  
 
-                    return [Tensor("pipeline_output", np.array([float(label)], dtype=np.float64))]
+                    return [Tensor("pipeline_output", np.array([json.dumps(response)], dtype=object))]
                 else:
                     raise ValueError(f"Unknown mode '{mode}'")
         except Exception as e:
