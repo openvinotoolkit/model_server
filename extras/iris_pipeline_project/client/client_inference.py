@@ -139,7 +139,7 @@ def main():
                     for i, centroid in enumerate(centroids):
                         print(f"  Centroid {i}: {centroid}")
 
-                    X = df.drop(columns=[target_column]) if target_column else df
+                    X = df.drop(columns=[target_column]) if (target_column is not None and target_column in df.columns) else df
                     X = X.values
                     plt.figure(figsize=(8, 6))
                     plt.scatter(X[:, 0], X[:, 1], c=labels, cmap="viridis", s=30, alpha=0.7, label="Points")
