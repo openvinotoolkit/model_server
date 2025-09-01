@@ -1,5 +1,5 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index 73731c0..e31add1 100644
+index 73731c0..0d966ed 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 @@ -2060,6 +2060,30 @@ third_party_inference_model_map = {
@@ -19,7 +19,7 @@ index 73731c0..e31add1 100644
 +        underscore_to_dot=True,
 +    ),
 +    "ovms_model_stream": ModelConfig(
-+        model_name="ovms_model_stream",
++        model_name="ovms-model-stream",
 +        display_name="ovms_model_stream",
 +        url="http://localhost:8000/v3",
 +        org="ovms",
@@ -34,7 +34,7 @@ index 73731c0..e31add1 100644
  
  
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
-index 8665234..3f7a6c4 100644
+index 8665234..9e85e59 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 @@ -23,7 +23,7 @@ class OpenAICompletionsHandler(BaseHandler):
@@ -46,11 +46,12 @@ index 8665234..3f7a6c4 100644
  
      def decode_ast(self, result, language="Python"):
          if "FC" in self.model_name or self.is_fc_model:
-@@ -61,6 +61,7 @@ class OpenAICompletionsHandler(BaseHandler):
+@@ -61,6 +61,8 @@ class OpenAICompletionsHandler(BaseHandler):
              "messages": message,
              "model": self.model_name.replace("-FC", ""),
              "temperature": self.temperature,
 +            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
++            "max_completion_tokens": 2048,
              "store": False,
          }
  
