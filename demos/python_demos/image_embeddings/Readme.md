@@ -107,7 +107,18 @@ openvino/model_server:py \
 
 To use GPU
 ```bash
-docker run -it --rm --device=/dev/dxg --volume /usr/lib/wsl:/usr/lib/wsl -p 9000:9000 -p 8000:8000 -v ${PWD}/servable:/workspace -v ${PWD}/model_conversion/saved_mod/dino:/saved_mod/dino -v ${PWD}/model_conversion/saved_mod/clip:/saved_mod/clip -v ${PWD}/model_conversion/saved_mod/laion:/saved_mod/laion ovms-gpu-custom --config_path /workspace/config_model.json --port 9000 --rest_port 8000
+docker run -it --rm \
+  --device=/dev/dxg \
+  --volume /usr/lib/wsl:/usr/lib/wsl \
+  -p 9000:9000 -p 8000:8000 \
+  -v ${PWD}/servable:/workspace \
+  -v ${PWD}/model_conversion/saved_mod/dino:/saved_mod/dino \
+  -v ${PWD}/model_conversion/saved_mod/clip:/saved_mod/clip \
+  -v ${PWD}/model_conversion/saved_mod/laion:/saved_mod/laion \
+  ovms-gpu-custom \
+    --config_path /workspace/config_model.json \
+    --port 9000 \
+    --rest_port 8000
 ```
 
 ## Deploying the Vector Database
