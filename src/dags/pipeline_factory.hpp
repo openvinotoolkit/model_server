@@ -76,10 +76,7 @@ public:
     void retireOtherThan(std::set<std::string>&& pipelinesInConfigFile, ModelManager& manager);
     Status revalidatePipelines(ModelManager&);
     const std::vector<std::string> getPipelinesNames() const;
-
-    std::shared_mutex& getDefinitionsMtx() const {
-        return definitionsMtx;
-    }
+    const std::vector<std::string> getNamesOfAvailablePipelines() const;
 };
 
 }  // namespace ovms
