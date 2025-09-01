@@ -190,28 +190,11 @@ Status DisableModel(const std::string& configFilePath, const ModelsSettingsImpl&
     }
 }
 
-static Status validateAndPrepareConfigFilePath(std::string& configDirOrFilePath) {
-    if (configDirOrFilePath.empty()) {
-        SPDLOG_ERROR("Config path empty: {}", configDirOrFilePath);
-        return StatusCode::PATH_INVALID;
-    }
-    // check if the config path is a directory and if it is, append config.json
-    bool isDir = false;
-    auto status = LocalFileSystem::isDir(configDirOrFilePath, &isDir);
-    if (!status.ok()) {
-        return status;
-    }
-    if (isDir) {
-        configDirOrFilePath = FileSystem::joinPath({configDirOrFilePath, "config.json"});
-    }
-    return StatusCode::OK;
-}
-
 Status updateConfig(const ModelsSettingsImpl& modelSettings, const ConfigExportType& exportType) {
     std::string configFilePath = modelSettings.configPath;
-    auto status = validateAndPrepareConfigFilePath(configFilePath);
-    if (!status.ok()) {
-        return status;
+    if (configFilePath.empty()) {
+        SPDLOG_ERROR("Config path is empty.");
+        return StatusCode::PATH_INVALID;
     }
     if (exportType == ENABLE_MODEL) {
         return EnableModel(configFilePath, modelSettings);

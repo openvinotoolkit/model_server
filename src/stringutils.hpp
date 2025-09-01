@@ -18,6 +18,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <cstdint>
+
 namespace ovms {
 
 std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter);

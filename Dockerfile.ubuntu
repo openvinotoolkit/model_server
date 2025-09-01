@@ -27,8 +27,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG BASE_IMAGE
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
-            gcc-9 \
-            g++-9 \
             make \
             cmake \
             automake \
@@ -45,8 +43,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             pkg-config \
             wget \
             zlib1g-dev && \
-            update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9 && \
-            update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9 && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
 
@@ -187,13 +183,6 @@ RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ;
     tar -zxf ./*openvino_toolkit*.tgz -C /opt/intel && \
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino && \
     ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino_2025
-
-# update oneTBB
-RUN wget -nv https://github.com/oneapi-src/oneTBB/releases/download/v2021.13.0/oneapi-tbb-2021.13.0-lin.tgz && \
-    tar -zxf oneapi-tbb-2021.13.0-lin.tgz && \
-    rm /opt/intel/openvino/runtime/3rdparty/tbb/lib/*.so* && \
-    cp -vP oneapi-tbb-2021.13.0/lib/intel64/gcc4.8/*.so* /opt/intel/openvino/runtime/3rdparty/tbb/lib/ && \
-    rm -f /opt/intel/openvino/oneapi-tbb-2021.13.0-lin.tgz
 
 WORKDIR /
 # install sample apps including benchmark_app
@@ -403,12 +392,12 @@ RUN apt-get update ; \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.22.0/linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2204.tar.gz && \
-            tar -xf linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2204.tar.gz && \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.23.0/linux-npu-driver-v1.23.0.20250827-17270089246-ubuntu2204.tar.gz && \
+            tar -xf linux-npu-driver-v1.23.0.20250827-17270089246-ubuntu2204.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u22.04_amd64.deb ; \
         else \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.22.0/linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.22.0.20250813-16938856004-ubuntu2404.tar.gz && \
+            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.23.0/linux-npu-driver-v1.23.0.20250827-17270089246-ubuntu2404.tar.gz && \
+            tar -xf linux-npu-driver-v1.23.0.20250827-17270089246-ubuntu2404.tar.gz && \
             curl -L -O https://github.com/oneapi-src/level-zero/releases/download/v1.22.4/level-zero_1.22.4+u24.04_amd64.deb ; \
         fi ; \      
         dpkg -i ./*.deb && rm -Rf /tmp/npu_deps ; \

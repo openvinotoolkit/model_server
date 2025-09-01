@@ -586,22 +586,48 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
-    bool exist = false;
-    auto it = models.find(name);
-    if (it != models.end())
-        exist = true;
-    const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    if (std::find(pipelinesNames.begin(), pipelinesNames.end(), name) != pipelinesNames.end())
-        exist = true;
+    bool available = false;
+    bool found = false;
+
+    // MediaPipe first, it is most likely that anyone will check llms
 #if (MEDIAPIPE_DISABLE == 0)
-    auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
-    if (std::find(mediapipes.begin(), mediapipes.end(), name) != mediapipes.end())
-        exist = true;
+    if (!found) {
+        std::shared_lock lockMediapipes(modelManager.getMediapipeFactory().getDefinitionsMtx());
+        auto mediapipeGraphDefinition = modelManager.getMediapipeFactory().findDefinitionByName(name);
+        if (mediapipeGraphDefinition != nullptr) {
+            found = true;
+            if (mediapipeGraphDefinition->getStatus().isAvailable())
+                available = true;
+        }
+    }
 #endif
+
+    // Single Model
+    if (!found) {
+        std::shared_lock lockSingleModels(modelManager.modelsMtx);
+        const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
+        auto it = models.find(name);
+        if (it != models.end()) {
+            found = true;
+            auto defaultModelInstance = it->second->getDefaultModelInstance();
+            if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
+                available = true;
+        }
+    }
+    // DAG (deprecated)
+    if (!found) {
+        std::shared_lock lockDags(modelManager.getPipelineFactory().getDefinitionsMtx());
+        auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(name);
+        if (pipelineDefinition != nullptr) {
+            found = true;
+            if (pipelineDefinition->getStatus().isAvailable())
+                available = true;
+        }
+    }
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    if (!exist) {
+    if (!available) {
         writer.StartObject();
         writer.String("error");
         writer.String("Model not found");
@@ -617,7 +643,6 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
 }
 
 Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
-    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     time_t timestamp;
@@ -627,18 +652,37 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("list");
     writer.String("data");
     writer.StartArray();
+
+    // Single Model
+    std::shared_lock lockSingleModels(modelManager.modelsMtx);
+    const std::map<std::string, std::shared_ptr<Model>>& models = modelManager.getModels();
     for (auto const& model : models) {
-        parseModel(writer, model.first, timestamp);
+        auto defaultModelInstance = model.second->getDefaultModelInstance();
+        if (defaultModelInstance && defaultModelInstance->getStatus().getState() == ModelVersionState::AVAILABLE)
+            parseModel(writer, model.first, timestamp);
     }
+    lockSingleModels.unlock();
+
+    // DAG
     const std::vector<std::string>& pipelinesNames = modelManager.getPipelineFactory().getPipelinesNames();
-    for (auto const& pipelineName : pipelinesNames) {
-        parseModel(writer, pipelineName, timestamp);
+    std::shared_lock lockDags(modelManager.getPipelineFactory().getDefinitionsMtx());
+    for (auto const& name : pipelinesNames) {
+        auto pipelineDefinition = modelManager.getPipelineFactory().findDefinitionByName(name);
+        if (pipelineDefinition->getStatus().isAvailable())
+            parseModel(writer, name, timestamp);
     }
+    lockDags.unlock();
+
+    // MediaPipe
 #if (MEDIAPIPE_DISABLE == 0)
     auto mediapipes = modelManager.getMediapipeFactory().getMediapipePipelinesNames();
+    std::shared_lock lockMediapipes(modelManager.getMediapipeFactory().getDefinitionsMtx());
     for (auto const& graphName : mediapipes) {
-        parseModel(writer, graphName, timestamp);
+        auto mediapipeGraphDefinition = modelManager.getMediapipeFactory().findDefinitionByName(graphName);
+        if (mediapipeGraphDefinition->getStatus().isAvailable())
+            parseModel(writer, graphName, timestamp);
     }
+    lockMediapipes.unlock();
 #endif
     writer.EndArray();
     writer.String("object");

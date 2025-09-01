@@ -757,7 +757,7 @@ TEST_P(SerializeCAPITensorNegative, SerializeTensorShouldFailForPrecision) {
         UNUSED_NAME,
         UNUSED_VERSION,
         inputs,
-        nullptr,
+        CAPIRequestNULL,
         &response,
         getTensorInfoName);
     EXPECT_EQ(status, ovms::StatusCode::OV_UNSUPPORTED_SERIALIZATION_PRECISION)

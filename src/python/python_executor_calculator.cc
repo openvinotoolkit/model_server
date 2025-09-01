@@ -231,8 +231,8 @@ public:
 
                 std::vector<py::object> pyInputs;
                 prepareInputs(cc, &pyInputs);
-                py::object executeResult = std::move(nodeResources->ovmsPythonModel->attr("execute")(pyInputs));
-                handleExecutionResult(cc, std::move(executeResult));
+                py::object executeResult = nodeResources->ovmsPythonModel->attr("execute")(pyInputs);
+                handleExecutionResult(cc, executeResult);
             }
         } catch (const UnexpectedOutputTensorError& e) {
             LOG(INFO) << "Error occurred during node " << cc->NodeName() << " execution: " << e.what();

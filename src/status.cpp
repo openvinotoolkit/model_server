@@ -233,6 +233,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     // LLM Nodes
     {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
     {StatusCode::LLM_NODE_DIRECTORY_DOES_NOT_EXIST, "The LLM Node workspace path does not exist"},
+    {StatusCode::LLM_NODE_PATH_DOES_NOT_EXIST_AND_NOT_GGUFFILE, "The LLM Node workspace path does not exist and not gguf model file"},
     {StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "The LLM Node resource initialization failed"},
     {StatusCode::LLM_NODE_MISSING_OPTIONS, "The LLM Node is missing options definition"},
     {StatusCode::LLM_NODE_MISSING_NAME, "The LLM Node is missing name definition"},

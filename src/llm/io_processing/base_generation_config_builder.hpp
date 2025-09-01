@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <string>
+
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "../apis/openai_request.hpp"
@@ -39,6 +41,11 @@ public:
     virtual ~BaseGenerationConfigBuilder() = default;
 
     ov::genai::GenerationConfig& getConfig() { return config; }
+
+    /*
+    * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
+    */
+    void addStopString(const std::string& decodedStopString);
 
     /*
     * Validates the structured output configuration, if exists.
