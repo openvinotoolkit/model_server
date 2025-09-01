@@ -62,6 +62,15 @@ python client/client_inference.py infer <path_to_test_dataset>
 
 ---
 
+Input Format
+
+The pipeline expects input as a JSON object, sent as a single-element numpy array of bytes (dtype=object):
+
+{
+  "mode": "train_logreg" | "infer_logreg" | "train_kmeans" | "infer_kmeans",
+  "data": "<CSV string>"
+}
+
 ## Instructions for preparing the data
 Run the command to download the Iris dataset, which is taken to be the hello-world dataset of classification datasets.
 
