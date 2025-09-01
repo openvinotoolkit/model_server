@@ -77,14 +77,8 @@ python client/client_inference.py infer iris_train_nolabel.csv  --target_column 
 
 ---
 
-Input Format
-
-The pipeline expects input as a JSON object, sent as a single-element numpy array of bytes (dtype=object):
-
-{
-  "mode": "train_logreg" | "infer_logreg" | "train_kmeans" | "infer_kmeans",
-  "data": "<CSV string>"
-}
+For Enabling accelerator support:
+Manually set the ```bool - (use_ipex/use_oneDAL)``` in model.py file under "pipeline" directory to either True/False depending on the necessity.
 
 ## Instructions for preparing the data
 Run the command to download the Iris dataset, which is taken to be the hello-world dataset of classification datasets.
