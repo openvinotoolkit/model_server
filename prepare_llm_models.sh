@@ -38,7 +38,8 @@ MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$MODEL_FILE" "$
 
 all_exist=true
 for model in "${MODELS[@]}"; do
-  if [ ! -d "$1/$model" ]; then
+  if [ ! -f "$1/$model" ]; then
+    echo "Model file does not exist $1/$model"
     all_exist=false
     break
   fi
@@ -74,7 +75,7 @@ fi
 if [ ! -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exists."
   exit 1
-else
+fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
@@ -146,7 +147,7 @@ fi
 if [ ! -f "$1/$LLAMA3_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$LLAMA3_MODEL/$TOKENIZER_FILE does not exists."
   exit 1
-else
+fi
 
 if [ -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
@@ -154,7 +155,7 @@ else
   mkdir -p $1/$HERMES3_MODEL
   convert_tokenizer $HERMES3_MODEL --with_detokenizer -o $1/$HERMES3_MODEL
 fi
-if [ -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
+if [ ! -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE does not exists."
   exit 1
 fi
@@ -177,7 +178,6 @@ else
   convert_tokenizer $MISTRAL_MODEL --with_detokenizer -o $1/$MISTRAL_MODEL
 fi
 if [ ! -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE not created."
+  echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE does not exists."
   exit 1
 fi
-
