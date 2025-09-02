@@ -262,7 +262,7 @@ docker run -d --rm -v <model_repository_path>:/models openvino/model_server:late
 
 :::{tab-item} On Baremetal Host
 :sync: baremetal
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](./deploying_server_baremetal.md) for details.
 
 ```text
 ovms --model_repository_path /models/<model_path> --add_to_config <config_file_directory_path> --model_name <name>
