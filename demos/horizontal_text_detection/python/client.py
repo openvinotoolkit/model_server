@@ -53,7 +53,7 @@ def decode(text):
     return word
 
 def get_text(output):
-    alphabet = '#1234567890abcdefghijklmnopqrstuvwxyz'
+    alphabet = '0123456789abcdefghijklmnopqrstuvwxyz#'
     preds = output.argmax(2)
     word = ''
     for pred in preds:

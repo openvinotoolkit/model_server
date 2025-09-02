@@ -128,8 +128,8 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
-            std::cerr << "For now only OpenVINO models are supported in pulling mode";
+        if (serverSettings.hfSettings.downloadType == GIT_CLONE_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
+            std::cerr << "For now only OpenVINO models are supported in pulling mode with git clone. Please use optimum download or gguf models instead." << std::endl;
             return false;
         }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
@@ -230,15 +230,22 @@ bool Config::validate() {
         }
     } else {
         if (configPath().empty()) {
-            std::cerr << "Set config_path with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set config_path with add_to_config/remove_from_config" << std::endl;
             return false;
         }
         if (modelName().empty()) {
-            std::cerr << "Set model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_name with add_to_config/remove_from_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --remove_from_config <config_path>" << std::endl;
             return false;
         }
         if (modelPath().empty() && this->serverSettings.exportConfigType == ENABLE_MODEL) {
-            std::cerr << "Set model_path or model_repository_path and model_name with add_to_config, remove_from_config" << std::endl;
+            std::cerr << "Set model_name either with model_path or model_repository_path with add_to_config" << std::endl
+                      << "Usage: " << std::endl
+                      << "  ovms --model_name <model_name> --model_repository_path <repo_path> --add_to_config <config_path>" << std::endl
+                      << "  ovms --model_name <model_name> --model_path <model_path> --add_to_config <config_path>" << std::endl;
             return false;
         }
 
