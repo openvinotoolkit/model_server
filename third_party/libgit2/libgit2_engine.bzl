@@ -28,7 +28,7 @@ def libgit2_engine():
         build_file = "@_libgit2_engine//:BUILD",
         patch_args = ["-p1"],
         # Patch implements git-lfs filter, required for HF models download
-        patches = ["@ovms//third_party/libgit2/lfs.patch"],
+        patches = ["@ovms//third_party/libgit2:lfs.patch"],
     )
 
     #native.new_local_repository(
