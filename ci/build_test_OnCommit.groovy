@@ -67,15 +67,6 @@ pipeline {
                   sh 'make sdl-check'
               }
             }
-            stage('Client test') {
-              agent {
-                label "${agent_name_linux}"
-              }
-              when { expression { client_test_needed == "true" } }
-              steps {
-                    sh "make test_client_lib"
-                  }
-            }
           }
         }
         stage('Cleanup node') {

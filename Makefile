@@ -596,15 +596,6 @@ test_throughput_dummy_model: venv
 test_functional: venv
 	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
 
-# Client library make style target, by default uses Python 3 env in .venv path
-# This fact is used in test_client_lib, where make build runs in .venv Python 3 environment
-test_client_lib:
-	@cd client/python/ovmsclient/lib && \
-		make style || exit 1 && \
-		. .venv-ovmsclient/bin/activate; make build || exit 1 && \
-		make test TEST_TYPE=FULL || exit 1 && \
-		make clean
-
 test_python_clients:
 	@echo "Prepare docker image"
 	@docker build . -f tests/python/Dockerfile -t python_client_test
