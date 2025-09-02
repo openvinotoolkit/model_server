@@ -22,7 +22,7 @@ Image generation pipelines are exposed via [OpenAI API](https://platform.openai.
 
 > **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
-This command pulls the `OpenVINO/FLUX.1-schnell-int4-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and immediately start the serving.
+This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and immediately start the serving.
 
 > **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
 
@@ -41,7 +41,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model OpenVINO/FLUX.1-schnell-int4-ov
+    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
 :::
 
@@ -62,7 +62,7 @@ mkdir models
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model OpenVINO/FLUX.1-schnell-int4-ov
+  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
 ```
 :::
 
@@ -85,7 +85,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model OpenVINO/FLUX.1-schnell-int4-ov \
+    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device GPU
 ```
 :::
@@ -101,7 +101,7 @@ mkdir models
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
+  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device GPU
 ```
 :::
@@ -121,8 +121,6 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 > **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
 
-> **NOTE:** This feature will be available in 2025.3 and later releases, so until next release, it is required to build the model server from source from the `main` branch.
-
 
 It can be applied using the commands below:
 ```bash
@@ -135,7 +133,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task image_generation \
-    --source_model OpenVINO/FLUX.1-schnell-int4-ov \
+    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device 'NPU NPU GPU' \
     --resolution 512x512
 ```
@@ -151,7 +149,7 @@ mkdir models
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
-  --source_model OpenVINO/FLUX.1-schnell-int4-ov ^
+  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device 'NPU NPU GPU' ^
   --resolution 512x512
 ```
@@ -167,8 +165,8 @@ Image generation pipeline parameters will be defined inside the `graph.pbtxt` fi
 
 Download export script, install it's dependencies and create directory for the models:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 
@@ -389,12 +387,12 @@ Linux
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "OpenVINO/FLUX.1-schnell-int4-ov",
-    "prompt": "three cute cats sitting on a bench",
-    "rng_seed": 45,
-    "num_inference_steps": 3,
+    "model": "OpenVINO/stable-diffusion-v1-5-int8-ov",
+    "prompt": "Three astronauts on the moon, cold color palette, muted colors, detailed, 8k",
+    "rng_seed": 409,
+    "num_inference_steps": 50,
     "size": "512x512"
-  }'| jq -r '.data[0].b64_json' | base64 --decode > output.png
+  }'| jq -r '.data[0].b64_json' | base64 --decode > generate_output.png
 ```
 
 Windows Powershell
@@ -402,18 +400,18 @@ Windows Powershell
 $response = Invoke-WebRequest -Uri "http://localhost:8000/v3/images/generations" `
     -Method POST `
     -Headers @{ "Content-Type" = "application/json" } `
-    -Body '{"model": "OpenVINO/FLUX.1-schnell-int4-ov", "prompt": "three cute cats sitting on a bench", "rng_seed": 45, "num_inference_steps": 3, "size": "512x512"}'
+    -Body '{"model": "OpenVINO/stable-diffusion-v1-5-int8-ov", "prompt": "Three astronauts on the moon, cold color palette, muted colors, detailed, 8k", "rng_seed": 409, "num_inference_steps": 50, "size": "512x512"}'
 
 $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 
-[IO.File]::WriteAllBytes('output.png', [Convert]::FromBase64String($base64))
+[IO.File]::WriteAllBytes('generate_output.png', [Convert]::FromBase64String($base64))
 ```
 
 Windows Command Prompt
 ```bat
 curl http://localhost:8000/v3/images/generations ^
   -H "Content-Type: application/json" ^
-  -d "{\"model\": \"OpenVINO/FLUX.1-schnell-int4-ov\", \"prompt\": \"three cute cats sitting on a bench\", \"rng_seed\": 45, \"num_inference_steps\": 3, \"size\": \"512x512\"}"
+  -d "{\"model\": \"OpenVINO/stable-diffusion-v1-5-int8-ov\", \"prompt\": \"Three astronauts on the moon, cold color palette, muted colors, detailed, 8k\", \"rng_seed\": 409, \"num_inference_steps\": 50, \"size\": \"512x512\"}"
 ```
 
 
@@ -428,9 +426,9 @@ Expected Response
 }
 ```
 
-The commands will have the generated image saved in output.png.
+The commands will have the generated image saved in generate_output.png.
 
-![output](./output.png)
+![output](./generate_output.png)
 
 
 ### Requesting image generation with OpenAI Python package
@@ -454,25 +452,20 @@ client = OpenAI(
 )
 
 response = client.images.generate(
-            model="OpenVINO/FLUX.1-schnell-int4-ov",
-            prompt="three cute cats sitting on a bench",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            prompt="Three astronauts on the moon, cold color palette, muted colors, detailed, 8k",
             extra_body={
-                "rng_seed": 60,
+                "rng_seed": 409,
                 "size": "512x512",
-                "num_inference_steps": 3
+                "num_inference_steps": 50
             }
         )
 base64_image = response.data[0].b64_json
 
 image_data = base64.b64decode(base64_image)
 image = Image.open(BytesIO(image_data))
-image.save('output2.png')
-
+image.save('generate_output.png')
 ```
-
-Output file (`output2.png`):  
-![output2](./output2.png)
-
 
 ### Requesting image edit with OpenAI Python package
 
@@ -488,14 +481,14 @@ client = OpenAI(
 )
 
 response = client.images.edit(
-            model="OpenVINO/FLUX.1-schnell-int4-ov",
-            image=open("output2.png", "rb"),
-            prompt="pink cats",
+            model="OpenVINO/stable-diffusion-v1-5-int8-ov",
+            image=open("generate_output.png", "rb"),
+            prompt="Three astronauts in the jungle, vibrant color palette, live colors, detailed, 8k",
             extra_body={
-                "rng_seed": 60,
+                "rng_seed": 409,
                 "size": "512x512",
-                "num_inference_steps": 3,
-                "strength": 0.7
+                "num_inference_steps": 50,
+                "strength": 0.67
             }
         )
 base64_image = response.data[0].b64_json
@@ -503,13 +496,14 @@ base64_image = response.data[0].b64_json
 image_data = base64.b64decode(base64_image)
 image = Image.open(BytesIO(image_data))
 image.save('edit_output.png')
-
 ```
 
 Output file (`edit_output.png`):  
 ![edit_output](./edit_output.png)
 
+### Strength influence on final damage
 
+![strength](./strength.png)
 
 ## References
 - [Image Generation API](../../docs/model_server_rest_api_image_generation.md)
