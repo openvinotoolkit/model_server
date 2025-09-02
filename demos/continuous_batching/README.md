@@ -379,16 +379,16 @@ P99 TPOT (ms):                           246.48
 
 The service deployed above can be used in RAG chain using `langchain` library with OpenAI endpoint as the LLM engine.
 
-Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb)
+Check the example in the [RAG notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/continuous_batching/rag/rag_demo.ipynb)
 
 ## Scaling the Model Server
 
-Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/scaling/README.md).
+Check this simple [text generation scaling demo](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/continuous_batching/scaling/README.md).
 
 
 ## Testing the model accuracy over serving API
 
-Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/accuracy/README.md)
+Check the [guide of using lm-evaluation-harness](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/continuous_batching/accuracy/README.md)
 
 ## Use Speculative Decoding
 

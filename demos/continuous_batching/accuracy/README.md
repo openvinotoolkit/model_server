@@ -113,7 +113,7 @@ Use [Berkeley function call leaderboard ](https://github.com/ShishirPatil/gorill
 git clone https://github.com/ShishirPatil/gorilla
 cd gorilla/berkeley-function-call-leaderboard
 git checkout ac37049f00022af54cc44b6aa0cad4402c22d1a0
-curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
+curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
 pip install -e . 
 ```
 The commands below assumes the models is deployed with the name `openvino-qwen3-8b-int8`. It must match the name set in the `bfcl_eval/constants/model_config.py`.

@@ -13,7 +13,7 @@ The API includes following endpoints:
 * [Inference API](#inference-api)
 * [Streaming Inference API](#streaming-inference-api-extension)
 
-> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md).
+> **NOTE**: Examples of using each of above endpoints can be found in [KServe samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/client/python/kserve-api/samples/README.md).
 
 
 ## Server Live API
@@ -57,7 +57,7 @@ Check documentation for more [details](./streaming_endpoints.md).
 
 ## See Also
 
-- [Example client code](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
+- [Example client code](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/client/python/kserve-api/samples/README.md) shows how to use GRPC API and REST API.
 - [KServe API](https://github.com/kserve/kserve/tree/master/docs/predict-api/v2)
 - [gRPC](https://grpc.io/)
 

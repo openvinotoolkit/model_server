@@ -62,7 +62,7 @@ ovms --rest_port 8000 --source_model OpenVINO/InternVL2-2B-int4-ov --model_repos
 ## Model preparation
 Use this step for models outside of OpenVINO organization.
 
-Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `## Pulling models outside of OpenVINO organization` in the [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_hf_models.md)
+Specific OVMS pull mode example for models outside of OpenVINO organization is described in section `## Pulling models outside of OpenVINO organization` in the [Ovms pull mode](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/docs/pull_hf_models.md)
 
 Or you can use the python export_model.py script described below.
 
@@ -234,7 +234,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests

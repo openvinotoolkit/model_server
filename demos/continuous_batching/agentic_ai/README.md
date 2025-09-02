@@ -30,7 +30,7 @@ Use those steps to convert the model from HugginFace Hub to OpenVINO format and 
 
 ```console
 # Download export script, install its dependencies and create directory for the models
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
 mkdir models
 ```
@@ -399,8 +399,8 @@ docker run -d -v $(pwd)/src/mcp_weather_server:/mcp_weather_server  -p 8080:8080
 Install the application requirements
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/agentic_ai/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/3/demos/continuous_batching/agentic_ai/openai_agent.py -o openai_agent.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/3/demos/continuous_batching/agentic_ai/requirements.txt
 ```
 Make sure nodejs and npx are installed. On ubuntu it would require `sudo apt install nodejs npm`. On windows, visit https://nodejs.org/en/download. It is needed for the `file system` MCP server.
 
