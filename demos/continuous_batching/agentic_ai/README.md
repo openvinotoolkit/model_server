@@ -118,7 +118,7 @@ curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https
 ### Direct pulling of pre-configured HuggingFace models on Windows
 
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
 :::{tab-item} Qwen3-8B-int4-ov
@@ -157,7 +157,7 @@ This deployment procedure assumes the model was pulled or exported using the pro
 
 ### Deploying on Windows with GPU
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
 :::{tab-item} Qwen3-8B
