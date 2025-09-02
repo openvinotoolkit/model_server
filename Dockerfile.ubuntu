@@ -197,7 +197,7 @@ WORKDIR /openvino_tokenizers/
 ARG ov_tokenizers_branch=master
 # hadolint ignore=DL3003
 RUN  git clone https://github.com/openvinotoolkit/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
-RUN cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS ; cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
+RUN cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/
 
 # Install the openvino_tokenizers python bindings and copy to OpenVINO location
 RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
