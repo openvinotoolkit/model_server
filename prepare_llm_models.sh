@@ -22,7 +22,7 @@ fi
 
 CB_MODEL="facebook/opt-125m"
 TOKENIZER_FILE="openvino_tokenizer.bin"
-GRAPH_FILE="graph.pbtxt"
+MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
@@ -34,7 +34,7 @@ HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 
-MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/$GRAPH_FILE" "$RERANK_MODEL/$GRAPH_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
+MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$MODEL_FILE" "$RERANK_MODEL/rerank/$MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -86,13 +86,13 @@ if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ -f "$1/$EMBEDDING_MODEL/$GRAPH_FILE" ]; then
-  echo "Models file $1/$EMBEDDING_MODEL/$GRAPH_FILE exists. Skipping downloading models."
+if [ -f "$1/$EMBEDDING_MODEL/embeddings/$MODEL_FILE" ]; then
+  echo "Models file $1/$EMBEDDING_MODEL/embeddings/$MODEL_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
-if [ ! -f "$1/$EMBEDDING_MODEL/$GRAPH_FILE" ]; then
-  echo "Models file $1/$EMBEDDING_MODEL/$GRAPH_FILE does not exists."
+if [ ! -f "$1/$EMBEDDING_MODEL/embeddings/$MODEL_FILE" ]; then
+  echo "Models file $1/$EMBEDDING_MODEL/embeddings/$MODEL_FILE does not exists."
   exit 1
 fi
 
@@ -106,13 +106,13 @@ if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   exit 1
 fi
 
-if [ -f "$1/$RERANK_MODEL/$GRAPH_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/$GRAPH_FILE exists. Skipping downloading models."
+if [ -f "$1/$RERANK_MODEL/rerank/$MODEL_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/rerank/$MODEL_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
-if [ ! -f "$1/$RERANK_MODEL/$GRAPH_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/$GRAPH_FILE does not exists."
+if [ ! -f "$1/$RERANK_MODEL/rerank/$MODEL_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/rerank/$MODEL_FILE does not exists."
   exit 1
 fi
 

@@ -33,7 +33,7 @@ set "RERANK_MODEL=BAAI/bge-reranker-base"
 set "TEXT_GENERATION_MODEL=facebook/opt-125m"
 set "VLM_MODEL=OpenGVLab/InternVL2-1B"
 set "TOKENIZER_FILE=openvino_tokenizer.bin"
-set "GRAPH_FILE=graph.pbtxt"
+set "MODEL_FILE=1\model.bin"
 
 :: Models for tools testing. Only tokenizers are downloaded.
 set "QWEN3_MODEL=Qwen/Qwen3-8B"
@@ -42,11 +42,12 @@ set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\%GRAPH_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\%GRAPH_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE%
+set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\embeddings\%MODEL_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE%
 
 set "ALL_EXIST=1"
-for %%M in ("%MODELS_LIST%") do (
+for /f "tokens=1,* delims= " %%M in ("%MODELS_LIST%") do (
   if not exist "%~1\%%~M" (
+    echo "%~1\%%~M" does not exist
     set "ALL_EXIST=0"
   )
 )
@@ -83,15 +84,15 @@ if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
   exit /b 1
 ) 
 
-if exist "%~1\%EMBEDDING_MODEL%\%GRAPH_FILE%" (
-  echo Models file %~1\%EMBEDDING_MODEL%\%GRAPH_FILE% exists. Skipping downloading models.
+if exist "%~1\%EMBEDDING_MODEL%\embeddings\%MODEL_FILE%" (
+  echo Models file %~1\%EMBEDDING_MODEL%\embeddings\%MODEL_FILE% exists. Skipping downloading models.
 ) else (
   echo Downloading embeddings model to %~1\%EMBEDDING_MODEL% directory.
   python demos\common\export_models\export_model.py embeddings --source_model "%EMBEDDING_MODEL%" --weight-format int8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
-if not exist "%~1\%EMBEDDING_MODEL%\%GRAPH_FILE%" (
-  echo Models file %~1\%EMBEDDING_MODEL%\%GRAPH_FILE% does not exists.
+if not exist "%~1\%EMBEDDING_MODEL%\embeddings\%MODEL_FILE%" (
+  echo Models file %~1\%EMBEDDING_MODEL%\embeddings\%MODEL_FILE% does not exists.
   exit /b 1
 ) 
 
@@ -107,15 +108,15 @@ if not exist "%~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE%" (
   exit /b 1
 ) 
 
-if exist "%~1\%RERANK_MODEL%\%GRAPH_FILE%" (
-  echo Models file %~1\%RERANK_MODEL%\%GRAPH_FILE% exists. Skipping downloading models.
+if exist "%~1\%RERANK_MODEL%\rerank\%MODEL_FILE%" (
+  echo Models file %~1\%RERANK_MODEL%\rerank\%MODEL_FILE% exists. Skipping downloading models.
 ) else (
   echo Downloading rerank model to %~1\%RERANK_MODEL% directory.
   python demos\common\export_models\export_model.py rerank --source_model "%RERANK_MODEL%" --weight-format int8 --model_repository_path %~1
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
-if not exist "%~1\%RERANK_MODEL%\%GRAPH_FILE%" (
-  echo Models file %~1\%RERANK_MODEL%\%GRAPH_FILE% does not exists.
+if not exist "%~1\%RERANK_MODEL%\rerank\%MODEL_FILE%" (
+  echo Models file %~1\%RERANK_MODEL%\rerank\%MODEL_FILE% does not exists.
   exit /b 1
 ) 
 
