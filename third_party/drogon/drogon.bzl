@@ -53,7 +53,7 @@ cc_library(
         patches = [
             # Contains submodule (trantor) patches generated using:
             # git --no-pager diff --no-color --submodule=diff
-            "@//third_party/drogon:ovms_drogon_trantor.patch",
+            "@ovms//third_party/drogon:ovms_drogon_trantor.patch",
         ],
         patch_args = ["-p1"],
     )
