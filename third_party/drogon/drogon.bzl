@@ -33,7 +33,7 @@ def drogon_cpp():
 cc_library(
     name = "jsoncpp",
     srcs = glob(["src/lib_json/*.cpp"]),
-    hdrs = glob(["include/json/*.h", "src/lib_json/*.h"]),
+    hdrs = glob(["include/json/*.h", "src/lib_json/*.h", "src/lib_json/*.inl"]),
     includes = [
         "include",  # Add the top-level include directory
         "src/lib_json",  # Add the source-level include directory
