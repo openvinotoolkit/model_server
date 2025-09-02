@@ -121,12 +121,16 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 > **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
 
+> **NOTE:** In case the model loading phase takes too long, consider caching the model with `--cache_dir` parameter, as seen in example below.
 
 It can be applied using the commands below:
 ```bash
 mkdir -p models
+mkdir -p cache
 
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm -p 8000:8000 \
+  -v $(pwd)/models:/models/:rw \
+  -v $(pwd)/cache:/cache/:rw \
   --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest-gpu \
@@ -135,7 +139,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
     --target_device 'NPU NPU GPU' \
-    --resolution 512x512
+    --resolution 512x512 \
+    --cache_dir /cache
 ```
 :::
 
@@ -145,13 +150,15 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models/:rw \
 
 ```bat
 mkdir models
+mkdir cache
 
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --target_device 'NPU NPU GPU' ^
-  --resolution 512x512
+  --resolution 512x512 ^
+  --cache_dir ./cache
 ```
 :::
 
@@ -172,7 +179,7 @@ mkdir models
 
 Run `export_model.py` script to download and quantize the model:
 
-> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/black-forest-labs/FLUX.1-schnell) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
+> **Note:** Before downloading the model, access must be requested. Follow the instructions on the [HuggingFace model page](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5) to request access. When access is granted, create an authentication token in the HuggingFace account -> Settings -> Access Tokens page. Issue the following command and enter the authentication token. Authenticate via `huggingface-cli login`. 
 
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
@@ -181,8 +188,8 @@ Run `export_model.py` script to download and quantize the model:
 ### Export model for CPU
 ```console
 python export_model.py image_generation \
-  --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int4 \
+  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
+  --weight-format int8 \
   --config_file_path models/config.json \
   --model_repository_path models \
   --extra_quantization_params "--group-size 64" \
@@ -192,8 +199,8 @@ python export_model.py image_generation \
 ### Export model for GPU
 ```console
 python export_model.py image_generation \
-  --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int4 \
+  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
+  --weight-format int8 \
   --target_device GPU \
   --config_file_path models/config.json \
   --model_repository_path models \
@@ -207,15 +214,16 @@ Image generation endpoints consist of 3 steps: text encoding, denoising and vae 
 
 > **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
 
-> **NOTE:** This feature will be available in 2025.3 and later releases, so until next release, it is required to use export script from the `main` branch.
+> **NOTE:** In case the model loading phase takes too long, consider caching the model with `--cache_dir` parameter, as seen in example below.
 
 
 ```console
 python export_model.py image_generation \
-  --source_model black-forest-labs/FLUX.1-schnell \
-  --weight-format int4 \
+  --source_model stable-diffusion-v1-5/stable-diffusion-v1-5 \
+  --weight-format int8 \
   --target_device 'NPU NPU GPU' \
   --resolution '512x512' \
+  --cache_dir /cache \
   --config_file_path models/config.json \
   --model_repository_path models \
   --overwrite_models
@@ -247,8 +255,8 @@ Start docker container:
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   openvino/model_server:latest \
     --rest_port 8000 \
-    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
-    --model_path /models/black-forest-labs/FLUX.1-schnell
+    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
 
@@ -265,8 +273,8 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
-  --model_path ./models/black-forest-labs/FLUX.1-schnell
+  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
 
@@ -286,8 +294,8 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
-    --model_path /models/black-forest-labs/FLUX.1-schnell
+    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
 :::
@@ -299,16 +307,14 @@ Depending on how you prepared models in the first step of this demo, they are de
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
-  --model_path ./models/black-forest-labs/FLUX.1-schnell
+  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
 
 ::::
 
 **NPU or mixed device**  
-
-This feature will be available in 2025.3 and later releases. Until then, please build the model server from source from the `main` branch.
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -320,12 +326,15 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 It can be applied using the commands below:
 ```bash
-docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
+mkdir cache
+docker run -d --rm -p 8000:8000 \
+  -v $(pwd)/models:/models:ro \
+  -v $(pwd)/cache:/cache:ro \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_name OpenVINO/FLUX.1-schnell-int4-ov \
-    --model_path /models/black-forest-labs/FLUX.1-schnell
+    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
 :::
@@ -337,8 +346,8 @@ Depending on how you prepared models in the first step of this demo, they are de
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/FLUX.1-schnell-int4-ov ^
-  --model_path ./models/black-forest-labs/FLUX.1-schnell
+  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
 
@@ -350,10 +359,10 @@ ovms --rest_port 8000 ^
 Wait for the model to load. You can check the status with a simple command:
 ```console
 curl http://localhost:8000/v1/config
-```
+````
 ```json
 {
- "OpenVINO/FLUX.1-schnell-int4-ov" :
+ "OpenVINO/stable-diffusion-v1-5" :
  {
   "model_version_status": [
    {
@@ -468,6 +477,8 @@ image.save('generate_output.png')
 ```
 
 ### Requesting image edit with OpenAI Python package
+
+Example changing the previously generated image to: `Three astronauts in the jungle, vibrant color palette, live colors, detailed, 8k`:
 
 ```python
 from openai import OpenAI
