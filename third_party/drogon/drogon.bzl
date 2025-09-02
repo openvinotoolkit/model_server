@@ -167,7 +167,7 @@ build_debug = {{"CMAKE_BUILD_TYPE": "Debug"}}
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**"], exclude = ["**/*.txt"]),
+    srcs = glob(["**"], exclude = ["lib/tests/**/*.txt"]),
     visibility = ["//visibility:public"],
 )
 
