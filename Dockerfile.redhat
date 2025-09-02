@@ -228,7 +228,8 @@ RUN if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/ ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
     echo $'Metadata-Version: 1.0\nName: openvino-tokenizers\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino~=2025.4.0' > /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info/METADATA ; \
-    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; fi
+    ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so ; \
+    fi
 
 # Build OpenVINO Model Server
 WORKDIR /ovms
