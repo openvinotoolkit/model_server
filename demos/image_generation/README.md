@@ -3,7 +3,7 @@
 This demo shows how to deploy image generation models (Stable Diffusion/Stable Diffusion 3/Stable Diffusion XL/FLUX) to create and edit images with the OpenVINO Model Server.
 Image generation pipelines are exposed via [OpenAI API](https://platform.openai.com/docs/api-reference/images/create) `images/generations` and `images/edits` endpoints.
 
-Supported models: [LINK](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models)
+Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models).
 
 > **Note:** This demo was tested on Intel® Xeon®, Intel® Core®, Intel® Arc™ A770, Intel® Arc™ B580 on Ubuntu 22/24, RedHat 9 and Windows 11.
 
@@ -113,7 +113,7 @@ ovms --rest_port 8000 ^
 
 ### NPU or mixed device
 
-Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
+Image generation endpoints consist of 3 models: vae encoder, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for text encoding and denoising, and GPU for vae decoder. This is useful when the model is too large to fit into NPU memory, but the NPU can still be used for the first two steps.
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -212,7 +212,7 @@ python export_model.py image_generation \
 
 ### Export model for NPU or mixed device
 
-Image generation endpoints consist of 3 steps: text encoding, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for all the steps.
+Image generation endpoints consist of 3 models: vae encoder, denoising and vae decoder. It is possible to select device for each step separately. In this example, we will use NPU for all the steps.
 
 > **NOTE:** The NPU device requires the pipeline to be reshaped to static shape, this is why the `--resolution` parameter is used to define the input resolution.
 
@@ -526,3 +526,4 @@ Please follow [OpenVINO notebook](https://github.com/openvinotoolkit/openvino_no
 - [Image Edit API](../../docs/model_server_rest_api_image_edit.md)
 - [Writing client code](../../docs/clients_genai.md)
 - [Image Generation/Edit calculator reference](../../docs/image_generation/reference.md)
+- [Supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models)
