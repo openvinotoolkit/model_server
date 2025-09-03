@@ -361,7 +361,8 @@ ovms --rest_port 8000 ^
 Wait for the model to load. You can check the status with a simple command:
 ```console
 curl http://localhost:8000/v1/config
-````
+```
+
 ```json
 {
  "OpenVINO/stable-diffusion-v1-5" :
