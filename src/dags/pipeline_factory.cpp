@@ -121,6 +121,17 @@ const std::vector<std::string> PipelineFactory::getPipelinesNames() const {
     return names;
 }
 
+const std::vector<std::string> PipelineFactory::getNamesOfAvailablePipelines() const {
+    std::vector<std::string> names;
+    std::shared_lock lock(definitionsMtx);
+    for (auto& [name, definition] : definitions) {
+        if (definition->getStatus().isAvailable()) {
+            names.push_back(definition->getName());
+        }
+    }
+    return names;
+}
+
 template <typename RequestType, typename ResponseType>
 Status PipelineFactory::create(std::unique_ptr<Pipeline>& pipeline, const std::string& name, const RequestType* request, ResponseType* response, ModelManager& manager) const {
     std::shared_lock lock(definitionsMtx);

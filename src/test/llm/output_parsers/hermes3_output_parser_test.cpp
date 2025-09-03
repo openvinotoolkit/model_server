@@ -235,83 +235,106 @@ TEST_F(Hermes3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall)
 // Major positive test for streaming tool calls with multiple chunks and phase switching
 // Attempt thinking, but without reasoning parser, deltas should not contain reasoning content
 TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
-    std::vector<std::pair<std::string, std::optional<std::string>>> chunkToDeltaVec{
-        {"<think>", "{\"delta\":{\"content\":\"<think>\"}}"},
-        {"Some thinking content", "{\"delta\":{\"content\":\"Some thinking content\"}}"},
-        {"</think>", "{\"delta\":{\"content\":\"</think>\"}}"},
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<think>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"content\":\"<think>\"}}"},
+        {"Some thinking content", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"content\":\"Some thinking content\"}}"},
+        {"</think>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"content\":\"</think>\"}}"},
         // Tool call phase
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", std::nullopt},
-        {"{\"", std::nullopt},
-        {"name", std::nullopt},
-        {"\":", std::nullopt},
-        {" \"", std::nullopt},
-        {"super", std::nullopt},
-        {"_", std::nullopt},
-        {"tool", std::nullopt},
-        {"\",", std::nullopt},
-        {" \"", std::nullopt},
-        {"arguments", std::nullopt},
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         // As we have 'arguments' key present, we can return first delta
-        {"\":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"super_tool\"}}]}}"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"super_tool\"}}]}}"},
         // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
-        {" {", std::nullopt},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]}}"},
-        {"arg1", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg1\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
-        {"value1", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\", ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"value1\"}}]}}"},
-        {"arg2", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
-        {"\": ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg2\"}}]}}"},
-        {"{\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
-        {"nested_arg1", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"\"}}]}}"},
-        {"\": ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg1\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
-        {"nested_value1", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\", ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value1\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
-        {"nested_arg2", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg2\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
-        {"nested_value2", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\"}}}", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
-        {"</tool_call>\n", "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
+        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"value1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\", ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"value1\"}}]}}"},
+        {"arg2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"arg2\"}}]}}"},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"nested_arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"nested_value1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\", ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\", \"}}]}}"},
+        {"nested_arg2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_arg2\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"nested_value2", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\"}}}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
+        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
         // Starting second tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", std::nullopt},
-        {"{\"", std::nullopt},
-        {"name", std::nullopt},
-        {"\":", std::nullopt},
-        {" \"", std::nullopt},
-        {"super", std::nullopt},
-        {"_tool", std::nullopt},
-        {"_number", std::nullopt},
-        {"_two", std::nullopt},
-        {"\",", std::nullopt},
-        {" \"", std::nullopt},
-        {"arguments", std::nullopt},
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_two", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         // As we have 'arguments' key present, we can return first delta
-        {"\":", "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"super_tool_number_two\"}}]}}"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"super_tool_number_two\"}}]}}"},
         // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
-        {" {", std::nullopt},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"{\"}}]}}"},
-        {"arg1", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\": ", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"arg1\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
-        {"val{{{ue1", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"\"", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
-        {"}", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
-        {"}", "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
-        {"</tool_call>\n", std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt
+        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
+        {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
+        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt
+        // Starting third tool. Collecting chunk until full name is received. Don't return until then.
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_three", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // As we have 'arguments' key present, we can return first delta
+        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":2,\"function\":{\"name\":\"super_tool_number_three\"}}]}}"},
+        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
+        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        // Simulating hitting max tokens while during tool call generation. We should return the last two chunks as delta to flush the delay window
+        {"val,", ov::genai::GenerationFinishReason::LENGTH, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"val,\"}}]}}"},  // clo
     };
 
     for (bool immediateParsing : {false, true}) {
         if (immediateParsing) {
             chunkToDeltaVec.erase(chunkToDeltaVec.begin(), chunkToDeltaVec.begin() + 4);
-            chunkToDeltaVec.insert(chunkToDeltaVec.begin(), {"\n", std::nullopt});
+            chunkToDeltaVec.insert(chunkToDeltaVec.begin(), {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt});
         }
-        for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
-            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE) : outputParserWithRegularToolParsing->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+            std::optional<rapidjson::Document> doc = immediateParsing ? outputParserWithImmediateToolParsing->parseChunk(chunk, true, finishReason) : outputParserWithRegularToolParsing->parseChunk(chunk, true, finishReason);
             if (!expectedDelta.has_value() && !doc.has_value()) {
                 continue;  // Both are nullopt, OK
             }

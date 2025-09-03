@@ -6,6 +6,7 @@ maxdepth: 1
 hidden:
 ---
 ovms_demos_continuous_batching_agent
+ovms_demos_integration_with_open_webui
 ovms_demos_rerank
 ovms_demos_embeddings
 ovms_demos_continuous_batching
@@ -49,6 +50,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 | Demo | Description |
 |---|---|
 |[AI Agents with MCP servers and serving language models](./continuous_batching/agentic_ai/README.md)|OpenAI agents with MCP servers and serving LLM models|
+|[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using OpenWeb UI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools|
 |[LLM Text Generation with continuous batching](continuous_batching/README.md)|Generate text with LLM models and continuous batching pipeline|
 |[VLM Text Generation with continuous batching](continuous_batching/vlm/README.md)|Generate text with VLM models and continuous batching pipeline|
 |[OpenAI API text embeddings ](embeddings/README.md)|Get text embeddings via endpoint compatible with OpenAI API|
