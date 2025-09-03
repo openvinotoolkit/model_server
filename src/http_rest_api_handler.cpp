@@ -495,6 +495,7 @@ static Status createV3HttpPayload(
     bool isUriBasedRouting = !isApplicationJson && !isMultiPart;  // For content types other than "application/json" and "multipart/form-data", we look for model information in the URI
 
     if (isMultiPart) {
+        SPDLOG_ERROR("MULTIPART");
         OVMS_PROFILE_SCOPE("multipart parse");
         if (!multiPartParser->parse()) {
             SPDLOG_DEBUG("Failed to parse multipart content type request");
@@ -502,6 +503,7 @@ static Status createV3HttpPayload(
         }
         modelName = multiPartParser->getFieldByName("model");
         if (modelName.empty()) {
+            SPDLOG_ERROR("model");
             isUriBasedRouting = true;
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
