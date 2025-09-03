@@ -1,6 +1,4 @@
-# Demonstrating integration of Open WebUI with OpenVINO Model Server
-
----
+# Demonstrating integration of Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
 
 ## Description
 
