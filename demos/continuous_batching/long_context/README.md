@@ -25,8 +25,8 @@ Let's demonstrate all the optimizations combined and test it with the real life 
 Export the model Qwen/Qwen2.5-7B-Instruct-1M which has the max context length of 1 million tokens! 
 
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 python export_model.py text_generation --source_model Qwen/Qwen2.5-7B-Instruct-1M --weight-format int4 --config_file_path models/config.json --model_repository_path models
 ```
@@ -41,7 +41,7 @@ docker run -it --rm -u $(id -u) -p 8000:8000 -v $(pwd)/models/:/models:rw openvi
 To test the performance using vllm benchmarking script, let's create a custom dataset with long shared context and a set of questions in each request.  That way we can create a dataset with identical very long context with different queries related to the context. That is a common scenario for RAG applications which generates response based on a complete knowledge base. To make this experiment similar to real live, the context is not synthetic but build with the content of Don Quixote story with 10 different questions related to the story. Because the context is reused, it is a perfect case for benefitting from prefix caching. 
 
 ```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/long_context/custom_dataset.py -o custom_dataset.py
 pip install requests transformers
 python custom_dataset.py --limit_context_tokens 50000
 ```
