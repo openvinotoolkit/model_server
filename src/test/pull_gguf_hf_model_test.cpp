@@ -112,9 +112,6 @@ protected:
     }
 };
 
-// Make parametrized test for GGUFDownloaderPullHfModel
-// where i pass endpoint, sourceModel, ggufFilename
-
 class GGUFDownloaderPullHfModelParameterized : public GGUFDownloaderPullHfModel, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string, size_t>> {
 };
 
@@ -142,7 +139,7 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     EXPECT_EQ(expectedSize, fileSize);
 }
 
-TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadandStart) {
+TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadAndStart) {
     SKIP_AND_EXIT_IF_NO_GGUF();
     std::string sourceModel = std::get<0>(GetParam());
     std::string ggufFileName = std::get<1>(GetParam());
@@ -155,7 +152,6 @@ TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadandStar
     auto status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
     EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
-    // check size of the file with std::filesystem
     std::filesystem::path filePath(fullPath);
     size_t fileSize = std::filesystem::file_size(filePath);
     EXPECT_EQ(expectedSize, fileSize);
@@ -238,11 +234,121 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     bool exist = false;
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(exist);
     // check size of the file with std::filesystem
     size_t fileSize = 0;
     std::filesystem::path filePath(fullPath);
     fileSize = std::filesystem::file_size(filePath);
     EXPECT_EQ(4683071488, fileSize);
+}
+
+TEST_F(GGUFDownloaderPullHfModel, PositiveMultipartModel) {
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
+    const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    const std::string filenamePrefix = "/resolve/main/";
+    const std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    const std::string hfEndpoint = "https://huggingface.co/";
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+
+    std::string fullPathPart1 = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    bool existPart1 = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart1, &existPart1);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_TRUE(existPart1);
+    size_t fileSize = 0;
+    std::filesystem::path filePathPart1(fullPathPart1);
+    fileSize = std::filesystem::file_size(filePathPart1);
+    EXPECT_EQ(3993198592, fileSize);
+
+    const std::string ggufFileNamePart2 = "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf";
+    std::string fullPathPart2 = ovms::FileSystem::joinPath({downloadPath, ggufFileNamePart2});
+    bool existPart2 = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart2, &existPart2);
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_TRUE(existPart2);
+    std::filesystem::path filePathPart2(fullPathPart2);
+    fileSize = std::filesystem::file_size(filePathPart2);
+    EXPECT_EQ(689868800, fileSize);
+}
+
+class GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative : public GGUFDownloaderPullHfModel, public ::testing::WithParamInterface<std::tuple<std::string, std::string>> {};
+
+TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingParts) {
+    const std::string hfEndpoint = std::get<1>(GetParam());
+    const std::string ggufFileName = std::get<0>(GetParam());
+    // to many zeros
+    const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
+    const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    const std::string filenamePrefix = "/resolve/main/";
+    //ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::PATH_INVALID) << status.string();
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    bool exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_FALSE(exist);
+    // too long second part
+}
+
+std::vector<std::tuple<std::string, std::string>> ggufPartsParams = {
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://modelscope.cn/"),
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-000001-of-00002.gguf", "https://huggingface.co/"),
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-00001-of-000002.gguf", "https://huggingface.co/"),
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-0001-of-00002.gguf", "https://huggingface.co/"),
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-00001-of-0002.gguf", "https://huggingface.co/"),
+    std::make_tuple("qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf", "https://huggingface.co/")};
+
+#ifndef _WIN32
+INSTANTIATE_TEST_SUITE_P(
+    GGUF,
+    GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative,
+    ::testing::ValuesIn(ggufPartsParams),
+    [](const ::testing::TestParamInfo<GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative::ParamType>& info) {
+        auto paramTuple = info.param;
+        std::string paramName = ovms::joins({
+                                                std::get<0>(paramTuple),  // ggufFileName
+                                                std::get<1>(paramTuple)   // hfEndpoint
+                                            },
+            "_");
+        std::replace(paramName.begin(), paramName.end(), '-', '_');
+        std::replace(paramName.begin(), paramName.end(), '/', '_');
+        std::replace(paramName.begin(), paramName.end(), ':', '_');
+        std::replace(paramName.begin(), paramName.end(), '.', '_');
+        return paramName;
+    });
+#else
+INSTANTIATE_TEST_SUITE_P(
+    GGUF,
+    GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative,
+    ::testing::ValuesIn(ggufPartsParams));
+#endif
+
+class GGUFDownloaderMultipartUtils : public ::testing::Test {
+};
+
+TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenamePositive) {
+    std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 2));
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 2));
+    ggufFileName = "Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf";
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 5));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00003-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 3, 5));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00005-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 5, 5));
+}
+
+TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenameNegative) {
+    std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 0, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, -1, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 3, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 1), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 0), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, -1), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 100000), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 100000, 99999), std::invalid_argument);
 }
 
 void find_file_in_tree(git_repository* repo, git_tree* tree,

@@ -30,6 +30,8 @@
 #include "../status.hpp"
 #include "../version.hpp"
 
+#include <stdio.h>
+
 namespace ovms {
 std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
@@ -137,6 +139,18 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
 struct FtpFile {
     const char* filename;
     FILE* stream;
+    FtpFile(const char* fname, FILE* str) :
+        filename(fname),
+        stream(str) {}
+    ~FtpFile() {
+        if (stream) {
+            fclose(stream);
+        }
+        if (!success) {
+            std::filesystem::remove(filename);
+        }
+    }
+    bool success = false;
 };
 
 void fileClose(FILE* file) {
@@ -155,6 +169,8 @@ static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void*
             return 0;
         }
     }
+    //fwrite(buffer, size, nmemb, stdout);
+    //fwrite("\n", 1, 1, stdout);
     return fwrite(buffer, size, nmemb, out->stream);
 }
 
@@ -204,15 +220,7 @@ int progress_callback(void* clientp,
     return 0;
 }
 
-Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
-    // construct url
-    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}, downloadPath:{}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
-    std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
-    SPDLOG_TRACE("Constructed URL: {}", url);
-
-    // construct filepath
-    auto filePath = FileSystem::joinPath({downloadPath, ggufFilename});
-
+static Status downloadSingleFileWithCurl(const std::string& filePath, const std::string& url) {
     // agent string required to avoid 403 Forbidden error on modelscope
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
@@ -230,7 +238,7 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, file_write_callback));
     struct FtpFile ftpFile = {filePath.c_str(), NULL};
-    auto fileCloseGuard = std::unique_ptr<FILE, decltype(&fileClose)>(ftpFile.stream, fileClose);
+    //autddo fileCloseGuard = std::unique_ptr<FILE, decltype(&fileClose)>(ftpFile.stream, fileClose);
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ftpFile));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
     // progress bar options
@@ -243,7 +251,97 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
     CHECK_CURL_CALL(curl_easy_perform(curl));
-    SPDLOG_TRACE("cURL download completed for model: {} to path: {}", modelName, filePath);
+    long http_code = 0;
+    CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code));
+    SPDLOG_TRACE("HTTP response code: {}", http_code);
+    if (http_code != 200) {
+        SPDLOG_ERROR("Failed to download file from URL: {} HTTP response code: {}", url, http_code);
+        return StatusCode::PATH_INVALID;
+    }
+    ftpFile.success = true;
     return StatusCode::OK;
 }
+
+Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
+    std::vector<std::string> filesToDownload;
+    // we need to check if ggufFilename is of multipart type (contains 00001-of-N string)
+    // we should fail if it is 0000M-of-0000N where M != 1 as we need 1 here
+    // we need to extract N
+    // note that it could be 00001-of-00002, it could be 00001-of-00212 etc
+    // note that it has to be exactly 5 digits for part number and 5 digits for total parts
+    std::string multipartExactPattern = R"(.*-(\d{5})-of-(\d{5})\.gguf$)";
+    std::smatch match;
+    if (std::regex_match(ggufFilename, match, std::regex(multipartExactPattern))) {
+        SPDLOG_TRACE("Detected multipart gguf filename: {}", ggufFilename);
+        int totalParts = 1;
+        if (match.size() != 3) {
+            SPDLOG_ERROR("Regex match for multipart filename failed for filename: {}", ggufFilename);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        try {
+            if (match[1].str() != "00001") {
+                SPDLOG_ERROR("Multipart gguf filename must start with part 00001, got: {} for filename: {}", match[1].str(), ggufFilename);
+                return StatusCode::PATH_INVALID;
+            }
+            auto totalPartsOpt = stoi32(match[2].str());
+            if (!totalPartsOpt.has_value() || totalPartsOpt.value() <= 0) {
+                SPDLOG_ERROR("Error converting total parts to integer for filename: {}", ggufFilename);
+                return StatusCode::INTERNAL_ERROR;
+            }
+            totalParts = totalPartsOpt.value();
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error converting total parts to integer for filename: {} error: {}", ggufFilename, e.what());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        // now write a loop that will replace the part number in the filename and download all parts from 1 to N eg. 00001 to N where N is totalParts and we have to pad with zeros
+        for (int part = 1; part <= totalParts; part++) {
+            // create part filename
+            std::string partNumberStr = std::to_string(part);
+            auto partFilename = preparePartFilename(ggufFilename, part, totalParts);
+            filesToDownload.push_back(partFilename);
+        }
+    } else {
+        filesToDownload.push_back(ggufFilename);
+    }
+    size_t partNo = 1;
+    for (const auto& file : filesToDownload) {
+        // construct url
+        SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} file: {}, downloadPath:{}", hfEndpoint, modelName, filenamePrefix, file, downloadPath);
+        std::string url = hfEndpoint + modelName + filenamePrefix + file;
+        // construct filepath
+        auto filePath = FileSystem::joinPath({downloadPath, file});
+        SPDLOG_DEBUG("Downloading part {}/{} filename: {} url:{}", partNo, filesToDownload.size(), file, url);
+        auto status = downloadSingleFileWithCurl(filePath, url);
+        if (!status.ok()) {
+            return status;
+        }
+        SPDLOG_TRACE("cURL download completed for model: {} part: {}/{} to path: {}", partNo, filesToDownload.size(), modelName, filePath);
+        ++partNo;
+    }
+    SPDLOG_TRACE("cURL download completed for model: {}", modelName);
+    return StatusCode::OK;
+}
+std::string GGUFDownloader::preparePartFilename(const std::string& ggufFilename, int part, int totalParts) {
+    if (part <= 0 || totalParts <= 1 || part > totalParts || totalParts > 99999 || part > 99999) {
+        throw std::invalid_argument("Invalid part or totalParts values");
+    }
+    // example of strings
+    // ggufFilename qwen2.5-3b-instruct-fp16-00001-of-00002.gguf
+    // ggufFilename qwen2.5-b-instruct-fp16-00001-of-23232.gguf
+    // ggufFilename qwen3-b-instruct-fp16-00001-of-00232.gguf
+    // so we want to replace 00001-of-[0-9]{4}[2-9] part with appropriate part number
+    // we need to pad part number with zeros to match the length of 5
+    std::string partNumberStr = std::to_string(part);
+    std::ostringstream oss;
+    oss << std::setw(5) << std::setfill('0') << partNumberStr;
+    std::string numberPadded = oss.str();
+    std::string constructedFilename = ggufFilename;
+    auto it = ggufFilename.find("-00001-");
+    if (it == std::string::npos) {
+        throw std::invalid_argument("Invalid ggufFilename format, cannot find -00001- part");
+    }
+    constructedFilename.replace(ggufFilename.find("-00001-"), 7, "-" + numberPadded + "-");
+    return constructedFilename;
+}
+
 }  // namespace ovms
