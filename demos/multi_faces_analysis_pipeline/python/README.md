@@ -1,7 +1,7 @@
 # Multi Faces Analysis Pipeline Demo {#ovms_demo_multi_faces_analysis_pipeline}
 
 
-This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md) models.
+This document demonstrates how to create complex pipelines using object detection and object recognition models from OpenVINO Model Zoo. As an example, we will use [face-detection-retail-0004](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/face-detection-retail-0004/README.md) to detect multiple faces on the image. Then, for each detected face we will crop it using [model_zoo_intel_object_detection](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/src/custom_nodes/model_zoo_intel_object_detection) example custom node. Finally, each image face image will be forwarded to [age-gender-recognition-retail-0013](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/age-gender-recognition-retail-0013/README.md) and [emotion-recognition-retail-0003](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/emotions-recognition-retail-0003/README.md) models.
 
 ![Multi Faces Analysis Graph](multi_faces_analysis.png)
 
@@ -20,7 +20,7 @@ Below is depicted graph implementing faces analysis pipeline execution.
 It includes the following Nodes:
 - Model `face-detection` - deep learning model which takes user image as input. Its outputs contain information about face coordinates and confidence levels.
 - Custom node `model_zoo_intel_object_detection` - it includes C++ implementation of common object detection models results processing. By analysing the output it produces cropped face images based on the configurable score level threshold. Custom node also resizes them to the target resolution and combines into a single output of a dynamic batch size. The output batch size is determined by the number of detected
-boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/model_zoo_intel_object_detection).
+boxes according to the configured criteria. All operations on the images employ OpenCV libraries which are preinstalled in the OVMS. Learn more about the [model_zoo_intel_object_detection custom node](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/src/custom_nodes/model_zoo_intel_object_detection).
 - demultiplexer - outputs from the custom node model_zoo_intel_object_detection have variable batch size. In order to match it with the sequential recognition models, data is split into individual images with each batch size equal to 1.
 Such smaller requests can be submitted for inference in parallel to the next Model Nodes. Learn more about the [demultiplexing](../../../docs/demultiplexing.md).
 - Model `age-gender-recognition` - this model recognizes age and gender on given face image
@@ -111,7 +111,7 @@ docker run -p 9000:9000 -d -v ${PWD}/workspace:/workspace openvino/model_server 
 
 ## Requesting the Service
 
-Exemplary client [multi_faces_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/multi_faces_analysis_pipeline/python/multi_faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
+Exemplary client [multi_faces_analysis_pipeline.py](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/multi_faces_analysis_pipeline/python/multi_faces_analysis_pipeline.py) can be used to request pipeline deployed in previous step.
 
 ```bash
 pip3 install -r requirements.txt

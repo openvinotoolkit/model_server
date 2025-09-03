@@ -8,7 +8,7 @@ hidden:
 
 gRPC API <ovms_docs_grpc_api_kfs>
 RESTful API <ovms_docs_rest_api_kfs>
-Examples <https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples>
+Examples <https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/client/python/kserve-api/samples>
 ```
 
 ## Python Client
@@ -821,4 +821,4 @@ client.stop_stream()
 :::
 ::::
 
-For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples).
+For complete usage examples see [Kserve samples](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/client/python/kserve-api/samples).

@@ -1,9 +1,9 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF no additional steps are required. However, when pulling models [outside of the OpenVINO](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md) organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments. In summary you have 2 options:
+This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [OpenVINO organization](https://huggingface.co/OpenVINO) from HF no additional steps are required. However, when pulling models [outside of the OpenVINO](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/docs/pull_optimum_cli.md) organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or build the OVMS python container for docker deployments. In summary you have 2 options:
 
 - pulling preconfigured models in IR format from OpenVINO organization
-- pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace - described [here](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
+- pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace - described [here](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/docs/pull_optimum_cli.md)
 
 ### Pulling the models
 

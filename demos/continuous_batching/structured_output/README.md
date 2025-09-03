@@ -40,21 +40,21 @@ docker run --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/model
 ```
 :::
 :::{tab-item} On Baremetal Host and GPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device GPU --cache_size 2 --task text_generation
 ```
 :::
 :::{tab-item} On Baremetal Host and NPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device NPU --cache_size 2 --task text_generation
 ```
 :::
 :::{tab-item} On Baremetal Host and CPU
-**Required:** OpenVINO Model Server package - see [deployment instructions](../deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
 ovms.exe --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --rest_port 8000 --target_device CPU --cache_size 2 --task text_generation
@@ -173,7 +173,7 @@ It will be executed with the response_format request field including the schema 
 
 ```console
 pip install datasets tqdm openai jsonschema
-curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/continuous_batching/structured_output/accuracy_test.py -O 
+curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2025/3/demos/continuous_batching/structured_output/accuracy_test.py -O 
 python accuracy_test.py --base_url http://localhost:8000/v3 --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --concurrency 50 --limit 1000
 ```
 ```

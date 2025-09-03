@@ -25,7 +25,7 @@ RUN pip3 install numpy
 ENTRYPOINT [ `/ovms/bin/ovms` ]
 ```
 
-You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos) and from repository top level directory run `make python_image`
+You can also modify `requirements.txt` from our [python demos](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/demos/python_demos) and from repository top level directory run `make python_image`
 
 ## `OvmsPythonModel` class
 
@@ -1015,4 +1015,4 @@ node {
 }
 ```
 
-See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/main/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.
+See a [CLIP demo](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/demos/python_demos/clip_image_classification) for a complete example of a graph that uses Python nodes, OV Inference nodes and converter nodes.

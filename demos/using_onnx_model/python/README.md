@@ -77,7 +77,7 @@ docker run -d -u $(id -u):$(id -g) -v $(pwd)/workspace:/workspace -p 9001:9001 o
 --config_path /workspace/config.json --port 9001
 ```
 
-The `onnx_model_demo.py` script can run inference both with and without performing preprocessing. Since in this variant preprocessing is done by the model server (via custom node), there's no need to perform any image preprocessing on the client side. In that case, run without `--run_preprocessing` option. See [preprocessing function](https://github.com/openvinotoolkit/model_server/blob/main/demos/using_onnx_model/python/onnx_model_demo.py#L26-L33) run in the client.
+The `onnx_model_demo.py` script can run inference both with and without performing preprocessing. Since in this variant preprocessing is done by the model server (via custom node), there's no need to perform any image preprocessing on the client side. In that case, run without `--run_preprocessing` option. See [preprocessing function](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/using_onnx_model/python/onnx_model_demo.py#L26-L33) run in the client.
 
 Run the client without preprocessing:
 ```bash
@@ -88,7 +88,7 @@ Detected class name: bee
 ```
 
 ## Node parameters explanation
-Additional preprocessing step applies a division and an subtraction to each pixel value in the image. This calculation is configured by passing two parameters to _image transformation_ custom node in [config.json](https://github.com/openvinotoolkit/model_server/blob/main/demos/using_onnx_model/python/config.json#L32-L33):
+Additional preprocessing step applies a division and an subtraction to each pixel value in the image. This calculation is configured by passing two parameters to _image transformation_ custom node in [config.json](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/using_onnx_model/python/config.json#L32-L33):
 ```
 "params": {
   ...
