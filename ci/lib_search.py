@@ -78,6 +78,7 @@ def check_dir(start_dir):
         '.wav',
         '.log',
         '.xml',
+        '.jinja'
         'Doxyfile',
         'LICENSE',
         'REST_age_gender.ipynb',
@@ -191,6 +192,7 @@ def check_func(start_dir):
         '.venv',
         '.vscode',
         '.xml',
+        '.jinja'
         'Doxyfile',
         'REST_age_gender.ipynb',
         '__pycache__',

@@ -138,7 +138,7 @@ curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja 
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
 ovms.exe --pull --model_repository_path models --source_model OpenVINO/Phi-4-mini-instruct-int4-ov --task text_generation --tool_parser phi4
-curl -L -o models\microsoft\Phi-4-mini-instruct\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
+curl -L -o models\OpenVINO\Phi-4-mini-instruct-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_phi4_mini.jinja
 ```
 :::
 ::::
