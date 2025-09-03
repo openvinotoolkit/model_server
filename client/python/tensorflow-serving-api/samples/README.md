@@ -3,8 +3,6 @@
 This document contains examples to run *GetModelStatus*, *GetModelMetadata*, *Predict* functions over gRPC API and REST API.
 Samples are based on [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package.
 
-> **Note** : _tensorflow-serving-api_ package is heavy as it includes _tensorflow_ as its dependency.
-
 It covers following topics:
 * [gRPC API Client Examples](#grpc-api-client-examples)
 * [REST API Client Examples](#rest-api-client-examples)
