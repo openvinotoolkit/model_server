@@ -52,13 +52,13 @@ A demonstration on how to use OpenVINO Model Server can be found in our [quick-s
 
 Check also other instructions:
 
-[Preparing model repository](https://docs.openvino.ai/nightly/model-server/ovms_docs_models_repository.html)
+[Preparing model repository](https://docs.openvino.ai/2025/model-server/ovms_docs_models_repository.html)
 
-[Deployment](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server.html)
+[Deployment](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server.html)
 
-[Writing client code](https://docs.openvino.ai/nightly/model-server/ovms_docs_server_app.html)
+[Writing client code](https://docs.openvino.ai/2025/model-server/ovms_docs_server_app.html)
 
-[Demos](https://docs.openvino.ai/nightly/model-server/ovms_docs_demos.html)
+[Demos](https://docs.openvino.ai/2025/model-server/ovms_docs_demos.html)
 
 
 
@@ -74,7 +74,7 @@ Check also other instructions:
 
 * [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
 
-* [Benchmarking results](https://docs.openvino.ai/nightly/about-openvino/performance-benchmarks.html)
+* [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 
 
 ## Contact

@@ -24,7 +24,7 @@ make
 The steps in `Makefile` are:
 
 1. Download and use the models from [open model zoo](https://github.com/openvinotoolkit/open_model_zoo).
-2. Use [python script](https://github.com/openvinotoolkit/model_server/blob/main/tests/models/argmax_sum.py) located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.
+2. Use [python script](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/tests/models/argmax_sum.py) located in this repository. Since it uses tensorflow to create models in _saved model_ format, hence tensorflow pip package is required.
 3. Prepare argmax model with `(1, 1001)` input shapes to match output of the googlenet and resnet output shapes. The generated model will sum inputs and calculate the index with the highest value. The model output will indicate the most likely predicted class from the ImageNet* dataset.
 4. Convert models to IR format and [prepare models repository](../../../docs/models_repository.md).
 
@@ -54,7 +54,7 @@ models
 ## Step 2: Define required models and pipeline
 Pipelines need to be defined in the configuration file to use them. The same configuration file is used to define served models and served pipelines.
 
-Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/main/demos/model_ensemble/python/config.json), the content is as follows:
+Use the [config.json located here](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/model_ensemble/python/config.json), the content is as follows:
 ```bash
 cat config.json
 {

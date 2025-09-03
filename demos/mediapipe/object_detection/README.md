@@ -61,4 +61,4 @@ Received images with bounding boxes will be located in ./results directory.
 
 ## Real time stream analysis
 
-For demo featuring real time stream application see [real_time_stream_analysis](https://github.com/openvinotoolkit/model_server/tree/main/demos/real_time_stream_analysis/python)
+For demo featuring real time stream application see [real_time_stream_analysis](https://github.com/openvinotoolkit/model_server/tree/releases/2025/3/demos/real_time_stream_analysis/python)

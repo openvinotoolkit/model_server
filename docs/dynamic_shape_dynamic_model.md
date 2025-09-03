@@ -14,7 +14,7 @@ Another option to use dynamic shape feature is to export the model with dynamic 
 
 To the demonstrate dynamic dimensions, take advantage of:
 
-- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/main/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
+- Example client in Python [face_detection.py](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/face_detection/python/face_detection.py) that can be used to request inference with the desired input shape.
 
 - An example [face_detection_retail_0004](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2021/4/models/intel/face-detection-retail-0004/README.md) model.
 

@@ -23,7 +23,7 @@ KServe API also allows sending encoded images via HTTP interface to the model or
 For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. To send a batch of images you need to precede data of every batch by 4 bytes(little endian) containing size of this batch and specify their combined size in `binary_data_size`. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of input buffer inside binary extension would look like this: 
 <0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
 And in that case binary_data_size would be 1350(370 + 480 + 500)
-Function set_data_from_numpy in triton client lib that we use in our [REST sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/http_infer_binary_resnet.py) automatically converts given images to this format.
+Function set_data_from_numpy in triton client lib that we use in our [REST sample](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/client/python/kserve-api/samples/http_infer_binary_resnet.py) automatically converts given images to this format.
 
 If the request contains only one input `binary_data_size` parameter can be omitted - in this case whole buffer is treated as a input image.
 
@@ -48,8 +48,8 @@ For the Raw Data binary inputs `binary_data_size` parameter can be omitted since
 
 ## Usage examples
 
-Sample clients that use binary inputs via KFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
-Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/README.md))
+Sample clients that use binary inputs via KFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/client/python/kserve-api/samples/http_infer_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/client/python/kserve-api/samples/grpc_infer_binary_resnet.py))
+Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/client/python/kserve-api/samples/README.md))
 
 
 ## Recommendations:
