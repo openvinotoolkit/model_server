@@ -45,11 +45,12 @@ set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\embeddings\%MODEL_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE%
 
 set "ALL_EXIST=1"
-for /f "tokens=1,* delims= " %%M in ("%MODELS_LIST%") do (
+for %%M in (%MODELS_LIST%) do (
   if not exist "%~1\%%~M" (
     echo "%~1\%%~M" does not exist
     set "ALL_EXIST=0"
   )
+  echo "%~1\%%~M" exists
 )
 
 if "!ALL_EXIST!"=="1" (
