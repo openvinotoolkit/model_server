@@ -1,4 +1,20 @@
-#!/bin/bash
+#!/bin/bash -x
+#
+# Copyright (c) 2024 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 # install dependencies
 pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/${BRANCH_NAME}/demos/common/export_models/requirements.txt
@@ -86,7 +102,8 @@ run_model_test() {
     export OPENAI_BASE_URL=http://localhost:8000/v3
     export OPENAI_API_KEY="notused"
     export TOOL_CHOICE=auto
-    bfcl generate --model ovms-model --test-category simple,multiple --num-threads 100 --result-dir $result_dir -o
+    bfcl generate --model ovms-model --test-category simple,multiple,parallel,irrelevance,multi_turn_base --num-threads 100 --result-dir $result_dir -o
+    bfcl generate --model ovms-model --test-category multi_turn_base --num-threads 10 --result-dir $result_dir -o
     bfcl evaluate --model ovms-model --result-dir $result_dir --score-dir ${result_dir}_score
 }
 
