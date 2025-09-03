@@ -257,7 +257,7 @@ Start docker container:
 docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   openvino/model_server:latest \
     --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
     --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
@@ -275,7 +275,7 @@ as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
@@ -296,7 +296,7 @@ docker run -d --rm -p 8000:8000 -v $(pwd)/models:/models:ro \
   --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
     --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
@@ -309,7 +309,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
@@ -335,7 +335,7 @@ docker run -d --rm -p 8000:8000 \
   --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
   openvino/model_server:latest-gpu \
     --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5 \
+    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
     --model_path /models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 
@@ -348,7 +348,7 @@ Depending on how you prepared models in the first step of this demo, they are de
 
 ```bat
 ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5 ^
+  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
   --model_path ./models/stable-diffusion-v1-5/stable-diffusion-v1-5
 ```
 :::
@@ -365,7 +365,7 @@ curl http://localhost:8000/v1/config
 
 ```json
 {
- "OpenVINO/stable-diffusion-v1-5" :
+ "OpenVINO/stable-diffusion-v1-5-int8-ov" :
  {
   "model_version_status": [
    {
