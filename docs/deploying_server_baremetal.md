@@ -35,9 +35,16 @@ export PATH=$PATH:${PWD}/ovms/bin
 In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install libpython3.10
+sudo apt -y install python3-pip
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
+and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
+```{code} sh
+pip3 install numpy
+```
+**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
+Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+
 :::
 :::{tab-item} Ubuntu 24.04
 :sync: ubuntu-24-04
@@ -63,9 +70,16 @@ export PATH=$PATH:${PWD}/ovms/bin
 In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install libpython3.12
+sudo apt -y install python3-pip
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
+and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
+```{code} sh
+pip3 install numpy
+```
+**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
+Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+
 :::
 :::{tab-item} RHEL 9.6
 :sync: rhel-9.6
@@ -91,9 +105,17 @@ export PATH=$PATH:${PWD}/ovms/bin
 In case of the version with python run also:
 ```{code} sh
 export PYTHONPATH=${PWD}/ovms/lib/python
-sudo yum install -y python39-libs
+sudo yum install -y python3-pip
 pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
 ```
+
+and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
+```{code} sh
+pip3 install numpy
+```
+**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
+Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
+
 :::
 :::{tab-item} Windows
 :sync: windows
