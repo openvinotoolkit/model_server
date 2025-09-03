@@ -256,7 +256,7 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
 
-When working with tools, `/chat/completions` API accepts `tool_choice` parameter which gives additional control over model behavior realted to tool calling.
+When working with tools, `/chat/completions` API accepts `tool_choice` parameter which gives additional control over model behavior related to tool calling.
 `tool_choice` accepts three special string values:
   - `auto` - model is free to decide whether to call a tool or not
   - `none` - model server will try to push the model not to call any tool
