@@ -158,7 +158,8 @@ When using models with more complex templates and support for `tools` or `reason
 __Tool parsers:__
 - `hermes3` (also works for Qwen3 models)
 - `llama3`
-- `phi4`
+- `phi4` (no streaming support)
+- `mistral` (no streaming support)
 
 __Reasoning parsers:__
 - `qwen3`
@@ -166,7 +167,7 @@ __Reasoning parsers:__
 Those are the only acceptable values at the moment since OVMS supports `tools` handling in these particular models and `reasoning` in `Qwen3`.
 
 Note that using `tools` might require a chat template other than the original. 
-We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3` and `phi4` models. Save selected template as `template.jinja` in model directory and it will be used instead of the default one.
+We recommend using templates from [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4` and `mistral` models. Save selected template as `chat_template.jinja` in model directory and it will be used instead of the default one.
 
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
@@ -254,6 +255,14 @@ When default template is loaded, servable accepts `/chat/completions` calls when
 **Note:** Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
 
 Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+
+When working with tools, `/chat/completions` API accepts `tool_choice` parameter which gives additional control over model behavior related to tool calling.
+`tool_choice` accepts three special string values:
+  - `auto` - model is free to decide whether to call a tool or not
+  - `none` - model server will try to push the model not to call any tool
+  - `required` - model server will try to push the model to call at least one tool
+
+Additionally `tool_choice` can be an object describing specific tool to be called. For more see [API reference](../model_server_rest_api_chat.md#request). 
 
 ## Output processing
 
