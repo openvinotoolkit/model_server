@@ -105,7 +105,11 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
 //         throw std::runtime_error("failed to open as WAV file");
 // #endif
 //     }
-    OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr), "Failed to open WAV file from stdin");
+    auto result =  drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
+    if(result == false){
+        SPDLOG_ERROR("FILE PARSING FAILED {}", result);
+        throw std::runtime_error("FILE PARSING FAILED");
+    }
     if (wav.channels != 1 && wav.channels != 2) {
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file must be mono or stereo");
@@ -208,7 +212,13 @@ public:
             config.language = "<|en|>";  // can switch to <|zh|> for Chinese language
             config.task = "transcribe";
             config.return_timestamps = true;
-            ov::genai::RawSpeechInput raw_speech = read_wav(file.value());
+            ov::genai::RawSpeechInput raw_speech;
+            try {
+                raw_speech = read_wav(file.value());
+            } catch(std::exception&){
+                return absl::InvalidArgumentError("Audio file pasing failed");
+            }
+            
             output = std::make_unique<std::string>(pipeline.generate(raw_speech));
         } else if(absl::StartsWith(payload.uri, "/v3/audio/speech")){
             if (payload.parsedJson->HasParseError())
@@ -225,7 +235,6 @@ public:
                 return absl::InvalidArgumentError("input field is not a string");
             }
             ov::genai::Text2SpeechPipeline pipeline("/models/audio/speech", "CPU");
-            SPDLOG_ERROR("1");
             auto gen_speech = pipeline.generate(inputIt->value.GetString());
             drwav_data_format format;
             format.container = drwav_container_riff;
@@ -237,20 +246,18 @@ public:
             drwav wav;
             void* ppData;
             size_t pDataSize;
-            OPENVINO_ASSERT(drwav_init_memory_write(&wav, &ppData, &pDataSize, &format, nullptr),
-                            "Failed to initialize WAV writer");
+
             auto waveform_size = gen_speech.speeches[0].get_size();
             size_t total_samples = waveform_size * format.channels;
             auto waveform_ptr = gen_speech.speeches[0].data<const float>();
-
+            OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, &ppData, &pDataSize, &format, total_samples, nullptr),
+                            "Failed to initialize WAV writer");
             drwav_uint64 frames_written = drwav_write_pcm_frames(&wav, total_samples, waveform_ptr);
             OPENVINO_ASSERT(frames_written == total_samples, "Failed to write not all frames");
 
-            SPDLOG_ERROR("SIZE {}", gen_speech.speeches[0].get_size());
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-            //drwav_free(&wav) TODO: ??
             drwav_uninit(&wav);
-            SPDLOG_ERROR("3");
+            drwav_free(ppData, NULL);
         }else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
