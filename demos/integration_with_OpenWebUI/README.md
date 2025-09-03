@@ -1,7 +1,5 @@
 # Demonstrating integration of Open WebUI with OpenVINO Model Server {#ovms_demos_integration_with_open_webui}
 
----
-
 ## Description
 
 [Open WebUI](https://github.com/open-webui/open-webui) is a very popular component that provides a user interface to generative models. It supports use cases related to text generation, RAG, image generation, and many more. It also supports integration with remote execution servings compatible with standard APIs like OpenAI for chat completions and image generation.  
