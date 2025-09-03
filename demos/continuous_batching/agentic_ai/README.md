@@ -31,7 +31,7 @@ Use those steps to convert the model from HugginFace Hub to OpenVINO format and 
 ```console
 # Download export script, install its dependencies and create directory for the models
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 mkdir models
 ```
 Run `export_model.py` script to download and quantize the model:
@@ -118,7 +118,7 @@ curl -L -o models/OpenVINO/Phi-4-mini-instruct-int4-ov/chat_template.jinja https
 ### Direct pulling of pre-configured HuggingFace models on Windows
 
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
 :::{tab-item} Qwen3-8B-int4-ov
@@ -157,7 +157,7 @@ This deployment procedure assumes the model was pulled or exported using the pro
 
 ### Deploying on Windows with GPU
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
 :::{tab-item} Qwen3-8B

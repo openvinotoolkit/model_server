@@ -61,7 +61,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
 ```bat
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 pip3 install -q -r requirements.txt
 mkdir models
 ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
@@ -81,8 +81,8 @@ ovms --add_to_config models --model_name BAAI/bge-reranker-large --model_path BA
 Use this procedure for all the models outside of OpenVINO organization in HuggingFace Hub.
 
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
+pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 
 mkdir models
 python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json --model_repository_path models
