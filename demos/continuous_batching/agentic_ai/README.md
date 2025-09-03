@@ -459,13 +459,13 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 :::{tab-item} OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov
 :sync: OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool_choice required
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool-choice required
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
 :sync: Phi-4-mini-instruct-int4-ov
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool_choice required
+python openai_agent.py --query "What is the current weather in Tokyo?" --model OpenVINO/Phi-4-mini-instruct-int4-ov --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --tool-choice required
 ```
 :::
 ::::
