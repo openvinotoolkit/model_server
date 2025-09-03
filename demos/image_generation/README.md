@@ -328,7 +328,7 @@ In this specific case, we also need to use `--device /dev/dri`, because we also 
 
 It can be applied using the commands below:
 ```bash
-mkdir cache
+mkdir -p cache
 docker run -d --rm -p 8000:8000 \
   -v $(pwd)/models:/models:ro \
   -v $(pwd)/cache:/cache:ro \
