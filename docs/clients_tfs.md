@@ -13,7 +13,7 @@ Examples <https://github.com/openvinotoolkit/model_server/blob/main/client/pytho
 
 ## Python Client
 
-When creating a Python-based client application, you can use [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package that can be used with OpenVINO Model Server:
+When creating a Python-based client application, you can use [tensorflow-serving-api](https://pypi.org/project/tensorflow-serving-api/) package that can be used with OpenVINO Model Server.
 
 ### Install the Package
 
