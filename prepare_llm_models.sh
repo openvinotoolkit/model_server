@@ -21,6 +21,8 @@ if [ -z "$1" ]; then
 fi
 
 CB_MODEL="facebook/opt-125m"
+TOKENIZER_FILE="openvino_tokenizer.bin"
+LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
 RERANK_MODEL="BAAI/bge-reranker-base"
 VLM_MODEL="OpenGVLab/InternVL2-1B"
@@ -32,14 +34,16 @@ HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 
-MODELS=("$CB_MODEL" "$EMBEDDING_MODEL" "$RERANK_MODEL" "$VLM_MODEL" "$QWEN3_MODEL" "$LLAMA3_MODEL" "$HERMES3_MODEL" "$PHI4_MODEL" "$MISTRAL_MODEL" "$EMBEDDING_MODEL/ov" "$RERANK_MODEL/ov")
+MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
-  if [ ! -d "$1/$model" ]; then
+  if [ ! -f "$1/$model" ]; then
+    echo "Model file does not exist $1/$model"
     all_exist=false
     break
   fi
+  echo "Model file exist $1/$model"
 done
 
 if $all_exist; then
@@ -64,74 +68,117 @@ else
 fi
 mkdir -p $1
 
-if [ -d "$1/$CB_MODEL" ]; then
-  echo "Models directory $1/$CB_MODEL exists. Skipping downloading models."
+if [ -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$CB_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py text_generation --source_model "$CB_MODEL" --weight-format int8 --model_repository_path $1
 fi
+if [ ! -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$VLM_MODEL" ]; then
-  echo "Models directory $1/$VLM_MODEL exists. Skipping downloading models."
+if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
 fi
+if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$EMBEDDING_MODEL" ]; then
-  echo "Models directory $1/$EMBEDDING_MODEL exists. Skipping downloading models."
+if [ -f "$1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" ]; then
+  echo "Models file $1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
+if [ ! -f "$1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" ]; then
+  echo "Models file $1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$EMBEDDING_MODEL/ov" ]; then
-  echo "Models directory "$1/$EMBEDDING_MODEL/ov" exists. Skipping downloading models."
+if [ -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
+  echo "Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
 fi
+if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
+  echo "Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$RERANK_MODEL" ]; then
-  echo "Models directory $1/$RERANK_MODEL exists. Skipping downloading models."
+if [ -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
+if [ ! -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$RERANK_MODEL/ov" ]; then
-  echo "Models directory $1/$RERANK_MODEL/ov exists. Skipping downloading models."
+if [ -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --model_name $RERANK_MODEL/ov
 fi
+if [ ! -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$QWEN3_MODEL" ]; then
-  echo "Models directory $1/$QWEN3_MODEL exists. Skipping downloading models."
+if [ -f "$1/$QWEN3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$QWEN3_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   mkdir -p $1/$QWEN3_MODEL
   convert_tokenizer $QWEN3_MODEL --with_detokenizer -o $1/$QWEN3_MODEL
 fi
+if [ ! -f "$1/$QWEN3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$QWEN3_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$LLAMA3_MODEL" ]; then
-  echo "Models directory $1/$LLAMA3_MODEL exists. Skipping downloading models."
+if [ -f "$1/$LLAMA3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$LLAMA3_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   mkdir -p $1/$LLAMA3_MODEL
   convert_tokenizer $LLAMA3_MODEL --with_detokenizer -o $1/$LLAMA3_MODEL
 fi
+if [ ! -f "$1/$LLAMA3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$LLAMA3_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$HERMES3_MODEL" ]; then
-  echo "Models directory $1/$HERMES3_MODEL exists. Skipping downloading models."
+if [ -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   mkdir -p $1/$HERMES3_MODEL
   convert_tokenizer $HERMES3_MODEL --with_detokenizer -o $1/$HERMES3_MODEL
 fi
+if [ ! -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$PHI4_MODEL" ]; then
-  echo "Models directory $1/$PHI4_MODEL exists. Skipping downloading models."
+if [ -f "$1/$PHI4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$PHI4_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   mkdir -p $1/$PHI4_MODEL
   convert_tokenizer $PHI4_MODEL --with_detokenizer -o $1/$PHI4_MODEL
 fi
+if [ ! -f "$1/$PHI4_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$PHI4_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
 
-if [ -d "$1/$MISTRAL_MODEL" ]; then
-  echo "Models directory $1/$MISTRAL_MODEL exists. Skipping downloading models."
+if [ -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   mkdir -p $1/$MISTRAL_MODEL
   convert_tokenizer $MISTRAL_MODEL --with_detokenizer -o $1/$MISTRAL_MODEL
 fi
-
+if [ ! -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi

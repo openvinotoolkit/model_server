@@ -166,12 +166,20 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
             }
 
             // If we are closing the tool call, we need to add closing quote after the last closing brace that we assume is present in the chunk processed in the last call.
-            // Otherwise we just store the chunk in the second element of the delay array to be handled in the next call.
             if (modifiedChunk.find(toolCallEndTag) != std::string::npos) {
                 size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
                 if (lastClosingBrace != std::string::npos) {
                     argumentsDelayWindow[0].insert(lastClosingBrace, "\"");
                 }
+                // If generation has stopped and we didn't get closing tag, we still look for the closing brace to close the string properly
+                // Regardless of the closing brace presence we merge current chunk with the last one to make sure we don't miss returning the last part of model output.
+            } else if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+                size_t lastClosingBrace = modifiedChunk.find_last_of('}');
+                if (lastClosingBrace != std::string::npos) {
+                    modifiedChunk.insert(lastClosingBrace, "\"");
+                }
+                argumentsDelayWindow[0] += modifiedChunk;
+                // Otherwise we just store the chunk in the second element of the delay array to be handled in the next call.
             } else {
                 argumentsDelayWindow[1] = modifiedChunk;
             }
