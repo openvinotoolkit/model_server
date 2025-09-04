@@ -2,7 +2,7 @@
 
 This demo shows how to deploy  model with the OpenVINO Model Server.
 
-*Note*: This is experimental feature and issues in accuracy of models may be observed.
+> **NOTE**: This is experimental feature and issues in accuracy of models may be observed.
 
 > **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
 
@@ -17,12 +17,13 @@ Start with deploying the model:
 :sync: docker
 Start docker container:
 ```bash
+mkdir models
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:latest \
     --rest_port 8000 \
     --model_repository_path /models/ \
-    --task image_generation \
+    --task text_generation \
     --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" \
     --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf \
     --model_name LLM
@@ -33,10 +34,9 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
 :sync: bare-metal
 ```bat
 mkdir models
-
 ovms --rest_port 8000 ^
   --model_repository_path /models/ ^
-  --task image_generation ^
+  --task text_generation ^
   --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" ^
   --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf ^
   --model_name LLM
