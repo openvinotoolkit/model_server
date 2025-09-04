@@ -31,16 +31,10 @@ message SpeechCalculatorOptions {
     required string models_path = 1;
     optional string device = 2;
     optional string plugin_config = 3;
+    enum Mode {
+      TEXT_TO_SPEECH = 0;
+      SPEECH_TO_TEXT = 1;
+    }
 
-    // fields used during inference
-    optional string max_resolution = 4 [default = "4096x4096"];
-    optional string default_resolution = 5;
-    optional uint64 max_num_images_per_prompt = 6 [default = 10];
-    optional uint64 default_num_inference_steps = 7 [default = 50];
-    optional uint64 max_num_inference_steps = 8 [default = 100];
-
-    // static reshape setting, required for NPU, optional for other devices
-    optional string resolution = 9;
-    optional int64 num_images_per_prompt = 10;
-    optional float guidance_scale = 11;
+    required Mode mode = 4 [default = TEXT_TO_SPEECH];
 }
