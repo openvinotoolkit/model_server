@@ -200,7 +200,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithNoOve
     hfSettings.downloadType = ovms::ModelDownlaodType::GGUF_DOWNLOAD;
     const std::string hfEndpoint = "https://huggingface.co/";
     std::unordered_map<std::string, size_t> quantizations{
-        {"Llama-3.2-1B-Instruct-Q8_0.gguf",1321082528}};
+        {"Llama-3.2-1B-Instruct-Q8_0.gguf", 1321082528}};
     for (const auto& [ggufFilename, expectedSize] : quantizations) {
         hfSettings.ggufFilename = ggufFilename;
         ovms::GGUFDownloader downloader(hfEndpoint, hfSettings);
@@ -211,7 +211,8 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithNoOve
         status = ovms::LocalFileSystem::exists(fullPath, &exist);
         EXPECT_TRUE(status.ok()) << status.string();
         EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
-        if (!exist) continue;
+        if (!exist)
+            continue;
         // check size of the file with std::filesystem
         size_t fileSize = 0;
         std::filesystem::path filePath(fullPath);
@@ -221,12 +222,12 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithNoOve
 }
 
 TEST_F(GGUFDownloaderPullHfModel, ShouldSkipDownloadWithNoOverrideWhenSomePartsExist) {
-// Plan:
-// 1. Create (touch file) first part of the model. With no override it should fail to download
-// 2. With override it should download both parts
-// 3. Remove first part
-// 4. Try to download with no override - it should fail 
-// 5. With override it should download both parts
+    // Plan:
+    // 1. Create (touch file) first part of the model. With no override it should fail to download
+    // 2. With override it should download both parts
+    // 3. Remove first part
+    // 4. Try to download with no override - it should fail
+    // 5. With override it should download both parts
     SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
@@ -301,9 +302,9 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverr
     hfSettings.downloadType = ovms::ModelDownlaodType::GGUF_DOWNLOAD;
     const std::string hfEndpoint = "https://huggingface.co/";
     std::vector<std::pair<std::string, size_t>> quantizations{
-        {"Llama-3.2-1B-Instruct-Q4_K_M.gguf",807694368},
-        {"Llama-3.2-1B-Instruct-Q2_K.gguf",580874272},
-        {"Llama-3.2-1B-Instruct-Q8_0.gguf",1321082528}};
+        {"Llama-3.2-1B-Instruct-Q4_K_M.gguf", 807694368},
+        {"Llama-3.2-1B-Instruct-Q2_K.gguf", 580874272},
+        {"Llama-3.2-1B-Instruct-Q8_0.gguf", 1321082528}};
     size_t fileSize = 0;
     auto graphPbtxtPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, "graph.pbtxt"});
     ////////
@@ -323,7 +324,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverr
         fileSize = std::filesystem::file_size(filePath);
     }
     EXPECT_EQ(quantizations[0].second, fileSize);
-    
+
     ///////
     // now we pull with no override and it should skip download
     ///////
@@ -359,7 +360,6 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverr
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
 }
-
 
 // TODO:
 // -> no overwrite only some of the files exist

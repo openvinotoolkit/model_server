@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <vector>
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -53,7 +54,7 @@ static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const 
                 SPDLOG_TRACE("Model file already exists and will be removed due to overwrite flag: {}", filePath);
                 lfstatus = lfs.deleteFileFolder(filePath);
                 if (lfstatus != StatusCode::OK) {
-                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", path,lfstatus);
+                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", path, lfstatus);
                 } else {
                     SPDLOG_TRACE("Path deleted: {}", path);
                 }
@@ -75,8 +76,10 @@ std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettings
         SPDLOG_DEBUG("Checking if model file exists: {}", filePath);
         bool exist = false;
         auto status = LocalFileSystem::exists(filePath, &exist);
-        if (!status.ok()) return status;
-        if (exist) return exist;
+        if (!status.ok())
+            return status;
+        if (exist)
+            return exist;
     }
     return false;
 }
@@ -208,8 +211,6 @@ static size_t file_write_callback(void* buffer, size_t size, size_t nmemb, void*
             return 0;
         }
     }
-    //fwrite(buffer, size, nmemb, stdout);
-    //fwrite("\n", 1, 1, stdout);
     return fwrite(buffer, size, nmemb, out->stream);
 }
 
