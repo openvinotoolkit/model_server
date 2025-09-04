@@ -26,7 +26,7 @@ This demo was tested on CPU but most of the models could be also run on Intel ac
 
 ### Step 1: Preparation
 
-Download export script, install its dependencies and create the directory for models:
+Download the export script, install its dependencies and create the directory for models:
 
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
@@ -36,7 +36,7 @@ mkdir models
 
 ### Step 2: Export Model
 
-The text generation model used in this demo is [meta-llama/Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). If the model is not downloaded before, access must be requested. Run export script to download and quantize the model:
+The text generation model used in this demo is [meta-llama/Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). If the model is not downloaded before, access must be requested. Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-1B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json
@@ -75,7 +75,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
 ### Reference
-[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html#model-preparation)
+[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching.html#model-preparation)
 
 [https://docs.openwebui.com](https://docs.openwebui.com/#installation-with-pip)
 
@@ -107,7 +107,7 @@ Click **New Chat** and select the model to start chatting.
 
 ### Step 1: Model Preparation
 
-In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run export script to download and quantize the models:
+In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run the export script to download and quantize the models:
 ```bash
 python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L6-v2 --weight-format int8 --config_file_path models/config.json
 python export_model.py rerank_ov --source_model BAAI/bge-reranker-base --weight-format int8 --config_file_path models/config.json
@@ -182,7 +182,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ### Step 1: Model Preparation
 
-The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1.0](https://huggingface.co/dreamlike-art/dreamlike-anime-1.0). Run export script to download and quantize the model:
+The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1.0](https://huggingface.co/dreamlike-art/dreamlike-anime-1.0). Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py image_generation --source_model dreamlike-art/dreamlike-anime-1.0 --weight-format int8 --config_file_path models/config.json
@@ -232,7 +232,7 @@ Method 2:
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run export script to download and quantize the model:
+The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json
