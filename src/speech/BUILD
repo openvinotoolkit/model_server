@@ -18,6 +18,13 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "speech_servable",
+    hdrs = ["speech_servable.hpp"],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
     name = "llm_engine",  # in fact this is genai library
     srcs = [],
     deps =  ["@llm_engine//:llm_engine"],
@@ -34,6 +41,7 @@ ovms_cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "speech_calculator_cc_proto",
+        ":speech_servable",
     ]+ select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

@@ -46,6 +46,7 @@
 #include "../sidepacket_servable.hpp"
 #include "../embeddings/embeddings_servable.hpp"
 #include "../rerank/rerank_servable.hpp"
+#include "../speech/speech_servable.hpp"
 
 namespace ovms {
 class MediapipeGraphDefinitionUnloadGuard;
@@ -62,6 +63,7 @@ struct ImageGenerationPipelines;
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
 using RerankServableMap = std::unordered_map<std::string, std::shared_ptr<RerankServable>>;
+using SpeechServableMap = std::unordered_map<std::string, std::shared_ptr<SpeechServable>>;
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
 
@@ -71,19 +73,22 @@ struct GraphSidePackets {
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
     RerankServableMap rerankServableMap;
+    SpeechServableMap speechServableMap;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
         rerankServableMap.clear();
+        speechServableMap.clear();
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&
                 genAiServableMap.empty() &&
                 imageGenPipelinesMap.empty() &&
                 embeddingsServableMap.empty() &&
-                rerankServableMap.empty());
+                rerankServableMap.empty() &&
+                speechServableMap.empty());
     }
 };
 
@@ -124,6 +129,7 @@ public:
     static const std::string IMAGE_GEN_CALCULATOR_NAME;
     static const std::string EMBEDDINGS_NODE_CALCULATOR_NAME;
     static const std::string RERANK_NODE_CALCULATOR_NAME;
+    static const std::string SPEECH_NODE_CALCULATOR_NAME;
     Status waitForLoaded(std::unique_ptr<MediapipeGraphDefinitionUnloadGuard>& unloadGuard, const uint32_t waitForLoadedTimeoutMicroseconds = WAIT_FOR_LOADED_DEFAULT_TIMEOUT_MICROSECONDS);
 
     // Pipelines are not versioned and any available definition has constant version equal 1.

@@ -37,6 +37,7 @@
 #include "dr_wav.h"
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+#include "speech_servable.hpp"
 
 #ifdef _WIN32
 #    include <fcntl.h>
@@ -171,7 +172,7 @@ public:
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
-        // cc->InputSidePackets().Tag(IMAGE_GEN_SESSION_SIDE_PACKET_TAG).Set<SpeechPipelinesMap>();  // TODO: template?
+        cc->InputSidePackets().Tag(SPEECH_SESSION_SIDE_PACKET_TAG).Set<SpeechServableMap>();  // TODO: template?
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Set<std::string>();
         return absl::OkStatus();
     }
@@ -189,10 +190,10 @@ public:
     absl::Status Process(CalculatorContext* cc) final {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SpeechCalculator  [Node: {}] Process start", cc->NodeName());
 
-        // ImageGenerationPipelinesMap pipelinesMap = cc->InputSidePackets().Tag(SPEECH_SESSION_SIDE_PACKET_TAG).Get<SpeechPipelinesMap>();
-        // auto it = pipelinesMap.find(cc->NodeName());
-        // RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized Speech node named: " << cc->NodeName();
-        // auto pipe = it->second;
+        SpeechServableMap pipelinesMap = cc->InputSidePackets().Tag(SPEECH_SESSION_SIDE_PACKET_TAG).Get<SpeechServableMap>();
+        auto it = pipelinesMap.find(cc->NodeName());
+        RET_CHECK(it != pipelinesMap.end()) << "Could not find initialized Speech node named: " << cc->NodeName();
+        auto pipe = it->second;
 
         auto payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>();
 
@@ -206,8 +207,7 @@ public:
             if(!file.has_value()){
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
-            ov::genai::WhisperPipeline pipeline("/models/audio/transcriptions", "CPU");
-            ov::genai::WhisperGenerationConfig config = pipeline.get_generation_config();
+            ov::genai::WhisperGenerationConfig config = pipe->whisperPipeline->get_generation_config();
             // 'task' and 'language' parameters are supported for multilingual models only
             config.language = "<|en|>";  // can switch to <|zh|> for Chinese language
             config.task = "transcribe";
@@ -219,7 +219,7 @@ public:
                 return absl::InvalidArgumentError("Audio file pasing failed");
             }
             std::string result = "{\"text\": \"";
-            result += pipeline.generate(raw_speech);
+            result += pipe->whisperPipeline->generate(raw_speech);
             result.append("\"}");
             output = std::make_unique<std::string>(result);
         } else if(absl::StartsWith(payload.uri, "/v3/audio/speech")){
@@ -236,8 +236,8 @@ public:
             if (!inputIt->value.IsString()) {
                 return absl::InvalidArgumentError("input field is not a string");
             }
-            ov::genai::Text2SpeechPipeline pipeline("/models/audio/speech", "CPU");
-            auto gen_speech = pipeline.generate(inputIt->value.GetString());
+            
+            auto gen_speech = pipe->text2SpeechPipeline->generate(inputIt->value.GetString());
             drwav_data_format format;
             format.container = drwav_container_riff;
             format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
