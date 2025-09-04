@@ -29,8 +29,8 @@ python export_model.py text_generation --source_model codellama/CodeLlama-7b-Ins
 ## Prepare Agentic Model 
 We need specialized model that is able to produce tool calls. For this task we will use Qwen3-8B quantized to int4. We will use automatic pulling of HF models, so export script is not required.
 
-Pull and add `OpenVINO/Qwen3-8B-int4-ov`:
-```console
+Pull and add `OpenVINO/Qwen3-8B-int4-ov` (Linux):
+```bash
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
     openvino/model_server:latest-gpu \
@@ -48,6 +48,21 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_name OpenVINO/Qwen3-8B-int4-ov \
     --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
+
+Or, when running on Windows, pull and add `OpenVINO/Qwen3-8B-int4-ov`:
+```bat
+ovms --pull ^
+  --task text_generation ^
+  --model_repository_path ./models ^
+  --source_model OpenVINO/Qwen3-8B-int4-ov ^
+  --target_device GPU ^
+  --tool_parser hermes3
+
+ovms --add_to_config /models/config_all.json ^
+  --model_name OpenVINO/Qwen3-8B-int4-ov ^
+  --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+
 
 > **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
 
