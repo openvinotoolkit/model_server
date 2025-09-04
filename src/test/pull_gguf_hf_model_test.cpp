@@ -361,12 +361,6 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverr
     EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
 }
 
-// TODO:
-// -> no overwrite only some of the files exist
-// -> no overwrite all files exist
-// -> overwrite dir exist not files
-// -> overwrite some files exist
-
 TEST_F(GGUFDownloaderPullHfModel, PositiveMultipartModel) {
     SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
@@ -403,11 +397,9 @@ class GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative : public GGUFDo
 TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingParts) {
     const std::string hfEndpoint = std::get<1>(GetParam());
     const std::string ggufFilename = std::get<0>(GetParam());
-    // to many zeros
     const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
-    //ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
     auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFilename, downloadPath);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::PATH_INVALID) << status.string();
     std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFilename});
@@ -415,7 +407,6 @@ TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingPa
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_FALSE(exist);
-    // too long second part
 }
 
 std::vector<std::tuple<std::string, std::string>> ggufPartsParams = {

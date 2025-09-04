@@ -105,8 +105,6 @@ Status GGUFDownloader::downloadModel() {
     if (!status.ok()) {
         return status;
     }
-    // now we want to check if model directory already exists
-    // if not we will create one
     if (!std::filesystem::is_directory(this->downloadPath)) {
         if (!std::filesystem::create_directories(this->downloadPath)) {
             SPDLOG_ERROR("Failed to create model directory: {}", this->downloadPath);
@@ -278,7 +276,6 @@ static Status downloadSingleFileWithCurl(const std::string& filePath, const std:
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, file_write_callback));
     struct FtpFile ftpFile = {filePath.c_str(), NULL};
-    //autddo fileCloseGuard = std::unique_ptr<FILE, decltype(&fileClose)>(ftpFile.stream, fileClose);
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ftpFile));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
     // progress bar options
@@ -333,9 +330,7 @@ std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenam
             SPDLOG_ERROR("Error converting total parts to integer for filename: {} error: {}", ggufFilename, e.what());
             return StatusCode::INTERNAL_ERROR;
         }
-        // now write a loop that will replace the part number in the filename and download all parts from 1 to N eg. 00001 to N where N is totalParts and we have to pad with zeros
         for (int part = 1; part <= totalParts; part++) {
-            // create part filename
             std::string partNumberStr = std::to_string(part);
             auto partFilename = preparePartFilename(ggufFilename, part, totalParts);
             filesToDownload.push_back(partFilename);
@@ -377,7 +372,6 @@ std::string GGUFDownloader::preparePartFilename(const std::string& ggufFilename,
     // example of strings
     // ggufFilename qwen2.5-3b-instruct-fp16-00001-of-00002.gguf
     // ggufFilename qwen2.5-b-instruct-fp16-00001-of-23232.gguf
-    // ggufFilename qwen3-b-instruct-fp16-00001-of-00232.gguf
     // so we want to replace 00001-of-[0-9]{4}[2-9] part with appropriate part number
     // we need to pad part number with zeros to match the length of 5
     std::string partNumberStr = std::to_string(part);
@@ -392,5 +386,4 @@ std::string GGUFDownloader::preparePartFilename(const std::string& ggufFilename,
     constructedFilename.replace(ggufFilename.find("-00001-"), 7, "-" + numberPadded + "-");
     return constructedFilename;
 }
-
 }  // namespace ovms
