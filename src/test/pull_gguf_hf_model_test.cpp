@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <git2.h>
+#include "env_guard.hpp"
 #include "test_utils.hpp"
 #include "gguf_environment.hpp"
 #include "../filesystem.hpp"
@@ -33,58 +34,6 @@
 #include "../status.hpp"
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
-namespace {
-struct EnvGuard {
-    EnvGuard() {
-        SPDLOG_TRACE("EnvGuardConstructor");
-    }
-    void set(const std::string& name, const std::string& value) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set", name);
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        SetEnvironmentVar(name, value);
-    }
-    void unset(const std::string& name) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set", name);
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        UnSetEnvironmentVar(name);
-    }
-    ~EnvGuard() {
-        SPDLOG_TRACE("EnvGuardDestructor");
-        for (auto& [k, v] : originalValues) {
-            if (v.has_value()) {
-                SPDLOG_TRACE("Var:{} was set to value:{}", k, v.value());
-                SetEnvironmentVar(k, v.value());
-            } else {
-                SPDLOG_TRACE("Var:{} was empty", k);
-                UnSetEnvironmentVar(k);
-            }
-        }
-    }
-
-private:
-    std::unordered_map<std::string, std::optional<std::string>> originalValues;
-};
-}  // namespace
 
 class GGUFDownloaderPullHfModel : public TestWithTempDir {
 protected:
@@ -123,12 +72,12 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     const std::string hfEndpoint = std::get<0>(GetParam());
     const std::string sourceModel = std::get<1>(GetParam());
     const std::string filenamePrefix = std::get<2>(GetParam());
-    const std::string ggufFileName = std::get<3>(GetParam());
+    const std::string ggufFilename = std::get<3>(GetParam());
     const size_t expectedSize = std::get<4>(GetParam());
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
-    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFilename, downloadPath);
     ASSERT_TRUE(status.ok()) << status.string();
-    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFilename});
     bool exist = false;
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
@@ -142,12 +91,12 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
 TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadAndStart) {
     SKIP_AND_EXIT_IF_NO_GGUF();
     std::string sourceModel = std::get<0>(GetParam());
-    std::string ggufFileName = std::get<1>(GetParam());
+    std::string ggufFilename = std::get<1>(GetParam());
     const size_t expectedSize = std::get<2>(GetParam());
     std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     std::string task = "text_generation";
-    this->SetUpServerForDownloadAndStartGGUF(ggufFileName, sourceModel, downloadPath, task);
-    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFileName});
+    this->SetUpServerForDownloadAndStartGGUF(ggufFilename, sourceModel, downloadPath, task);
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFilename});
     bool exist = false;
     auto status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
@@ -158,12 +107,12 @@ TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadAndStar
 }
 
 std::vector<std::tuple<std::string, std::string, std::string, std::string, size_t>> ggufParams = {
-    std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168)),
-    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568)),
-    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752877568))};
+    std::make_tuple("https://huggingface.co/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117321312)),
+    std::make_tuple("https://www.modelscope.cn/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752880736)),
+    std::make_tuple("https://hf-mirror.com/", "unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "/resolve/main/", "DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf", size_t(752880736))};
 
 std::vector<std::tuple<std::string, std::string, size_t>> ggufServerStartParams = {
-    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168))};
+    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117321312))};
 
 #ifndef _WIN32
 INSTANTIATE_TEST_SUITE_P(
@@ -176,7 +125,7 @@ INSTANTIATE_TEST_SUITE_P(
                                                 std::get<0>(paramTuple),  // hfEndpoint
                                                 std::get<1>(paramTuple),  // sourceModel
                                                 std::get<2>(paramTuple),  // filenamePrefix
-                                                std::get<3>(paramTuple)   // ggufFileName
+                                                std::get<3>(paramTuple)   // ggufFilename
                                             },
             "_");
         std::replace(paramName.begin(), paramName.end(), '-', '_');
@@ -201,7 +150,7 @@ INSTANTIATE_TEST_SUITE_P(
         auto paramTuple = info.param;
         std::string paramName = ovms::joins({
                                                 std::get<0>(paramTuple),  // sourceModel
-                                                std::get<1>(paramTuple)   // ggufFileName
+                                                std::get<1>(paramTuple)   // ggufFilename
                                             },
             "_");
         std::replace(paramName.begin(), paramName.end(), '-', '_');
@@ -224,13 +173,12 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     const std::string sourceModel = "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
-    const std::string ggufFileName = "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf";
+    const std::string ggufFilename = "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf";
     const std::string hfEndpoint = "https://huggingface.co/";
     // const std::string hfEndpoint = "https://www.modelscope.cn";
-    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFilename, downloadPath);
     ASSERT_TRUE(status.ok()) << status.string();
-    // TODO check if file exists, its size
-    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFilename});
     bool exist = false;
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok());
@@ -239,20 +187,196 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
     size_t fileSize = 0;
     std::filesystem::path filePath(fullPath);
     fileSize = std::filesystem::file_size(filePath);
-    EXPECT_EQ(4683071488, fileSize);
+    EXPECT_EQ(4683073248, fileSize);
 }
+
+TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithNoOverride) {
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.overwriteModels = false;
+    hfSettings.sourceModel = "unsloth/Llama-3.2-1B-Instruct-GGUF";
+    hfSettings.downloadPath = downloadPath;
+    hfSettings.downloadType = ovms::ModelDownlaodType::GGUF_DOWNLOAD;
+    const std::string hfEndpoint = "https://huggingface.co/";
+    std::unordered_map<std::string, size_t> quantizations{
+        {"Llama-3.2-1B-Instruct-Q8_0.gguf",1321082528}};
+    for (const auto& [ggufFilename, expectedSize] : quantizations) {
+        hfSettings.ggufFilename = ggufFilename;
+        ovms::GGUFDownloader downloader(hfEndpoint, hfSettings);
+        auto status = downloader.downloadModel();
+        ASSERT_TRUE(status.ok()) << status.string();
+        std::string fullPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, ggufFilename});
+        bool exist = false;
+        status = ovms::LocalFileSystem::exists(fullPath, &exist);
+        EXPECT_TRUE(status.ok()) << status.string();
+        EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+        if (!exist) continue;
+        // check size of the file with std::filesystem
+        size_t fileSize = 0;
+        std::filesystem::path filePath(fullPath);
+        fileSize = std::filesystem::file_size(filePath);
+        EXPECT_EQ(expectedSize, fileSize);
+    }
+}
+
+TEST_F(GGUFDownloaderPullHfModel, ShouldSkipDownloadWithNoOverrideWhenSomePartsExist) {
+// Plan:
+// 1. Create (touch file) first part of the model. With no override it should fail to download
+// 2. With override it should download both parts
+// 3. Remove first part
+// 4. Try to download with no override - it should fail 
+// 5. With override it should download both parts
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
+    const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    const std::string filenamePrefix = "/resolve/main/";
+    const std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    const std::string ggufFilenamePart2 = "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf";
+    const std::string hfEndpoint = "https://huggingface.co/";
+    auto filePathPart1 = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFilename});
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.overwriteModels = false;
+    hfSettings.sourceModel = sourceModel;
+    hfSettings.downloadPath = downloadPath;
+    hfSettings.downloadType = ovms::ModelDownlaodType::GGUF_DOWNLOAD;
+    hfSettings.ggufFilename = ggufFilename;
+    ovms::GGUFDownloader downloader(hfEndpoint, hfSettings);
+    auto dirPath = ovms::FileSystem::joinPath({downloadPath, sourceModel});
+    // create dir
+    std::filesystem::create_directories(dirPath);
+    // create file
+    auto filePath = ovms::FileSystem::joinPath({dirPath, ggufFilename});
+    auto status = downloader.downloadModel();
+    ASSERT_TRUE(status.ok()) << status.string();
+    // check that part2 does not exist
+    bool exist = false;
+    status = ovms::LocalFileSystem::exists(ovms::FileSystem::joinPath({dirPath, ggufFilenamePart2}), &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_FALSE(exist) << "File " << ggufFilenamePart2 << " should not exist";
+    // Part 2 with override should succeed
+    hfSettings.overwriteModels = true;
+    status = downloader.downloadModel();
+    ASSERT_TRUE(status.ok()) << status.string();
+    std::string fullPathPart1 = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFilename});
+    std::string fullPathPart2 = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFilenamePart2});
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart1, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPathPart1 << " does not exist after download";
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart2, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPathPart2 << " does not exist after download";
+    // Part 3
+    // remove fullPathPart1
+    std::filesystem::remove(fullPathPart1);
+    hfSettings.overwriteModels = false;
+    status = downloader.downloadModel();
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR) << status.string();
+
+
+
+////////////////////////////////
+///
+////////////
+////////////
+/// Plan:
+/// 1. Create (touch file) first part of the model. With no override it shoudl fail to download
+/// 2. With override it should download both parts
+/// 3. Remove first part
+/// 4. Try to download with no override - it should fail 
+/// 5. With override it should download both parts
+}
+
+
+TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverride) {
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.overwriteModels = true;
+    hfSettings.sourceModel = "unsloth/Llama-3.2-1B-Instruct-GGUF";
+    hfSettings.downloadPath = downloadPath;
+    hfSettings.downloadType = ovms::ModelDownlaodType::GGUF_DOWNLOAD;
+    const std::string hfEndpoint = "https://huggingface.co/";
+    std::vector<std::pair<std::string, size_t>> quantizations{
+        {"Llama-3.2-1B-Instruct-Q4_K_M.gguf",807694368},
+        {"Llama-3.2-1B-Instruct-Q2_K.gguf",580874272},
+        {"Llama-3.2-1B-Instruct-Q8_0.gguf",1321082528}};
+    size_t fileSize = 0;
+    auto graphPbtxtPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, "graph.pbtxt"});
+    ////////
+    // first we pull first with override true to see if it worksa even if no files exist
+    ////////
+    hfSettings.ggufFilename = quantizations[0].first;
+    auto downloader = std::make_unique<ovms::GGUFDownloader>(hfEndpoint, hfSettings);
+    auto status = downloader->downloadModel();
+    ASSERT_TRUE(status.ok()) << status.string();
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, hfSettings.ggufFilename.value()});
+    bool exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    if (exist) {
+        std::filesystem::path filePath(fullPath);
+        fileSize = std::filesystem::file_size(filePath);
+    }
+    EXPECT_EQ(quantizations[0].second, fileSize);
+    
+    ///////
+    // now we pull with no override and it should skip download
+    ///////
+    hfSettings.overwriteModels = false;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    status = downloader->downloadModel();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    ASSERT_TRUE(status.ok()) << status.string();
+    ASSERT_LE(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count(), 500) << "Download took too long, probably it was not skipped";
+
+    ///////
+    // now we pull another quantization with override true and expect previous file to exist
+    ///////
+
+    hfSettings.overwriteModels = true;
+    hfSettings.ggufFilename = quantizations[1].first;
+    status = downloader->downloadModel();
+    ASSERT_TRUE(status.ok()) << status.string();
+    fullPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, hfSettings.ggufFilename.value()});
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    if (exist) {
+        std::filesystem::path filePath(fullPath);
+        fileSize = std::filesystem::file_size(filePath);
+    }
+    EXPECT_EQ(quantizations[1].second, fileSize);
+    // now we check previous quantization
+    fullPath = ovms::FileSystem::joinPath({downloadPath, hfSettings.sourceModel, quantizations[0].first});
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+}
+
+
+// TODO:
+// -> no overwrite only some of the files exist
+// -> no overwrite all files exist
+// -> overwrite dir exist not files
+// -> overwrite some files exist
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveMultipartModel) {
     SKIP_AND_EXIT_IF_NO_GGUF();
     const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
-    const std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    const std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
     const std::string hfEndpoint = "https://huggingface.co/";
-    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFilename, downloadPath);
     ASSERT_TRUE(status.ok()) << status.string();
 
-    std::string fullPathPart1 = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    std::string fullPathPart1 = ovms::FileSystem::joinPath({downloadPath, ggufFilename});
     bool existPart1 = false;
     status = ovms::LocalFileSystem::exists(fullPathPart1, &existPart1);
     EXPECT_TRUE(status.ok()) << status.string();
@@ -260,7 +384,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveMultipartModel) {
     size_t fileSize = 0;
     std::filesystem::path filePathPart1(fullPathPart1);
     fileSize = std::filesystem::file_size(filePathPart1);
-    EXPECT_EQ(3993198592, fileSize);
+    EXPECT_EQ(3993201344, fileSize);
 
     const std::string ggufFileNamePart2 = "qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf";
     std::string fullPathPart2 = ovms::FileSystem::joinPath({downloadPath, ggufFileNamePart2});
@@ -270,22 +394,22 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveMultipartModel) {
     ASSERT_TRUE(existPart2);
     std::filesystem::path filePathPart2(fullPathPart2);
     fileSize = std::filesystem::file_size(filePathPart2);
-    EXPECT_EQ(689868800, fileSize);
+    EXPECT_EQ(689872288, fileSize);
 }
 
 class GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative : public GGUFDownloaderPullHfModel, public ::testing::WithParamInterface<std::tuple<std::string, std::string>> {};
 
 TEST_P(GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative, NonMatchingParts) {
     const std::string hfEndpoint = std::get<1>(GetParam());
-    const std::string ggufFileName = std::get<0>(GetParam());
+    const std::string ggufFilename = std::get<0>(GetParam());
     // to many zeros
     const std::string sourceModel = "Qwen/Qwen2.5-7B-Instruct-GGUF";
     const std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
     const std::string filenamePrefix = "/resolve/main/";
-    //ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
-    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFileName, downloadPath);
+    //ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    auto status = ovms::GGUFDownloader::downloadWithCurl(hfEndpoint, sourceModel, filenamePrefix, ggufFilename, downloadPath);
     EXPECT_EQ(status.getCode(), ovms::StatusCode::PATH_INVALID) << status.string();
-    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFileName});
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, ggufFilename});
     bool exist = false;
     status = ovms::LocalFileSystem::exists(fullPath, &exist);
     EXPECT_TRUE(status.ok()) << status.string();
@@ -309,7 +433,7 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<GGUFDownloaderPullHfModelGGUFFilenameParameterizedNegative::ParamType>& info) {
         auto paramTuple = info.param;
         std::string paramName = ovms::joins({
-                                                std::get<0>(paramTuple),  // ggufFileName
+                                                std::get<0>(paramTuple),  // ggufFilename
                                                 std::get<1>(paramTuple)   // hfEndpoint
                                             },
             "_");
@@ -330,25 +454,25 @@ class GGUFDownloaderMultipartUtils : public ::testing::Test {
 };
 
 TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenamePositive) {
-    std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
-    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 2));
-    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 2));
-    ggufFileName = "Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf";
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 5));
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00003-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 3, 5));
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00005-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFileName, 5, 5));
+    std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 2));
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 2));
+    ggufFilename = "Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf";
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 5));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00003-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFilename, 3, 5));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00005-of-00005.gguf", ovms::GGUFDownloader::preparePartFilename(ggufFilename, 5, 5));
 }
 
 TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenameNegative) {
-    std::string ggufFileName = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 0, 2), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, -1, 2), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 3, 2), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 1), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 0), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, -1), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 1, 100000), std::invalid_argument);
-    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFileName, 100000, 99999), std::invalid_argument);
+    std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 0, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, -1, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 3, 2), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 1), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 0), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, -1), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 1, 100000), std::invalid_argument);
+    EXPECT_THROW(ovms::GGUFDownloader::preparePartFilename(ggufFilename, 100000, 99999), std::invalid_argument);
 }
 
 void find_file_in_tree(git_repository* repo, git_tree* tree,

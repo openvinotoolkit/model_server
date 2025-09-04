@@ -37,27 +37,55 @@ std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
+    // improve so that only specific files are deleted not all quantizations FIXME
     auto lfstatus = StatusCode::OK;
     if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
+        auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+        if (std::holds_alternative<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus)) {
+            return std::get<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus);
+        }
+        auto& allSpecifiedQuantizationPartsFilenames = std::get<std::vector<std::string>>(allSpecifiedQuantizationPartsFilenamesOrStatus);
         LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(path);
-        if (lfstatus != StatusCode::OK) {
-            SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
-                path,
-                lfstatus);
-        } else {
-            SPDLOG_DEBUG("Path deleted: {}", path);
+        for (const auto& file : allSpecifiedQuantizationPartsFilenames) {
+            auto filePath = FileSystem::joinPath({path, file});
+            SPDLOG_TRACE("Checking if model file exists for overwrite: {}", filePath);
+            if (std::filesystem::exists(filePath)) {
+                SPDLOG_TRACE("Model file already exists and will be removed due to overwrite flag: {}", filePath);
+                lfstatus = lfs.deleteFileFolder(filePath);
+                if (lfstatus != StatusCode::OK) {
+                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", path,lfstatus);
+                } else {
+                    SPDLOG_TRACE("Path deleted: {}", path);
+                }
+            }
         }
     }
     return lfstatus;
 }
 
+std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettingsImpl& hfSettings, const std::string& path) {
+    auto ggufFilesOrStatus = createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+    if (std::holds_alternative<Status>(ggufFilesOrStatus)) {
+        SPDLOG_ERROR("Could not create GGUF filenames to download for checking existing files");
+        return std::get<Status>(ggufFilesOrStatus);
+    }
+    auto& ggufFiles = std::get<std::vector<std::string>>(ggufFilesOrStatus);
+    bool anyExists = false;
+    for (const auto& file : ggufFiles) {
+        auto filePath = FileSystem::joinPath({path, file});
+        SPDLOG_DEBUG("Checking if model file exists: {}", filePath);
+        if (std::filesystem::exists(filePath)) {
+            SPDLOG_DEBUG("Model file already exists: {}. If model does not load try reruning with --overwrite_models", filePath);
+            anyExists = true;
+        }
+    }
+    return anyExists;
+}
+
 GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
     hfSettings(hfSettings),
-    hfEndpoint(hfEndpoint) {
-    // TODO shared logic across all pullers
-    this->downloadPath = FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel});
-}
+    hfEndpoint(hfEndpoint),
+    downloadPath(FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel})) {}
 
 Status GGUFDownloader::downloadModel() {
     if (this->hfSettings.downloadType != GGUF_DOWNLOAD) {
@@ -68,19 +96,31 @@ Status GGUFDownloader::downloadModel() {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
     }
-
-    if (std::filesystem::is_directory(this->downloadPath) && !this->hfSettings.overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
-        return StatusCode::OK;
+    if (!this->hfSettings.ggufFilename.has_value() || this->hfSettings.ggufFilename->empty()) {
+        SPDLOG_ERROR("GGUF filename must be specified for GGUF download type, and shouldn't be empty.");
+        return StatusCode::INTERNAL_ERROR;
     }
-    std::filesystem::create_directories(this->downloadPath);
-    ovms::Status status;
+    auto status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
     if (!status.ok()) {
         return status;
     }
-    status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
-    if (!status.ok()) {
-        return status;
+    // now we want to check if model directory already exists
+    // if not we will create one
+    if (!std::filesystem::is_directory(this->downloadPath)) {
+        if (!std::filesystem::create_directories(this->downloadPath)) {
+            SPDLOG_ERROR("Failed to create model directory: {}", this->downloadPath);
+            return StatusCode::PATH_INVALID;
+        }
+    }
+    if (!this->hfSettings.overwriteModels) {
+        auto statusOrBool = checkIfAlreadyExists(this->hfSettings, this->downloadPath);
+        if (std::holds_alternative<Status>(statusOrBool)) {
+            return std::get<Status>(statusOrBool);
+        }
+        if (std::get<bool>(statusOrBool)) {
+            SPDLOG_DEBUG("Model files already exist and overwrite is disabled, skipping download for model: {}", this->hfSettings.sourceModel);
+            return StatusCode::OK;
+        }
     }
     status = downloadWithCurl(this->hfEndpoint, this->hfSettings.sourceModel, "/resolve/main/", this->hfSettings.ggufFilename.value(), this->downloadPath);
     if (!status.ok()) {
@@ -194,29 +234,31 @@ int progress_callback(void* clientp,
     curl_off_t ultotal,
     curl_off_t ulnow) {
     ProgressData* pcs = reinterpret_cast<ProgressData*>(clientp);
+    time_t currentTime = time(NULL);
     if (dlnow == 0) {
         pcs->started_download = time(NULL);
         pcs->last_print_time = time(NULL);
-    }
-    time_t currentTime = time(NULL);
-    if (currentTime - pcs->last_print_time < 1) {
-        return 0;
     }
 
     if ((dltotal == dlnow) && dltotal < 1000) {
         // Usually with first messages we don't get the full size and we don't want to print progress bar
         // so we assume that until dltotal is less than 1000 we don't have full size
         // otherwise we would print 100% progress bar
-        pcs->last_print_time = currentTime;
         return 0;
     }
     // called multiple times, so we want to print progress bar only once reached 100%
     if (pcs->fullDownloadPrinted) {
         return 0;
     }
+    if ((currentTime - pcs->last_print_time < 1) && (dltotal != dlnow)) {
+        // we dont want to skip printing progress bar for the 100% but we don't want to spam stdout either
+        return 0;
+    }
+    // FIXME no proper speed
     print_progress(dlnow, dltotal, (dlnow == 0), currentTime - pcs->started_download);
     std::cout.flush();
     pcs->fullDownloadPrinted = (dltotal == dlnow);
+    pcs->last_print_time = currentTime;
     return 0;
 }
 
@@ -262,7 +304,7 @@ static Status downloadSingleFileWithCurl(const std::string& filePath, const std:
     return StatusCode::OK;
 }
 
-Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
+std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenamesToDownload(const std::string& ggufFilename) {
     std::vector<std::string> filesToDownload;
     // we need to check if ggufFilename is of multipart type (contains 00001-of-N string)
     // we should fail if it is 0000M-of-0000N where M != 1 as we need 1 here
@@ -285,7 +327,7 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
             }
             auto totalPartsOpt = stoi32(match[2].str());
             if (!totalPartsOpt.has_value() || totalPartsOpt.value() <= 0) {
-                SPDLOG_ERROR("Error converting total parts to integer for filename: {}", ggufFilename);
+                SPDLOG_ERROR("Error converting total parts to integer for filename: {}, match: {}", ggufFilename, match[2].str());
                 return StatusCode::INTERNAL_ERROR;
             }
             totalParts = totalPartsOpt.value();
@@ -303,6 +345,15 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     } else {
         filesToDownload.push_back(ggufFilename);
     }
+    return filesToDownload;
+}
+
+Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
+    auto filesOrStatus = createGGUFFilenamesToDownload(ggufFilename);
+    if (std::holds_alternative<Status>(filesOrStatus)) {
+        return std::get<Status>(filesOrStatus);
+    }
+    auto& filesToDownload = std::get<std::vector<std::string>>(filesOrStatus);
     size_t partNo = 1;
     for (const auto& file : filesToDownload) {
         // construct url

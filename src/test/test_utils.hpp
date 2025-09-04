@@ -63,10 +63,6 @@
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-void SetEnvironmentVar(const std::string& var, const std::string& val);
-void UnSetEnvironmentVar(const std::string& var);
-const std::string GetEnvVar(const std::string& var);
-
 std::string dirTree(const std::string& path, const std::string& indent = "");
 const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
 const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
