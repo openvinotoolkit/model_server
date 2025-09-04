@@ -89,7 +89,14 @@ Examine that workspace is set up properly `models/config_all.json`:
             "base_path": "Qwen/Qwen2.5-Coder-1.5B"
         }
     ],
-    "model_config_list": []
+    "model_config_list": [
+        {
+            "config": {
+                "name": "OpenVINO/Qwen3-8B-int4-ov",
+                "base_path": "OpenVINO/Qwen3-8B-int4-ov"
+            }
+        }
+    ]
 }
 ```
 
@@ -205,6 +212,21 @@ models:
       - chat
       - edit
       - apply
+  - name: OVMS Qwen/Qwen3-8B
+    provider: openai
+    model: OpenVINO/Qwen3-8B-int4-ov
+    apiKey: unused
+    apiBase: localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
   -
     name: OVMS Qwen2.5-Coder-1.5B
     provider: openai
@@ -223,7 +245,7 @@ context:
   - provider: codebase
 ```
 
-## Have Fun
+## Chatting, code editing and autocompletion in action
 
 - to use chatting feature click continue button on the left sidebar
 - use `CTRL+I` to select and include source in chat message
@@ -233,8 +255,25 @@ context:
 ![final](final.png)
 
 
-## Troubleshooting
+## Agentic behavior in action
+Continue.dev plugin is shipped with multiple built-in tools. For full list please [visit Continue documentation](https://docs.continue.dev/features/agent/how-it-works#what-tools-are-available-in-plan-mode-read-only).
 
-OpenVINO Model Server uses python to apply chat templates. If you get an error during model loading, enable Unicode UTF-8 in your system settings:
+To use them, select Agent Mode:
 
-![utf8](utf8.png)
+![select agent](./select_agent.png)
+
+Select Agentic model from model list:
+
+![select model](./select_qwen.png)
+
+Example use cases for tools:
+
+1. Run terminal commands
+
+![git log](./using_terminal.png)
+
+2. Search files
+
+![glob](./glob.png)
+
+## Setup custom MCP servers to access custom tools TODO
