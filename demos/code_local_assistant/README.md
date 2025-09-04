@@ -268,11 +268,15 @@ Select Agentic model from model list:
 
 Example use cases for tools:
 
-1. Run terminal commands
+* Run terminal commands
 
 ![git log](./using_terminal.png)
 
-2. Search files
+* Look up web links
+
+![wikipedia](./wikipedia.png)
+
+* Search files
 
 ![glob](./glob.png)
 
