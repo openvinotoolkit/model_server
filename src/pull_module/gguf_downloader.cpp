@@ -38,7 +38,6 @@ std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
-    // improve so that only specific files are deleted not all quantizations FIXME
     auto lfstatus = StatusCode::OK;
     if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
         auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
@@ -234,13 +233,13 @@ int progress_callback(void* clientp,
     curl_off_t ultotal,
     curl_off_t ulnow) {
     ProgressData* pcs = reinterpret_cast<ProgressData*>(clientp);
-    time_t currentTime = time(NULL);
     if (dlnow == 0) {
         pcs->started_download = time(NULL);
         pcs->last_print_time = time(NULL);
     }
-
-    if ((dltotal == dlnow) && dltotal < 1000) {
+    time_t currentTime = time(NULL);
+    bool shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
+    if ((dltotal == dlnow) && dltotal < 10000) {
         // Usually with first messages we don't get the full size and we don't want to print progress bar
         // so we assume that until dltotal is less than 1000 we don't have full size
         // otherwise we would print 100% progress bar
@@ -250,15 +249,14 @@ int progress_callback(void* clientp,
     if (pcs->fullDownloadPrinted) {
         return 0;
     }
-    if ((currentTime - pcs->last_print_time < 1) && (dltotal != dlnow)) {
+    if (!shouldPrintDueToTime && (dltotal != dlnow)) {
         // we dont want to skip printing progress bar for the 100% but we don't want to spam stdout either
         return 0;
     }
-    // FIXME no proper speed
-    print_progress(dlnow, dltotal, (dlnow == 0), currentTime - pcs->started_download);
-    std::cout.flush();
     pcs->fullDownloadPrinted = (dltotal == dlnow);
     pcs->last_print_time = currentTime;
+    print_progress(dlnow, dltotal, (dlnow == 0), currentTime - pcs->started_download);
+    std::cout.flush();
     return 0;
 }
 
