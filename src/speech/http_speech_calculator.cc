@@ -218,8 +218,10 @@ public:
             } catch(std::exception&){
                 return absl::InvalidArgumentError("Audio file pasing failed");
             }
-            
-            output = std::make_unique<std::string>(pipeline.generate(raw_speech));
+            std::string result = "{\"text\": \"";
+            result += pipeline.generate(raw_speech);
+            result.append("\"}");
+            output = std::make_unique<std::string>(result);
         } else if(absl::StartsWith(payload.uri, "/v3/audio/speech")){
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
