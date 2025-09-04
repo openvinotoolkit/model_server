@@ -26,6 +26,31 @@ python export_model.py text_generation --source_model codellama/CodeLlama-7b-Ins
 
 > **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
 
+## Prepare Agentic Model 
+We need specialized model that is able to produce tool calls. For this task we will use Qwen3-8B quantized to int4. We will use automatic pulling of HF models, so export script is not required.
+
+Pull and add `OpenVINO/Qwen3-8B-int4-ov`:
+```console
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --pull \
+    --task text_generation \
+    --model_repository_path /models \
+    --source_model OpenVINO/Qwen3-8B-int4-ov \
+    --target_device GPU \
+    --tool_parser hermes3
+
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --add_to_config /models/config_all.json \
+    --model_name OpenVINO/Qwen3-8B-int4-ov \
+    --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+
+> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
+
 ## Prepare Code Completion Model
 For this task we need smaller, lighter model that will produce code quicker than chat task.
 Since we do not want to wait for the code to appear, we need to use smaller model. It should be responsive enough to generate multi-line blocks of code ahead of time as we type.
@@ -57,24 +82,45 @@ Examine that workspace is set up properly `models/config_all.json`:
 tree models
 models
 ├── codellama
-│   └── CodeLlama-7b-Instruct-hf
-│       ├── config.json
-│       ├── generation_config.json
-│       ├── graph.pbtxt
-│       ├── openvino_detokenizer.bin
-│       ├── openvino_detokenizer.xml
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── tokenizer.model
+│   └── CodeLlama-7b-Instruct-hf
+│       ├── chat_template.jinja
+│       ├── config.json
+│       ├── generation_config.json
+│       ├── graph.pbtxt
+│       ├── openvino_detokenizer.bin
+│       ├── openvino_detokenizer.xml
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── tokenizer.model
 ├── config_all.json
+├── OpenVINO
+│   └── Qwen3-8B-int4-ov
+│       ├── added_tokens.json
+│       ├── config.json
+│       ├── generation_config.json
+│       ├── graph.pbtxt
+│       ├── merges.txt
+│       ├── openvino_config.json
+│       ├── openvino_detokenizer.bin
+│       ├── openvino_detokenizer.xml
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── README.md
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── vocab.json
 └── Qwen
     └── Qwen2.5-Coder-1.5B
         ├── added_tokens.json
+        ├── chat_template.jinja
         ├── config.json
         ├── generation_config.json
         ├── graph.pbtxt
@@ -90,7 +136,7 @@ models
         ├── tokenizer.json
         └── vocab.json
 
-4 directories, 29 files
+7 directories, 48 files
 ```
 
 ## Set Up Server
