@@ -280,4 +280,3 @@ Example use cases for tools:
 
 ![glob](./glob.png)
 
-## Setup custom MCP servers to access custom tools TODO
