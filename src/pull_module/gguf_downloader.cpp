@@ -288,7 +288,7 @@ static Status downloadSingleFileWithCurl(const std::string& filePath, const std:
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
     CHECK_CURL_CALL(curl_easy_perform(curl));
-    long http_code = 0;
+    int32_t http_code = 0;
     CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code));
     SPDLOG_TRACE("HTTP response code: {}", http_code);
     if (http_code != 200) {
