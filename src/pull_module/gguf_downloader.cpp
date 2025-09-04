@@ -70,16 +70,15 @@ std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettings
         return std::get<Status>(ggufFilesOrStatus);
     }
     auto& ggufFiles = std::get<std::vector<std::string>>(ggufFilesOrStatus);
-    bool anyExists = false;
     for (const auto& file : ggufFiles) {
         auto filePath = FileSystem::joinPath({path, file});
         SPDLOG_DEBUG("Checking if model file exists: {}", filePath);
-        if (std::filesystem::exists(filePath)) {
-            SPDLOG_DEBUG("Model file already exists: {}. If model does not load try reruning with --overwrite_models", filePath);
-            anyExists = true;
-        }
+        bool exist = false;
+        auto status = LocalFileSystem::exists(filePath, &exist);
+        if (!status.ok()) return status;
+        if (exist) return exist;
     }
-    return anyExists;
+    return false;
 }
 
 GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :

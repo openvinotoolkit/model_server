@@ -243,17 +243,17 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldSkipDownloadWithNoOverrideWhenSomePartsE
     hfSettings.ggufFilename = ggufFilename;
     ovms::GGUFDownloader downloader(hfEndpoint, hfSettings);
     auto dirPath = ovms::FileSystem::joinPath({downloadPath, sourceModel});
-    // create dir
     std::filesystem::create_directories(dirPath);
-    // create file
     auto filePath = ovms::FileSystem::joinPath({dirPath, ggufFilename});
+    std::ofstream file(filePath);
+    file.close();
     auto status = downloader.downloadModel();
     ASSERT_TRUE(status.ok()) << status.string();
-    // check that part2 does not exist
     bool exist = false;
     status = ovms::LocalFileSystem::exists(ovms::FileSystem::joinPath({dirPath, ggufFilenamePart2}), &exist);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_FALSE(exist) << "File " << ggufFilenamePart2 << " should not exist";
+    SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
     // Part 2 with override should succeed
     hfSettings.overwriteModels = true;
     status = downloader.downloadModel();
@@ -269,26 +269,27 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldSkipDownloadWithNoOverrideWhenSomePartsE
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_TRUE(exist) << "File " << fullPathPart2 << " does not exist after download";
     // Part 3
-    // remove fullPathPart1
     std::filesystem::remove(fullPathPart1);
+    // Part 4
     hfSettings.overwriteModels = false;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     status = downloader.downloadModel();
-    ASSERT_EQ(status.getCode(), ovms::StatusCode::INTERNAL_ERROR) << status.string();
-
-
-
-////////////////////////////////
-///
-////////////
-////////////
-/// Plan:
-/// 1. Create (touch file) first part of the model. With no override it shoudl fail to download
-/// 2. With override it should download both parts
-/// 3. Remove first part
-/// 4. Try to download with no override - it should fail 
-/// 5. With override it should download both parts
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    ASSERT_LE(std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count(), 500) << "Download took too long, probably it was not skipped";
+    ASSERT_TRUE(status.ok()) << status.string();
+    // Part 5
+    hfSettings.overwriteModels = true;
+    status = downloader.downloadModel();
+    ASSERT_TRUE(status.ok()) << status.string();
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart1, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPathPart1 << " does not exist after download";
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPathPart2, &exist);
+    EXPECT_TRUE(status.ok()) << status.string();
+    EXPECT_TRUE(exist) << "File " << fullPathPart2 << " does not exist after download";
 }
-
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverride) {
     SKIP_AND_EXIT_IF_NO_GGUF();
