@@ -85,7 +85,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
 | `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
-| `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face repository.                                        |
+| `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
 
 ## Pull Mode Options for optimum-cli mode
 
