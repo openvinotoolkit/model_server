@@ -102,6 +102,9 @@ protected:
     void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadAndStartGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
     }
+    void SetUpServerForDownloadGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
+        ::SetUpServerForDownloadGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, 0, timeoutSeconds);
+    }
     void TearDown() {
         server.setShutdownRequest(1);
         if (t)
@@ -119,6 +122,9 @@ class GGUFDownloaderPullHfModelParameterized : public GGUFDownloaderPullHfModel,
 };
 
 class GGUFDownloaderPullHfModelParameterizedWithServer : public GGUFDownloaderPullHfModelWithServer, public ::testing::WithParamInterface<std::tuple<std::string, std::string, size_t>> {
+};
+
+class GGUFDownloaderPullHfModelParameterizedWithServerPullOnly : public GGUFDownloaderPullHfModelWithServer, public ::testing::WithParamInterface<std::tuple<std::string, std::string, size_t, std::string, size_t>> {
 };
 
 TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
@@ -142,7 +148,47 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     EXPECT_EQ(expectedSize, fileSize);
 }
 
+TEST_P(GGUFDownloaderPullHfModelParameterizedWithServerPullOnly, PositiveDownloadWithServerTwoFilesFromOneSourceModelName) {
+    // export RUN_GGUF_TESTS=1 to run the tests
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    std::string sourceModel = std::get<0>(GetParam());
+    std::string ggufFileName = std::get<1>(GetParam());
+    const size_t expectedSize = std::get<2>(GetParam());
+    std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    std::string task = "text_generation";
+    this->SetUpServerForDownloadGGUF(ggufFileName, sourceModel, downloadPath, task);
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFileName});
+    bool exist = false;
+    auto status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok());
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    // check size of the file with std::filesystem
+    std::filesystem::path filePath(fullPath);
+    size_t fileSize = std::filesystem::file_size(filePath);
+    EXPECT_EQ(expectedSize, fileSize);
+
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    // Download second file
+    std::string ggufFileName2 = std::get<3>(GetParam());
+    const size_t expectedSize2 = std::get<4>(GetParam());
+    this->SetUpServerForDownloadGGUF(ggufFileName2, sourceModel, downloadPath, task);
+    fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFileName2});
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok());
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    // check size of the file with std::filesystem
+    std::filesystem::path filePath2(fullPath);
+    size_t fileSize2 = std::filesystem::file_size(filePath2);
+    EXPECT_EQ(expectedSize2, fileSize2);
+}
+
 TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadandStart) {
+    // export RUN_GGUF_TESTS=1 to run the tests
     SKIP_AND_EXIT_IF_NO_GGUF();
     std::string sourceModel = std::get<0>(GetParam());
     std::string ggufFileName = std::get<1>(GetParam());
@@ -169,6 +215,8 @@ std::vector<std::tuple<std::string, std::string, std::string, std::string, size_
 std::vector<std::tuple<std::string, std::string, size_t>> ggufServerStartParams = {
     std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168))};
 
+std::vector<std::tuple<std::string, std::string, size_t, std::string, size_t>> ggufServerPullParams = {
+    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168), "DeepSeek-R1-Distill-Qwen-1.5B-Q3_K_M.gguf", size_t(924454912))};
 #ifndef _WIN32
 INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelTests,
@@ -219,6 +267,31 @@ INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelWithServerTests,
     GGUFDownloaderPullHfModelParameterizedWithServer,
     ::testing::ValuesIn(ggufServerStartParams));
+#endif
+
+#ifndef _WIN32
+INSTANTIATE_TEST_SUITE_P(
+    GGUFDownloaderPullHfModelWithServerTests2,
+    GGUFDownloaderPullHfModelParameterizedWithServerPullOnly,
+    ::testing::ValuesIn(ggufServerPullParams),
+    [](const ::testing::TestParamInfo<GGUFDownloaderPullHfModelParameterizedWithServerPullOnly::ParamType>& info) {
+        auto paramTuple = info.param;
+        std::string paramName = ovms::joins({
+                                                std::get<0>(paramTuple),  // sourceModel
+                                                std::get<1>(paramTuple)   // ggufFileName
+                                            },
+            "_");
+        std::replace(paramName.begin(), paramName.end(), '-', '_');
+        std::replace(paramName.begin(), paramName.end(), '/', '_');
+        std::replace(paramName.begin(), paramName.end(), ':', '_');
+        std::replace(paramName.begin(), paramName.end(), '.', '_');
+        return paramName;
+    });
+#else
+INSTANTIATE_TEST_SUITE_P(
+    GGUFDownloaderPullHfModelWithServerTests2,
+    GGUFDownloaderPullHfModelParameterizedWithServerPullOnly,
+    ::testing::ValuesIn(ggufServerPullParams));
 #endif
 
 TEST_F(GGUFDownloaderPullHfModel, PositiveDownload) {
