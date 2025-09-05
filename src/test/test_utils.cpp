@@ -816,7 +816,8 @@ void SetUpServerForDownloadAndStart(std::unique_ptr<std::thread>& t, ovms::Serve
 
 void SetUpServerForDownloadGGUF(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& ggufFilename, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
-    char* argv[] = {(char*)"ovms",
+    char* argv[] = {
+        (char*)"ovms",
         (char*)"--pull",
         (char*)"--source_model",
         (char*)source_model.c_str(),
@@ -825,7 +826,8 @@ void SetUpServerForDownloadGGUF(std::unique_ptr<std::thread>& t, ovms::Server& s
         (char*)"--task",
         (char*)task.c_str(),
         (char*)"--gguf_filename",
-        (char*)ggufFilename.c_str(),};
+        (char*)ggufFilename.c_str(),
+    };
 
     std::cout << "OVMS server start arguments:" << argv[9] << std::endl;
     int argc = 10;

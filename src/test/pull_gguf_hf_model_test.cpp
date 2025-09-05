@@ -103,7 +103,7 @@ protected:
         ::SetUpServerForDownloadAndStartGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
     }
     void SetUpServerForDownloadGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
-        ::SetUpServerForDownloadGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, 0 , timeoutSeconds);
+        ::SetUpServerForDownloadGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, 0, timeoutSeconds);
     }
     void TearDown() {
         server.setShutdownRequest(1);
@@ -216,7 +216,7 @@ std::vector<std::tuple<std::string, std::string, size_t>> ggufServerStartParams 
     std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168))};
 
 std::vector<std::tuple<std::string, std::string, size_t, std::string, size_t>> ggufServerPullParams = {
-    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168), "DeepSeek-R1-Distill-Qwen-1.5B-Q3_K_M.gguf",  size_t(924454912))};
+    std::make_tuple("unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf", size_t(1117319168), "DeepSeek-R1-Distill-Qwen-1.5B-Q3_K_M.gguf", size_t(924454912))};
 #ifndef _WIN32
 INSTANTIATE_TEST_SUITE_P(
     GGUFDownloaderPullHfModelTests,

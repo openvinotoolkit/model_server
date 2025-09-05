@@ -342,7 +342,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED, "Failed to run optimum-cli export command"},
     {StatusCode::HF_GIT_CLONE_FAILED, "Failed in libgit2 execution of clone method"},
     {StatusCode::HF_CREATE_DIRECTORY_FAILED, "Failed to create directory"},
-    
+
     {StatusCode::PARTIAL_END, "Request has finished and no further communication is needed"},
     {StatusCode::NONEXISTENT_PATH, "Nonexistent path"},
     {StatusCode::DEFAULT_EXCEEDS_MAXIMUM_ALLOWED_RESOLUTION, "Default exceeds maximum allowed resolution"},

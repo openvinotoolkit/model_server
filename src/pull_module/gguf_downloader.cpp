@@ -36,7 +36,7 @@ std::string GGUFDownloader::getGraphDirectory() {
 }
 std::string GGUFDownloader::getModelFile() {
     std::string modelFile = FileSystem::joinPath({downloadPath, this->hfSettings.ggufFilename.value()});
-    return  modelFile;
+    return modelFile;
 }
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
     auto lfstatus = StatusCode::OK;
@@ -72,8 +72,8 @@ Status GGUFDownloader::downloadModel() {
     }
 
     ovms::Status status;
-    if (!std::filesystem::is_directory(this->downloadPath) ) {
-        if(!std::filesystem::create_directories(this->downloadPath)) {
+    if (!std::filesystem::is_directory(this->downloadPath)) {
+        if (!std::filesystem::create_directories(this->downloadPath)) {
             SPDLOG_ERROR("Create directory error for path: {}", this->downloadPath);
             return StatusCode::HF_CREATE_DIRECTORY_FAILED;
         }
