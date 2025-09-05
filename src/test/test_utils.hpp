@@ -809,7 +809,7 @@ protected:
     }
 
     void TearDown() override {
-        SPDLOG_DEBUG("Directory tree of: {}.\n{}", directoryPath, dirTree(directoryPath));
+        SPDLOG_DEBUG("Directory tree of: {}\n{}", directoryPath, dirTree(directoryPath));
         // search for files from filesToPrintInCaseOfFailure in directoryPath and
         // then print its path with filename and contents
         // search for files recursively in directoryPath

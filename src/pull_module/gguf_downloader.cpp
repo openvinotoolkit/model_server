@@ -105,11 +105,16 @@ Status GGUFDownloader::downloadModel() {
     if (!status.ok()) {
         return status;
     }
-    if (!std::filesystem::is_directory(this->downloadPath)) {
+    bool exists = false;
+    status = LocalFileSystem::exists(this->downloadPath, &exists);
+    if (!exists || !status.ok()) {
         if (!std::filesystem::create_directories(this->downloadPath)) {
             SPDLOG_ERROR("Failed to create model directory: {}", this->downloadPath);
-            return StatusCode::PATH_INVALID;
+            return StatusCode::DIRECTORY_NOT_CREATED;
         }
+    } else if (!std::filesystem::is_directory(this->downloadPath)) {
+        SPDLOG_ERROR("Model path exists and is not a directory: {}", this->downloadPath);
+        return StatusCode::DIRECTORY_NOT_CREATED;
     }
     if (!this->hfSettings.overwriteModels) {
         auto statusOrBool = checkIfAlreadyExists(this->hfSettings, this->downloadPath);
