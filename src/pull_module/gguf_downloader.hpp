@@ -35,6 +35,7 @@ public:
     GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings);
     Status downloadModel() override;
     std::string getGraphDirectory() override;
+    std::string getModelFile();
     static Status downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath);
 
 protected:

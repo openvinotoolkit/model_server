@@ -34,9 +34,13 @@ namespace ovms {
 std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
+std::string GGUFDownloader::getModelFile() {
+    static std::string modelFile = FileSystem::joinPath({downloadPath, this->hfSettings.ggufFilename.value()});
+    return  modelFile;
+}
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
     auto lfstatus = StatusCode::OK;
-    if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
+    if (hfSettings.overwriteModels) {
         LocalFileSystem lfs;
         lfstatus = lfs.deleteFileFolder(path);
         if (lfstatus != StatusCode::OK) {
@@ -67,19 +71,24 @@ Status GGUFDownloader::downloadModel() {
         return StatusCode::PATH_INVALID;
     }
 
-    if (std::filesystem::is_directory(this->downloadPath) && !this->hfSettings.overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
+    ovms::Status status;
+    if (!std::filesystem::is_directory(this->downloadPath) ) {
+        if(!std::filesystem::create_directories(this->downloadPath)) {
+            SPDLOG_ERROR("Create directory error for path: {}", this->downloadPath);
+            return StatusCode::HF_CREATE_DIRECTORY_FAILED;
+        }
+    }
+
+    if (std::filesystem::exists(this->getModelFile()) && !this->hfSettings.overwriteModels) {
+        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->getModelFile());
         return StatusCode::OK;
     }
-    std::filesystem::create_directories(this->downloadPath);
-    ovms::Status status;
+
+    status = checkIfOverwriteAndRemove(this->hfSettings, this->getModelFile());
     if (!status.ok()) {
         return status;
     }
-    status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
-    if (!status.ok()) {
-        return status;
-    }
+
     status = downloadWithCurl(this->hfEndpoint, this->hfSettings.sourceModel, "/resolve/main/", this->hfSettings.ggufFilename.value(), this->downloadPath);
     if (!status.ok()) {
         SPDLOG_ERROR("Error occurred while downloading GGUF model: {} reason: {}", this->hfSettings.sourceModel, status.string());
@@ -210,9 +219,6 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
     SPDLOG_TRACE("Constructed URL: {}", url);
 
-    // construct filepath
-    auto filePath = FileSystem::joinPath({downloadPath, ggufFilename});
-
     // agent string required to avoid 403 Forbidden error on modelscope
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
@@ -229,7 +235,9 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     // set impl options
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, file_write_callback));
-    struct FtpFile ftpFile = {filePath.c_str(), NULL};
+
+    std::string modelFile = FileSystem::joinPath({downloadPath, ggufFilename});
+    struct FtpFile ftpFile = {modelFile.c_str(), NULL};
     auto fileCloseGuard = std::unique_ptr<FILE, decltype(&fileClose)>(ftpFile.stream, fileClose);
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ftpFile));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
@@ -243,7 +251,7 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
     CHECK_CURL_CALL(curl_easy_perform(curl));
-    SPDLOG_TRACE("cURL download completed for model: {} to path: {}", modelName, filePath);
+    SPDLOG_TRACE("cURL download completed for model: {} to path: {}", modelName, modelFile);
     return StatusCode::OK;
 }
 }  // namespace ovms

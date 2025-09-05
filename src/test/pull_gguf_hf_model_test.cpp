@@ -102,6 +102,9 @@ protected:
     void SetUpServerForDownloadAndStartGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
         ::SetUpServerForDownloadAndStartGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
     }
+    void SetUpServerForDownloadGGUF(std::string& ggufFile, std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 60) {
+        ::SetUpServerForDownloadGGUF(this->t, this->server, ggufFile, sourceModel, downloadPath, task, timeoutSeconds);
+    }
     void TearDown() {
         server.setShutdownRequest(1);
         if (t)
@@ -142,7 +145,48 @@ TEST_P(GGUFDownloaderPullHfModelParameterized, PositiveDownload) {
     EXPECT_EQ(expectedSize, fileSize);
 }
 
+TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadWithServerTwoFilesFromOneSourceModelName) {
+    // export RUN_GGUF_TESTS=1 to run the tests
+    SKIP_AND_EXIT_IF_NO_GGUF();
+    std::string sourceModel = std::get<0>(GetParam());
+    std::string ggufFileName = std::get<1>(GetParam());
+    const size_t expectedSize = std::get<2>(GetParam());
+    std::string downloadPath = ovms::FileSystem::appendSlash(directoryPath);
+    std::string task = "text_generation";
+    this->SetUpServerForDownloadGGUF(ggufFileName, sourceModel, downloadPath, task);
+    std::string fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFileName});
+    bool exist = false;
+    auto status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok());
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    // check size of the file with std::filesystem
+    std::filesystem::path filePath(fullPath);
+    size_t fileSize = std::filesystem::file_size(filePath);
+    EXPECT_EQ(expectedSize, fileSize);
+
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+
+    // Download second file
+    std::string ggufFileName2 = ggufFileName;
+    std::replace(ggufFileName2.begin(), ggufFileName2.end(), '4', '3');
+    const size_t expectedSize2 = expectedSize;
+    this->SetUpServerForDownloadGGUF(ggufFileName2, sourceModel, downloadPath, task);
+    fullPath = ovms::FileSystem::joinPath({downloadPath, sourceModel, ggufFileName2});
+    exist = false;
+    status = ovms::LocalFileSystem::exists(fullPath, &exist);
+    EXPECT_TRUE(status.ok());
+    EXPECT_TRUE(exist) << "File " << fullPath << " does not exist after download";
+    // check size of the file with std::filesystem
+    std::filesystem::path filePath2(fullPath);
+    size_t fileSize2 = std::filesystem::file_size(filePath2);
+    EXPECT_EQ(expectedSize2, fileSize2);
+}
+
 TEST_P(GGUFDownloaderPullHfModelParameterizedWithServer, PositiveDownloadandStart) {
+    // export RUN_GGUF_TESTS=1 to run the tests
     SKIP_AND_EXIT_IF_NO_GGUF();
     std::string sourceModel = std::get<0>(GetParam());
     std::string ggufFileName = std::get<1>(GetParam());

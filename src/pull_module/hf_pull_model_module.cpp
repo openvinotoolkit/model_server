@@ -112,6 +112,7 @@ Status HfPullModelModule::start(const ovms::Config& config) {
 
 Status HfPullModelModule::clone() const {
     std::string graphDirectory = "";
+    std::string modelPath = "";
     if (this->hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
         auto guardOrError = createGuard();
         if (std::holds_alternative<Status>(guardOrError)) {
@@ -124,6 +125,7 @@ Status HfPullModelModule::clone() const {
             return status;
         }
         graphDirectory = hfDownloader.getGraphDirectory();
+        modelPath = hfDownloader.getGraphDirectory();
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
         OptimumDownloader optimumDownloader(this->hfSettings);
         auto status = optimumDownloader.cloneRepository();
@@ -131,6 +133,7 @@ Status HfPullModelModule::clone() const {
             return status;
         }
         graphDirectory = optimumDownloader.getGraphDirectory();
+        modelPath = optimumDownloader.getGraphDirectory();
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
         GGUFDownloader ggufDownloader(this->GetHfEndpoint(), this->hfSettings);
         auto status = ggufDownloader.downloadModel();
@@ -138,11 +141,12 @@ Status HfPullModelModule::clone() const {
             return status;
         }
         graphDirectory = ggufDownloader.getGraphDirectory();
+        modelPath = ggufDownloader.getModelFile();
     } else {
         SPDLOG_ERROR("Unsupported download type");
         return StatusCode::INTERNAL_ERROR;
     }
-    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
+    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << modelPath << std::endl;
     GraphExport graphExporter;
     auto status = graphExporter.createServableConfig(graphDirectory, this->hfSettings);
     if (!status.ok()) {
