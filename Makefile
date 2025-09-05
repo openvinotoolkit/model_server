@@ -655,10 +655,11 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
-		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v $(shell realpath ${TEST_LLM_PATH}):${TEST_LLM_PATH}:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
+		-e TEST_LLM_PATH=${TEST_LLM_PATH} \
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -672,10 +673,11 @@ else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
-		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		-v $(shell realpath ${TEST_LLM_PATH}):${TEST_LLM_PATH}:ro \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
+		-e TEST_LLM_PATH=${TEST_LLM_PATH} \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh ;\
