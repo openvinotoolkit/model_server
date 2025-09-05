@@ -1,2 +1,0 @@
-[bandit]
-exclude: client/python/ovmsclient/lib/.venv,client/python/ovmsclient/lib/tests,client/python/ovmsclient/lib/setup.py
