@@ -35,7 +35,7 @@ std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 std::string GGUFDownloader::getModelFile() {
-    static std::string modelFile = FileSystem::joinPath({downloadPath, this->hfSettings.ggufFilename.value()});
+    std::string modelFile = FileSystem::joinPath({downloadPath, this->hfSettings.ggufFilename.value()});
     return  modelFile;
 }
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {

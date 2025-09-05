@@ -827,6 +827,7 @@ void SetUpServerForDownloadGGUF(std::unique_ptr<std::thread>& t, ovms::Server& s
         (char*)"--gguf_filename",
         (char*)ggufFilename.c_str(),};
 
+    std::cout << "OVMS server start arguments:" << argv[9] << std::endl;
     int argc = 10;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {
         EXPECT_EQ(expected_code, server.start(argc, argv));
