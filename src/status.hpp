@@ -26,12 +26,12 @@
 namespace ovms {
 
 enum class StatusCode {
-    OK, /*!< Success */
-
-    PATH_INVALID,        /*!< The provided path is invalid or doesn't exists */
-    FILE_INVALID,        /*!< File not found or cannot open */
-    CONFIG_FILE_INVALID, /*!< Config file not found or cannot open */
-    FILESYSTEM_ERROR,    /*!< Underlying filesystem error */
+    OK,                    /*!< Success */
+    PATH_INVALID,          /*!< The provided path is invalid or doesn't exists */
+    DIRECTORY_NOT_CREATED, /*!< Directory could not be created */
+    FILE_INVALID,          /*!< File not found or cannot open */
+    CONFIG_FILE_INVALID,   /*!< Config file not found or cannot open */
+    FILESYSTEM_ERROR,      /*!< Underlying filesystem error */
     MODEL_NOT_LOADED,
     JSON_INVALID,             /*!< The file/content is not valid json */
     JSON_SERIALIZATION_ERROR, /*!< Data serialization to json format failed */
