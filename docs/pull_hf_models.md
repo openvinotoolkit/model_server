@@ -29,7 +29,7 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 :::
 ::::
 
-*Note:* GGUF format models is only supported with `--task text_generation`. For list of supported models check [blog](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models).
+*Note:* GGUF format model is only supported with `--task text_generation`. For list of supported models check [blog](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models).
 
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
