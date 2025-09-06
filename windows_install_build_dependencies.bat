@@ -215,7 +215,10 @@ git fetch origin
 git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
-mkdir build && cd build
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
 cmake.exe -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 cmake.exe --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
