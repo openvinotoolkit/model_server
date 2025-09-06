@@ -132,8 +132,8 @@ IF /I EXIST %bash_path% (
 if "%USE_OV_BINARY%"=="" (
     set "USE_OV_BINARY=0"
 )
-
-IF NOT "%USE_OV_BINARY%"=="0" (
+echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
+IF "%USE_OV_BINARY%"=="0" (
     goto :install_openvino_from_src
 )
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
