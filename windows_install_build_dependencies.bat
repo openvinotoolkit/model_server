@@ -206,16 +206,22 @@ goto :finished_openvino
 set OV_SOURCE_ORG=e-ddykim
 set OV_SOURCE_BRANCH=sdpa_micro_pa
 
-git clone https://github.com/%OV_SOURCE_ORG%/openvino
+
+IF /I NOT EXIST openvino (
+    git clone https://github.com/%OV_SOURCE_ORG%/openvino
+)
 cd openvino
+git fetch origin
 git checkout %OV_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 mkdir build && cd build
-cmake.exe -G "Visual Studio 17 2022" ..
+cmake.exe -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 cmake.exe --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
+cd ..\..
+rmdir /S /Q openvino
 
 :finished_openvino
 
