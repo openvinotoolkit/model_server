@@ -128,7 +128,14 @@ IF /I EXIST %bash_path% (
     :msys_install_finished
     echo [INFO] Msys installed in: %msys_path%
 )
+:: Set default USE_OV_BINARY if not set
+if "%USE_OV_BINARY%"=="" (
+    set "USE_OV_BINARY=0"
+)
 
+IF NOT "%USE_OV_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -192,6 +199,25 @@ if "!output_user_root!" neq "opt" (
 :: Remove genai headers to be replaced by the ones from openvino_genai repository
 rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
+goto :finished_openvino
+
+:install_openvino_from_src
+
+set OV_SOURCE_ORG=e-ddykim
+set OV_SOURCE_BRANCH=sdpa_micro_pa
+
+git clone https://github.com/%OV_SOURCE_ORG%/openvino
+cd openvino
+git checkout %OV_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+git submodule update --init --recursive
+mkdir build && cd build
+cmake.exe -G "Visual Studio 17 2022" ..
+cmake.exe --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
+
+:finished_openvino
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
