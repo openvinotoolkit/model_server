@@ -6,6 +6,16 @@ At the moment, for demonstrating purposes of the established project structure, 
 
 ---
 
+## Instructions for preparing the data
+Run the command to download the Iris dataset, which is taken to be the hello-world dataset of classification datasets for simplicity purposes.
+Split and preprocess(label encoding, normalization and Cross validation) accordingly.
+
+```bash
+curl -o iris.csv https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data
+```
+
+---
+
 ## Step 1: Clone the Repository
 
 ```bash
@@ -38,11 +48,7 @@ docker build --no-cache -t prototype_iris .
 client/
   ├── client_inference.py
   └── client_train.py
-data_folder/
-  ├── iris_train.csv
-  └── iris_test.csv
 pipeline/
-  ├── __pycache__/
   ├── graph.pbtxt
   ├── model.py
   └── ovmsmodel.py
@@ -79,17 +85,10 @@ python client/client_inference.py infer iris_train_nolabel.csv  --target_column 
 ---
 
 For Enabling accelerator support:
-Manually set the ```bool - (use_ipex/use_oneDAL)``` in model.py file under "pipeline" directory to either True/False depending on the necessity.
-
-## Instructions for preparing the data
-Run the command to download the Iris dataset, which is taken to be the hello-world dataset of classification datasets.
-
-```bash
-curl -o iris.csv https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data
-```
+You can pass the ```bool - (use_ipex/use_oneDAL)``` in the "hyperparams.json"/ "kmeans_params.json" file as a key variable pair to either True/False depending on the necessity.
 
 
-Command-Line Usage
+Command-Line Usage:
 
 The training and inference client supports flexible options for both Logistic Regression and KMeans models.
 
