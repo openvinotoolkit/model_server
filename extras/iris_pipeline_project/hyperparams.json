@@ -1,5 +1,6 @@
 {
   "max_iter": 500,
   "C": 0.8,
-  "solver": "liblinear"
+  "solver": "liblinear",
+  "use_ipex": False
 }
