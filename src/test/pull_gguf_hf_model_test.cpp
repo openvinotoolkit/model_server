@@ -497,24 +497,24 @@ class GGUFDownloaderMultipartUtils : public ::testing::Test {
 
 TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenamePositive) {
     std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
-    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", GGUFDownloader::preparePartFilename(ggufFilename, 1, 2));
-    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", GGUFDownloader::preparePartFilename(ggufFilename, 1, 2));
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", std::get<std::string>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 2)));
+    EXPECT_EQ("qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf", std::get<std::string>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 2)));
     ggufFilename = "Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf";
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf", GGUFDownloader::preparePartFilename(ggufFilename, 1, 5));
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00003-of-00005.gguf", GGUFDownloader::preparePartFilename(ggufFilename, 3, 5));
-    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00005-of-00005.gguf", GGUFDownloader::preparePartFilename(ggufFilename, 5, 5));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00001-of-00005.gguf", std::get<std::string>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 5)));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00003-of-00005.gguf", std::get<std::string>(GGUFDownloader::preparePartFilename(ggufFilename, 3, 5)));
+    EXPECT_EQ("Mixtral-8x22B-v0.1-Q3_K_M-00005-of-00005.gguf", std::get<std::string>(GGUFDownloader::preparePartFilename(ggufFilename, 5, 5)));
 }
 
 TEST_F(GGUFDownloaderMultipartUtils, PreparePartFilenameNegative) {
     std::string ggufFilename = "qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf";
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 0, 2), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, -1, 2), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 3, 2), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 1, 1), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 1, 0), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 1, -1), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 1, 100000), std::invalid_argument);
-    EXPECT_THROW(GGUFDownloader::preparePartFilename(ggufFilename, 100000, 99999), std::invalid_argument);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 0, 2)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, -1, 2)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 3, 2)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 1)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 0)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 1, -1)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 1, 100000)).getCode(), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(std::get<Status>(GGUFDownloader::preparePartFilename(ggufFilename, 100000, 99999)).getCode(), StatusCode::INTERNAL_ERROR);
 }
 
 void find_file_in_tree(git_repository* repo, git_tree* tree,

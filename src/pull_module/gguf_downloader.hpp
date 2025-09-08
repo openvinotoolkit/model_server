@@ -38,7 +38,7 @@ public:
     Status downloadModel() override;
     std::string getGraphDirectory() override;
     static Status downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath);
-    static std::string preparePartFilename(const std::string& ggufFilename, int part, int totalParts);
+    static std::variant<Status, std::string> preparePartFilename(const std::string& ggufFilename, int part, int totalParts);
     static std::variant<Status, std::vector<std::string>> createGGUFFilenamesToDownload(const std::string& ggufFilename);
     static std::variant<Status, bool> checkIfAlreadyExists(const HFSettingsImpl& hfSettings, const std::string& path);
 

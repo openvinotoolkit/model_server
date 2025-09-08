@@ -320,25 +320,24 @@ std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenam
             SPDLOG_ERROR("Regex match for multipart filename failed for filename: {}", ggufFilename);
             return StatusCode::INTERNAL_ERROR;
         }
-        try {
-            if (match[1].str() != "00001") {
-                SPDLOG_ERROR("Multipart gguf filename must start with part 00001, got: {} for filename: {}", match[1].str(), ggufFilename);
-                return StatusCode::PATH_INVALID;
-            }
-            auto totalPartsOpt = stoi32(match[2].str());
-            if (!totalPartsOpt.has_value() || totalPartsOpt.value() <= 0) {
-                SPDLOG_ERROR("Error converting total parts to integer for filename: {}, match: {}", ggufFilename, match[2].str());
-                return StatusCode::INTERNAL_ERROR;
-            }
-            totalParts = totalPartsOpt.value();
-        } catch (const std::exception& e) {
-            SPDLOG_ERROR("Error converting total parts to integer for filename: {} error: {}", ggufFilename, e.what());
+        if (match[1].str() != "00001") {
+            SPDLOG_ERROR("Multipart gguf filename must start with part 00001, got: {} for filename: {}", match[1].str(), ggufFilename);
+            return StatusCode::PATH_INVALID;
+        }
+        auto totalPartsOpt = stoi32(match[2].str());
+        if (!totalPartsOpt.has_value() || totalPartsOpt.value() <= 0) {
+            SPDLOG_ERROR("Error converting total parts to integer for filename: {}, match: {}", ggufFilename, match[2].str());
             return StatusCode::INTERNAL_ERROR;
         }
+        totalParts = totalPartsOpt.value();
         for (int part = 1; part <= totalParts; part++) {
             std::string partNumberStr = std::to_string(part);
-            auto partFilename = preparePartFilename(ggufFilename, part, totalParts);
-            filesToDownload.push_back(partFilename);
+            auto partFilenameOrStatus = preparePartFilename(ggufFilename, part, totalParts);
+            if (std::holds_alternative<Status>(partFilenameOrStatus)) {
+                // shouldn't happen as we already validated regex
+                return std::get<Status>(partFilenameOrStatus);
+            }
+            filesToDownload.push_back(std::get<std::string>(partFilenameOrStatus));
         }
     } else {
         filesToDownload.push_back(ggufFilename);
@@ -370,9 +369,9 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     SPDLOG_TRACE("cURL download completed for model: {}", modelName);
     return StatusCode::OK;
 }
-std::string GGUFDownloader::preparePartFilename(const std::string& ggufFilename, int part, int totalParts) {
+std::variant<Status, std::string> GGUFDownloader::preparePartFilename(const std::string& ggufFilename, int part, int totalParts) {
     if (part <= 0 || totalParts <= 1 || part > totalParts || totalParts > 99999 || part > 99999) {
-        throw std::invalid_argument("Invalid part or totalParts values");
+        return Status(StatusCode::INTERNAL_ERROR, "Invalid part or totalParts values");
     }
     // example of strings
     // ggufFilename qwen2.5-3b-instruct-fp16-00001-of-00002.gguf
@@ -386,7 +385,7 @@ std::string GGUFDownloader::preparePartFilename(const std::string& ggufFilename,
     std::string constructedFilename = ggufFilename;
     auto it = ggufFilename.find("-00001-");
     if (it == std::string::npos) {
-        throw std::invalid_argument("Invalid ggufFilename format, cannot find -00001- part");
+        return Status(StatusCode::INTERNAL_ERROR, "Invalid ggufFilename format, cannot find -00001- part");
     }
     constructedFilename.replace(ggufFilename.find("-00001-"), 7, "-" + numberPadded + "-");
     return constructedFilename;
