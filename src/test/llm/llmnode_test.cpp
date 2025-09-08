@@ -3698,6 +3698,7 @@ public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
 #endif
+public:
     static const char* getModelPath(std::string defaultValue) {
         const char* testLlmPathEnv = std::getenv("TEST_LLM_PATH");
         if (testLlmPathEnv != nullptr && std::strlen(testLlmPathEnv) > 0) {
