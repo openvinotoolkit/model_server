@@ -26,7 +26,6 @@ class LogisticRegressionTorch(ModelClass):
         self.use_ipex = False
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
-        # pull accelerator flag from params
         self.use_ipex = bool(params.get("use_ipex", False))
 
         try:
@@ -90,7 +89,6 @@ class KMeansSkLearn(ModelClass):
         self.use_onedal = False
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
-        # pull accelerator flag from params
         self.use_onedal = bool(params.get("use_onedal", False))
 
         if self.use_onedal:
