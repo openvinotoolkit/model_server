@@ -1,7 +1,8 @@
-# OVMS Iris Pipeline Example
+# Optimized serving endpoint for Classical Machine Learning Models 
 
 This repository demonstrates how to use OpenVINO Model Server (OVMS) with a custom Mediapipe pipeline for the Iris dataset, including both model training and inference through a Python client.
-At the moment, it supports Logistic regression and KMeans.
+
+At the moment, for demonstrating purposes of the established project structure, we'll be demonstrating the Logistic Regression Model in pytorch and KMeans algorithm using scikit-Learn .
 
 ---
 
