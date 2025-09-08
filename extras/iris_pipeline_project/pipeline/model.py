@@ -4,35 +4,40 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.cluster import KMeans
-from sklearnex import patch_sklearn, unpatch_sklearn   
-import intel_extension_for_pytorch as ipex
+from sklearnex import patch_sklearn, unpatch_sklearn
 
 
 class ModelClass(abc.ABC):
     @abc.abstractmethod
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
+        """Train the model with given data and hyperparameters."""
         pass
 
     @abc.abstractmethod
     def predict(self, X: np.ndarray):
+        """Run inference on the given data."""
         pass
 
 
 class LogisticRegressionTorch(ModelClass):
-    def __init__(self, use_ipex=False):
+    def __init__(self):
         self.model = None
         self.device = torch.device("cpu")
-        self.use_ipex = use_ipex
+        self.use_ipex = False
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
+        # pull accelerator flag from params
+        self.use_ipex = bool(params.get("use_ipex", False))
+
         try:
             if self.use_ipex:
-                import intel_extension_for_pytorch as ipex  
-                use_ipex = True
+                import intel_extension_for_pytorch as ipex
             else:
-                use_ipex = False
+                ipex = None
         except ImportError:
-            use_ipex = False
+            print("[Torch LogisticRegression] IPEX not available, falling back to native PyTorch.")
+            self.use_ipex = False
+            ipex = None
 
         X_tensor = torch.from_numpy(X).float().to(self.device)
         y_tensor = torch.from_numpy(y).long().to(self.device)
@@ -46,7 +51,7 @@ class LogisticRegressionTorch(ModelClass):
         epochs = params.get("epochs", 100)
         optimizer = torch.optim.SGD(self.model.parameters(), lr=lr)
 
-        if use_ipex:
+        if self.use_ipex and ipex is not None:
             self.model, optimizer = ipex.optimize(self.model, optimizer=optimizer, dtype=torch.float32)
 
         start = time.perf_counter()
@@ -59,8 +64,8 @@ class LogisticRegressionTorch(ModelClass):
             optimizer.step()
         end = time.perf_counter()
 
-        print(f"[Torch LogisticRegression] Training time (IPEX={use_ipex}): {end - start:.4f} sec")
-        return self  
+        print(f"[Torch LogisticRegression] Training time (IPEX={self.use_ipex}): {end - start:.4f} sec")
+        return self
 
     def predict(self, X: np.ndarray):
         if self.model is None:
@@ -80,15 +85,18 @@ class LogisticRegressionTorch(ModelClass):
 
 
 class KMeansSkLearn(ModelClass):
-    def __init__(self, use_onedal=False):
+    def __init__(self):
         self.model = None
-        self.use_onedal = use_onedal
+        self.use_onedal = False
 
     def fit(self, X: np.ndarray, y: np.ndarray, params: dict):
+        # pull accelerator flag from params
+        self.use_onedal = bool(params.get("use_onedal", False))
+
         if self.use_onedal:
-            patch_sklearn()   
+            patch_sklearn()
         else:
-            unpatch_sklearn() 
+            unpatch_sklearn()
 
         n_clusters = params.get("n_clusters", 3)
         self.model = KMeans(n_clusters=n_clusters, random_state=42)
