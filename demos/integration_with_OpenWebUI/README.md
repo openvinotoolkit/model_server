@@ -2,9 +2,9 @@
 
 ## Description
 
-[Open WebUI](https://github.com/open-webui/open-webui) is a very popular component that provides a user interface to generative models. It supports use cases related to text generation, RAG, image generation, and many more. It also supports integration with remote execution servings compatible with standard APIs like OpenAI for chat completions and image generation.  
+[Open WebUI](https://github.com/open-webui/open-webui) is a very popular component that provides a user interface for generative models. It supports use cases related to text generation, RAG, image generation, and many more. It also supports integration with remote execution services compatible with standard APIs like OpenAI for chat completion and image generation.  
 
-The goal of this demo is to integrate Open WebUI with [OpenVINO Model Server](https://github.com/openvinotoolkit/model_server). It would include instructions for deploying the serving with a set of models and configuring Open WebUI to delegate generation to the serving endpoints.
+The goal of this demo is to integrate Open WebUI with [OpenVINO Model Server](https://github.com/openvinotoolkit/model_server). It includes instructions for deploying the server with a set of models and configuring Open WebUI to delegate generation to the serving endpoints.
 
 ---
 
@@ -20,7 +20,7 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
-There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
+There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
 This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
 
@@ -75,7 +75,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
 ### Reference
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching.html#model-preparation)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching.html#model-preparation)
 
 [https://docs.openwebui.com](https://docs.openwebui.com/#installation-with-pip)
 
@@ -150,7 +150,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 ### Step 4: Chat with RAG
 
 1. Click **New Chat**. Enter `#` symbol
-2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a message**
+2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a Message**
 3. Enter a query and sent
 
 ![chat with RAG demo](./chat_with_RAG_demo.png)
@@ -172,7 +172,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ### Reference
 
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
 [https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
 
@@ -223,7 +223,7 @@ Method 2:
 ![image generation method 2 demo](./image_generation_method_2_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
 [https://docs.openwebui.com/tutorials/images](https://docs.openwebui.com/tutorials/images/#using-image-generation)
 
@@ -255,7 +255,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 ![chat with VLM demo](./chat_with_VLM_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
 
 ---
 
