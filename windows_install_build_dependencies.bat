@@ -220,7 +220,6 @@ cmake.exe --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
 cd ..\..
-rmdir /S /Q openvino
 
 :finished_openvino
 :: Replace path in ovms WORKSPACE file
