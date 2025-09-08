@@ -296,11 +296,11 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
             streamOutputCache.clear();
             return result;
         }
-        return parseContentChunk(chunkResponse);
+        return parseContentChunk(streamOutputCache.getBuffer());
     } else if (processingPhase == TOOL_CALLS) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
-        TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
-        if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
+        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
+        if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }
         auto result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
