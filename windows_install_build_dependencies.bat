@@ -198,10 +198,18 @@ echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 goto :finished_openvino
 
 :install_openvino_from_src
-
-set OV_SOURCE_ORG=e-ddykim
-set OV_SOURCE_BRANCH=sdpa_micro_pa
-
+if "%OV_SOURCE_BRANCH%"=="" (
+    set "OV_SOURCE_BRANCH=sdpa_micro_pa"
+)
+if "%OV_SOURCE_ORG%"=="" (
+    set "OV_SOURCE_ORG=e-ddykim"
+)
+if "%TOKENIZER_SOURCE_ORG%"=="" (
+    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_BRANCH%"=="" (
+    set "TOKENIZER_SOURCE_BRANCH=master"
+)
 
 IF /I NOT EXIST openvino (
     git clone https://github.com/%OV_SOURCE_ORG%/openvino
@@ -220,6 +228,22 @@ cmake.exe --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
 cd ..\..
+
+C:\\%output_user_root%\\openvino\setupvars.bat
+IF /I NOT EXIST openvino_tokenizers (
+    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git
+)
+cd openvino_tokenizers
+git fetch origin
+git checkout %TOKENIZER_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix C:\\%output_user_root%\\openvino
+cd ..\..
+echo [INFO] OpenVINO from source installed: C:\%output_user_root%\openvino
 
 :finished_openvino
 :: Replace path in ovms WORKSPACE file
