@@ -248,7 +248,8 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldFailWhenTargetPathEscapes) {
 }
 
 TEST_F(GGUFDownloaderPullHfModel, ShouldFailWhenTargetPathIsFile) {
-    const std::string downloadPath = FileSystem::appendSlash(directoryPath);
+    const std::string downloadPath = this->directoryPath;
+
     HFSettingsImpl hfSettings;
     hfSettings.overwriteModels = false;
     hfSettings.sourceModel = "unsloth/Llama-3.2-1B-Instruct-GGUF";
@@ -257,8 +258,8 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldFailWhenTargetPathIsFile) {
     hfSettings.ggufFilename = "Llama-3.2-1B-Instruct-Q8_0.gguf";
     GGUFDownloader downloader("https://huggingface.co/", hfSettings);
     // now we create a file at downloadPath
-    auto filePathDir = FileSystem::joinPath({downloadPath, "unsloth/"});
-    EXPECT_TRUE(std::filesystem::create_directories(filePathDir));
+    auto filePathDir = FileSystem::joinPath({downloadPath, "unsloth"});
+    ASSERT_TRUE(std::filesystem::create_directories(filePathDir)) << downloadPath << " " << filePathDir;
     std::ofstream file(FileSystem::joinPath({filePathDir, "Llama-3.2-1B-Instruct-GGUF"}));
     file.close();
     auto status = downloader.downloadModel();
