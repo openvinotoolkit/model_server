@@ -3698,18 +3698,26 @@ public:
     static void SetUpTestSuite() { py::initialize_interpreter(); }
     static void TearDownTestSuite() { py::finalize_interpreter(); }
 #endif
+    static const char* getModelPath(std::string defaultValue) {
+        const char* testLlmPathEnv = std::getenv("TEST_LLM_PATH");
+        if (testLlmPathEnv != nullptr && std::strlen(testLlmPathEnv) > 0) {
+            return testLlmPathEnv;
+        } else {
+            return defaultValue.c_str();
+        }
+    }
 };
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/facebook/opt-125m"; }
+    void SetUp() { modelsPath = getModelPath("/ovms/src/test/llm_testing/facebook/opt-125m"); }
 };
 
 class LLMVLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
-    void SetUp() { modelsPath = "/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"; }
+    void SetUp() { modelsPath = getModelPath("/ovms/src/test/llm_testing/OpenGVLab/InternVL2-1B"); }
 };
 
 void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
