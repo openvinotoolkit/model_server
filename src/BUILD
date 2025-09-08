@@ -2657,6 +2657,8 @@ cc_test(
             "//src:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
+            ":test_test_with_temp_dir",
+            ":test_platform_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
             ":inferencerequest_test",
@@ -2671,6 +2673,7 @@ cc_test(
             ":listdirectorymodels_test",
             ":graph_export_test",
             ":config_export_test",
+            ":config_export_full_test",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2731,13 +2734,53 @@ cc_library(
         "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
-    data = [
-    ],
     deps = [
         "//src:ovms_lib",
         "//src:network_utils",
+        "//src:test_platform_utils",
+        "//src:test_light_test_utils",
         "@com_google_googletest//:gtest",
     ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_test_with_temp_dir",
+    hdrs = ["test/test_with_temp_dir.hpp",],
+    srcs = ["test/test_with_temp_dir.cpp",],
+    deps = [
+        "//src:libovmslogging",
+        ":test_platform_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+cc_library( # DO NOT ADD BIG DEPENDENCIES HERE
+    name = "test_light_test_utils",
+    hdrs = ["test/light_test_utils.hpp",],
+    srcs = ["test/light_test_utils.cpp",],
+    deps = [
+            "@com_github_gabime_spdlog//:spdlog",
+    ],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+
+cc_library(
+    name = "test_platform_utils",
+    hdrs = ["test/platform_utils.hpp",],
+    srcs = ["test/platform_utils.cpp",],
+    deps = [
+        "@com_google_googletest//:gtest",
+    ],
+    linkstatic = 1,
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
@@ -2818,6 +2861,8 @@ cc_library(
         "//src/servables_config_manager_module:listmodels",
         ":test_env_guard",
         ":test_utils",
+        ":test_platform_utils",
+        ":test_test_with_temp_dir",
         "//src/pull_module:libgit2",
         "//src/pull_module:hf_pull_model_module",
         "//src:ovms_lib",
@@ -2836,7 +2881,9 @@ cc_library(
     deps = [
         "@libgit2_engine//:libgit2_engine",
         "//src/servables_config_manager_module:listmodels",
+        ":test_platform_utils",
         ":test_utils",
+        ":test_test_with_temp_dir",
         ":test_gguf_environment",
         ":test_env_guard",
         "//src/pull_module:gguf_downloader",
@@ -2855,7 +2902,7 @@ cc_library(
     deps = [
         "//src/servables_config_manager_module:listmodels",
         ":test_utils",
-        #"//src:ovms_lib",
+        ":test_test_with_temp_dir",
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
     ],
@@ -2870,7 +2917,8 @@ cc_library(
     srcs = ["test/graph_export_test.cpp"],
     linkopts = [],
     deps = [
-        ":test_utils",
+        ":test_light_test_utils",
+        ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
@@ -2885,7 +2933,27 @@ cc_library(
     srcs = ["test/config_export_test.cpp"],
     linkopts = [],
     deps = [
+        ":test_platform_utils",
+        ":test_test_with_temp_dir",
+        ":test_light_test_utils",
+        "//src/config_export_module:config_export",
+        "//src:libovms_server_settings",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "config_export_full_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/config_export_full_test.cpp"],
+    linkopts = [],
+    deps = [
         ":test_utils",
+        ":test_platform_utils",
+        ":test_test_with_temp_dir",
+        ":test_light_test_utils",
         "//src/config_export_module:config_export",
         "//src:libovms_server_settings",
         "@com_google_googletest//:gtest",
@@ -2920,6 +2988,7 @@ cc_library(
     deps = [
 	":libtest_gpuenvironment",
         ":test_utils",
+        ":test_test_with_temp_dir",
         "//src:ovms_lib",
 	":libovmsoclutils",
         "@com_google_googletest//:gtest",
@@ -2952,6 +3021,7 @@ cc_library(
     srcs = ["test/text2image_test.cpp"],
     deps = [
         "//src:test_utils",
+        "//src:test_platform_utils",
         "//src/image_gen:imagegenutils",
         "//src/image_gen:imagegen_init",
     ],

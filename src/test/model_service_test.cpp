@@ -37,7 +37,9 @@
 #include "../modelversionstatus.hpp"
 #include "../server.hpp"
 #include "gtest/gtest.h"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
 
 using namespace ovms;
 

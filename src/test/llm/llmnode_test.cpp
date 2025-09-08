@@ -47,6 +47,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"
 

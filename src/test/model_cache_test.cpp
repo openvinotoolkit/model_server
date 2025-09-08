@@ -23,6 +23,7 @@
 #include "../modelinstance.hpp"
 #include "../modelmanager.hpp"
 #include "test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using namespace ovms;
 

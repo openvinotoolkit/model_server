@@ -30,6 +30,9 @@
 #include "../modelconfig.hpp"
 #include "../modelmanager.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using namespace ovms;
 

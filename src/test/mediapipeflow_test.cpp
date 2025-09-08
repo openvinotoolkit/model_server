@@ -59,7 +59,10 @@
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/tensor.h"
 #include "opencv2/opencv.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 #if (PYTHON_DISABLE == 0)
 #pragma warning(push)

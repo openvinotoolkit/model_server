@@ -20,9 +20,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "env_guard.hpp"
-#include "test_utils.hpp"
-#include "../filesystem.hpp"
+#include "src/test/env_guard.hpp"
+#include "src/test/light_test_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/test_with_temp_dir.hpp"
+#include "src/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"

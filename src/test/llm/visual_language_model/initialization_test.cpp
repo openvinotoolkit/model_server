@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../../../llm/servable_initializer.hpp"
+#include "../../platform_utils.hpp"
 #include "../../test_utils.hpp"
 
 using namespace ovms;

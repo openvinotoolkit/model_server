@@ -56,6 +56,7 @@
 
 #include "../python/python_backend.hpp"
 #include "opencv2/opencv.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;

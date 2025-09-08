@@ -40,6 +40,8 @@
 #include "../sequence_processing_spec.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
 
 using testing::_;
 using testing::ContainerEq;

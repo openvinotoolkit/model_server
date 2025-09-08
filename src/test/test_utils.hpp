@@ -61,22 +61,9 @@
 #include "../python/pythonnoderesources.hpp"
 #endif
 
+#include "platform_utils.hpp"
+
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
-
-std::string dirTree(const std::string& path, const std::string& indent = "");
-const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
-std::string getOvmsTestExecutablePath();
-
-#ifdef _WIN32
-const std::string getWindowsRepoRootPath();
-#endif
-void adjustConfigForTargetPlatform(std::string& input);
-const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
-std::string adjustConfigForTargetPlatformCStr(const char* input);
 
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
 
@@ -505,8 +492,6 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
-std::string GetFileContents(const std::string& filePath);
-
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
@@ -701,9 +686,6 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
     return result;
 }
-
-// returns path to a file.
-bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -792,61 +774,6 @@ public:
 
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
 void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
-
-class TestWithTempDir : public ::testing::Test {
-protected:
-    void SetUp() override {
-        const ::testing::TestInfo* const test_info =
-            ::testing::UnitTest::GetInstance()->current_test_info();
-        std::stringstream ss;
-        ss << std::string(test_info->test_suite_name())
-           << "/"
-           << std::string(test_info->name());
-        const std::string directoryName = ss.str();
-        directoryPath = getGenericFullPathForTmp("/tmp/" + directoryName);
-        std::filesystem::remove_all(directoryPath);
-        std::filesystem::create_directories(directoryPath);
-    }
-
-    void TearDown() override {
-        SPDLOG_DEBUG("Directory tree of: {}\n{}", directoryPath, dirTree(directoryPath));
-        // search for files from filesToPrintInCaseOfFailure in directoryPath and
-        // then print its path with filename and contents
-        // search for files recursively in directoryPath
-        // in case of gtest failure print the contents of the files
-        // check if this test failed and if yes print contents of the files
-        if (::testing::Test::HasFailure()) {
-            auto filePathsToPrint = searchFilesRecursively(directoryPath, filesToPrintInCaseOfFailure);
-            for (const auto& filePath : filePathsToPrint) {
-                std::stringstream content;
-                std::ifstream file(filePath);
-                if (file.is_open()) {
-                    content << file.rdbuf();
-                    SPDLOG_ERROR("File:{} Contents:\n{}", filePath, content.str());
-                } else {
-                    SPDLOG_ERROR("Could not open file: {}", filePath);
-                    continue;
-                }
-            }
-        }
-        std::filesystem::remove_all(directoryPath);
-    }
-    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) const {
-        std::vector<std::string> foundFiles;
-        for (const auto& file : filesToSearch) {
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
-                if (entry.is_regular_file() && entry.path().filename() == file) {
-                    foundFiles.push_back(entry.path().string());
-                    SPDLOG_DEBUG("Found file: {}", entry.path().string());
-                }
-            }
-        }
-        return foundFiles;
-    }
-
-    std::string directoryPath;
-    std::vector<std::string> filesToPrintInCaseOfFailure;
-};
 
 /**
  * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached

@@ -43,6 +43,8 @@
 #include "../server.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
 
 using namespace ovms;
 using namespace rapidjson;

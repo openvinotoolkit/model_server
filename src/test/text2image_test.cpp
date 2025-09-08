@@ -25,7 +25,8 @@
 #pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
-#include "test_utils.hpp"
+#include "test_utils.hpp"  // FIXME dispose?
+#include "platform_utils.hpp"
 
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"

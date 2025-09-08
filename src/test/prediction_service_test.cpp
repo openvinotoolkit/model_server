@@ -55,6 +55,9 @@
 #include "../regularovtensorfactory.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using testing::Each;
 using testing::ElementsAre;
