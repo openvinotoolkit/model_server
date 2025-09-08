@@ -262,7 +262,7 @@ To use them, select Agent Mode:
 
 ![select agent](./select_agent.png)
 
-Select Agentic model from model list:
+Select model that support tool calling from model list:
 
 ![select model](./select_qwen.png)
 
