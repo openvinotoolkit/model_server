@@ -237,7 +237,10 @@ cd openvino_tokenizers
 git fetch origin
 git checkout %TOKENIZER_SOURCE_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
-mkdir build && cd build
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
