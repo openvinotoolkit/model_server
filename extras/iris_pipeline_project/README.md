@@ -1,6 +1,6 @@
 # Optimized serving endpoint for Classical Machine Learning Models 
 
-This repository demonstrates how to use OpenVINO Model Server (OVMS) with a custom Mediapipe pipeline for the Iris dataset, including both model training and inference through a Python client.
+This project presents a versatile framework for training and deploying classical machine learning models on the OpenVINO Model Server (OVMS), leveraging accelerators(oneDAL for scikit-learn and IPEX for pytorch algorithms) to boost inference performance. The architecture is designed as a general solution, accommodating various machine learning algorithms and providing a consistent structure for both model development and production deployment.
 
 At the moment, for demonstrating purposes of the established project structure, we'll be demonstrating the Logistic Regression Model in pytorch and KMeans algorithm using scikit-Learn .
 
