@@ -288,10 +288,20 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
                 expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
                 EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
             } else {
-                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk << "Received: " << docStr << ", expected: " << expected;
             }
         } else {
-            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+            std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+            std::string docStr = doc.has_value() ? [&]() {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                return std::string(buffer.GetString());
+            }()
+                                                 : "std::nullopt";
+            FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                   << "\nexpectedDelta: " << expectedStr
+                   << "\ndoc: " << docStr;
         }
     }
 }

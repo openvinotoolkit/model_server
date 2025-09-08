@@ -19,12 +19,32 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "base_output_parser.hpp"
 
 namespace ovms {
 
 class OutputParser {
+    // Public types and enums
+public:
+    enum TagLookupStatus {
+        NOT_FOUND,
+        FOUND_COMPLETE,
+        FOUND_INCOMPLETE
+    };
+
+    class StreamOutputCache {
+        std::string buffer;
+
+    public:
+        TagLookupStatus lookupTag(const std::string& tag) const;
+        TagLookupStatus lookupTags(const std::unordered_set<std::string>& tags) const;
+        void add(const std::string& chunk);
+        void clear();
+        const std::string& getBuffer() const;
+    };
+
     enum ProcessingPhase {
         UNKNOWN,
         CONTENT,
@@ -32,12 +52,14 @@ class OutputParser {
         TOOL_CALLS
     };
 
+private:
     ov::genai::Tokenizer tokenizer;
     std::unique_ptr<BaseOutputParser> toolParser = nullptr;       // Tool parser for extracting tool calls
     std::unique_ptr<BaseOutputParser> reasoningParser = nullptr;  // Reasoning parser for extracting reasoning content
 
     // Streaming related members
     ProcessingPhase processingPhase = UNKNOWN;
+    StreamOutputCache streamOutputCache;
 
     // Common method for parsing content chunk in the streaming mode.
     rapidjson::Document parseContentChunk(const std::string& chunk);

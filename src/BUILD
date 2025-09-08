@@ -2515,6 +2515,7 @@ cc_test(
                 "test/llm/output_parsers/phi4_output_parser_test.cpp",
                 "test/llm/output_parsers/mistral_output_parser_test.cpp",
                 "test/llm/output_parsers/partial_json_builder_test.cpp",
+                "test/llm/output_parsers/stream_output_cache_test.cpp",
             ],
             "//:disable_python" : [],
         }) + select({
