@@ -1,4 +1,4 @@
-openai-agents==0.0.17
-openai==1.84.0
+openai-agents==0.2.11
+openai==1.107.0
 python-dateutil
 mcp_weather_server
