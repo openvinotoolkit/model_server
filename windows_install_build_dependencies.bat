@@ -228,7 +228,7 @@ cmake.exe --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
 cd ..\..
-
+call C:\\%output_user_root%\\openvino\\setupvars.bat
 set "OVMS_DIR=C:\\%output_user_root%\\openvino"
 IF /I NOT EXIST openvino_tokenizers (
     git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git
