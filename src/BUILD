@@ -16,7 +16,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
-     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS_VISIBLE", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
+     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES", "COPTS_PYTHON", "COPTS_MEDIAPIPE", "COPTS_DROGON",
      "create_config_settings", "ovms_cc_library")
 
 COPTS_OV_TRACE = select({
@@ -53,7 +53,7 @@ cc_library(
         "custom_nodes/common/buffersqueue.cpp",
     ],
     deps = ["libovms_queue"],
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_shared_library(
@@ -946,7 +946,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -961,7 +961,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts =COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts =COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -979,7 +979,7 @@ cc_binary(
         "libovms_queue",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -998,7 +998,7 @@ cc_binary(
         "libovms_queue",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -1013,7 +1013,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 cc_binary(
@@ -1028,7 +1028,7 @@ cc_binary(
         "//third_party:opencv",
     ],
     linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS_VISIBLE,
+    copts = COMMON_STATIC_LIBS_COPTS,
 )
 
 # POC which can start OVMS with C-API built by bazel
