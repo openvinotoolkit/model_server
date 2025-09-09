@@ -106,16 +106,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
     }
 }
 
-std::string getOvmsTestExecutablePath() {
-#ifdef __linux__
-    return std::filesystem::canonical("/proc/self/exe").string();
-#elif _WIN32
-    char buffer[2000];
-    GetModuleFileNameA(NULL, buffer, 2000);
-    return std::filesystem::path(buffer).parent_path().string();
-#endif
-}
-
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied

@@ -43,6 +43,7 @@
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "test_models_configs.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"

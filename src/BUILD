@@ -2674,6 +2674,7 @@ cc_test(
             ":graph_export_test",
             ":config_export_test",
             ":config_export_full_test",
+            ":test_constructor_enabled_model_manager",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2701,22 +2702,52 @@ cc_test(
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED,
 )
-
 cc_library(
     name = "test_env_guard",
-    linkstatic = 1,
-    hdrs = [
-        "test/env_guard.hpp",
-        ],
-    srcs = [
-        "test/env_guard.cpp",
-        ],
-    data = [
-    ],
+    hdrs = ["test/env_guard.hpp",],
+    srcs = ["test/env_guard.cpp",],
     deps = [
         "libovmslogging",
         "@com_google_googletest//:gtest",
     ],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+cc_library(
+    name = "test_constructor_enabled_model_manager",
+    hdrs = ["test/constructor_enabled_model_manager.hpp",],
+    srcs = ["test/constructor_enabled_model_manager.cpp",],
+    deps = [
+        "libovmslogging",
+        "@com_google_googletest//:gtest",
+        ":ovms_lib",
+    ],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+cc_library(
+    name = "test_test_models",
+    hdrs = ["test/test_models.hpp",],
+    deps = [
+        "@com_google_googletest//:gtest",
+    ],
+    linkstatic = 1,
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+    linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+)
+cc_library(
+    name = "test_test_models_configs",
+    hdrs = ["test/test_models_configs.hpp",],
+    deps = [
+            ":test_test_models",
+            ":modelconfig",
+    ],
+    linkstatic = 1,
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
@@ -2735,10 +2766,12 @@ cc_library(
         "test/test_utils.cpp",
         ],
     deps = [
+        "test_test_models_configs",
         "//src:ovms_lib",
         "//src:network_utils",
         "//src:test_platform_utils",
         "//src:test_light_test_utils",
+        "//src:test_constructor_enabled_model_manager",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

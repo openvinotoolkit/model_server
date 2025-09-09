@@ -16,6 +16,7 @@
 #include "platform_utils.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <mutex>
 #include <unordered_map>
@@ -193,4 +194,13 @@ std::string adjustConfigForTargetPlatformCStr(const char* input) {
     std::string inputString(input);
     adjustConfigForTargetPlatform(inputString);
     return inputString;
+}
+std::string getOvmsTestExecutablePath() {
+#ifdef __linux__
+    return std::filesystem::canonical("/proc/self/exe").string();
+#elif _WIN32
+    char buffer[2000];
+    GetModuleFileNameA(NULL, buffer, 2000);
+    return std::filesystem::path(buffer).parent_path().string();
+#endif
 }
