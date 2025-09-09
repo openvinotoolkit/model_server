@@ -39,11 +39,6 @@ void TestWithTempDir::SetUp() {
 
 void TestWithTempDir::TearDown() {
     SPDLOG_DEBUG("Directory tree of: {}\n{}", directoryPath, dirTree(directoryPath));
-    // search for files from filesToPrintInCaseOfFailure in directoryPath and
-    // then print its path with filename and contents
-    // search for files recursively in directoryPath
-    // in case of gtest failure print the contents of the files
-    // check if this test failed and if yes print contents of the files
     if (::testing::Test::HasFailure()) {
         auto filePathsToPrint = searchFilesRecursively(directoryPath, filesToPrintInCaseOfFailure);
         for (const auto& filePath : filePathsToPrint) {
