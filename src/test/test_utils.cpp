@@ -665,30 +665,6 @@ std::string GetFileContents(const std::string& filePath) {
     return content;
 }
 
-void SetEnvironmentVar(const std::string& var, const std::string& val) {
-    SPDLOG_INFO("Setting environment variable: {} to: {}", var, val);
-#ifdef _WIN32
-    _putenv_s(var.c_str(), val.c_str());
-#elif __linux__
-    ::setenv(var.c_str(), val.c_str(), 1);
-#endif
-}
-void UnSetEnvironmentVar(const std::string& var) {
-    SPDLOG_INFO("Unsetting environment variable: {}", var);
-#ifdef _WIN32
-    _putenv_s(var.c_str(), "");
-#elif __linux__
-    ::unsetenv(var.c_str());
-#endif
-}
-const std::string GetEnvVar(const std::string& var) {
-    std::string val = "";
-    const char* envCred = std::getenv(var.c_str());
-    if (envCred)
-        val = std::string(envCred);
-    return val;
-}
-
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, type] = inputInfo;
