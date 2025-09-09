@@ -21,7 +21,7 @@ set -exo pipefail
 os=${os:-auto}
 opencv_branch=${opencv_branch:-4.12.0}
 work_dir=${work_dir:-/opt}
-SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Werror -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security"
+SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-pointer -D_FORTIFY_SOURCE=1 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security"
 
 
 #===================================================================================================
@@ -64,7 +64,7 @@ git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b $opencv_bran
 cd $work_dir/opencv_repo
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
-cmake $(cat $current_working_dir/opencv_cmake_flags.txt) -DCMAKE_CXX_FLAGS=${SDL_OPS} $work_dir/opencv_repo && \
+cmake $(cat $current_working_dir/opencv_cmake_flags.txt) -DCMAKE_CXX_FLAGS="${SDL_OPS}" $work_dir/opencv_repo && \
     make "-j$(nproc)" && \
     make install
 
