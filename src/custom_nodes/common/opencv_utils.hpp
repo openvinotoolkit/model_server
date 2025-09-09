@@ -18,7 +18,10 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 
 template <typename T>
 void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {
