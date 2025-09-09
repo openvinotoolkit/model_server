@@ -2508,14 +2508,7 @@ cc_test(
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 # Tools support is limited to configuration with Python enabled
-                "test/llm/output_parsers/base_output_parser_test.cpp",
-                "test/llm/output_parsers/llama3_output_parser_test.cpp",
-                "test/llm/output_parsers/qwen3_output_parser_test.cpp",
-                "test/llm/output_parsers/hermes3_output_parser_test.cpp",
-                "test/llm/output_parsers/phi4_output_parser_test.cpp",
-                "test/llm/output_parsers/mistral_output_parser_test.cpp",
-                "test/llm/output_parsers/partial_json_builder_test.cpp",
-                "test/llm/output_parsers/stream_output_cache_test.cpp",
+                # Output parser tests moved to llm_output_parsers_tests
             ],
             "//:disable_python" : [],
         }) + select({
@@ -2690,6 +2683,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
+                ":llm_output_parsers_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3108,6 +3102,21 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = [],
 )
+
+cc_library(
+    name = "llm_output_parsers_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
+    deps = [
+        "@com_google_googletest//:gtest",
+        ":test_utils",
+        "//src/llm:output_parsers",
+    ],
+    copts = COPTS_TESTS,
+    local_defines = COMMON_LOCAL_DEFINES,
+)
+
 ovms_cc_library(
     name = "capimodule",
     hdrs = ["capi_frontend/capimodule.hpp"],

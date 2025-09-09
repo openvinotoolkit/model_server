@@ -36,8 +36,8 @@ TEST(StreamOutputCacheTest, LookupTag) {
     EXPECT_EQ(cache.lookupTag("functools"), OutputParser::TagLookupStatus::FOUND_COMPLETE);
 
     cache.clear();
-    // Not realistic but tests the logic
-    EXPECT_EQ(cache.lookupTag("func"), OutputParser::TagLookupStatus::FOUND_INCOMPLETE);
+    // With empty cache we cannot match anything so we return NOT_FOUND
+    EXPECT_EQ(cache.lookupTag("func"), OutputParser::TagLookupStatus::NOT_FOUND);
 
     cache.add("functools");
     EXPECT_EQ(cache.lookupTag("functools"), OutputParser::TagLookupStatus::FOUND_COMPLETE);
@@ -87,5 +87,27 @@ TEST(StreamOutputCacheTest, LookupTags) {
     EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "{"}), OutputParser::TagLookupStatus::NOT_FOUND);
     cache.add("|>");
     EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "{"}), OutputParser::TagLookupStatus::NOT_FOUND);
+    cache.clear();
+
+    // Check complete & incomplete tags
+    cache.add("<|python");
+    EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "<|python_t"}), OutputParser::TagLookupStatus::FOUND_INCOMPLETE);
+    cache.add("_t");
+    EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "<|python_t"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+    cache.add("a");
+    EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "<|python_t"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+    cache.add("g|>");
+    EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "<|python_t"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+    cache.clear();
+
+    // Check complete & incomplete tags - reversed lookup order
+    cache.add("<|python");
+    EXPECT_EQ(cache.lookupTags({"<|python_t", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_INCOMPLETE);
+    cache.add("_t");
+    EXPECT_EQ(cache.lookupTags({"<|python_t", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+    cache.add("a");
+    EXPECT_EQ(cache.lookupTags({"<|python_t", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+    cache.add("g|>");
+    EXPECT_EQ(cache.lookupTags({"<|python_t", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
     cache.clear();
 }

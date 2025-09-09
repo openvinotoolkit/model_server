@@ -18,6 +18,7 @@
 #include <unordered_set>
 
 #include "../../logging.hpp"
+#include "../../stringutils.hpp"
 #include "output_parser.hpp"
 #include "llama3/tool_parser.hpp"
 #include "hermes3/tool_parser.hpp"
@@ -26,27 +27,14 @@
 #include "qwen3/reasoning_parser.hpp"
 
 namespace ovms {
-
-bool stringsOverlap(const std::string& lhs, const std::string& rhs) {
-    size_t minLength = std::min(lhs.size(), rhs.size());
-    for (size_t len = 1; len <= minLength; ++len) {
-        if (lhs.compare(lhs.size() - len, len, rhs, 0, len) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
     if (tag.size() > buffer.size()) {
         /* 
-        If the tag is longer than the buffer, we check:
-           a) if the buffer is a prefix of the tag (whole cache is matched)
-           b) if the buffer and tag overlap (part of the cache is matched)
-        in both cases we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
+        If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
+        They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
         */
-        if (tag.compare(0, buffer.size(), buffer) == 0 || stringsOverlap(buffer, tag)) {
+        if (stringsOverlap(buffer, tag)) {
             return TagLookupStatus::FOUND_INCOMPLETE;
         } else {
             return TagLookupStatus::NOT_FOUND;
@@ -187,19 +175,6 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     return parsedOutput;
 }
 
-static inline bool isParsingTagPartOfChunk(const std::string& chunk, const std::string& parsingTag) {
-    return chunk.find(parsingTag) != std::string::npos;
-}
-
-static inline bool chunkContainsSpecialParsingTag(const std::string& chunk, const std::unordered_set<std::string>& specialParsingTags) {
-    for (const auto& tag : specialParsingTags) {
-        if (isParsingTagPartOfChunk(chunk, tag)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
     // Using appropriate parser based on the current processing phase
     // Call to this method should return either result from parser parseChunk implementation when we are in particular phase
@@ -296,7 +271,9 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
             streamOutputCache.clear();
             return result;
         }
-        return parseContentChunk(streamOutputCache.getBuffer());
+        auto result = parseContentChunk(streamOutputCache.getBuffer());
+        streamOutputCache.clear();
+        return result;
     } else if (processingPhase == TOOL_CALLS) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
         TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());

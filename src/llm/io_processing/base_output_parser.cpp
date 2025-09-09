@@ -18,7 +18,6 @@
 #include <string>
 #include <optional>
 #include <vector>
-#include <unordered_set>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
