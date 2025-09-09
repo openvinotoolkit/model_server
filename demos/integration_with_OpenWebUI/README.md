@@ -160,7 +160,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 1. Go to **Workspace** → **Models** → **+Add New Model** ([http://localhost:8080/workspace/models/create](http://localhost:8080/workspace/models/create))
 2. Configure the Model:
    * Name the model
-   * Select a base model from list
+   * Select a base model from the list
    * Click **Select Knowledge** and select a knowledge base for retrieval
 
 ![create and configure the RAG-enabled model](./create_and_configure_the_RAG-enabled_model.png)
