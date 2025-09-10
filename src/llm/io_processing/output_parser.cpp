@@ -28,9 +28,6 @@
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
-    // TODO: Remove debug print
-    std::cout << "Looking up tag: '" << tag << "' in buffer: '" << buffer << "'" << std::endl;
-
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
     }
@@ -80,14 +77,20 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
 }
 
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTags(const std::unordered_set<std::string>& tags) const {
-    TagLookupStatus tagLookupStatus = TagLookupStatus::NOT_FOUND;
+    // We look for multiple tags and return the status in the following priority: FOUND COMPLETE > FOUND_INCOMPLETE > NOT_FOUND
+    TagLookupStatus finalTagLookupStatus = TagLookupStatus::NOT_FOUND;
     for (const auto& tag : tags) {
-        tagLookupStatus = lookupTag(tag);
+        auto tagLookupStatus = lookupTag(tag);
         if (tagLookupStatus == TagLookupStatus::FOUND_COMPLETE) {
+            finalTagLookupStatus = TagLookupStatus::FOUND_COMPLETE;
             break;
+        } else if (finalTagLookupStatus == TagLookupStatus::FOUND_INCOMPLETE) {
+            // If we already have FOUND_INCOMPLETE and current tag lookup status is not FOUND_COMPLETE, we continue to look for completed tag
+            continue;
         }
+        finalTagLookupStatus = tagLookupStatus;
     }
-    return tagLookupStatus;
+    return finalTagLookupStatus;
 }
 
 void OutputParser::StreamOutputCache::add(const std::string& chunk) {
