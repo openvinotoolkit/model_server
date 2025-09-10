@@ -2,7 +2,7 @@
 
 This demo shows how to deploy  model with the OpenVINO Model Server.
 
-> **NOTE**: This is experimental feature and issues in accuracy of models may be observed.
+Currently supported models are DeepSeek-R1-Distill-Qwen (1.5B, 7B), Qwen2.5 Instruct (1.5B, 3B, 7B) & llama-3.2 Instruct (1B, 3B, 8B).
 
 If the model already exists locally, it will skip the downloading and immediately start the serving.
 
