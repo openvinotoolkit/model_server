@@ -4,8 +4,6 @@ This demo shows how to deploy  model with the OpenVINO Model Server.
 
 > **NOTE**: This is experimental feature and issues in accuracy of models may be observed.
 
-> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
-
 If the model already exists locally, it will skip the downloading and immediately start the serving.
 
 > **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
@@ -84,3 +82,6 @@ Example response would be:
   }
 }
 ```
+
+> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
+
