@@ -28,6 +28,10 @@
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
+    if (tag.empty()) {
+        return TagLookupStatus::NOT_FOUND;
+    }
+
     if (tag.size() > buffer.size()) {
         /* 
         If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
@@ -283,11 +287,28 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
             return parseContentChunk();
         }
         return parseContentChunk();
-    } else if (processingPhase == TOOL_CALLS) {
+    } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
         TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
+        }
+        if (toolEndTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+            // If tool call has finished, we switch to waiting for next tool call as tool calls in the last phase,
+            // so we either get next tool call or finish processing.
+            return parseToolCallChunk(finishReason, TOOL_CALLS_WAITING_FOR_TOOL);
+        }
+        return parseToolCallChunk(finishReason);
+    } else if (processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) {
+        // In this phase we are waiting for next tool call or finish of generation.
+        // If we get next tool call start tag, we switch to TOOL_CALLS phase, otherwise if generation finishes we switch to CONTENT phase to flush any remaining content.
+        TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTag(toolParser->getParsingStartTag());
+        if (toolStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
+            return std::nullopt;  // Wait for more chunks to determine if start tag is complete
+        }
+        if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+            // If tool call has started, we switch back to processing tool phase.
+            return parseToolCallChunk(finishReason, TOOL_CALLS_PROCESSING_TOOL);
         }
         return parseToolCallChunk(finishReason);
     } else {

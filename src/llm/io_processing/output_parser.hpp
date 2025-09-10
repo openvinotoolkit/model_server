@@ -49,7 +49,8 @@ public:
         UNKNOWN,
         CONTENT,
         REASONING,
-        TOOL_CALLS
+        TOOL_CALLS_PROCESSING_TOOL,
+        TOOL_CALLS_WAITING_FOR_TOOL
     };
 
 private:
@@ -66,7 +67,7 @@ private:
     // Regular content parsing method does not require finishReason as content is always parsed
     rapidjson::Document parseContentChunk(ProcessingPhase newPhase = CONTENT);
 
-    std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS);
+    std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<rapidjson::Document> parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
 
 public:
