@@ -2507,8 +2507,6 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
-                # Tools support is limited to configuration with Python enabled
-                # Output parser tests moved to llm_output_parsers_tests
             ],
             "//:disable_python" : [],
         }) + select({
@@ -3110,7 +3108,7 @@ cc_library(
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
     deps = [
         "@com_google_googletest//:gtest",
-        ":test_utils",
+        ":test_platform_utils",
         "//src/llm:output_parsers",
     ],
     copts = COPTS_TESTS,
