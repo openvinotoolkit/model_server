@@ -177,6 +177,7 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
+                        "/guard:cf",
                         "/W4",
                         "/WX",
                         "/external:anglebrackets",
