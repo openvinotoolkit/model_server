@@ -982,7 +982,7 @@ cc_binary(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
-cc_binary(
+ovms_cc_library(
     name = "opencv_core",
     srcs = [
         "deps/opencv_core_inc.hpp",
@@ -990,8 +990,7 @@ cc_binary(
     deps = [
         "//third_party:opencv",
     ],
-    linkshared = 1,
-    copts = COMMON_STATIC_LIBS_COPTS,
+    visibility = ["//visibility:public",],
 )
 
 cc_binary(
