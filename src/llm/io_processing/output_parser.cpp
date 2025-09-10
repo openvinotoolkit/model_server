@@ -21,7 +21,9 @@
 #include "hermes3/tool_parser.hpp"
 #include "phi4/tool_parser.hpp"
 #include "mistral/tool_parser.hpp"
+#include "openai/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
+#include "openai/reasoning_parser.hpp"
 
 namespace ovms {
 
@@ -50,12 +52,16 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
     } else if (toolParserName == "mistral") {
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
+    } else if (toolParserName == "gpt") {
+        toolParser = std::make_unique<GptToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
 
     if (reasoningParserName == "qwen3") {
         reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "gpt") {
+        reasoningParser = std::make_unique<GptReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: " + reasoningParserName);
     }

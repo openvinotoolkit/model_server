@@ -762,6 +762,7 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
+        SPDLOG_INFO("AAAA: [{}]", tokenizer.decode(generatedIds, ov::AnyMap{ov::genai::skip_special_tokens(false)}));
         parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
         parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
