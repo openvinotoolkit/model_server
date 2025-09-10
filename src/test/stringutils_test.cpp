@@ -335,3 +335,14 @@ TEST(StringUtils, isValidUtf8) {
     result = ovms::isValidUtf8("\xaa\xaa");  // iterations would decrease i below 0
     EXPECT_FALSE(result);
 }
+
+TEST(StringUtils, stringsOverlap) {
+    EXPECT_TRUE(ovms::stringsOverlap("hello", "lo world"));
+    EXPECT_TRUE(ovms::stringsOverlap("hello", "hello world"));
+    EXPECT_FALSE(ovms::stringsOverlap("hello", "world"));
+    EXPECT_TRUE(ovms::stringsOverlap("aaaaa", "aaab"));
+    EXPECT_FALSE(ovms::stringsOverlap("aaaaa", "baaa"));
+    EXPECT_TRUE(ovms::stringsOverlap("", ""));
+    EXPECT_FALSE(ovms::stringsOverlap("", "a"));
+    EXPECT_FALSE(ovms::stringsOverlap("a", ""));
+}
