@@ -2675,6 +2675,8 @@ cc_test(
             ":config_export_test",
             ":config_export_full_test",
             ":test_constructor_enabled_model_manager",
+            ":test_test_models",
+            ":test_test_models_configs",
             ] + select({
                 "//conditions:default": [
                     ":openvino_remote_tensors_tests",
@@ -2982,6 +2984,7 @@ cc_library(
     srcs = ["test/config_export_full_test.cpp"],
     linkopts = [],
     deps = [
+        ":test_constructor_enabled_model_manager",
         ":test_utils",
         ":test_platform_utils",
         ":test_test_with_temp_dir",
