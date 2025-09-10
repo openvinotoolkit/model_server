@@ -826,7 +826,7 @@ ovms_cc_library(
     srcs = ["tensor_conversion.cpp",],
     deps = [
         "//third_party:openvino",
-        "//third_party:opencv",
+        "opencv_core",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -842,7 +842,7 @@ ovms_cc_library(
     srcs = ["tensor_conversion_common.cpp",],
     deps = [
         "//third_party:openvino",
-        "//third_party:opencv",
+        "opencv_core",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -858,7 +858,7 @@ ovms_cc_library(
     hdrs = ["tensor_conversion_after.hpp"],
     deps = [
         "//third_party:openvino",
-        "//third_party:opencv",
+        "opencv_core",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -943,7 +943,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "//third_party:opencv",
+        "opencv_core",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -958,7 +958,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "//third_party:opencv",
+        "opencv_core",
     ],
     linkshared = 1,
     copts =COMMON_STATIC_LIBS_COPTS,
@@ -983,6 +983,18 @@ cc_binary(
 )
 
 cc_binary(
+    name = "opencv_core",
+    srcs = [
+        "deps/opencv_core_inc.hpp",
+    ],
+    deps = [
+        "//third_party:opencv",
+    ],
+    linkshared = 1,
+    copts = COMMON_STATIC_LIBS_COPTS,
+)
+
+cc_binary(
     name = "libcustom_node_model_zoo_intel_object_detection.so",
     srcs = [
         "custom_nodes/common/utils.hpp",
@@ -994,7 +1006,7 @@ cc_binary(
     ],
     deps = [
         "custom_nodes_common_buffersqueue",
-        "//third_party:opencv",
+        "opencv_core",
         "libovms_queue",
     ],
     linkshared = 1,
@@ -1010,7 +1022,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "//third_party:opencv",
+        "opencv_core",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -1025,7 +1037,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "//third_party:opencv",
+        "opencv_core",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -1067,7 +1079,7 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
-        "//third_party:opencv",
+        "opencv_core",
         "tensor_conversion_common",
         "inference_request_common",
         "predict_request_validation_utils_impl",

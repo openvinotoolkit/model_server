@@ -19,11 +19,8 @@
 #include <vector>
 #include <string>
 #include <utility>
-#pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include <opencv2/opencv.hpp>
-#pragma warning(pop)
 
+#include "deps/opencv_core_inc.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "profiler.hpp"
