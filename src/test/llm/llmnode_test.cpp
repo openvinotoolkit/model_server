@@ -47,6 +47,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "../constructor_enabled_model_manager.hpp"
 #include "../platform_utils.hpp"
 #include "../test_http_utils.hpp"
 #include "../test_utils.hpp"

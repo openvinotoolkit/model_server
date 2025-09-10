@@ -29,6 +29,7 @@
 #include "../status.hpp"
 #include "../stringutils.hpp"
 #include "mediapipe/framework/port/integral_types.h"
+#include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 

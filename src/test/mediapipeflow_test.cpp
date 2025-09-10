@@ -55,6 +55,7 @@
 #include "../shape.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
+#include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/formats/tensor.h"

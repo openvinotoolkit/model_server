@@ -41,6 +41,8 @@
 #include "../schema.hpp"
 #include "../sequence_processing_spec.hpp"
 #include "../server.hpp"
+
+#include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"

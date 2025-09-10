@@ -2766,12 +2766,11 @@ cc_library(
         "test/test_utils.cpp",
         ],
     deps = [
-        "test_test_models_configs",
+        "test_test_models",
         "//src:ovms_lib",
         "//src:network_utils",
         "//src:test_platform_utils",
         "//src:test_light_test_utils",
-        "//src:test_constructor_enabled_model_manager",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

@@ -18,6 +18,8 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../modelversionstatus.hpp"
+
+#include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
 #include "test_models_configs.hpp"
 

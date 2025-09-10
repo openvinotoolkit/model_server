@@ -25,6 +25,7 @@
 #include "../model_metric_reporter.hpp"
 #include "../modelconfig.hpp"
 #include "../modelinstance.hpp"
+#include "constructor_enabled_model_manager.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "platform_utils.hpp"

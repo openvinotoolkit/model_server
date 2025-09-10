@@ -53,6 +53,7 @@
 #include "../modelinstanceunloadguard.hpp"
 #include "../precision.hpp"
 #include "../stringutils.hpp"
+#include "constructor_enabled_model_manager.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"

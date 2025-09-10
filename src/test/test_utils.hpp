@@ -61,8 +61,6 @@
 #include "../python/pythonnoderesources.hpp"
 #endif
 
-#include "platform_utils.hpp"
-#include "constructor_enabled_model_manager.hpp"
 #include "test_models.hpp"
 
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
@@ -535,17 +533,6 @@ public:
             this->getOptionalInputNames(),
             this->getModelConfig().getBatchingMode(),
             this->getModelConfig().getShapes());
-    }
-};
-
-class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
-public:
-    int getResourcesSize() {
-        return resources.size();
-    }
-
-    void setResourcesCleanupIntervalMillisec(uint32_t value) {
-        this->resourcesCleanupIntervalMillisec = value;
     }
 };
 

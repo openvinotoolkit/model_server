@@ -46,6 +46,8 @@
 #include "../status.hpp"
 #include "../tensor_conversion.hpp"
 #include "../timer.hpp"
+
+#include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
 #include "test_models_configs.hpp"
 #include "test_utils.hpp"

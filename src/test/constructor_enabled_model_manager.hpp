@@ -36,3 +36,8 @@ public:
     void updateConfigurationWithoutConfigFile();
     void setWaitForModelLoadedTimeoutMs(int value);
 };
+class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
+public:
+    int getResourcesSize();
+    void setResourcesCleanupIntervalMillisec(uint32_t value);
+};
