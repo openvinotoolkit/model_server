@@ -61,8 +61,13 @@ private:
     ProcessingPhase processingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
 
-    // Common method for parsing content chunk in the streaming mode.
-    rapidjson::Document parseContentChunk(const std::string& chunk);
+    // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
+
+    // Regular content parsing method does not require finishReason as content is always parsed
+    rapidjson::Document parseContentChunk(ProcessingPhase newPhase = CONTENT);
+
+    std::optional<rapidjson::Document> parseToolCallChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS);
+    std::optional<rapidjson::Document> parseReasoningChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
 
 public:
     OutputParser() = delete;
