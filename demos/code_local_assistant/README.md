@@ -58,7 +58,7 @@ ovms --pull ^
   --target_device GPU ^
   --tool_parser hermes3
 
-ovms --add_to_config /models/config_all.json ^
+ovms --add_to_config ./models/config_all.json ^
   --model_name OpenVINO/Qwen3-8B-int4-ov ^
   --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -207,7 +207,7 @@ models:
     provider: openai
     model: codellama/CodeLlama-7b-Instruct-hf
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
@@ -216,7 +216,7 @@ models:
     provider: openai
     model: OpenVINO/Qwen3-8B-int4-ov
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
@@ -232,7 +232,7 @@ models:
     provider: openai
     model: Qwen/Qwen2.5-Coder-1.5B
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - autocomplete
 context:
