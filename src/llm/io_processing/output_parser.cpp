@@ -29,7 +29,7 @@
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
     // TODO: Remove debug print
-    std:: cout << "Looking up tag: '" << tag << "' in buffer: '" << buffer << "'" << std::endl;
+    std::cout << "Looking up tag: '" << tag << "' in buffer: '" << buffer << "'" << std::endl;
 
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
