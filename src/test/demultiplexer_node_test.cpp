@@ -28,6 +28,8 @@
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "../ov_utils.hpp"
+
+#include "constructor_enabled_model_manager.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;
