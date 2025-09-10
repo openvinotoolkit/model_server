@@ -102,7 +102,6 @@ build:linux --cxxopt=-fstack-clash-protection
 build:linux --cxxopt=-Wformat
 build:linux --cxxopt=-Wformat-security
 build:linux --cxxopt=-Werror=format-security
-build:linux --cxxopt=-fno-immediate-escalation
 # TODO: Add equivalent windows flag
 build:linux --force_pic
 
