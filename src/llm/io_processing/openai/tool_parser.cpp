@@ -40,6 +40,7 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
         return;
     }
 
+    return;
     
     auto gt = generatedTokens;
 

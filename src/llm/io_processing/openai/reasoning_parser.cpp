@@ -27,10 +27,21 @@
 
 #include "../../../logging.hpp"
 #include "reasoning_parser.hpp"
+#include "harmony.hpp"
 #include "../utils.hpp"
 
+#include "harmony.hpp"
 namespace ovms {
 void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+
+    openai::Harmony harmony(tokenizer, generatedTokens);
+    if (!harmony.parse()) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
+    }
+
+    return;
 
     SPDLOG_INFO("BBBBB: [{}]", parsedOutput.content);
     SPDLOG_INFO("CCCCC: [{}]", generatedTokens);
