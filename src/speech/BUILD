@@ -35,7 +35,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "speech_calculator",
     srcs = ["http_speech_calculator.cc"],
-    hdrs = ["dr_wav.h"],
+    hdrs = ["dr_wav.h", "dr_mp3.h"],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
