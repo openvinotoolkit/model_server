@@ -21,7 +21,7 @@ mkdir models
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
 ```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
 
 > **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
@@ -39,7 +39,8 @@ docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     --model_repository_path /models \
     --source_model OpenVINO/Qwen3-8B-int4-ov \
     --target_device GPU \
-    --tool_parser hermes3
+    --tool_parser hermes3 \
+    --cache_size 2
 
 docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
     -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
@@ -56,9 +57,10 @@ ovms --pull ^
   --model_repository_path ./models ^
   --source_model OpenVINO/Qwen3-8B-int4-ov ^
   --target_device GPU ^
-  --tool_parser hermes3
+  --tool_parser hermes3 ^
+  --cache_size 2
 
-ovms --add_to_config /models/config_all.json ^
+ovms --add_to_config ./models/config_all.json ^
   --model_name OpenVINO/Qwen3-8B-int4-ov ^
   --model_path OpenVINO/Qwen3-8B-int4-ov
 ```
@@ -73,7 +75,7 @@ Code completion works in non-streaming, unary mode. Do not use instruct model, t
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 2 --overwrite_models
 ```
 
 Examine that workspace is set up properly `models/config_all.json`:
@@ -207,7 +209,7 @@ models:
     provider: openai
     model: codellama/CodeLlama-7b-Instruct-hf
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
@@ -216,7 +218,7 @@ models:
     provider: openai
     model: OpenVINO/Qwen3-8B-int4-ov
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
@@ -232,7 +234,7 @@ models:
     provider: openai
     model: Qwen/Qwen2.5-Coder-1.5B
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - autocomplete
 context:
