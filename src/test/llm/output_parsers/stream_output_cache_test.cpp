@@ -67,6 +67,7 @@ TEST(StreamOutputCacheTest, LookupTag) {
 
 TEST(StreamOutputCacheTest, LookupTags) {
     OutputParser::StreamOutputCache cache;
+    // Check all possible states
     cache.add("{\"name\":");
     EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "{"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
 
@@ -87,6 +88,29 @@ TEST(StreamOutputCacheTest, LookupTags) {
     EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "{"}), OutputParser::TagLookupStatus::NOT_FOUND);
     cache.add("|>");
     EXPECT_EQ(cache.lookupTags({"<|python_tag|>", "{"}), OutputParser::TagLookupStatus::NOT_FOUND);
+    cache.clear();
+
+    // Check all possible states - reversed lookup order
+    cache.add("{\"name\":");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+
+    cache.clear();
+    cache.add("some text <|python");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_INCOMPLETE);
+    cache.add("_tag|> more text");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+
+    cache.clear();
+    cache.add("<|python{");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_COMPLETE);
+
+    cache.clear();
+    cache.add("<|python_tag|");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::FOUND_INCOMPLETE);
+    cache.add("text");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::NOT_FOUND);
+    cache.add("|>");
+    EXPECT_EQ(cache.lookupTags({"{", "<|python_tag|>"}), OutputParser::TagLookupStatus::NOT_FOUND);
     cache.clear();
 
     // Check complete & incomplete tags

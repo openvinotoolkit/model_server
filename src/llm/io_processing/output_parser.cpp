@@ -82,13 +82,11 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTags(const 
     for (const auto& tag : tags) {
         auto tagLookupStatus = lookupTag(tag);
         if (tagLookupStatus == TagLookupStatus::FOUND_COMPLETE) {
-            finalTagLookupStatus = TagLookupStatus::FOUND_COMPLETE;
-            break;
-        } else if (finalTagLookupStatus == TagLookupStatus::FOUND_INCOMPLETE) {
-            // If we already have FOUND_INCOMPLETE and current tag lookup status is not FOUND_COMPLETE, we continue to look for completed tag
-            continue;
+            return TagLookupStatus::FOUND_COMPLETE;
         }
-        finalTagLookupStatus = tagLookupStatus;
+        if (tagLookupStatus == TagLookupStatus::FOUND_INCOMPLETE) {
+            finalTagLookupStatus = TagLookupStatus::FOUND_INCOMPLETE;
+        }
     }
     return finalTagLookupStatus;
 }

@@ -345,4 +345,6 @@ TEST(StringUtils, stringsOverlap) {
     EXPECT_TRUE(ovms::stringsOverlap("", ""));
     EXPECT_FALSE(ovms::stringsOverlap("", "a"));
     EXPECT_FALSE(ovms::stringsOverlap("a", ""));
+    EXPECT_FALSE(ovms::stringsOverlap("bac", "a"));
+    EXPECT_FALSE(ovms::stringsOverlap("bac", "b"));
 }
