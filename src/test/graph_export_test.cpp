@@ -19,7 +19,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
+#include "test_with_temp_dir.hpp"
+#include "light_test_utils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "../filesystem.hpp"

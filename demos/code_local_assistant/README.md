@@ -21,8 +21,50 @@ mkdir models
 
 Export `codellama/CodeLlama-7b-Instruct-hf`:
 ```console
-python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --overwrite_models
+python export_model.py text_generation --source_model codellama/CodeLlama-7b-Instruct-hf --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device GPU --cache_size 2 --overwrite_models
 ```
+
+> **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
+
+## Prepare Agentic Model 
+We need specialized model that is able to produce tool calls. For this task we will use Qwen3-8B quantized to int4. We will use automatic pulling of HF models, so export script is not required.
+
+Pull and add `OpenVINO/Qwen3-8B-int4-ov` (Linux):
+```bash
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --pull \
+    --task text_generation \
+    --model_repository_path /models \
+    --source_model OpenVINO/Qwen3-8B-int4-ov \
+    --target_device GPU \
+    --tool_parser hermes3 \
+    --cache_size 2
+
+docker run -it --rm --user $(id -u):$(id -g) -v $(pwd)/models:/models/:rw \
+    -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+    openvino/model_server:latest-gpu \
+    --add_to_config /models/config_all.json \
+    --model_name OpenVINO/Qwen3-8B-int4-ov \
+    --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+
+Or, when running on Windows, pull and add `OpenVINO/Qwen3-8B-int4-ov`:
+```bat
+ovms --pull ^
+  --task text_generation ^
+  --model_repository_path ./models ^
+  --source_model OpenVINO/Qwen3-8B-int4-ov ^
+  --target_device GPU ^
+  --tool_parser hermes3 ^
+  --cache_size 2
+
+ovms --add_to_config ./models/config_all.json ^
+  --model_name OpenVINO/Qwen3-8B-int4-ov ^
+  --model_path OpenVINO/Qwen3-8B-int4-ov
+```
+
 
 > **Note:** Use `--target_device NPU` for Intel NPU or omit this parameter to run on Intel CPU
 
@@ -33,7 +75,7 @@ Code completion works in non-streaming, unary mode. Do not use instruct model, t
 
 Export `Qwen/Qwen2.5-Coder-1.5B`:
 ```console
-python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --overwrite_models
+python export_model.py text_generation --source_model Qwen/Qwen2.5-Coder-1.5B --weight-format int4 --config_file_path models/config_all.json --model_repository_path models --target_device NPU --cache_size 2 --overwrite_models
 ```
 
 Examine that workspace is set up properly `models/config_all.json`:
@@ -49,7 +91,14 @@ Examine that workspace is set up properly `models/config_all.json`:
             "base_path": "Qwen/Qwen2.5-Coder-1.5B"
         }
     ],
-    "model_config_list": []
+    "model_config_list": [
+        {
+            "config": {
+                "name": "OpenVINO/Qwen3-8B-int4-ov",
+                "base_path": "OpenVINO/Qwen3-8B-int4-ov"
+            }
+        }
+    ]
 }
 ```
 
@@ -57,24 +106,45 @@ Examine that workspace is set up properly `models/config_all.json`:
 tree models
 models
 ├── codellama
-│   └── CodeLlama-7b-Instruct-hf
-│       ├── config.json
-│       ├── generation_config.json
-│       ├── graph.pbtxt
-│       ├── openvino_detokenizer.bin
-│       ├── openvino_detokenizer.xml
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── tokenizer.model
+│   └── CodeLlama-7b-Instruct-hf
+│       ├── chat_template.jinja
+│       ├── config.json
+│       ├── generation_config.json
+│       ├── graph.pbtxt
+│       ├── openvino_detokenizer.bin
+│       ├── openvino_detokenizer.xml
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── tokenizer.model
 ├── config_all.json
+├── OpenVINO
+│   └── Qwen3-8B-int4-ov
+│       ├── added_tokens.json
+│       ├── config.json
+│       ├── generation_config.json
+│       ├── graph.pbtxt
+│       ├── merges.txt
+│       ├── openvino_config.json
+│       ├── openvino_detokenizer.bin
+│       ├── openvino_detokenizer.xml
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── README.md
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── vocab.json
 └── Qwen
     └── Qwen2.5-Coder-1.5B
         ├── added_tokens.json
+        ├── chat_template.jinja
         ├── config.json
         ├── generation_config.json
         ├── graph.pbtxt
@@ -90,7 +160,7 @@ models
         ├── tokenizer.json
         └── vocab.json
 
-4 directories, 29 files
+7 directories, 48 files
 ```
 
 ## Set Up Server
@@ -139,17 +209,32 @@ models:
     provider: openai
     model: codellama/CodeLlama-7b-Instruct-hf
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - chat
       - edit
       - apply
+  - name: OVMS Qwen/Qwen3-8B
+    provider: openai
+    model: OpenVINO/Qwen3-8B-int4-ov
+    apiKey: unused
+    apiBase: http://localhost:8000/v3
+    roles:
+      - chat
+      - edit
+      - apply
+    capabilities:
+      - tool_use
+    requestOptions:
+      extraBodyProperties:
+        chat_template_kwargs:
+          enable_thinking: false
   -
     name: OVMS Qwen2.5-Coder-1.5B
     provider: openai
     model: Qwen/Qwen2.5-Coder-1.5B
     apiKey: unused
-    apiBase: localhost:8000/v3
+    apiBase: http://localhost:8000/v3
     roles:
       - autocomplete
 context:
@@ -162,7 +247,7 @@ context:
   - provider: codebase
 ```
 
-## Have Fun
+## Chatting, code editing and autocompletion in action
 
 - to use chatting feature click continue button on the left sidebar
 - use `CTRL+I` to select and include source in chat message
@@ -172,8 +257,28 @@ context:
 ![final](final.png)
 
 
-## Troubleshooting
+## AI Agents in action
+Continue.dev plugin is shipped with multiple built-in tools. For full list please [visit Continue documentation](https://docs.continue.dev/features/agent/how-it-works#what-tools-are-available-in-plan-mode-read-only).
 
-OpenVINO Model Server uses python to apply chat templates. If you get an error during model loading, enable Unicode UTF-8 in your system settings:
+To use them, select Agent Mode:
 
-![utf8](utf8.png)
+![select agent](./select_agent.png)
+
+Select model that support tool calling from model list:
+
+![select model](./select_qwen.png)
+
+Example use cases for tools:
+
+* Run terminal commands
+
+![git log](./using_terminal.png)
+
+* Look up web links
+
+![wikipedia](./wikipedia.png)
+
+* Search files
+
+![glob](./glob.png)
+

@@ -61,218 +61,11 @@
 #include "../python/pythonnoderesources.hpp"
 #endif
 
+#include "test_models.hpp"
+
 using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovms::Precision>>;
 
-std::string dirTree(const std::string& path, const std::string& indent = "");
-const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange = true);
-const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange = true);
-std::string getOvmsTestExecutablePath();
-
-#ifdef _WIN32
-const std::string getWindowsRepoRootPath();
-#endif
-void adjustConfigForTargetPlatform(std::string& input);
-const std::string& adjustConfigForTargetPlatformReturn(std::string& input);
-std::string adjustConfigForTargetPlatformCStr(const char* input);
-
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
-
-const std::string dummy_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy", false);
-const std::string dummy_fp64_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_fp64", false);
-const std::string sum_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/add_two_inputs_model", false);
-const std::string increment_1x3x4x5_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/increment_1x3x4x5", false);
-const std::string passthrough_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough", false);
-const std::string passthrough_string_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/passthrough_string", false);
-const std::string dummy_saved_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_saved_model", false);
-const std::string dummy_tflite_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy_tflite", false);
-const std::string scalar_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/scalar", false);
-const std::string no_name_output_model_location = getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/no_name_output", false);
-
-const ovms::ModelConfig DUMMY_MODEL_CONFIG{
-    "dummy",
-    dummy_model_location,  // base path
-    "CPU",                 // target device
-    "1",                   // batchsize
-    1,                     // NIREQ
-    false,                 // is stateful
-    true,                  // idle sequence cleanup enabled
-    false,                 // low latency transformation enabled
-    500,                   // stateful sequence max number
-    "",                    // cache directory
-    1,                     // model_version unused since version are read from path
-    dummy_model_location,  // local path
-};
-
-const ovms::ModelConfig DUMMY_FP64_MODEL_CONFIG{
-    "dummy_fp64",
-    dummy_fp64_model_location,  // base path
-    "CPU",                      // target device
-    "1",                        // batchsize
-    1,                          // NIREQ
-    false,                      // is stateful
-    true,                       // idle sequence cleanup enabled
-    false,                      // low latency transformation enabled
-    500,                        // stateful sequence max number
-    "",                         // cache directory
-    1,                          // model_version unused since version are read from path
-    dummy_fp64_model_location,  // local path
-};
-
-const ovms::ModelConfig SUM_MODEL_CONFIG{
-    "sum",
-    sum_model_location,  // base path
-    "CPU",               // target device
-    "1",                 // batchsize
-    1,                   // NIREQ
-    false,               // is stateful
-    true,                // idle sequence cleanup enabled
-    false,               // low latency transformation enabled
-    500,                 // stateful sequence max number
-    "",                  // cache directory
-    1,                   // model_version unused since version are read from path
-    sum_model_location,  // local path
-};
-
-const ovms::ModelConfig INCREMENT_1x3x4x5_MODEL_CONFIG{
-    "increment_1x3x4x5",
-    increment_1x3x4x5_model_location,  // base path
-    "CPU",                             // target device
-    "1",                               // batchsize
-    1,                                 // NIREQ
-    false,                             // is stateful
-    true,                              // idle sequence cleanup enabled
-    false,                             // low latency transformation enabled
-    500,                               // stateful sequence max number
-    "",                                // cache directory
-    1,                                 // model_version unused since version are read from path
-    increment_1x3x4x5_model_location,  // local path
-};
-
-const ovms::ModelConfig PASSTHROUGH_MODEL_CONFIG{
-    "passthrough",
-    passthrough_model_location,  // base path
-    "CPU",                       // target device
-    "1",                         // batchsize
-    1,                           // NIREQ
-    false,                       // is stateful
-    true,                        // idle sequence cleanup enabled
-    false,                       // low latency transformation enabled
-    500,                         // stateful sequence max number
-    "",                          // cache directory
-    1,                           // model_version unused since version are read from path
-    passthrough_model_location,  // local path
-};
-
-const ovms::ModelConfig NATIVE_STRING_MODEL_CONFIG{
-    "passthrough_string",
-    passthrough_string_model_location,  // base path
-    "CPU",                              // target device
-    "",                                 // batchsize
-    1,                                  // NIREQ
-    false,                              // is stateful
-    true,                               // idle sequence cleanup enabled
-    false,                              // low latency transformation enabled
-    500,                                // stateful sequence max number
-    "",                                 // cache directory
-    1,                                  // model_version unused since version are read from path
-    passthrough_string_model_location,  // local path
-};
-
-const ovms::ModelConfig DUMMY_SAVED_MODEL_CONFIG{
-    "dummy_saved_model",
-    dummy_saved_model_location,  // base path
-    "CPU",                       // target device
-    "1",                         // batchsize
-    1,                           // NIREQ
-    false,                       // is stateful
-    true,                        // idle sequence cleanup enabled
-    false,                       // low latency transformation enabled
-    500,                         // stateful sequence max number
-    "",                          // cache directory
-    1,                           // model_version unused since version are read from path
-    dummy_saved_model_location,  // local path
-};
-
-const ovms::ModelConfig DUMMY_TFLITE_CONFIG{
-    "dummy_tflite",
-    dummy_tflite_location,  // base path
-    "CPU",                  // target device
-    "1",                    // batchsize
-    1,                      // NIREQ
-    false,                  // is stateful
-    true,                   // idle sequence cleanup enabled
-    false,                  // low latency transformation enabled
-    500,                    // stateful sequence max number
-    "",                     // cache directory
-    1,                      // model_version unused since version are read from path
-    dummy_tflite_location,  // local path
-};
-
-const ovms::ModelConfig SCALAR_MODEL_CONFIG{
-    "scalar",
-    scalar_model_location,  // base path
-    "CPU",                  // target device
-    "",                     // batchsize needs to be empty to emulate missing --batch_size param
-    1,                      // NIREQ
-    false,                  // is stateful
-    true,                   // idle sequence cleanup enabled
-    false,                  // low latency transformation enabled
-    500,                    // stateful sequence max number
-    "",                     // cache directory
-    1,                      // model_version unused since version are read from path
-    scalar_model_location,  // local path
-};
-
-const ovms::ModelConfig NO_NAME_MODEL_CONFIG{
-    "no_name_output",
-    no_name_output_model_location,  // base path
-    "CPU",                          // target device
-    "1",                            // batchsize
-    1,                              // NIREQ
-    false,                          // is stateful
-    true,                           // idle sequence cleanup enabled
-    false,                          // low latency transformation enabled
-    500,                            // stateful sequence max number
-    "",                             // cache directory
-    1,                              // model_version unused since version are read from path
-    no_name_output_model_location,  // local path
-};
-
-constexpr const char* DUMMY_MODEL_INPUT_NAME = "b";
-constexpr const char* DUMMY_MODEL_OUTPUT_NAME = "a";
-constexpr const int DUMMY_MODEL_INPUT_SIZE = 10;
-constexpr const int DUMMY_MODEL_OUTPUT_SIZE = 10;
-constexpr const float DUMMY_ADDITION_VALUE = 1.0;
-const ovms::signed_shape_t DUMMY_MODEL_SHAPE{1, 10};
-const ovms::Shape DUMMY_MODEL_SHAPE_META{1, 10};
-
-constexpr const char* DUMMY_FP64_MODEL_INPUT_NAME = "input:0";
-constexpr const char* DUMMY_FP64_MODEL_OUTPUT_NAME = "output:0";
-
-constexpr const char* SUM_MODEL_INPUT_NAME_1 = "input1";
-constexpr const char* SUM_MODEL_INPUT_NAME_2 = "input2";
-constexpr const char* SUM_MODEL_OUTPUT_NAME = "sum";
-constexpr const int SUM_MODEL_INPUT_SIZE = 10;
-constexpr const int SUM_MODEL_OUTPUT_SIZE = 10;
-
-constexpr const char* INCREMENT_1x3x4x5_MODEL_INPUT_NAME = "input";
-constexpr const char* INCREMENT_1x3x4x5_MODEL_OUTPUT_NAME = "output";
-constexpr const float INCREMENT_1x3x4x5_ADDITION_VALUE = 1.0;
-
-constexpr const char* PASSTHROUGH_MODEL_INPUT_NAME = "input";
-constexpr const char* PASSTHROUGH_MODEL_OUTPUT_NAME = "copy:0";
-
-constexpr const char* PASSTHROUGH_STRING_MODEL_INPUT_NAME = "my_name";
-constexpr const char* PASSTHROUGH_STRING_MODEL_OUTPUT_NAME = "my_name";
-
-constexpr const char* SCALAR_MODEL_INPUT_NAME = "model_scalar_input";
-constexpr const char* SCALAR_MODEL_OUTPUT_NAME = "model_scalar_output";
-
-const std::string UNUSED_SERVABLE_NAME = "UNUSED_SERVABLE_NAME";
-constexpr const ovms::model_version_t UNUSED_MODEL_VERSION = 42;  // Answer to the Ultimate Question of Life
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::Predict};
 
@@ -505,8 +298,6 @@ void prepareBinary4x4PredictRequest(tensorflow::serving::PredictRequest& request
 void prepareBinary4x4PredictRequest(::KFSRequest& request, const std::string& inputName, const int batchSize = 1);
 void prepareBinary4x4PredictRequest(ovms::InferenceRequest& request, const std::string& inputName, const int batchSize = 1);  // CAPI binary not supported
 
-std::string GetFileContents(const std::string& filePath);
-
 template <typename TensorType>
 void prepareInvalidImageBinaryTensor(TensorType& tensor);
 
@@ -701,9 +492,6 @@ static std::vector<google::protobuf::int32> asVector(google::protobuf::RepeatedF
     std::memcpy(result.data(), container->mutable_data(), result.size() * sizeof(google::protobuf::int32));
     return result;
 }
-
-// returns path to a file.
-bool createConfigFileWithContent(const std::string& content, std::string filename = "/tmp/ovms_config_file.json");
 #pragma GCC diagnostic pop
 
 template <typename T>
@@ -716,37 +504,6 @@ static std::vector<T> asVector(const std::string& tensor_content) {
     v.resize(tensor_content.size() / sizeof(T));
     return v;
 }
-
-class ConstructorEnabledModelManager : public ovms::ModelManager {
-    ovms::MetricRegistry registry;
-
-public:
-    ConstructorEnabledModelManager(const std::string& modelCacheDirectory = "", ovms::PythonBackend* pythonBackend = nullptr) :
-        ovms::ModelManager(modelCacheDirectory, &registry, pythonBackend) {}
-    ~ConstructorEnabledModelManager() {
-        join();
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-        models.clear();
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-    }
-    /*
-     *  Loads config but resets the config filename to the one provided in the argument. In production server this is only changed once
-     */
-    ovms::Status loadConfig(const std::string& jsonFilename) {
-        this->configFilename = jsonFilename;
-        return ModelManager::loadConfig();
-    }
-
-    /**
-     * @brief Updates OVMS configuration with cached configuration file. Will check for newly added model versions
-     */
-    void updateConfigurationWithoutConfigFile() {
-        ModelManager::updateConfigurationWithoutConfigFile();
-    }
-    void setWaitForModelLoadedTimeoutMs(int value) {
-        this->waitForModelLoadedTimeoutMs = value;
-    }
-};
 
 class MockedMetadataModelIns : public ovms::ModelInstance {
 public:
@@ -779,74 +536,8 @@ public:
     }
 };
 
-class ResourcesAccessModelManager : public ConstructorEnabledModelManager {
-public:
-    int getResourcesSize() {
-        return resources.size();
-    }
-
-    void setResourcesCleanupIntervalMillisec(uint32_t value) {
-        this->resourcesCleanupIntervalMillisec = value;
-    }
-};
-
 void RemoveReadonlyFileAttributeFromDir(std::string& directoryPath);
 void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
-
-class TestWithTempDir : public ::testing::Test {
-protected:
-    void SetUp() override {
-        const ::testing::TestInfo* const test_info =
-            ::testing::UnitTest::GetInstance()->current_test_info();
-        std::stringstream ss;
-        ss << std::string(test_info->test_suite_name())
-           << "/"
-           << std::string(test_info->name());
-        const std::string directoryName = ss.str();
-        directoryPath = getGenericFullPathForTmp("/tmp/" + directoryName);
-        std::filesystem::remove_all(directoryPath);
-        std::filesystem::create_directories(directoryPath);
-    }
-
-    void TearDown() override {
-        SPDLOG_DEBUG("Directory tree of: {}\n{}", directoryPath, dirTree(directoryPath));
-        // search for files from filesToPrintInCaseOfFailure in directoryPath and
-        // then print its path with filename and contents
-        // search for files recursively in directoryPath
-        // in case of gtest failure print the contents of the files
-        // check if this test failed and if yes print contents of the files
-        if (::testing::Test::HasFailure()) {
-            auto filePathsToPrint = searchFilesRecursively(directoryPath, filesToPrintInCaseOfFailure);
-            for (const auto& filePath : filePathsToPrint) {
-                std::stringstream content;
-                std::ifstream file(filePath);
-                if (file.is_open()) {
-                    content << file.rdbuf();
-                    SPDLOG_ERROR("File:{} Contents:\n{}", filePath, content.str());
-                } else {
-                    SPDLOG_ERROR("Could not open file: {}", filePath);
-                    continue;
-                }
-            }
-        }
-        std::filesystem::remove_all(directoryPath);
-    }
-    std::vector<std::string> searchFilesRecursively(const std::string& directoryPath, const std::vector<std::string>& filesToSearch) const {
-        std::vector<std::string> foundFiles;
-        for (const auto& file : filesToSearch) {
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
-                if (entry.is_regular_file() && entry.path().filename() == file) {
-                    foundFiles.push_back(entry.path().string());
-                    SPDLOG_DEBUG("Found file: {}", entry.path().string());
-                }
-            }
-        }
-        return foundFiles;
-    }
-
-    std::string directoryPath;
-    std::vector<std::string> filesToPrintInCaseOfFailure;
-};
 
 /**
  * Wait until ModelManager::configFileReloadNeeded returns false or timeout is reached

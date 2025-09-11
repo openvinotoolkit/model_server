@@ -19,18 +19,21 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "mediapipe/framework/port/parse_text_proto.h"
+
 #include "../rest_parser.hpp"
 #include "../http_payload.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
-#include "test_utils.hpp"
+#include "test_models.hpp"
+#include "platform_utils.hpp"
 
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
-
 #include "src/image_conversion.hpp"
+#include "src/status.hpp"
 
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
@@ -792,7 +795,6 @@ TEST(Image2ImageTest, getImageEditRequestOptionsRejectedFields) {
     ASSERT_FALSE(std::holds_alternative<ov::AnyMap>(requestOptions));
 }
 
-using mediapipe::CalculatorContract;
 using mediapipe::CalculatorGraphConfig;
 using ovms::ImageGenPipelineArgs;
 TEST(ImageGenCalculatorOptionsTest, PositiveAllfields) {
