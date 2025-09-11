@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 
-#include "deps/opencv_core_inc.hpp"
+#include "deps/opencv.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {

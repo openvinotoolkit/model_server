@@ -32,7 +32,7 @@
 
 #include <openvino/openvino.hpp>
 
-#include "../deps/opencv_core_inc.hpp"
+#include "../deps/opencv.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../status.hpp"

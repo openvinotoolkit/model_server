@@ -826,7 +826,7 @@ ovms_cc_library(
     srcs = ["tensor_conversion.cpp",],
     deps = [
         "//third_party:openvino",
-        "opencv_core",
+        "opencv_dep",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -842,7 +842,7 @@ ovms_cc_library(
     srcs = ["tensor_conversion_common.cpp",],
     deps = [
         "//third_party:openvino",
-        "opencv_core",
+        "opencv_dep",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -858,7 +858,7 @@ ovms_cc_library(
     hdrs = ["tensor_conversion_after.hpp"],
     deps = [
         "//third_party:openvino",
-        "opencv_core",
+        "opencv_dep",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -943,7 +943,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "opencv_core",
+        "opencv_dep",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -958,7 +958,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "opencv_core",
+        "opencv_dep",
     ],
     linkshared = 1,
     copts =COMMON_STATIC_LIBS_COPTS,
@@ -983,9 +983,9 @@ cc_binary(
 )
 
 ovms_cc_library(
-    name = "opencv_core",
+    name = "opencv_dep",
     srcs = [
-        "deps/opencv_core_inc.hpp",
+        "deps/opencv.hpp",
     ],
     deps = [
         "//third_party:opencv",
@@ -1005,7 +1005,7 @@ cc_binary(
     ],
     deps = [
         "custom_nodes_common_buffersqueue",
-        "opencv_core",
+        "opencv_dep",
         "libovms_queue",
     ],
     linkshared = 1,
@@ -1021,7 +1021,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "opencv_core",
+        "opencv_dep",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -1036,7 +1036,7 @@ cc_binary(
         "custom_node_interface.h",
     ],
     deps = [
-        "opencv_core",
+        "opencv_dep",
     ],
     linkshared = 1,
     copts = COMMON_STATIC_LIBS_COPTS,
@@ -1078,7 +1078,7 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsprofiler",
         "libovmsstatus",
-        "opencv_core",
+        "opencv_dep",
         "tensor_conversion_common",
         "inference_request_common",
         "predict_request_validation_utils_impl",

@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 
-#include "deps/opencv_core_inc.hpp"
+#include "deps/opencv.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "profiler.hpp"
