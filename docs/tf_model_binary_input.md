@@ -60,7 +60,7 @@ docker run -d -p 9000:9000 -v ${PWD}/resnet_v2/models:/models openvino/model_ser
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
-cd client/python/tensorflow-serving-api/samples
+cd model_server/client/python/tensorflow-serving-api/samples
 virtualenv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
