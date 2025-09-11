@@ -33,6 +33,7 @@
 #include "harmony.hpp"
 namespace ovms {
 void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+    SPDLOG_INFO("Reasoning parsing with GPT format");
 
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
@@ -41,58 +42,8 @@ void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
     }
 
-    return;
-
-    SPDLOG_INFO("BBBBB: [{}]", parsedOutput.content);
-    SPDLOG_INFO("CCCCC: [{}]", generatedTokens);
-    SPDLOG_INFO("KKKK: [{}]", tokenizer.decode(generatedTokens, ov::AnyMap{ov::genai::skip_special_tokens(false)}));
-
-    if (generatedTokens.size() == 0) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No generated tokens to parse for reasoning");
-        return;
-    }
-
-    auto gt = generatedTokens;
-
-    // find sequence 200005, X, 200008 in generatedTokens
-    // find first 200007 after that
-    // extract to new vector, remove from original
-    std::vector<int64_t> reasoningTokens;
-    bool startFound = false;
-    size_t startIndex = 0;
-    for (size_t i = 0; i < gt.size(); i++) {
-        if (!startFound && gt[i] == 200005) {
-            if (i + 2 < gt.size() && gt[i + 2] == 200008) {
-                startFound = true;
-                startIndex = i;
-                int64_t channel = gt[i + 1];
-                i += 2; // skip next two tokens
-                for (; i < gt.size(); i++) {
-                    if (gt[i] == 200007) {
-                        if (channel == 35644) {
-                            SPDLOG_INFO("Found reasoning channel: analysis");
-                        } else if (channel == 35645) {
-                            SPDLOG_INFO("Found reasoning channel: tool use");
-                        } else {
-                            SPDLOG_INFO("Unknown reasoning channel: {}", channel);
-                        }
-                        // found 200007, extract reasoning tokens
-                        reasoningTokens.insert(reasoningTokens.end(), gt.begin() + startIndex + 3, gt.begin() + i);
-                        gt.erase(gt.begin() + startIndex, gt.begin() + i + 3);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    SPDLOG_INFO("DDDDD: [{}]", reasoningTokens);
-    SPDLOG_INFO("EEEEE: [{}]", tokenizer.decode(reasoningTokens));
-    parsedOutput.reasoning = tokenizer.decode(reasoningTokens);
-
-    SPDLOG_INFO("GTRemaining: [{}]", gt);
-    SPDLOG_INFO("Remaining: [{}]", tokenizer.decode(gt));
-    parsedOutput.content = tokenizer.decode(gt);
+    parsedOutput.content = harmony.getContent();  // what if someone has only tool parser and no reasoning parsers?
+    parsedOutput.reasoning = harmony.getReasoning();
 }
 
 std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {

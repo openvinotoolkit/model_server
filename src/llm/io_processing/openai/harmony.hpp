@@ -24,10 +24,25 @@
 namespace ovms {
 namespace openai {
 
+class Message {
+    std::string channel;
+    std::string constrain;
+    std::string content;
+
+public:
+    Message(const std::string& channel, const std::string& constrain, const std::string& content) : channel(channel), constrain(constrain), content(content) {}
+    std::string getChannel() const { return channel; }
+    std::string getConstrain() const { return constrain; }
+    std::string getContent() const { return content; }
+};
+
 class Harmony {
     ov::genai::Tokenizer& tokenizer;
     std::vector<int64_t> tokens;
 
+    std::vector<Message> messages;
+
+    //?
     std::string content;
     std::string reasoning;
     ToolCalls toolCalls;
@@ -38,9 +53,9 @@ public:
     bool parse();
     bool parse2();
 
-    std::string getContent() { return content; }
-    std::string getReasoning() { return reasoning; }
-    ToolCalls getToolCalls() { return toolCalls; }
+    std::string getContent();
+    std::string getReasoning();
+    ToolCalls getToolCalls();
 
     static const std::string TOKEN_START;
     static const std::string TOKEN_END;

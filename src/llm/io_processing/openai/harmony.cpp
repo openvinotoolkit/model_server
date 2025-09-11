@@ -16,6 +16,7 @@
 #include "harmony.hpp"
 
 #include "../../../logging.hpp"
+#include "../../../stringutils.hpp"
 
 // Based on https://cookbook.openai.com/articles/openai-harmony
 
@@ -30,6 +31,62 @@ enum class HarmonyState : int {
     READING_MESSAGE,
     READING_CONSTRAIN,
 };
+
+std::string Harmony::getContent() {
+    std::string content;
+    int i = 0;
+    for (const auto& msg : messages) {
+        if (msg.getChannel() == "final") {
+            if (i++ > 0) {
+                content += " ";
+            }
+            content += msg.getContent();
+        }
+    }
+    return content;
+}
+
+std::string Harmony::getReasoning() {
+    std::string reasoning;
+    int i = 0;
+    for (const auto& msg : messages) {
+        if (msg.getChannel() == "analysis") {
+            if (i++ > 0) {
+                content += " ";
+            }
+            reasoning += msg.getContent();
+        }
+    }
+    return reasoning;
+}
+
+ToolCalls Harmony::getToolCalls() {
+    ToolCalls tool_calls;
+    // Message in channel [commentary to=functions.get_humidity ] constrain[json]: [{"location":"Paris"}]
+    for (const auto& msg : messages) {
+        SPDLOG_INFO("Channel: [{}] Constrain:[{}] Content:[{}]", msg.getChannel(), msg.getConstrain(), msg.getContent());
+        if (startsWith(msg.getChannel(), "commentary")) {
+            SPDLOG_INFO("Found commentary");
+            // Try to parse tool name from segment like 'to=functions.NAME ...'
+            size_t marker = msg.getChannel().find("to=functions.");
+            if (marker != std::string::npos) {
+                marker += strlen("to=functions.");
+                size_t sp = msg.getChannel().find_first_of(" \t\n\r<", marker);
+                ToolCall tc;
+                if (sp == std::string::npos) {
+                    tc.name = msg.getChannel().substr(marker); // take the rest of the string
+                } else {
+                    tc.name = msg.getChannel().substr(marker, sp - marker);
+                }
+                tc.arguments = msg.getContent();
+                tool_calls.push_back(tc);
+            } else {
+                SPDLOG_INFO("Could not find tool name in channel [{}]", msg.getChannel());
+            }
+        }
+    }
+    return tool_calls;
+}
 
 bool Harmony::parse() {
     if (tokens.empty())
@@ -98,6 +155,7 @@ bool Harmony::parse() {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                 if (cur_state == HarmonyState::READING_MESSAGE) {
                     SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
+                    messages.emplace_back(cur_channel, cur_constrain, decoded);
                 }
                 cur_state = HarmonyState::UNKNOWN;
                 token_cache.clear();
@@ -110,6 +168,7 @@ bool Harmony::parse() {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                 if (cur_state == HarmonyState::READING_MESSAGE) {
                     SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
+                    messages.emplace_back(cur_channel, cur_constrain, decoded);
                 }
                 cur_state = HarmonyState::UNKNOWN;
                 token_cache.clear();
@@ -122,6 +181,7 @@ bool Harmony::parse() {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                 if (cur_state == HarmonyState::READING_MESSAGE) {
                     SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
+                    messages.emplace_back(cur_channel, cur_constrain, decoded);
                 }
                 cur_state = HarmonyState::UNKNOWN;
                 token_cache.clear();

@@ -28,94 +28,21 @@
 
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
+#include "harmony.hpp"
 #include "../utils.hpp"
 
 namespace ovms {
 
 void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    std::vector<std::string> tools;
-
-    if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "No content to parse for tool calls");
-        return;
+    openai::Harmony harmony(tokenizer, generatedTokens);
+    if (!harmony.parse()) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
     }
 
-    return;
-    
-    auto gt = generatedTokens;
-
-    // find all sequences of 200005, 12606 in generatedTokens
-    // after those tokens, find 200012
-    // extract to new vector, remove from original
-    std::vector<int64_t> toolCallTokens;
-    bool startFound = false;
-    size_t startIndex = 0;
-    for (size_t i = 0; i < gt.size(); i++) {
-        if (!startFound && gt[i] == 200005) {
-            if (i + 2 < gt.size() && gt[i + 1] == 12606 && gt[i + 2] == 815) {
-                startFound = true;
-                startIndex = i;
-                i += 1; // skip next token
-                for (; i < gt.size(); i++) {
-                    if (gt[i] == 200012) {
-                        auto toolStr = tokenizer.decode(std::vector<int64_t>(gt.begin() + startIndex, gt.begin() + i + 1), ov::AnyMap{ov::genai::skip_special_tokens(false)});
-
-                            
-
-
-                        SPDLOG_INFO("HEADER: [{}]", toolStr);
-
-                        std::string marker = "to=functions.";
-                        size_t start = toolStr.find(marker);
-                        std::string functionName;
-                        if (start != std::string::npos) {
-                            start += marker.length(); // move past "to=functions."
-                            size_t end = toolStr.find(' ', start); // find next space
-                            std::string result = toolStr.substr(start, end - start);
-                            SPDLOG_INFO("Extracted function name: [{}]", result);
-                            functionName = result;
-                            
-                        } else {
-                            break;
-                        }
-
-                        marker = "<|message|>";
-                        start = toolStr.find(marker);
-                        if (start == std::string::npos) {
-                            break;
-                        }
-
-                        start += marker.length(); // Move past the marker
-                        // Find the position of <|call|>
-                        std::size_t end = toolStr.find("<|call|>", start);
-                        if (end == std::string::npos) {
-                            break;
-                        }
-
-                        // Extract substring
-                        std::string functionArgs = toolStr.substr(start, end - start);
-                        SPDLOG_INFO("Content: [{}]", functionArgs);
-
-                        ToolCall toolCall;
-                        toolCall.name = functionName;
-                        toolCall.arguments = functionArgs;
-                        parsedOutput.toolCalls.push_back(toolCall);
-                        
-                        startFound = false;
-                        parsedOutput.content = "";
-                        break;  // exit inner loop
-                    }
-                }
-            }
-        }
-    }
-
-    SPDLOG_INFO("DDDDD: [{}]", toolCallTokens);
-    SPDLOG_INFO("EEEEE: [{}]", tokenizer.decode(toolCallTokens));
-    //parsedOutput.tool_calls = tokenizer.decode(toolCallTokens);
-
-    SPDLOG_INFO("GTRemaining: [{}]", gt);
-    SPDLOG_INFO("Remaining: [{}]", tokenizer.decode(gt));
+    parsedOutput.content = harmony.getContent();  // what if someone has only reasoning parsers and no tool parser?
+    parsedOutput.toolCalls = harmony.getToolCalls();
 }
 
 std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
