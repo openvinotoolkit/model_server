@@ -22,6 +22,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::OK, ""},
 
     {StatusCode::PATH_INVALID, "The provided base path is invalid or doesn't exists"},
+    {StatusCode::DIRECTORY_NOT_CREATED, "Directory could not be created"},
     {StatusCode::FILE_INVALID, "File not found or cannot open"},
     {StatusCode::CONFIG_FILE_INVALID, "Configuration file not found or cannot open"},
     {StatusCode::FILESYSTEM_ERROR, "Error during filesystem operation"},

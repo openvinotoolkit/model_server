@@ -20,7 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
-#include "../../test_utils.hpp"
+#include "../../platform_utils.hpp"
 
 using namespace ovms;
 
@@ -369,7 +369,17 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
                     EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
                 }
             } else {
-                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+                std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
+                std::string docStr = doc.has_value() ? [&]() {
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    doc->Accept(writer);
+                    return std::string(buffer.GetString());
+                }()
+                                                     : "std::nullopt";
+                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
+                       << "\nexpectedDelta: " << expectedStr
+                       << "\ndoc: " << docStr;
             }
         }
     }

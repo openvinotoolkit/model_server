@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <vector>
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -30,6 +31,8 @@
 #include "../status.hpp"
 #include "../version.hpp"
 
+#include <stdio.h>
+
 namespace ovms {
 std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
@@ -37,25 +40,53 @@ std::string GGUFDownloader::getGraphDirectory() {
 static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
     auto lfstatus = StatusCode::OK;
     if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
+        auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+        if (std::holds_alternative<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus)) {
+            return std::get<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus);
+        }
+        auto& allSpecifiedQuantizationPartsFilenames = std::get<std::vector<std::string>>(allSpecifiedQuantizationPartsFilenamesOrStatus);
         LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(path);
-        if (lfstatus != StatusCode::OK) {
-            SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
-                path,
-                lfstatus);
-        } else {
-            SPDLOG_DEBUG("Path deleted: {}", path);
+        for (const auto& file : allSpecifiedQuantizationPartsFilenames) {
+            auto filePath = FileSystem::joinPath({path, file});
+            SPDLOG_TRACE("Checking if model file exists for overwrite: {}", filePath);
+            if (std::filesystem::exists(filePath)) {
+                SPDLOG_TRACE("Model file already exists and will be removed due to overwrite flag: {}", filePath);
+                lfstatus = lfs.deleteFileFolder(filePath);
+                if (lfstatus != StatusCode::OK) {
+                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", path, lfstatus);
+                } else {
+                    SPDLOG_TRACE("Path deleted: {}", path);
+                }
+            }
         }
     }
     return lfstatus;
 }
 
+std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettingsImpl& hfSettings, const std::string& path) {
+    auto ggufFilesOrStatus = createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+    if (std::holds_alternative<Status>(ggufFilesOrStatus)) {
+        SPDLOG_ERROR("Could not create GGUF filenames to download for checking existing files");
+        return std::get<Status>(ggufFilesOrStatus);
+    }
+    auto& ggufFiles = std::get<std::vector<std::string>>(ggufFilesOrStatus);
+    for (const auto& file : ggufFiles) {
+        auto filePath = FileSystem::joinPath({path, file});
+        SPDLOG_DEBUG("Checking if model file exists: {}", filePath);
+        bool exist = false;
+        auto status = LocalFileSystem::exists(filePath, &exist);
+        if (!status.ok())
+            return status;
+        if (exist)
+            return exist;
+    }
+    return false;
+}
+
 GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
     hfSettings(hfSettings),
-    hfEndpoint(hfEndpoint) {
-    // TODO shared logic across all pullers
-    this->downloadPath = FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel});
-}
+    hfEndpoint(hfEndpoint),
+    downloadPath(FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel})) {}
 
 Status GGUFDownloader::downloadModel() {
     if (this->hfSettings.downloadType != GGUF_DOWNLOAD) {
@@ -66,19 +97,34 @@ Status GGUFDownloader::downloadModel() {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
     }
-
-    if (std::filesystem::is_directory(this->downloadPath) && !this->hfSettings.overwriteModels) {
-        SPDLOG_DEBUG("Path already exists on local filesystem. Not downloading to path: {}", this->downloadPath);
-        return StatusCode::OK;
+    if (!this->hfSettings.ggufFilename.has_value() || this->hfSettings.ggufFilename->empty()) {
+        SPDLOG_ERROR("GGUF filename must be specified for GGUF download type, and shouldn't be empty.");
+        return StatusCode::INTERNAL_ERROR;
     }
-    std::filesystem::create_directories(this->downloadPath);
-    ovms::Status status;
+    auto status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
     if (!status.ok()) {
         return status;
     }
-    status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
-    if (!status.ok()) {
-        return status;
+    bool exists = false;
+    status = LocalFileSystem::exists(this->downloadPath, &exists);
+    if (!exists || !status.ok()) {
+        if (!std::filesystem::create_directories(this->downloadPath)) {
+            SPDLOG_ERROR("Failed to create model directory: {}", this->downloadPath);
+            return StatusCode::DIRECTORY_NOT_CREATED;
+        }
+    } else if (!std::filesystem::is_directory(this->downloadPath)) {
+        SPDLOG_ERROR("Model path exists and is not a directory: {}", this->downloadPath);
+        return StatusCode::DIRECTORY_NOT_CREATED;
+    }
+    if (!this->hfSettings.overwriteModels) {
+        auto statusOrBool = checkIfAlreadyExists(this->hfSettings, this->downloadPath);
+        if (std::holds_alternative<Status>(statusOrBool)) {
+            return std::get<Status>(statusOrBool);
+        }
+        if (std::get<bool>(statusOrBool)) {
+            SPDLOG_DEBUG("Model files already exist and overwrite is disabled, skipping download for model: {}", this->hfSettings.sourceModel);
+            return StatusCode::OK;
+        }
     }
     status = downloadWithCurl(this->hfEndpoint, this->hfSettings.sourceModel, "/resolve/main/", this->hfSettings.ggufFilename.value(), this->downloadPath);
     if (!status.ok()) {
@@ -137,6 +183,18 @@ void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_tim
 struct FtpFile {
     const char* filename;
     FILE* stream;
+    FtpFile(const char* fname, FILE* str) :
+        filename(fname),
+        stream(str) {}
+    ~FtpFile() {
+        if (stream) {
+            fclose(stream);
+        }
+        if (!success) {
+            std::filesystem::remove(filename);
+        }
+    }
+    bool success = false;
 };
 
 void fileClose(FILE* file) {
@@ -183,36 +241,29 @@ int progress_callback(void* clientp,
         pcs->last_print_time = time(NULL);
     }
     time_t currentTime = time(NULL);
-    if (currentTime - pcs->last_print_time < 1) {
-        return 0;
-    }
-
-    if ((dltotal == dlnow) && dltotal < 1000) {
+    bool shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
+    if ((dltotal == dlnow) && dltotal < 10000) {
         // Usually with first messages we don't get the full size and we don't want to print progress bar
         // so we assume that until dltotal is less than 1000 we don't have full size
         // otherwise we would print 100% progress bar
-        pcs->last_print_time = currentTime;
         return 0;
     }
     // called multiple times, so we want to print progress bar only once reached 100%
     if (pcs->fullDownloadPrinted) {
         return 0;
     }
+    if (!shouldPrintDueToTime && (dltotal != dlnow)) {
+        // we dont want to skip printing progress bar for the 100% but we don't want to spam stdout either
+        return 0;
+    }
+    pcs->fullDownloadPrinted = (dltotal == dlnow);
+    pcs->last_print_time = currentTime;
     print_progress(dlnow, dltotal, (dlnow == 0), currentTime - pcs->started_download);
     std::cout.flush();
-    pcs->fullDownloadPrinted = (dltotal == dlnow);
     return 0;
 }
 
-Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
-    // construct url
-    SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} ggufFilename: {}, downloadPath:{}", hfEndpoint, modelName, filenamePrefix, ggufFilename, downloadPath);
-    std::string url = hfEndpoint + modelName + filenamePrefix + ggufFilename;
-    SPDLOG_TRACE("Constructed URL: {}", url);
-
-    // construct filepath
-    auto filePath = FileSystem::joinPath({downloadPath, ggufFilename});
-
+static Status downloadSingleFileWithCurl(const std::string& filePath, const std::string& url) {
     // agent string required to avoid 403 Forbidden error on modelscope
     std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
 
@@ -230,7 +281,6 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, file_write_callback));
     struct FtpFile ftpFile = {filePath.c_str(), NULL};
-    auto fileCloseGuard = std::unique_ptr<FILE, decltype(&fileClose)>(ftpFile.stream, fileClose);
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ftpFile));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USERAGENT, agentString.c_str()));
     // progress bar options
@@ -243,7 +293,101 @@ Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L));
     CHECK_CURL_CALL(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
     CHECK_CURL_CALL(curl_easy_perform(curl));
-    SPDLOG_TRACE("cURL download completed for model: {} to path: {}", modelName, filePath);
+    int32_t http_code = 0;
+    CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code));
+    SPDLOG_TRACE("HTTP response code: {}", http_code);
+    if (http_code != 200) {
+        SPDLOG_ERROR("Failed to download file from URL: {} HTTP response code: {}", url, http_code);
+        return StatusCode::PATH_INVALID;
+    }
+    ftpFile.success = true;
     return StatusCode::OK;
+}
+
+std::variant<Status, std::vector<std::string>> GGUFDownloader::createGGUFFilenamesToDownload(const std::string& ggufFilename) {
+    std::vector<std::string> filesToDownload;
+    // we need to check if ggufFilename is of multipart type (contains 00001-of-N string)
+    // we should fail if it is 0000M-of-0000N where M != 1 as we need 1 here
+    // we need to extract N
+    // note that it could be 00001-of-00002, it could be 00001-of-00212 etc
+    // note that it has to be exactly 5 digits for part number and 5 digits for total parts
+    std::string multipartExactPattern = R"(.*-(\d{5})-of-(\d{5})\.gguf$)";
+    std::smatch match;
+    if (std::regex_match(ggufFilename, match, std::regex(multipartExactPattern))) {
+        SPDLOG_TRACE("Detected multipart gguf filename: {}", ggufFilename);
+        int totalParts = 1;
+        if (match.size() != 3) {
+            SPDLOG_ERROR("Regex match for multipart filename failed for filename: {}", ggufFilename);
+            return StatusCode::INTERNAL_ERROR;
+        }
+        if (match[1].str() != "00001") {
+            SPDLOG_ERROR("Multipart gguf filename must start with part 00001, got: {} for filename: {}", match[1].str(), ggufFilename);
+            return StatusCode::PATH_INVALID;
+        }
+        auto totalPartsOpt = stoi32(match[2].str());
+        if (!totalPartsOpt.has_value() || totalPartsOpt.value() <= 0) {
+            SPDLOG_ERROR("Error converting total parts to integer for filename: {}, match: {}", ggufFilename, match[2].str());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        totalParts = totalPartsOpt.value();
+        for (int part = 1; part <= totalParts; part++) {
+            std::string partNumberStr = std::to_string(part);
+            auto partFilenameOrStatus = preparePartFilename(ggufFilename, part, totalParts);
+            if (std::holds_alternative<Status>(partFilenameOrStatus)) {
+                // shouldn't happen as we already validated regex
+                return std::get<Status>(partFilenameOrStatus);
+            }
+            filesToDownload.push_back(std::get<std::string>(partFilenameOrStatus));
+        }
+    } else {
+        filesToDownload.push_back(ggufFilename);
+    }
+    return filesToDownload;
+}
+
+Status GGUFDownloader::downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath) {
+    auto filesOrStatus = createGGUFFilenamesToDownload(ggufFilename);
+    if (std::holds_alternative<Status>(filesOrStatus)) {
+        return std::get<Status>(filesOrStatus);
+    }
+    auto& filesToDownload = std::get<std::vector<std::string>>(filesOrStatus);
+    size_t partNo = 1;
+    for (const auto& file : filesToDownload) {
+        // construct url
+        SPDLOG_TRACE("hfEndpoint: {} modelName: {} filenamePrefix: {} file: {}, downloadPath:{}", hfEndpoint, modelName, filenamePrefix, file, downloadPath);
+        std::string url = hfEndpoint + modelName + filenamePrefix + file;
+        // construct filepath
+        auto filePath = FileSystem::joinPath({downloadPath, file});
+        SPDLOG_DEBUG("Downloading part {}/{} filename: {} url:{}", partNo, filesToDownload.size(), file, url);
+        auto status = downloadSingleFileWithCurl(filePath, url);
+        if (!status.ok()) {
+            return status;
+        }
+        SPDLOG_TRACE("cURL download completed for model: {} part: {}/{} to path: {}", partNo, filesToDownload.size(), modelName, filePath);
+        ++partNo;
+    }
+    SPDLOG_TRACE("cURL download completed for model: {}", modelName);
+    return StatusCode::OK;
+}
+std::variant<Status, std::string> GGUFDownloader::preparePartFilename(const std::string& ggufFilename, int part, int totalParts) {
+    if (part <= 0 || totalParts <= 1 || part > totalParts || totalParts > 99999 || part > 99999) {
+        return Status(StatusCode::INTERNAL_ERROR, "Invalid part or totalParts values");
+    }
+    // example of strings
+    // ggufFilename qwen2.5-3b-instruct-fp16-00001-of-00002.gguf
+    // ggufFilename qwen2.5-b-instruct-fp16-00001-of-23232.gguf
+    // so we want to replace 00001-of-[0-9]{4}[2-9] part with appropriate part number
+    // we need to pad part number with zeros to match the length of 5
+    std::string partNumberStr = std::to_string(part);
+    std::ostringstream oss;
+    oss << std::setw(5) << std::setfill('0') << partNumberStr;
+    std::string numberPadded = oss.str();
+    std::string constructedFilename = ggufFilename;
+    auto it = ggufFilename.find("-00001-");
+    if (it == std::string::npos) {
+        return Status(StatusCode::INTERNAL_ERROR, "Invalid ggufFilename format, cannot find -00001- part");
+    }
+    constructedFilename.replace(ggufFilename.find("-00001-"), 7, "-" + numberPadded + "-");
+    return constructedFilename;
 }
 }  // namespace ovms

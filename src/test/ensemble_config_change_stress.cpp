@@ -40,6 +40,7 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "stress_test_utils.hpp"
+#include "test_models.hpp"
 #include "test_utils.hpp"
 
 static const char* stressPipelineCustomNodeDifferentOperationsThenDummyThenChooseMaximumConfig = R"(
