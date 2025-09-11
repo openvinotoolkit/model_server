@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -104,16 +106,6 @@ void preparePredictRequest(tensorflow::serving::PredictRequest& request, inputs_
     }
 }
 
-std::string getOvmsTestExecutablePath() {
-#ifdef __linux__
-    return std::filesystem::canonical("/proc/self/exe").string();
-#elif _WIN32
-    char buffer[2000];
-    GetModuleFileNameA(NULL, buffer, 2000);
-    return std::filesystem::path(buffer).parent_path().string();
-#endif
-}
-
 void waitForOVMSConfigReload(ovms::ModelManager& manager) {
     // This is effectively multiplying by 5 to have at least 1 config reload in between
     // two test steps, but we check if config files changed to exit earlier if changes are already applied
@@ -137,25 +129,6 @@ void waitForOVMSResourcesCleanup(ovms::ModelManager& manager) {
     const uint32_t waitTime = WAIT_MULTIPLIER_FACTOR * manager.getResourcesCleanupIntervalMillisec();
     SPDLOG_DEBUG("waitForOVMSResourcesCleanup {} ms", waitTime);
     std::this_thread::sleep_for(std::chrono::milliseconds(waitTime));
-}
-
-bool createConfigFileWithContent(const std::string& content, std::string filename) {
-    std::ofstream configFile{filename};
-    // Check if the file was successfully opened
-    if (!configFile.is_open()) {
-        SPDLOG_ERROR("Failed to open file: {}", filename);
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
-    SPDLOG_INFO("Creating config file: {}\n with content:\n{}", filename, content);
-    configFile << content << std::endl;
-    configFile.close();
-    if (configFile.fail()) {
-        SPDLOG_INFO("Closing configFile failed");
-        return false;
-    } else {
-        SPDLOG_INFO("Closing configFile succeed");
-    }
-    return true;
 }
 
 ovms::tensor_map_t prepareTensors(
@@ -648,23 +621,6 @@ std::string* findKFSInferInputTensorContentInRawInputs(::KFSRequest& request, co
     return content;
 }
 
-std::string GetFileContents(const std::string& filePath) {
-    if (!std::filesystem::exists(filePath)) {
-        std::cout << "File does not exist: " << filePath << std::endl;
-        throw std::runtime_error("Failed to open file: " + filePath);
-    }
-
-    std::ifstream file(filePath, std::ios::in | std::ios::binary);
-    if (!file.is_open()) {
-        std::cout << "File could not be opened: " << filePath << std::endl;
-        throw std::runtime_error("Failed to open file: " + filePath);
-    }
-
-    std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
-    file.close();
-    return content;
-}
-
 void prepareCAPIInferInputTensor(ovms::InferenceRequest& request, const std::string& name, const std::tuple<ovms::signed_shape_t, const ovms::Precision>& inputInfo,
     const std::vector<float>& data, uint32_t decrementBufferSize, OVMS_BufferType bufferType, std::optional<uint32_t> deviceId) {
     auto [shape, type] = inputInfo;
@@ -856,212 +812,9 @@ std::shared_ptr<const TensorInfo> createTensorInfoCopyWithPrecision(std::shared_
         src->getLayout());
 }
 
-// Static map workaround for char* pointers as paths
-const std::string& getPathFromMap(std::string inputPath, std::string outputPath) {
-    static std::mutex mtx;
-    std::unique_lock<std::mutex> lock(mtx);
-    static std::unordered_map<std::string, std::string> inputMap = {};
-    auto it = inputMap.find(inputPath);
-    if (it != inputMap.end()) {
-        // element exists
-        return inputMap.at(inputPath);
-    } else {
-        // element does not exist
-        inputMap.emplace(inputPath, outputPath);
-        return inputMap.at(inputPath);
-    }
-}
-
-// Function changes linux docker container path /ovms/src/test/dummy to windows workspace "C:\git\model_server\src\test\dummy"
-// Depending on the ovms_test.exe location after build
-const std::string& getGenericFullPathForSrcTest(const std::string& linuxPath, bool logChange) {
-#ifdef __linux__
-    return getPathFromMap(linuxPath, linuxPath);
-#elif _WIN32
-    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
-    std::filesystem::path cwd = std::filesystem::current_path();
-    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
-
-    // Example linuxPath "/ovms/src/test/dummy"
-    std::size_t postOvmsIndex = linuxPath.find("/src/test");
-    if (postOvmsIndex != std::string::npos) {
-        // Setting winPath to "/src/test/dummy"
-        std::string winPath = linuxPath.substr(postOvmsIndex);
-        // Set basePath to "C:\git\model_server\"
-        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
-        // Combine "C:\git\model_server\" + "/src/test/dummy"
-        std::string finalWinPath = basePath + winPath;
-        // Change paths to linux separator for JSON parser compatybility in configs
-        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
-
-        if (logChange) {
-            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
-        }
-        return getPathFromMap(linuxPath, finalWinPath);
-    }
-#endif
-    return getPathFromMap(linuxPath, linuxPath);
-}
-
-// Function changes linux docker container path /ovms/bazel-out/src/lib_node_mock.so to windows workspace "C:\git\model_server\bazel-bin\src\lib_node_mock.so"
-// Depending on the ovms_test.exe location after build
-const std::string& getGenericFullPathForBazelOut(const std::string& linuxPath, bool logChange) {
-#ifdef __linux__
-    return getPathFromMap(linuxPath, linuxPath);
-#elif _WIN32
-    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
-    std::filesystem::path cwd = std::filesystem::current_path();
-    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
-
-    // Example linuxPath "/ovms/bazel-bin/src/lib_node_mock.so"
-    std::size_t postOvmsIndex = linuxPath.find("/bazel-bin/src");
-    if (postOvmsIndex != std::string::npos) {
-        // Setting winPath to "/bazel-bin/src"
-        std::string winPath = linuxPath.substr(postOvmsIndex);
-        // Set basePath to "C:\git\model_server\"
-        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
-        // Combine "C:\git\model_server\" + "/bazel-bin/src"
-        std::string finalWinPath = basePath + winPath;
-        // Change paths to linux separator for JSON parser compatybility in configs
-        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
-
-        if (logChange) {
-            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
-        }
-        return getPathFromMap(linuxPath, finalWinPath);
-    }
-#endif
-    return getPathFromMap(linuxPath, linuxPath);
-}
-
-const std::string& getGenericFullPathForSrcTest(const char* linuxPath, bool logChange) {
-    return getGenericFullPathForSrcTest(std::string(linuxPath, strlen(linuxPath)), logChange);
-}
-
-// Function changes docker linux paths starting with /tmp: "/tmp/dummy" to windows C:\git\model_server\tmp\dummy
-const std::string& getGenericFullPathForTmp(const std::string& linuxPath, bool logChange) {
-#ifdef __linux__
-    return getPathFromMap(linuxPath, linuxPath);
-#elif _WIN32
-    // For ovms_test cwd = C:\git\model_server\bazel-out\x64_windows-opt\bin\src
-    std::filesystem::path cwd = std::filesystem::current_path();
-    size_t bazelOutIndex = cwd.string().find("bazel-out");
-
-    // Example linuxPath "/tmp/dummy"
-    const std::string tmpString = "/tmp";
-    const size_t tmpStringSize = 4;
-
-    size_t postTmpIndex = linuxPath.find(tmpString) + tmpStringSize;
-    if (postTmpIndex != std::string::npos) {
-        std::string winPath = linuxPath.substr(postTmpIndex);
-        // Set basePath to "C:\git\model_server\"
-        std::string basePath = bazelOutIndex != std::string::npos ? cwd.string().substr(0, bazelOutIndex) : cwd.string();
-        // Combine "C:\git\model_server\" + "tmp" "\dummy"
-        std::string finalWinPath = basePath + tmpString + winPath;
-        // Change paths to linux separator for JSON parser compatybility in configs
-        std::replace(finalWinPath.begin(), finalWinPath.end(), '\\', '/');
-
-        if (logChange) {
-            std::cout << "[WINDOWS DEBUG] Changed path: " << linuxPath << " to path: " << finalWinPath << " for Windows" << std::endl;
-        }
-        return getPathFromMap(linuxPath, finalWinPath);
-    }
-#endif
-    return getPathFromMap(linuxPath, linuxPath);
-}
-
-const std::string& getGenericFullPathForTmp(const char* linuxPath, bool logChange) {
-    return getGenericFullPathForTmp(std::string(linuxPath, strlen(linuxPath)), logChange);
-}
-
-#ifdef _WIN32
-const std::string getWindowsRepoRootPath() {
-    std::filesystem::path cwd = std::filesystem::current_path();
-    std::size_t bazelOutIndex = cwd.string().find("bazel-out");
-    std::string rootPath = cwd.string().substr(0, bazelOutIndex);
-    std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
-    return rootPath;
-}
-#endif
-// Apply necessary changes so the graph config will comply with the platform
-// that tests are run on
-void adjustConfigForTargetPlatform(std::string& input) {
-#ifdef _WIN32
-    std::string repoTestPath = getWindowsRepoRootPath() + "/src/test";
-    std::string searchString = "\"/ovms/src/test";
-    std::string replaceString = "\"" + repoTestPath;
-    size_t pos = 0;
-    while ((pos = input.find(searchString, pos)) != std::string::npos) {
-        input.replace(pos, searchString.length(), replaceString);
-        pos += replaceString.length();
-    }
-
-    repoTestPath = getWindowsRepoRootPath() + "/tmp";
-    searchString = "\"/tmp";
-    replaceString = "\"" + repoTestPath;
-    pos = 0;
-    while ((pos = input.find(searchString, pos)) != std::string::npos) {
-        input.replace(pos, searchString.length(), replaceString);
-        pos += replaceString.length();
-    }
-
-    repoTestPath = getWindowsRepoRootPath() + "/bazel-bin/src";
-    searchString = "\"/ovms/bazel-bin/src";
-    replaceString = "\"" + repoTestPath;
-    pos = 0;
-    while ((pos = input.find(searchString, pos)) != std::string::npos) {
-        input.replace(pos, searchString.length(), replaceString);
-        pos += replaceString.length();
-    }
-#elif __linux__
-    // No changes needed for linux now, but keeping it as a placeholder
-#endif
-}
-
-// Apply necessary changes so the graph config will comply with the platform
-// that tests are run on
-const std::string& adjustConfigForTargetPlatformReturn(std::string& input) {
-    adjustConfigForTargetPlatform(input);
-    return input;
-}
-
-std::string adjustConfigForTargetPlatformCStr(const char* input) {
-    std::string inputString(input);
-    adjustConfigForTargetPlatform(inputString);
-    return inputString;
-}
-
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig) {
 #ifdef _WIN32
     modelConfig.setPluginConfig(ovms::plugin_config_t({{"ENABLE_MMAP", "NO"}}));
 #endif
     // on linux we can remove files from disk even if mmap is enabled
-}
-std::string dirTree(const std::string& path, const std::string& indent) {
-    if (!std::filesystem::exists(path)) {
-        SPDLOG_ERROR("Path does not exist: {}", path);
-        return "NON_EXISTENT_PATH";
-    }
-    std::stringstream tree;
-    // if is directory, add to stream its name followed by "/"
-    // if is file, add to stream its name
-
-    tree << indent;
-    if (!indent.empty()) {
-        tree << "|-- ";
-    }
-
-    tree << std::filesystem::path(path).filename().string();
-    if (std::filesystem::is_directory(path)) {
-        tree << "/";
-    }
-    tree << std::endl;
-    if (!std::filesystem::is_directory(path)) {
-        return tree.str();
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        std::string passDownIndent = indent.empty() ? "|   " : (indent + "    ");
-        tree << dirTree(entry.path().string(), passDownIndent);
-    }
-    return tree.str();
 }

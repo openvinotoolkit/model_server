@@ -20,7 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
-#include "../../test_utils.hpp"
+#include "../../platform_utils.hpp"
 
 using namespace ovms;
 

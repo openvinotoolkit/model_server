@@ -41,7 +41,12 @@
 #include "../ov_utils.hpp"
 #include "../prediction_service_utils.hpp"
 #include "../status.hpp"
+
+#include "constructor_enabled_model_manager.hpp"
+#include "platform_utils.hpp"
+#include "light_test_utils.hpp"
 #include "test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using namespace ovms;
 
