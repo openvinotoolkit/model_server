@@ -35,6 +35,11 @@
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav.h"
+#define DR_MP3_IMPLEMENTATION
+#pragma warning(push)
+#pragma warning(disable : 6386 6262)
+#include "dr_mp3.h"
+#pragma warning(pop)
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "speech_servable.hpp"
@@ -145,6 +150,84 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
     return pcmf32;
 }
 
+ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
+    drmp3 mp3;
+
+//     if (filename == "-") {
+//         {
+// #ifdef _WIN32
+//             _setmode(_fileno(stdin), _O_BINARY);
+// #endif
+
+//             uint8_t buf[1024];
+//             while (true) {
+//                 const size_t n = fread(buf, 1, sizeof(buf), stdin);
+//                 if (n == 0) {
+//                     break;
+//                 }
+//                 wav_data.insert(wav_data.end(), buf, buf + n);
+//             }
+//         }
+
+//         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
+//                         "Failed to open WAV file from stdin");
+
+//         fprintf(stderr, "%s: read %zu bytes from stdin\n", __func__, wav_data.size());
+//     } else if (is_wav_buffer(filename)) {
+//         OPENVINO_ASSERT(drwav_init_memory(&wav, filename.c_str(), filename.size(), nullptr),
+//                         "Failed to open WAV file from fname buffer");
+//     } else if (!drwav_init_file(&wav, filename.c_str(), nullptr)) {
+// #if defined(WHISPER_FFMPEG)
+//         OPENVINO_ASSERT(ffmpeg_decode_audio(fname, wav_data) == 0, "Failed to ffmpeg decode")
+
+//         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
+//                         "Failed to read wav data as wav")
+// #else
+//         throw std::runtime_error("failed to open as WAV file");
+// #endif
+//     }
+    SPDLOG_ERROR("1");
+    auto result =  drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
+    if(result == false){
+        SPDLOG_ERROR("FILE PARSING FAILED {}", result);
+        throw std::runtime_error("FILE PARSING FAILED");
+    }
+    SPDLOG_ERROR("2");
+    if (mp3.channels != 1 && mp3.channels != 2) {
+        drmp3_uninit(&mp3);
+        throw std::runtime_error("WAV file must be mono or stereo");
+    }
+    SPDLOG_ERROR("3 {}", mp3.sampleRate);
+    mp3.sampleRate = COMMON_SAMPLE_RATE;
+    // if (mp3.sampleRate != COMMON_SAMPLE_RATE) {
+    //     drmp3_uninit(&mp3);
+    //     throw std::runtime_error("WAV file must be " + std::string{COMMON_SAMPLE_RATE / 1000} + " kHz");
+    // }
+    SPDLOG_ERROR("4");
+    const uint64_t n =
+        mp3_data.empty() ? mp3.totalPCMFrameCount : mp3_data.size() / (mp3.channels * 4);
+    SPDLOG_ERROR("{}",  mp3.totalPCMFrameCount);
+    std::vector<int16_t> pcm16;
+    pcm16.resize(n * mp3.channels);
+    drmp3_read_pcm_frames_s16(&mp3, n, pcm16.data());
+    drmp3_uninit(&mp3);
+    SPDLOG_ERROR("5");
+    // convert to mono, float
+    std::vector<float> pcmf32;
+    pcmf32.resize(n);
+    if (mp3.channels == 1) {
+        for (uint64_t i = 0; i < n; i++) {
+            pcmf32[i] = float(pcm16[i]) / 32768.0f;
+        }
+    } else {
+        for (uint64_t i = 0; i < n; i++) {
+            pcmf32[i] = float(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0f;
+        }
+    }
+
+    return pcmf32;
+}
+
 std::variant<absl::Status, std::optional<std::string_view>> getFileFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
     std::string_view value = parser.getFileContentByFieldName(keyName);
     if (value.empty()) {
@@ -204,6 +287,13 @@ public:
                 return absl::InvalidArgumentError("Failed to parse multipart data");
 
             SET_OR_RETURN(std::optional<std::string_view>, file, getFileFromPayload(*payload.multipartParser, "file"));
+            auto stream = getFileFromPayload(*payload.multipartParser, "stream");
+            if(!std::holds_alternative<absl::Status>(stream)){
+                SPDLOG_ERROR("NO VALUE");
+            }
+            else{
+                SPDLOG_ERROR("{}", (std::get<std::optional<std::string_view>>(stream)).value());
+            }
             if(!file.has_value()){
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
@@ -214,7 +304,7 @@ public:
             config.return_timestamps = true;
             ov::genai::RawSpeechInput raw_speech;
             try {
-                raw_speech = read_wav(file.value());
+                raw_speech = read_mp3(file.value());
             } catch(std::exception&){
                 return absl::InvalidArgumentError("Audio file pasing failed");
             }
