@@ -47,8 +47,10 @@ void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int
 }
 
 std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("REASONING CHUNK [{}]", chunk);
+    
     if (chunk.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for Qwen3ReasoningParser");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for GptReasoningParser");
         return std::nullopt;
     }
 

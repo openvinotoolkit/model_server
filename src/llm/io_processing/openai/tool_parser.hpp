@@ -32,7 +32,26 @@
 
 namespace ovms {
 class GptToolParser : public BaseOutputParser {
-    const int64_t botTokenId = 5;  // [TOOL_CALLS]
+    const std::string parsingStartTag = "<|channel|>commentary";
+    const std::string parsingEndTag = "<|call|>";  // need more
+
+    enum class StreamState : int {
+        READING_CHANNEL,
+        READING_CONSTRAIN,
+        READING_MESSAGE,
+    };
+
+    // streaming
+    StreamState streamState = StreamState::READING_CHANNEL;
+    std::string cache;
+    bool isStreamingFunctionName = false;
+    int toolCallIndex = -1;
+    std::string functionNameCache;
+
+    PartialJsonBuilder jsonBuilder;
+    rapidjson::Document lastJson;
+
+    std::optional<rapidjson::Document> out(const std::string& chunk);
 
 public:
     GptToolParser() = delete;
@@ -42,8 +61,7 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        static const std::string toolCallStartTag = "[TOOL_CALLS]";
-        return toolCallStartTag;
+        return parsingStartTag;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> specialParsingStartTags = {};
@@ -51,8 +69,7 @@ public:
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        static const std::string toolCallEndTag = "";
-        return toolCallEndTag;
+        return parsingEndTag;
     }
 };
 }  // namespace ovms

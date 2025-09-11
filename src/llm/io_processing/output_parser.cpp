@@ -299,7 +299,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         return parseContentChunk();
     } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
-        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
+        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());  // TODO: Implement more end tags for GPT
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }

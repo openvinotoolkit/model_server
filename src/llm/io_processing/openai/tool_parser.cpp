@@ -27,6 +27,7 @@
 #pragma warning(pop)
 
 #include "../../../logging.hpp"
+#include "../../../stringutils.hpp"
 #include "tool_parser.hpp"
 #include "harmony.hpp"
 #include "../utils.hpp"
@@ -45,9 +46,149 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     parsedOutput.toolCalls = harmony.getToolCalls();
 }
 
-std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
-    // Not implemented
-    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "GptToolParser::parseChunk is not implemented");
+std::optional<rapidjson::Document> GptToolParser::out(const std::string& chunk) {
+    rapidjson::Document newJson;
+    try {
+        newJson = jsonBuilder.add(chunk);
+    } catch (const std::exception& e) {
+        (void)e;  // Suppress unused variable warning on Windows
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
+        // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
+        throw std::runtime_error("Generated tool call structure is not valid");
+    }
+
+    rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
+    lastJson.CopyFrom(newJson, lastJson.GetAllocator());
+    // If delta is empty or contains only null or empty string values, we don't stream anything.
+    if (delta.ObjectEmpty()) {
+        return std::nullopt;
+    }
+    for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
+        if (it->value.IsNull() || (it->value.IsString() && std::string(it->value.GetString()).empty())) {
+            return std::nullopt;
+        }
+    }
+    // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
+    return wrapDelta(delta, toolCallIndex);
+}
+
+std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
+    //SPDLOG_INFO("TOOL PARSER CHUNK [{}]", chunk);
+
+    std::string chunk = c;
+    std::optional<rapidjson::Document> result;
+    
+    //if (chunk.find(getParsingStartTag()) != std::string::npos || chunk.find(getParsingEndTag()) != std::string::npos) {
+    if (chunk.find(getParsingStartTag()) != std::string::npos) {
+        toolCallIndex++;
+        return std::nullopt;
+    }
+
+    
+    if (chunk == "<|constrain|>") {
+        if (streamState == StreamState::READING_CHANNEL) {
+            SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache); 
+            if (functionNameCache.size()) {
+                result = wrapFirstDelta(functionNameCache, toolCallIndex);
+            }
+            cache.clear();
+        }
+
+        streamState = StreamState::READING_CONSTRAIN;
+        isStreamingFunctionName = false;
+        return result;
+    }
+
+    if (chunk == "<|message|>") {
+        if (streamState == StreamState::READING_CHANNEL) {
+            SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache);
+            if (functionNameCache.size()) {
+                result = wrapFirstDelta(functionNameCache, toolCallIndex);
+            }
+            cache.clear();
+        }
+        if (streamState == StreamState::READING_CONSTRAIN) {
+            SPDLOG_INFO("CONSTRAIN READ COMPLETE [{}]", cache);
+            cache.clear();
+        }
+
+        streamState = StreamState::READING_MESSAGE;
+        isStreamingFunctionName = false;
+        return result;
+    }
+    
+    if (endsWith(chunk, "<|call|>") || endsWith(chunk, "<|end|>") || endsWith(chunk, "<|return|>")) {
+        // find last <| and remove from chunk everything after it
+        std::size_t pos = chunk.rfind("<|");
+        if (pos != std::string::npos) {
+            if (pos > 0) {
+                std::string toAdd = chunk.substr(0, pos);
+                if (!toAdd.empty()) {
+                    cache += toAdd;
+                    SPDLOG_INFO("READING MESSAGE STEP [{}]", toAdd);  //// ZZZZZZZZ
+                    result = out(toAdd);
+                }
+            }
+        }
+
+        SPDLOG_INFO("MESSAGE READ COMPLETE [{}]", cache);
+        cache.clear();
+        streamState = StreamState::READING_CHANNEL;
+        isStreamingFunctionName = false;
+        return result;
+    }
+    
+    cache += chunk;
+
+    switch (streamState) {
+    case StreamState::READING_CHANNEL:
+    {
+        if (!isStreamingFunctionName) {
+            std::string futureCache = cache + chunk;
+            if (startsWith(futureCache, " to=functions.")) {
+                isStreamingFunctionName = true;
+                functionNameCache.clear();
+                // cut everything after first .
+                // remove and take only remaining part
+                std::size_t pos = chunk.find('.');
+                if (pos != std::string::npos) {
+                    chunk = chunk.substr(pos + 1);
+                }
+            }
+        }
+        if (isStreamingFunctionName) {
+            // search for space bar and cut everything after it, flag streaming function name end
+            // dont include space bar
+            std::size_t pos = chunk.find(' ');
+            if (pos != std::string::npos) {
+                isStreamingFunctionName = false;
+                chunk = chunk.substr(0, pos);
+                cache.clear();
+            }
+
+            if (chunk.size()) {
+                SPDLOG_INFO("FUNCTION NAME STEP [{}]", chunk);  // XXXXXXXXXXX
+                functionNameCache += chunk;
+            }
+        } else {
+            SPDLOG_INFO("READING CHANNEL STEP [{}]", chunk);  /// XXXXXXXXXXX
+        }
+        break;
+    }
+    case StreamState::READING_CONSTRAIN:
+        SPDLOG_INFO("READING CONSTRAIN STEP [{}]", chunk);  // YYYYYYYYYY
+        break;
+    case StreamState::READING_MESSAGE:
+    {
+        SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
+        
+        
+        return out(chunk);
+        
+        break;
+    }
+    }
+
     return std::nullopt;
 }
 }  // namespace ovms

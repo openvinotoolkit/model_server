@@ -50,7 +50,7 @@ std::string Harmony::getReasoning() {
     std::string reasoning;
     int i = 0;
     for (const auto& msg : messages) {
-        if (msg.getChannel() == "analysis") {
+        if (msg.getChannel() == "analysis") {  // TODO: Reasoning might be also in commentary part // or is it content? https://cookbook.openai.com/articles/openai-harmony#preambles
             if (i++ > 0) {
                 content += " ";
             }
