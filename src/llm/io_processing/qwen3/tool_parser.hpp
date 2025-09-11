@@ -31,16 +31,18 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Llama3ToolParser : public BaseOutputParser {
+class Qwen3ToolParser : public BaseOutputParser {
 protected:
-    const std::string parsingStartTag = "<|python_tag|>";
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
-    const std::string parsingEndTag = "";
+    static const std::string toolsStartTag = "<tool_call>";
+    static const std::string toolsEndTag = "</tool_call>";
+    static const std::string toolPrefixTag = "<function=";
+    static const std::string toolEndTag = "</function>";
+    static const std::string parameterPrefixTag = "<parameter=";
+    static const std::string parameterEndTag = "</parameter>";
+    bool stripNewline = false;
 
-    // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    static const int64_t botTokenId = 128010;
     // ";" is used as a separator between tool calls in the response
-    std::string separator = ";";
+    const std::string separator = ";";
 
     // Streaming required members
     rapidjson::Document lastJson;
@@ -52,25 +54,23 @@ protected:
     std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
     int escapeLevel = 0;
 
-    void startNextToolCall();
-
 public:
-    Llama3ToolParser() = delete;
+    Qwen3ToolParser() = delete;
     explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        return parsingStartTag;
+        return "FIXME";
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {"{"};
+        static const std::unordered_set<std::string> specialParsingStartTags = {"FIXME"};
         return specialParsingStartTags;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return parsingEndTag;
+        return "FIXME";
     }
 };
 }  // namespace ovms
