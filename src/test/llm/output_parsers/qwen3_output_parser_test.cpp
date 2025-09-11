@@ -288,7 +288,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
                 expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
                 EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
             } else {
-                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk << "Received: " << docStr << ", expected: " << expected;
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk << " Received: " << docStr << ", expected: " << expected;
             }
         } else {
             std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
