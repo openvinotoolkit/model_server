@@ -47,29 +47,33 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
 }
 
 std::optional<rapidjson::Document> GptToolParser::out(const std::string& chunk) {
-    rapidjson::Document newJson;
-    try {
-        newJson = jsonBuilder.add(chunk);
-    } catch (const std::exception& e) {
-        (void)e;  // Suppress unused variable warning on Windows
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
-        // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
-        throw std::runtime_error("Generated tool call structure is not valid");
-    }
+    SPDLOG_INFO("--------- OUT: [{}]", chunk);
 
-    rapidjson::Document delta = PartialJsonBuilder::computeDelta(lastJson, newJson);
-    lastJson.CopyFrom(newJson, lastJson.GetAllocator());
-    // If delta is empty or contains only null or empty string values, we don't stream anything.
-    if (delta.ObjectEmpty()) {
-        return std::nullopt;
+    rapidjson::Document newDelta;
+    // prepare document with {"arguments": "escaped_chunk"}
+    newDelta.SetObject();
+    rapidjson::Value argumentsValue;
+    argumentsValue.SetString(chunk.c_str(), static_cast<rapidjson::SizeType>(chunk.size()), newDelta.GetAllocator());
+    newDelta.AddMember("arguments", argumentsValue, newDelta.GetAllocator());
+
+    
+    rapidjson::Document wrappedDelta;
+    wrappedDelta.SetObject();
+    rapidjson::Value toolCalls(rapidjson::kArrayType);
+    rapidjson::Value toolCallObj(rapidjson::kObjectType);
+    toolCallObj.AddMember("index", toolCallIndex, wrappedDelta.GetAllocator());
+    rapidjson::Value functionObj(rapidjson::kObjectType);
+    for (auto it = newDelta.MemberBegin(); it != newDelta.MemberEnd(); ++it) {
+        rapidjson::Value key(it->name, wrappedDelta.GetAllocator());
+        rapidjson::Value value(it->value, wrappedDelta.GetAllocator());
+        functionObj.AddMember(key, value, wrappedDelta.GetAllocator());
     }
-    for (auto it = delta.MemberBegin(); it != delta.MemberEnd(); ++it) {
-        if (it->value.IsNull() || (it->value.IsString() && std::string(it->value.GetString()).empty())) {
-            return std::nullopt;
-        }
-    }
-    // Wrap delta in {"tool_calls":[{"index":<toolCallIndex>,"function":<delta>}]}
-    return wrapDelta(delta, toolCallIndex);
+    toolCallObj.AddMember("function", functionObj, wrappedDelta.GetAllocator());
+    toolCalls.PushBack(toolCallObj, wrappedDelta.GetAllocator());
+    rapidjson::Value deltaWrapper(rapidjson::kObjectType);
+    deltaWrapper.AddMember("tool_calls", toolCalls, wrappedDelta.GetAllocator());
+    wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
+    return wrappedDelta;
 }
 
 std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
@@ -181,11 +185,9 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
     case StreamState::READING_MESSAGE:
     {
         SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
-        
-        
+
         return out(chunk);
-        
-        break;
+
     }
     }
 
