@@ -48,10 +48,7 @@ class GptToolParser : public BaseOutputParser {
     int toolCallIndex = -1;
     std::string functionNameCache;
 
-    PartialJsonBuilder jsonBuilder;
-    rapidjson::Document lastJson;
-
-    std::optional<rapidjson::Document> out(const std::string& chunk);
+    std::optional<rapidjson::Document> wrapCustom(const std::string& chunk);
 
 public:
     GptToolParser() = delete;

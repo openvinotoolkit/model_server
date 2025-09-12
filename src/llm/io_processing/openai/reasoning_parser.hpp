@@ -46,7 +46,7 @@ public:
         return parsingStartTag;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {};
+        static const std::unordered_set<std::string> specialParsingStartTags = {"<|channel|>commentary<|message|>"/*Preamble*/};
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {

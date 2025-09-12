@@ -46,17 +46,17 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     parsedOutput.toolCalls = harmony.getToolCalls();
 }
 
-std::optional<rapidjson::Document> GptToolParser::out(const std::string& chunk) {
+std::optional<rapidjson::Document> GptToolParser::wrapCustom(const std::string& chunk) {
     SPDLOG_INFO("--------- OUT: [{}]", chunk);
 
-    rapidjson::Document newDelta;
     // prepare document with {"arguments": "escaped_chunk"}
+    // It gets escaped automatically by rapidjson
+    rapidjson::Document newDelta;
     newDelta.SetObject();
     rapidjson::Value argumentsValue;
     argumentsValue.SetString(chunk.c_str(), static_cast<rapidjson::SizeType>(chunk.size()), newDelta.GetAllocator());
     newDelta.AddMember("arguments", argumentsValue, newDelta.GetAllocator());
 
-    
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();
     rapidjson::Value toolCalls(rapidjson::kArrayType);
@@ -130,7 +130,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
                 if (!toAdd.empty()) {
                     cache += toAdd;
                     SPDLOG_INFO("READING MESSAGE STEP [{}]", toAdd);  //// ZZZZZZZZ
-                    result = out(toAdd);
+                    result = wrapCustom(toAdd);
                 }
             }
         }
@@ -139,6 +139,14 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
         cache.clear();
         streamState = StreamState::READING_CHANNEL;
         isStreamingFunctionName = false;
+
+        // print the json
+        // use buffer writer
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        result.value().Accept(writer);
+        SPDLOG_INFO("WRAPPED DELTA [{}]", buffer.GetString());
+
         return result;
     }
     
@@ -186,7 +194,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
     {
         SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
 
-        return out(chunk);
+        return wrapCustom(chunk);
 
     }
     }

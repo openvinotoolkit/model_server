@@ -42,6 +42,20 @@ std::string Harmony::getContent() {
             }
             content += msg.getContent();
         }
+
+        //  Preambles
+        /*
+            Preambles
+            At times the model might choose to generate a “preamble” to inform the user about the tools it is about to call.
+            For example, when it plans to call multiple tools.
+            If this is the case it will generate an assistant message on the commentary channel that, unlike the chain-of-thought, is intended TO BE SHOWN to the end-user.
+        */
+        if (msg.getChannel() == "commentary") {
+            if (i++ > 0) {
+                content += " ";
+            }
+            content += msg.getContent();
+        }
     }
     return content;
 }
@@ -68,9 +82,10 @@ ToolCalls Harmony::getToolCalls() {
         if (startsWith(msg.getChannel(), "commentary")) {
             SPDLOG_INFO("Found commentary");
             // Try to parse tool name from segment like 'to=functions.NAME ...'
-            size_t marker = msg.getChannel().find("to=functions.");
+            const static std::string tool_prefix = "to=functions.";
+            size_t marker = msg.getChannel().find(tool_prefix);
             if (marker != std::string::npos) {
-                marker += strlen("to=functions.");
+                marker += tool_prefix.length();
                 size_t sp = msg.getChannel().find_first_of(" \t\n\r<", marker);
                 ToolCall tc;
                 if (sp == std::string::npos) {
