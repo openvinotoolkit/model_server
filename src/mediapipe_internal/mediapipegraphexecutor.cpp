@@ -47,6 +47,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     const GenAiServableMap& llmNodeResourcesMap,
     const EmbeddingsServableMap& embeddingsServableMap,
     const RerankServableMap& rerankServableMap,
+    const SpeechServableMap& speechServableMap,
     PythonBackend* pythonBackend,
     MediapipeServableMetricReporter* mediapipeServableMetricReporter) :
     name(name),
@@ -56,7 +57,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     outputTypes(std::move(outputTypes)),
     inputNames(std::move(inputNames)),
     outputNames(std::move(outputNames)),
-    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap}),
+    sidePacketMaps({pythonNodeResourcesMap, llmNodeResourcesMap, {}, embeddingsServableMap, rerankServableMap, speechServableMap}),
     pythonBackend(pythonBackend),
     currentStreamTimestamp(STARTING_TIMESTAMP),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter) {}
@@ -88,6 +89,7 @@ const std::string MediapipeGraphExecutor::LLM_SESSION_SIDE_PACKET_TAG = "llm";
 const std::string MediapipeGraphExecutor::IMAGE_GEN_SESSION_SIDE_PACKET_TAG = "pipes";
 const std::string MediapipeGraphExecutor::EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servable";
 const std::string MediapipeGraphExecutor::RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
+const std::string MediapipeGraphExecutor::SPEECH_SESSION_SIDE_PACKET_TAG = "speech_servable";
 const ::mediapipe::Timestamp MediapipeGraphExecutor::STARTING_TIMESTAMP = ::mediapipe::Timestamp(0);
 
 }  // namespace ovms
