@@ -15,6 +15,7 @@
 #
 
 HEADER_FILE_PATH ?= ../custom_node_interface.h
+OPENCV_HEADER_FILE_PATH ?= ../deps/opencv.hpp
 OPENCV_BUILD_FLAGS ?= ../../third_party/opencv/opencv_cmake_flags.txt
 OPENCV_INSTALL_SCRIPT ?= ../../third_party/opencv/install_opencv.sh
 
@@ -51,6 +52,7 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	@echo "Docker image will be rebuilt from scratch"
 endif
 	@cp $(HEADER_FILE_PATH) .
+	@cp $(OPENCV_HEADER_FILE_PATH) .
 	@cp $(OPENCV_BUILD_FLAGS) .
 	@cp $(OPENCV_INSTALL_SCRIPT) .
 	@cp -r ../queue.hpp ./queue.hpp

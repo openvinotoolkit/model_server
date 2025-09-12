@@ -177,6 +177,7 @@ LINUX_COMMON_STATIC_LIBS_COPTS = [
 ]
 
 WINDOWS_COMMON_STATIC_LIBS_COPTS = [
+                        "/guard:cf",
                         "/W4",
                         "/WX",
                         "/external:anglebrackets",
@@ -232,20 +233,6 @@ COMMON_STATIC_TEST_COPTS = select({
                         "/utf-8",
                     ],
                 })
-
-COMMON_STATIC_LIBS_COPTS_VISIBLE = select({
-                "//conditions:default": [
-                    "-Wall",
-                    # TODO: was in ovms bin "-Wconversion",
-                    "-Wno-unknown-pragmas", 
-                    "-Wno-sign-compare",
-                    "-Werror",
-                ],
-                "//src:windows" : [
-                        "-W0",
-                        "-Isrc",
-                    ],
-                }) 
 
 COMMON_STATIC_LIBS_LINKOPTS = select({
                 "//conditions:default": [

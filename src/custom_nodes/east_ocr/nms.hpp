@@ -27,7 +27,10 @@
 #include <utility>
 #include <vector>
 
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 
 /**
  * @brief nms
