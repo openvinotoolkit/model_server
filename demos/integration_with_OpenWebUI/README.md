@@ -70,7 +70,7 @@ Running Open WebUI:
 open-webui serve
 ```
 
-Go to [http://localhost:8080](http://localhost:8080) and create admin account to get started.
+Go to [http://localhost:8080](http://localhost:8080) and create admin account to get started
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
@@ -94,7 +94,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 ![connection setting](./connection_setting.png)
 ### Step 2: Start Chatting
 
-Click **New Chat** and select the model to start chatting.
+Click **New Chat** and select the model to start chatting
 
 ![chat demo](./chat_demo.png)
 
@@ -150,7 +150,10 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 ### Step 4: Chat with RAG
 
 1. Click **New Chat**. Enter `#` symbol
-2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a Message**
+2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a Message**.
+
+![select documents](./select_documents.png)
+
 3. Enter a query and sent
 
 ![chat with RAG demo](./chat_with_RAG_demo.png)
@@ -162,10 +165,10 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
    * Name the model
    * Select a base model from the list
    * Click **Select Knowledge** and select a knowledge base for retrieval
-
+3. Click **Save & Create**
+   
 ![create and configure the RAG-enabled model](./create_and_configure_the_RAG-enabled_model.png)
 
-3. Click **Save & Create**
 4. Click the created model and start chatting
 
 ![RAG-enabled model demo](./RAG-enabled_model_demo.png)
@@ -246,8 +249,8 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`.
-2. Click **+more** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
+1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`
+2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
 3. Enter a query and sent
@@ -284,7 +287,10 @@ uvicorn main:app --host 0.0.0.0 --port 18000 --reload
 
 ### Step 3: Chat with AI Agent
 
-1. Click **+more** and toggle on the tool
+1. Click **+More** and toggle on the tool
+   
+![activate the tool](./activate_the_tool.png)
+
 2. Enter a query and sent
 
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
