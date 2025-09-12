@@ -35,6 +35,8 @@ protected:
     const std::string parsingStartTag = "<|channel|>analysis<|message|>";
     const std::string parsingEndTag = "<|end|>";
 
+    int state = 0;  // 0 - looking for start tag, 1 - reading reasoning, 2 - reading content
+
 public:
     GptReasoningParser() = delete;
     explicit GptReasoningParser(ov::genai::Tokenizer& tokenizer) :
@@ -46,7 +48,10 @@ public:
         return parsingStartTag;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {"<|channel|>commentary<|message|>"/*Preamble*/};
+        static const std::unordered_set<std::string> specialParsingStartTags = {
+            "<|channel|>commentary<|message|>",/*Preamble*/
+            "<|start|>assistant<|channel|>final<|message|>", /*Direct answer*/
+        };
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {

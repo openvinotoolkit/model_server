@@ -26,6 +26,7 @@
 #pragma warning(pop)
 
 #include "../../../logging.hpp"
+#include "../../../stringutils.hpp"
 #include "reasoning_parser.hpp"
 #include "harmony.hpp"
 #include "../utils.hpp"
@@ -46,30 +47,58 @@ void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int
     parsedOutput.reasoning = harmony.getReasoning();
 }
 
-std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("REASONING CHUNK [{}]", chunk);
+std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("REASONING CHUNK [{}]", c);
     
-    if (chunk.empty()) {
+    if (c.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for GptReasoningParser");
         return std::nullopt;
     }
 
-    if (chunk.find(getParsingStartTag()) != std::string::npos || chunk.find(getParsingEndTag()) != std::string::npos) {
-        return std::nullopt;
-    } else {
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        writer.StartObject();
-        writer.String("delta");
-        writer.StartObject();
-        writer.String("reasoning_content");
-        writer.String(chunk.c_str());
-        writer.EndObject();
-        writer.EndObject();
-        rapidjson::Document doc;
-        doc.Parse(buffer.GetString());
-        return doc;
+    std::string chunk = c;
+
+    int lastState = state;
+
+    if (startsWith(chunk, getParsingStartTag())) {
+        state = 1;
+        // remove the start tag
+        chunk = chunk.substr(getParsingStartTag().size());
+    } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
+        state = 2;
+        // remove the tag
+        chunk = chunk.substr(std::strlen("<|start|>assistant<|channel|>final<|message|>"));
+    } else if (endsWith(chunk, getParsingEndTag())) {
+        state = 0;
+        // remove the end tag
+        chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
     }
+
+    if (chunk.size() == 0)
+        return std::nullopt;
+
+    switch (lastState)
+    {
+        case 1:
+        case 2:
+        {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            writer.StartObject();
+            writer.String("delta");
+            writer.StartObject();
+            if (state == 1)
+                writer.String("reasoning_content");
+            else
+                writer.String("content");
+            writer.String(chunk.c_str());
+            writer.EndObject();
+            writer.EndObject();
+            rapidjson::Document doc;
+            doc.Parse(buffer.GetString());
+            return doc;
+        }
+    }
+
     return std::nullopt;
 }
 }  // namespace ovms
