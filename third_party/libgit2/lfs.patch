@@ -287,10 +287,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..cd3aa39fd
+index 000000000..6317b7ecf
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,500 @@
+@@ -0,0 +1,502 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -528,6 +528,8 @@ index 000000000..cd3aa39fd
 +	for (i = bar_length; i < bar_width; ++i) {
 +		printf(" ");
 +	}
++	if (progress > 1.0)
++		progress = 1.0;
 +	printf("] %.2f%%", progress * 100);
 +	print_download_speed_info(count, elapsed_time);
 +	if (progress == 1.0)
