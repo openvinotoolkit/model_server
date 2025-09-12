@@ -23,6 +23,7 @@ Start using OpenVINO Model Server with a fast-forward serving example from the [
 Read [release notes](https://github.com/openvinotoolkit/model_server/releases) to find out what’s new.
 
 ### Key features:
+- **[NEW]** [Support for AI agents](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_agent.html)
 - **[NEW]** [Image generation compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html)
 - **[NEW]** Native Windows support. Check updated [deployment guide](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html)
 - **[NEW]** [Text Embeddings compatible with OpenAI API](https://docs.openvino.ai/2025/model-server/ovms_demos_embeddings.html)

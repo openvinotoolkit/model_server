@@ -151,7 +151,7 @@ def check_dir(start_dir):
         "results.txt",
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -191,6 +191,7 @@ def check_func(start_dir):
         '.venv',
         '.vscode',
         '.xml',
+        '.jinja'
         'Doxyfile',
         'REST_age_gender.ipynb',
         '__pycache__',
