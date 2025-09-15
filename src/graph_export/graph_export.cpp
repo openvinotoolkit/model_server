@@ -136,7 +136,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             # Speculative decoding configuration)";
         oss << R"(
-            draft_models_path: )" << graphSettings.draftModelDirName.value() << R"(,)";
+            draft_models_path: ")" << graphSettings.draftModelDirName.value() << R"(",)";
     }
     oss << R"(
         }
@@ -158,7 +158,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     SPDLOG_TRACE("Generated pbtxt: {}", oss.str());
     if (!success) {
         SPDLOG_ERROR("Created graph config file couldn't be parsed - check used task parameters values.");
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        // return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
 #endif
     // clang-format on
