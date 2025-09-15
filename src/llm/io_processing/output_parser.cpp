@@ -196,9 +196,9 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
 
-    //if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
-    //}
+    if (spdlog::default_logger_raw()->level() == spdlog::level::trace) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Raw model output: {}", tokenizer.decode(generatedTokens, ov::genai::skip_special_tokens(false)));
+    }
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {

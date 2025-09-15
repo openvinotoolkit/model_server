@@ -96,6 +96,7 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         if (getProperties()->toolParserName == "gpt" || getProperties()->reasoningParserName == "gpt") {
             skipSpecialTokens = false;
         }
+        // This requires changes to GenAI repo, hence not yet merged
         legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, skipSpecialTokens);
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
@@ -201,8 +202,15 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
         // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
+
+        // TODO:
+        // This error is surpressed in order for BFCL benchmark to work since BFCL relies on usage in streaming mode.
+        // When running BFCL benchmark, the scripts need to be modified to ignore missing usage in streaming mode.
+        // The real use case will be with Continuous Batching pipelines, which provide usage.
+        // We need to remove it before merge.
         //if (executionContext->apiHandler->getStreamOptions().includeUsage)
         //    return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
+        
         // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
