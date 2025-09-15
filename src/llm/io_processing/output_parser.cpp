@@ -25,6 +25,7 @@
 #include "phi4/tool_parser.hpp"
 #include "mistral/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
+#include "qwen3/tool_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -150,6 +151,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<Phi4ToolParser>(tokenizer);
     } else if (toolParserName == "mistral") {
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
+    } else if (toolParserName == "qwen3coder") {
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
