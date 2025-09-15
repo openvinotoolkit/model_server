@@ -26,6 +26,7 @@
 #include "mistral/tool_parser.hpp"
 #include "gptoss/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
+#include "qwen3/tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 
 namespace ovms {
@@ -154,6 +155,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (toolParserName == "gptoss") {
         toolParser = std::make_unique<GptOssToolParser>(tokenizer);
+    } else if (toolParserName == "qwen3coder") {
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }

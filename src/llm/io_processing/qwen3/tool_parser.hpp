@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -31,14 +32,54 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class Qwen3ToolParser : public BaseOutputParser {
+struct Functool {
+    std::string name;
+    std::vector<std::pair<std::string, std::string>> parameters;
+//    std::unordered_set<std::string> usedParameterNames;
+void clear() {
+    name.clear();
+    parameters.clear();
+//    usedParameterNames.clear();
+}
+};
+struct Parser {
+    enum State {
+        Content, // here we expect either tools start tag or end of content
+        InsideToolCall, // here we expect function start tag
+        InsideFunctionName, // here we expect parameter start tag
+        InsideFunction, // here we expect parameter start tag
+        InsideParameterName, // here we expect parameter end tag
+        InsideParameter, // here we expect parameter end tag
+        AfterParameter, // here we expect either next parameter or function & tools end
+        ErrorEnd, // we reached the end with error
+        End // we reached the end successfully
+    };
+    std::string& content;
+    // string iterator to current position in content
+    size_t currentPosition{0};
+    State currentState = State::Content;
+    Functool currentFunction;
+    std::string currentParameterName;
+    std::stack<size_t> toolsBeginStack;
+    std::stack<size_t> toolsEndStack;
+    void removeToolCallsFromContent();
+    /*
+     * Returns true if step was successful, false if we reached the end or error occurred
+     */
+    bool step(ToolCalls& toolCalls);
+    Parser(std::string& content) : content(content) {}
+};
+
+class Qwen3CoderToolParser : public BaseOutputParser {
+        public:
+    static const std::string toolsStartTag;
+    static const std::string toolsEndTag;
+    static const std::string toolPrefixTag;
+    static const std::string toolEndTag;
+    static const std::string parameterPrefixTag;
+    static const std::string parameterEndTag;
+    static const std::string tagEnd;
 protected:
-    static const std::string toolsStartTag = "<tool_call>";
-    static const std::string toolsEndTag = "</tool_call>";
-    static const std::string toolPrefixTag = "<function=";
-    static const std::string toolEndTag = "</function>";
-    static const std::string parameterPrefixTag = "<parameter=";
-    static const std::string parameterEndTag = "</parameter>";
     bool stripNewline = false;
 
     // ";" is used as a separator between tool calls in the response
@@ -55,22 +96,22 @@ protected:
     int escapeLevel = 0;
 
 public:
-    Qwen3ToolParser() = delete;
-    explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer) :
+    Qwen3CoderToolParser() = delete;
+    explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        return "FIXME";
+        return toolsStartTag; // FIXME CHECK
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {"FIXME"};
+        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag}; // FIXME CHECK
         return specialParsingStartTags;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return "FIXME";
+        return toolsEndTag; // FIXME CHECK
     }
 };
 }  // namespace ovms
