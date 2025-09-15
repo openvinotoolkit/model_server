@@ -136,7 +136,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             # Speculative decoding configuration)";
         oss << R"(
-            draft_models_path: ")" << graphSettings.draftModelDirName.value() << R"(",)";
+            draft_models_path: )" << graphSettings.draftModelDirName.value() << R"(,)";
     }
     oss << R"(
         }

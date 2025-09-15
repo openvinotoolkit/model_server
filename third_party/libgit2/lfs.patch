@@ -287,10 +287,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..4adcc72d1
+index 000000000..bbe4093b1
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,548 @@
+@@ -0,0 +1,568 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -639,6 +639,11 @@ index 000000000..4adcc72d1
 +	       filename);
 +}
 +
++#define CURL_SETOPT(setopt)       \
++	if (status == CURLE_OK) { \
++		status = setopt;  \
++	}
++
 +/**
 + * lfs_download - Downloads a file using the LFS (Large File Storage) mechanism.
 + *
@@ -668,7 +673,8 @@ index 000000000..4adcc72d1
 +	char *tmp_out_file = append_char_to_buffer(la->full_path, '2');
 +
 +	CURL *info_curl,*dl_curl;
-+	CURLcode res;
++	CURLcode res = CURLE_OK;
++	CURLcode status = CURLE_OK;
 +	git_str res_str = GIT_STR_INIT;
 +	/* get a curl handle */
 +	info_curl = curl_easy_init();
@@ -689,12 +695,16 @@ index 000000000..4adcc72d1
 +		/* Add a custom header */
 +		chunk = curl_slist_append(chunk, "Content-Type: application/vnd.git-lfs+json");
 +		/* set our custom set of headers */
-+		curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk));
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr));
 +
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			goto info_cleaup;
++		}
 +		git_str lfs_info_data = GIT_STR_INIT;
 +
 +		/* "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a12310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}" */
@@ -715,17 +725,19 @@ index 000000000..4adcc72d1
 +		}
 +
 +		/* Now specify the POST data */
-+		curl_easy_setopt(info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr);
-+		curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-+		curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L));
 +
 +		struct memory response = { 0 };
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_WRITEFUNCTION, write_callback);
-+		curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_WRITEDATA, (void *)&response);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEFUNCTION, write_callback));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0"));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEDATA, (void *)&response));
 +
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			goto info_cleaup;
++		}
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(info_curl);
 +		/* Check for errors */
@@ -743,10 +755,13 @@ index 000000000..4adcc72d1
 +		res_str.asize = response.size;
 +		res_str.size = response.size;
 +		res_str.ptr = git__strdup(response.response);
-+		/* always cleanup */
-+		curl_easy_cleanup(info_curl);
-+		/* free the custom headers */
-+		curl_slist_free_all(chunk);
++		info_cleaup:
++		    /* always cleanup */
++		    curl_easy_cleanup(info_curl);
++		    /* free the custom headers */
++		    curl_slist_free_all(chunk);
++		    if (status != CURLE_OK)
++			    goto on_error;
 +	}
 +
 +	/* get a curl handle */
@@ -763,20 +778,25 @@ index 000000000..4adcc72d1
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr);
-+		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-+		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
-+		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-+		curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
-+		curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
-+		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0"));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile));
 +
 +		// progress bar options
 +		struct progress_data progress_d = { time(NULL), time(NULL) , false };
-+		curl_easy_setopt(dl_curl, CURLOPT_NOPROGRESS, 0L);
-+		curl_easy_setopt(dl_curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
-+		curl_easy_setopt(dl_curl, CURLOPT_XFERINFODATA, &progress_d);
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_NOPROGRESS, 0L));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFODATA, &progress_d));
 +
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			curl_easy_cleanup(dl_curl);
++			goto on_error;
++		}
 +		print_download_info(la->full_path, get_digit(la->lfs_size));
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(dl_curl);
