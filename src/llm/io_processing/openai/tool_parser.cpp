@@ -44,7 +44,7 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
 
     parsedOutput.content = harmony.getContent();  // what if someone has only reasoning parsers and no tool parser?
     parsedOutput.toolCalls = harmony.getToolCalls();
-    for (const auto& toolCall : parsedOutput.toolCalls) {
+    for (auto& toolCall : parsedOutput.toolCalls) {
         SPDLOG_INFO("DEBUG Unary | GPT Tool Call | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
     }
 }

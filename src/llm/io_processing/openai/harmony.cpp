@@ -17,6 +17,7 @@
 
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
+#include "../utils.hpp"
 
 // Based on https://cookbook.openai.com/articles/openai-harmony
 
@@ -94,6 +95,7 @@ ToolCalls Harmony::getToolCalls() {
                     tc.name = msg.getChannel().substr(marker, sp - marker);
                 }
                 tc.arguments = msg.getContent();
+                tc.id = generateRandomId();
                 tool_calls.push_back(tc);
             } else {
                 // SPDLOG_INFO("Could not find tool name in channel [{}]", msg.getChannel());
