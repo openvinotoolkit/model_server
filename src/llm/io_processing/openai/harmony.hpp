@@ -51,7 +51,6 @@ public:
     Harmony(ov::genai::Tokenizer& tokenizer, const std::vector<int64_t>& tokens);
 
     bool parse();
-    bool parse2();
 
     std::string getContent();
     std::string getReasoning();

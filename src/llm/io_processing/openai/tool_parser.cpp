@@ -39,15 +39,18 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
     } else {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
+        //SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
     }
 
     parsedOutput.content = harmony.getContent();  // what if someone has only reasoning parsers and no tool parser?
     parsedOutput.toolCalls = harmony.getToolCalls();
+    for (const auto& toolCall : parsedOutput.toolCalls) {
+        SPDLOG_INFO("DEBUG Unary | GPT Tool Call | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
+    }
 }
 
 std::optional<rapidjson::Document> GptToolParser::wrapCustom(const std::string& chunk) {
-    SPDLOG_INFO("--------- OUT: [{}]", chunk);
+    //SPDLOG_INFO("--------- OUT: [{}]", chunk);
 
     // prepare document with {"arguments": "escaped_chunk"}
     // It gets escaped automatically by rapidjson
@@ -78,6 +81,7 @@ std::optional<rapidjson::Document> GptToolParser::wrapCustom(const std::string& 
 
 std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
     //SPDLOG_INFO("TOOL PARSER CHUNK [{}]", chunk);
+    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Chunk [{}]", c);
 
     std::string chunk = c;
     std::optional<rapidjson::Document> result;
@@ -91,8 +95,9 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
     
     if (chunk == "<|constrain|>") {
         if (streamState == StreamState::READING_CHANNEL) {
-            SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache); 
+            //SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache); 
             if (functionNameCache.size()) {
+                SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
             }
             cache.clear();
@@ -105,14 +110,15 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
 
     if (chunk == "<|message|>") {
         if (streamState == StreamState::READING_CHANNEL) {
-            SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache);
+            //SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache);
             if (functionNameCache.size()) {
+                SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
             }
             cache.clear();
         }
         if (streamState == StreamState::READING_CONSTRAIN) {
-            SPDLOG_INFO("CONSTRAIN READ COMPLETE [{}]", cache);
+            //SPDLOG_INFO("CONSTRAIN READ COMPLETE [{}]", cache);
             cache.clear();
         }
 
@@ -129,13 +135,15 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
                 std::string toAdd = chunk.substr(0, pos);
                 if (!toAdd.empty()) {
                     cache += toAdd;
-                    SPDLOG_INFO("READING MESSAGE STEP [{}]", toAdd);  //// ZZZZZZZZ
+                    //SPDLOG_INFO("READING MESSAGE STEP [{}]", toAdd);  //// ZZZZZZZZ
+                    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", toAdd);
+
                     result = wrapCustom(toAdd);
                 }
             }
         }
 
-        SPDLOG_INFO("MESSAGE READ COMPLETE [{}]", cache);
+        //SPDLOG_INFO("MESSAGE READ COMPLETE [{}]", cache);
         cache.clear();
         streamState = StreamState::READING_CHANNEL;
         isStreamingFunctionName = false;
@@ -145,7 +153,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         result.value().Accept(writer);
-        SPDLOG_INFO("WRAPPED DELTA [{}]", buffer.GetString());
+        //SPDLOG_INFO("WRAPPED DELTA [{}]", buffer.GetString());
 
         return result;
     }
@@ -179,21 +187,21 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
             }
 
             if (chunk.size()) {
-                SPDLOG_INFO("FUNCTION NAME STEP [{}]", chunk);  // XXXXXXXXXXX
+                //SPDLOG_INFO("FUNCTION NAME STEP [{}]", chunk);  // XXXXXXXXXXX
                 functionNameCache += chunk;
             }
         } else {
-            SPDLOG_INFO("READING CHANNEL STEP [{}]", chunk);  /// XXXXXXXXXXX
+            //SPDLOG_INFO("READING CHANNEL STEP [{}]", chunk);  /// XXXXXXXXXXX
         }
         break;
     }
     case StreamState::READING_CONSTRAIN:
-        SPDLOG_INFO("READING CONSTRAIN STEP [{}]", chunk);  // YYYYYYYYYY
+        //SPDLOG_INFO("READING CONSTRAIN STEP [{}]", chunk);  // YYYYYYYYYY
         break;
     case StreamState::READING_MESSAGE:
     {
-        SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
-
+        //SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
+        SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", chunk);
         return wrapCustom(chunk);
 
     }

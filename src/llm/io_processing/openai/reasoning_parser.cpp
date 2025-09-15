@@ -34,24 +34,27 @@
 #include "harmony.hpp"
 namespace ovms {
 void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    SPDLOG_INFO("Reasoning parsing with GPT format");
+    //SPDLOG_INFO("Reasoning parsing with GPT format");
 
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
     } else {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
+        //SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
     }
 
+    // Loggin assuming both parser are always on
     parsedOutput.content = harmony.getContent();  // what if someone has only tool parser and no reasoning parsers?
+    SPDLOG_INFO("DEBUG Unary | GPT Content | [{}]", parsedOutput.content);
     parsedOutput.reasoning = harmony.getReasoning();
+    SPDLOG_INFO("DEBUG Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
 }
 
 std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("REASONING CHUNK [{}]", c);
+    SPDLOG_INFO("DEBUG Streaming | GPT Reason | Chunk [{}]", c);
     
     if (c.empty()) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for GptReasoningParser");
+        //SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for GptReasoningParser");
         return std::nullopt;
     }
 
@@ -95,6 +98,11 @@ std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::str
             writer.EndObject();
             rapidjson::Document doc;
             doc.Parse(buffer.GetString());
+
+            if (state == 1)
+                SPDLOG_INFO("DEBUG Streaming | GPT Reason-Think | Send [{}]", chunk);
+            else
+                SPDLOG_INFO("DEBUG Streaming | GPT Reason-Content | Send [{}]", chunk);
             return doc;
         }
     }

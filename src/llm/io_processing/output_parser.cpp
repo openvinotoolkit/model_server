@@ -212,6 +212,7 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
 }
 
 std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("DEBUG Streaming | New Chunk [{}]", chunkResponse);
     /*
     Using appropriate parser based on the current processing phase
     Call to this method should return either result from parserContentChunk, parseToolCallChunk, parseReasoningChunk when we can determine the phase
