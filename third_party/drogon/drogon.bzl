@@ -120,7 +120,7 @@ if __name__ == "__main__":
             "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
             "CMAKE_CXX_STANDARD": "17",
             "CXX_FILESYSTEM_HAVE_FS": "1",
-            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1"
+            "CMAKE_CXX_FLAGS": " /guard:cf /GS -s -D_GLIBCXX_USE_CXX11_ABI=1"
         """
         out_static_libs = [
             "drogon.lib",
