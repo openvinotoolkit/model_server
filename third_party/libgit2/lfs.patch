@@ -287,10 +287,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..bbe4093b1
+index 000000000..0ac7b40a2
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,568 @@
+@@ -0,0 +1,567 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -567,20 +567,19 @@ index 000000000..bbe4093b1
 +	time_t currentTime = time(NULL);
 +	bool shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
 +	if ((dltotal == dlnow) && dltotal < 10000) {
-+		// Usually with first messages we don't get the full size and we
-+		// don't want to print progress bar so we assume that until
-+		// dltotal is less than 1000 we don't have full size otherwise
-+		// we would print 100% progress bar
++		/* Usually with first messages we don't get the full size and we
++		   don't want to print progress bar so we assume that until
++		   dltotal is less than 1000 we don't have full size otherwise
++		   we would print 100% progress bar */
 +		return 0;
 +	}
-+	// called multiple times, so we want to print progress bar only once
-+	// reached 100%
++	/* called multiple times, so we want to print progress bar only once reached 100% */
 +	if (pcs->fullDownloadPrinted) {
 +		return 0;
 +	}
 +	if (!shouldPrintDueToTime && (dltotal != dlnow)) {
-+		// we dont want to skip printing progress bar for the 100% but
-+		// we don't want to spam stdout either
++		/* we dont want to skip printing progress bar for the 100% but
++		   we don't want to spam stdout either */
 +		return 0;
 +	}
 +	pcs->fullDownloadPrinted = (dltotal == dlnow);
@@ -786,7 +785,7 @@ index 000000000..bbe4093b1
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback));
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile));
 +
-+		// progress bar options
++		/* progress bar options */
 +		struct progress_data progress_d = { time(NULL), time(NULL) , false };
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_NOPROGRESS, 0L));
 +		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
