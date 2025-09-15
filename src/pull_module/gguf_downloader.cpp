@@ -149,7 +149,6 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
 }
 
-
 void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
     float progress = (float)count / max;
     if (!first_run && progress < 0.01 && count > 0)
