@@ -134,8 +134,7 @@ Status GGUFDownloader::downloadModel() {
     return StatusCode::OK;
 }
 
-static const char* rate_units[] = {"B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL};
-
+static const char* sizeUnits[] = {"B", "KB", "MB", "GB", "TB", NULL};
 static void print_download_speed_info(size_t received_size, size_t elapsed_time) {
     double recv_len = (double)received_size;
     uint64_t elapsed = (uint64_t)elapsed_time;
@@ -143,14 +142,14 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
     rate = elapsed ? recv_len / elapsed : received_size;
 
     size_t rate_unit_idx = 0;
-    while (rate > 1024 && rate_units[rate_unit_idx + 1]) {
-        rate /= 1024.0;
+    while (rate > 1000 && sizeUnits[rate_unit_idx + 1]) {
+        rate /= 1000.0;
         rate_unit_idx++;
     }
-    printf(" [%.2f %s] ", rate, rate_units[rate_unit_idx]);
+    printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
 }
 
-static const char* sizeUnits[] = {"B", "KB", "MB", "GB", "TB", NULL};
+
 void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
     float progress = (float)count / max;
     if (!first_run && progress < 0.01 && count > 0)
@@ -250,7 +249,7 @@ int progress_callback(void* clientp,
     }
     // called multiple times, so we want to print progress bar only once reached 100%
     if (pcs->fullDownloadPrinted) {
-        return 0;
+        std::cout << "dlnow" << dlnow <<std::endl;
     }
     if (!shouldPrintDueToTime && (dltotal != dlnow)) {
         // we dont want to skip printing progress bar for the 100% but we don't want to spam stdout either
