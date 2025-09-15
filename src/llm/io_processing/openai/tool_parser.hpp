@@ -32,8 +32,11 @@
 
 namespace ovms {
 class GptToolParser : public BaseOutputParser {
+    // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
     const std::string parsingStartTag = "<|channel|>commentary";
-    const std::string parsingEndTag = "<|call|>";  // need more
+
+    // TODO: There should be more end tags: <|end|> and <|return|>, implement on upper level, find some example prompt that uses them
+    const std::string parsingEndTag = "<|call|>";
 
     enum class StreamState : int {
         READING_CHANNEL,
@@ -41,30 +44,35 @@ class GptToolParser : public BaseOutputParser {
         READING_MESSAGE,
     };
 
-    // streaming
+    // Streaming temp variables
     StreamState streamState = StreamState::READING_CHANNEL;
     std::string cache;
     bool isStreamingFunctionName = false;
     int toolCallIndex = -1;
     std::string functionNameCache;
 
-    std::optional<rapidjson::Document> wrapCustom(const std::string& chunk);
+
+    std::optional<rapidjson::Document> wrapDeltaIntoDocument(const std::string& chunk);
 
 public:
     GptToolParser() = delete;
     explicit GptToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
+    // Unary
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    // Streaming
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
+
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> specialParsingStartTags = {};
         return specialParsingStartTags;
     }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
+
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;
     }

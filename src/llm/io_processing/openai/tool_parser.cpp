@@ -38,28 +38,29 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
-    } else {
-        //SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
+        return;
     }
 
-    parsedOutput.content = harmony.getContent();  // what if someone has only reasoning parsers and no tool parser?
+    // TODO: How to enforce users to select some parser even if they do not need reasoning?
+    // Yes, getContent is called twice, once in reasoning parser and once here, in tool parser.
+    // This is because we have no guarantee that user will use both parsers, they might use only one of them.
+    parsedOutput.content = harmony.getContent();
     parsedOutput.toolCalls = harmony.getToolCalls();
-    for (auto& toolCall : parsedOutput.toolCalls) {
+    for (const auto& toolCall : parsedOutput.toolCalls) {
         SPDLOG_INFO("DEBUG Unary | GPT Tool Call | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
     }
 }
 
-std::optional<rapidjson::Document> GptToolParser::wrapCustom(const std::string& chunk) {
-    //SPDLOG_INFO("--------- OUT: [{}]", chunk);
-
-    // prepare document with {"arguments": "escaped_chunk"}
-    // It gets escaped automatically by rapidjson
+/*
+    Prepares document with {"arguments": "escaped_chunk"}
+    String gets escaped automatically by rapidjson
+*/
+std::optional<rapidjson::Document> GptToolParser::wrapDeltaIntoDocument(const std::string& chunk) {
     rapidjson::Document newDelta;
     newDelta.SetObject();
     rapidjson::Value argumentsValue;
     argumentsValue.SetString(chunk.c_str(), static_cast<rapidjson::SizeType>(chunk.size()), newDelta.GetAllocator());
     newDelta.AddMember("arguments", argumentsValue, newDelta.GetAllocator());
-
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();
     rapidjson::Value toolCalls(rapidjson::kArrayType);
@@ -79,38 +80,42 @@ std::optional<rapidjson::Document> GptToolParser::wrapCustom(const std::string& 
     return wrappedDelta;
 }
 
-std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
-    //SPDLOG_INFO("TOOL PARSER CHUNK [{}]", chunk);
-    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Chunk [{}]", c);
+std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Chunk [{}]", newChunk);
 
-    std::string chunk = c;
+    std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
     
-    //if (chunk.find(getParsingStartTag()) != std::string::npos || chunk.find(getParsingEndTag()) != std::string::npos) {
     if (chunk.find(getParsingStartTag()) != std::string::npos) {
-        toolCallIndex++;
+        toolCallIndex++;  // starting with -1, first call will be 0
         return std::nullopt;
     }
 
-    
+    // This should only happen during channel read if model does not produce garbage
     if (chunk == "<|constrain|>") {
+        // If previous state was channel, it means constrain was skipped
+        // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
-            //SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache); 
             if (functionNameCache.size()) {
                 SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
+            } else {
+                SPDLOG_DEBUG("<|constrain|> appearance without previous <|channel|>");
             }
             cache.clear();
         }
 
         streamState = StreamState::READING_CONSTRAIN;
         isStreamingFunctionName = false;
+        functionNameCache.clear();
         return result;
     }
 
+    // Message appears after channel and constrain, before actual message
     if (chunk == "<|message|>") {
+        // If previous state was channel, it means constrain was skipped
+        // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
-            //SPDLOG_INFO("CHANNEL READ COMPLETE [{}]", cache);
             if (functionNameCache.size()) {
                 SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
@@ -118,12 +123,13 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
             cache.clear();
         }
         if (streamState == StreamState::READING_CONSTRAIN) {
-            //SPDLOG_INFO("CONSTRAIN READ COMPLETE [{}]", cache);
+            // Constrains are ignored, not needed for end user
             cache.clear();
         }
 
         streamState = StreamState::READING_MESSAGE;
         isStreamingFunctionName = false;
+        functionNameCache.clear();
         return result;
     }
     
@@ -135,50 +141,45 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
                 std::string toAdd = chunk.substr(0, pos);
                 if (!toAdd.empty()) {
                     cache += toAdd;
-                    //SPDLOG_INFO("READING MESSAGE STEP [{}]", toAdd);  //// ZZZZZZZZ
                     SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", toAdd);
-
-                    result = wrapCustom(toAdd);
+                    result = wrapDeltaIntoDocument(toAdd);
                 }
             }
         }
 
-        //SPDLOG_INFO("MESSAGE READ COMPLETE [{}]", cache);
         cache.clear();
         streamState = StreamState::READING_CHANNEL;
         isStreamingFunctionName = false;
-
-        // print the json
-        // use buffer writer
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        result.value().Accept(writer);
-        //SPDLOG_INFO("WRAPPED DELTA [{}]", buffer.GetString());
+        functionNameCache.clear();
 
         return result;
     }
-    
+
     cache += chunk;
 
     switch (streamState) {
-    case StreamState::READING_CHANNEL:
-    {
+    case StreamState::READING_CHANNEL: {
+        // Reading channel, but function name has not appeared yet
         if (!isStreamingFunctionName) {
+            // Look ahead, and check if the function name reading state will begin now
             std::string futureCache = cache + chunk;
             if (startsWith(futureCache, " to=functions.")) {
                 isStreamingFunctionName = true;
                 functionNameCache.clear();
-                // cut everything after first .
-                // remove and take only remaining part
+                // Cut everything after first .
+                // Remove and take only remaining part
+                // The harmony format is: <|channel|>commentary to=functions.<function_name> <|constrain|>json<|message|>{...}<|call|>
                 std::size_t pos = chunk.find('.');
                 if (pos != std::string::npos) {
                     chunk = chunk.substr(pos + 1);
                 }
             }
         }
+
+        // If the function name reading state has begun, we are either reading function name or its end has been reached
         if (isStreamingFunctionName) {
-            // search for space bar and cut everything after it, flag streaming function name end
-            // dont include space bar
+            // Function names dont include space bars.
+            // We can rely on this fact and simply decide if function name reading phase has finished.
             std::size_t pos = chunk.find(' ');
             if (pos != std::string::npos) {
                 isStreamingFunctionName = false;
@@ -187,23 +188,17 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
             }
 
             if (chunk.size()) {
-                //SPDLOG_INFO("FUNCTION NAME STEP [{}]", chunk);  // XXXXXXXXXXX
                 functionNameCache += chunk;
             }
-        } else {
-            //SPDLOG_INFO("READING CHANNEL STEP [{}]", chunk);  /// XXXXXXXXXXX
         }
         break;
     }
     case StreamState::READING_CONSTRAIN:
-        //SPDLOG_INFO("READING CONSTRAIN STEP [{}]", chunk);  // YYYYYYYYYY
+        // Ignored, not needed for end user
         break;
-    case StreamState::READING_MESSAGE:
-    {
-        //SPDLOG_INFO("READING MESSAGE STEP [{}]", chunk); /// ZZZZZZZZZZ
+    case StreamState::READING_MESSAGE: {
         SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", chunk);
-        return wrapCustom(chunk);
-
+        return wrapDeltaIntoDocument(chunk);
     }
     }
 

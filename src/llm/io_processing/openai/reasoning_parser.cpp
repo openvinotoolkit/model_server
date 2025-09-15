@@ -34,31 +34,27 @@
 #include "harmony.hpp"
 namespace ovms {
 void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
-    //SPDLOG_INFO("Reasoning parsing with GPT format");
-
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
-    } else {
-        //SPDLOG_LOGGER_INFO(llm_calculator_logger, "Parsed with harmony");
+        return;
     }
 
-    // Loggin assuming both parser are always on
-    parsedOutput.content = harmony.getContent();  // what if someone has only tool parser and no reasoning parsers?
+    // TODO: How to enforce users to select reasoning parser even if they do not need reasoning?
+    parsedOutput.content = harmony.getContent();
     SPDLOG_INFO("DEBUG Unary | GPT Content | [{}]", parsedOutput.content);
     parsedOutput.reasoning = harmony.getReasoning();
     SPDLOG_INFO("DEBUG Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
 }
 
-std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& c, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("DEBUG Streaming | GPT Reason | Chunk [{}]", c);
-    
-    if (c.empty()) {
-        //SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received empty chunk for GptReasoningParser");
+std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+    SPDLOG_INFO("DEBUG Streaming | GPT Reason | Chunk [{}]", newChunk);
+
+    if (newChunk.empty()) {
         return std::nullopt;
     }
 
-    std::string chunk = c;
+    std::string chunk = newChunk;
 
     StreamState lastState = state;
 
