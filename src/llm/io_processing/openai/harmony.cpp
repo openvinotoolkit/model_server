@@ -33,18 +33,25 @@ enum class HarmonyState : int {
     READING_CONSTRAIN,
 };
 
+/*
+    There are 2 ways model can put content:
+    - Messages in channel "final" - these are final content messages; example: <|channel|>final<|message|>The weather is sunny.<|end|>
+    - Messages in channel "commentary" - these are preambles that model can use to inform user about tools it is going to call; example: <|channel|>commentary<|message|>I will call the get_weather function to get the current weather.<|end|>
+
+    Both types of messages are concatenated to form the final content.
+*/
 std::string Harmony::getContent() {
     std::string content;
     int i = 0;
     for (const auto& msg : messages) {
+        // Regular content. Usually appears at the end of generation.
         if (msg.getChannel() == "final") {
             if (i++ > 0) {
-                content += " ";
+                content += " ";  // TODO: how to separate multiple preambles/content? For now this is space
             }
             content += msg.getContent();
         }
 
-        //  Preambles
         /*
             Preambles
             At times the model might choose to generate a “preamble” to inform the user about the tools it is about to call.
@@ -53,7 +60,7 @@ std::string Harmony::getContent() {
         */
         if (msg.getChannel() == "commentary") {
             if (i++ > 0) {
-                content += " ";
+                content += " ";  // TODO: how to separate multiple preambles/content? For now this is space
             }
             content += msg.getContent();
         }
@@ -61,13 +68,16 @@ std::string Harmony::getContent() {
     return content;
 }
 
+/*
+    Reasoning is extracted from messages in channel "analysis"; example: <|channel|>analysis<|message|>I need to find out the weather in Paris.<|end|>
+*/
 std::string Harmony::getReasoning() {
     std::string reasoning;
     int i = 0;
     for (const auto& msg : messages) {
-        if (msg.getChannel() == "analysis") {  // TODO: Reasoning might be also in commentary part // or is it content? https://cookbook.openai.com/articles/openai-harmony#preambles
+        if (msg.getChannel() == "analysis") {
             if (i++ > 0) {
-                content += " ";
+                reasoning += " ";
             }
             reasoning += msg.getContent();
         }
@@ -75,41 +85,42 @@ std::string Harmony::getReasoning() {
     return reasoning;
 }
 
+/*
+    Tool calls are extracted from messages in channel "commentary" that contain "to=functions.NAME" in the channel content; example:
+    <|channel|>commentary to=functions.get_humidity <|message|>{"location":"Paris"}<|end|>
+*/
 ToolCalls Harmony::getToolCalls() {
-    ToolCalls tool_calls;
-    // Message in channel [commentary to=functions.get_humidity ] constrain[json]: [{"location":"Paris"}]
+    ToolCalls toolCalls;
     for (const auto& msg : messages) {
-        //SPDLOG_INFO("Channel: [{}] Constrain:[{}] Content:[{}]", msg.getChannel(), msg.getConstrain(), msg.getContent());
         if (startsWith(msg.getChannel(), "commentary")) {
-            //SPDLOG_INFO("Found commentary");
-            // Try to parse tool name from segment like 'to=functions.NAME ...'
             const static std::string tool_prefix = "to=functions.";
             size_t marker = msg.getChannel().find(tool_prefix);
             if (marker != std::string::npos) {
                 marker += tool_prefix.length();
-                size_t sp = msg.getChannel().find_first_of(" \t\n\r<", marker);
-                ToolCall tc;
-                if (sp == std::string::npos) {
-                    tc.name = msg.getChannel().substr(marker); // take the rest of the string
+                size_t firstWhiteSpaceOrSpecialBegin = msg.getChannel().find_first_of(" \t\n\r<", marker);
+                ToolCall toolCall;
+                if (firstWhiteSpaceOrSpecialBegin == std::string::npos) {
+                    // Take the remaining part of the string
+                    toolCall.name = msg.getChannel().substr(marker);
                 } else {
-                    tc.name = msg.getChannel().substr(marker, sp - marker);
+                    // Take up to the first whitespace or special token begin
+                    toolCall.name = msg.getChannel().substr(marker, firstWhiteSpaceOrSpecialBegin - marker);
                 }
-                tc.arguments = msg.getContent();
-                tc.id = generateRandomId();
-                tool_calls.push_back(tc);
+                toolCall.arguments = msg.getContent();
+                toolCall.id = generateRandomId();
+                toolCalls.push_back(toolCall);
             } else {
-                // SPDLOG_INFO("Could not find tool name in channel [{}]", msg.getChannel());
+                SPDLOG_DEBUG("Skipping tool call. Could not find tool name in channel [{}]", msg.getChannel());
             }
         }
     }
-    return tool_calls;
+    return toolCalls;
 }
 
 bool Harmony::parse() {
     if (tokens.empty())
         return true;
 
-    // Parse the token stream
     size_t pos = 0;
 
     HarmonyState cur_state = HarmonyState::UNKNOWN;
@@ -120,7 +131,8 @@ bool Harmony::parse() {
 
     while (pos < tokens.size()) {
         int64_t token = tokens[pos];
-
+ 
+        // New channel starts
         if (token == TokenID::CHANNEL) {
             cur_state = HarmonyState::READING_CHANNEL;
             cur_channel.clear();
@@ -130,13 +142,14 @@ bool Harmony::parse() {
             continue;
         }
 
+        // Constrain starts. Can appear only inside channel definition
         else if (token == TokenID::CONSTRAIN) {
             if (cur_state != HarmonyState::READING_CHANNEL) {
-                SPDLOG_DEBUG("Error - found <|constain|> outside of channel reading state");
+                SPDLOG_DEBUG("Error parsing harmony format - found <|constrain|> outside of channel reading state");
                 return false;
             }
 
-            // Dump Channel
+            // Reading channel finished, save channel title
             if (!token_cache.empty()) {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                 if (cur_state == HarmonyState::READING_CHANNEL) {
@@ -149,10 +162,12 @@ bool Harmony::parse() {
             continue;
         }
 
+        // Message starts. Can appear only after channel definition and optionally after constrain
         else if (token == TokenID::MESSAGE) {
-            // Dump Channel
             if (!token_cache.empty()) {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
+                
+                // Depending on current state, save channel or constrain and clear the cache - prepare clean state for reading message
                 if (cur_state == HarmonyState::READING_CHANNEL) {
                     cur_channel = decoded;
                     cur_state = HarmonyState::READING_MESSAGE;
@@ -166,37 +181,15 @@ bool Harmony::parse() {
             pos++;
             continue;
         }
-        else if (token == TokenID::END) {
+
+        // Finished reading entire message. Message can be regular content, reasoning or tool call
+        // Channel name, metadata, constrains should be already read at this point
+        else if (token == TokenID::END || token == TokenID::RETURN || token == TokenID::CALL) {
             if (!token_cache.empty()) {
                 std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
+                
+                // Message reading is complete. Pushing its content
                 if (cur_state == HarmonyState::READING_MESSAGE) {
-                    //SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
-                    messages.emplace_back(cur_channel, cur_constrain, decoded);
-                }
-                cur_state = HarmonyState::UNKNOWN;
-                token_cache.clear();
-            }
-            pos++;
-            continue;
-        }
-        else if (token == TokenID::RETURN) {
-            if (!token_cache.empty()) {
-                std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
-                if (cur_state == HarmonyState::READING_MESSAGE) {
-                    //SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
-                    messages.emplace_back(cur_channel, cur_constrain, decoded);
-                }
-                cur_state = HarmonyState::UNKNOWN;
-                token_cache.clear();
-            }
-            pos++;
-            continue;
-        }
-        else if (token == TokenID::CALL) {
-            if (!token_cache.empty()) {
-                std::string decoded = tokenizer.decode(token_cache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
-                if (cur_state == HarmonyState::READING_MESSAGE) {
-                    //SPDLOG_INFO("Message in channel [{}] constrain[{}]: [{}]", cur_channel, cur_constrain, decoded);
                     messages.emplace_back(cur_channel, cur_constrain, decoded);
                 }
                 cur_state = HarmonyState::UNKNOWN;
