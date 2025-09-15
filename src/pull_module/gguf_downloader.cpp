@@ -249,7 +249,7 @@ int progress_callback(void* clientp,
     }
     // called multiple times, so we want to print progress bar only once reached 100%
     if (pcs->fullDownloadPrinted) {
-        std::cout << "dlnow" << dlnow <<std::endl;
+        return 0;
     }
     if (!shouldPrintDueToTime && (dltotal != dlnow)) {
         // we dont want to skip printing progress bar for the 100% but we don't want to spam stdout either
