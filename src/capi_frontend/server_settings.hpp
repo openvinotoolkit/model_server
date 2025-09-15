@@ -54,6 +54,7 @@ const std::map<std::string, GraphExportType> stringToType = {
 
 std::string enumToString(GraphExportType type);
 GraphExportType stringToEnum(const std::string& inString);
+bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename);
 
 enum ConfigExportType : int {
     ENABLE_MODEL,

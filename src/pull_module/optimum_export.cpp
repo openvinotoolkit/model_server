@@ -115,7 +115,7 @@ std::string OptimumDownloader::getExportCmd() {
 OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
-    this->hfSettings = {};
+    this->downloadType = OPTIMUM_CLI_DOWNLOAD;
     this->overwriteModels = false;
 }
 
@@ -123,11 +123,12 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHfSettings, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
-    this->sourceModel = inHfSettings.sourceModel;
-    this->downloadPath = HfDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel);
-    this->hfSettings = inHfSettings;
-    this->overwriteModels = inHfSettings.overwriteModels;
+OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHFSettings, const std::string& inSourceModel, const std::string& inDownloadPath, ModelDownlaodType inDownloadType, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
+    this->sourceModel = inSourceModel;
+    this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
+    this->downloadType = inDownloadType;
+    this->overwriteModels = overwriteModels;
+    this->hfSettings = inHFSettings;
     this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
     this->OPTIMUM_CLI_EXPORT_COMMAND = cliExportCmd;
 }
@@ -146,7 +147,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
 }
 
 Status OptimumDownloader::cloneRepository() {
-    if (this->hfSettings.downloadType != OPTIMUM_CLI_DOWNLOAD) {
+    if (this->downloadType != OPTIMUM_CLI_DOWNLOAD) {
         SPDLOG_ERROR("Wrong download type selected. Expected optiumum-cli type.");
         return StatusCode::INTERNAL_ERROR;
     }
