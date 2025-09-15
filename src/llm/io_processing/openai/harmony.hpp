@@ -40,9 +40,10 @@ class Harmony {
     ov::genai::Tokenizer& tokenizer;
     std::vector<int64_t> tokens;
 
+    // Valid messages parsed from unary output, used in final accessors
     std::vector<Message> messages;
 
-    //?
+    // Intermediate state during parsing of each message, not used in final accessors
     std::string content;
     std::string reasoning;
     ToolCalls toolCalls;

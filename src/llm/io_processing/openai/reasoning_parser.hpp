@@ -30,27 +30,42 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
+
+/*
+    This parser handles reasoning, but is also responsible for parsing regular content.
+    This model group requires use of reasoning to work even if reasoning is not needed.
+    This is due to the fact that regular content is placed in harmony format in similar fashion as reasoning.
+*/
 class GptReasoningParser : public BaseOutputParser {
 protected:
     const std::string parsingStartTag = "<|channel|>analysis<|message|>";
     const std::string parsingEndTag = "<|end|>";
 
-    int state = 0;  // 0 - looking for start tag, 1 - reading reasoning, 2 - reading content
+    enum class StreamState : int {
+        UNKNOWN = 0,
+        READING_REASONING = 1,
+        READING_CONTENT = 2,
+    };
+    StreamState state = StreamState::UNKNOWN;
 
 public:
     GptReasoningParser() = delete;
     explicit GptReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
+    // Unary
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    // Streaming
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
+
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
     }
+
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> specialParsingStartTags = {
-            "<|channel|>commentary<|message|>",/*Preamble*/
-            "<|start|>assistant<|channel|>final<|message|>", /*Direct answer*/
+            "<|channel|>commentary<|message|>",  // Preable to reasoning, users usually sees that
+            "<|start|>assistant<|channel|>final<|message|>",  // Final content users sees
         };
         return specialParsingStartTags;
     }

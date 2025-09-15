@@ -60,18 +60,18 @@ std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::str
 
     std::string chunk = c;
 
-    int lastState = state;
+    StreamState lastState = state;
 
     if (startsWith(chunk, getParsingStartTag())) {
-        state = 1;
+        state = StreamState::READING_REASONING;
         // remove the start tag
         chunk = chunk.substr(getParsingStartTag().size());
     } else if (startsWith(chunk, "<|start|>assistant<|channel|>final<|message|>")) {
-        state = 2;
+        state = StreamState::READING_CONTENT;
         // remove the tag
         chunk = chunk.substr(std::strlen("<|start|>assistant<|channel|>final<|message|>"));
     } else if (endsWith(chunk, getParsingEndTag())) {
-        state = 0;
+        state = StreamState::UNKNOWN;
         // remove the end tag
         chunk = chunk.substr(0, chunk.size() - getParsingEndTag().size());
     }
@@ -81,15 +81,15 @@ std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::str
 
     switch (lastState)
     {
-        case 1:
-        case 2:
+        case StreamState::READING_REASONING:
+        case StreamState::READING_CONTENT:
         {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             writer.StartObject();
             writer.String("delta");
             writer.StartObject();
-            if (state == 1)
+            if (state == StreamState::READING_REASONING)
                 writer.String("reasoning_content");
             else
                 writer.String("content");
@@ -99,12 +99,14 @@ std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::str
             rapidjson::Document doc;
             doc.Parse(buffer.GetString());
 
-            if (state == 1)
+            if (state == StreamState::READING_REASONING)
                 SPDLOG_INFO("DEBUG Streaming | GPT Reason-Think | Send [{}]", chunk);
             else
                 SPDLOG_INFO("DEBUG Streaming | GPT Reason-Content | Send [{}]", chunk);
             return doc;
         }
+        case StreamState::UNKNOWN:
+            break;
     }
 
     return std::nullopt;
