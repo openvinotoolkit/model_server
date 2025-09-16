@@ -395,3 +395,55 @@ TEST_F(GptOssOutputParserTest, HolisticMultiTurn) {
         ASSERT_EQ(harmony.getToolCalls()[1].arguments, "NOT A JSON") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
     }
 }
+
+// Negative
+TEST_F(GptOssOutputParserTest, MissingChannel) {
+    builder
+        .clear()
+        // .add(Harmony::TokenID::CHANNEL)  // no channel
+        .add("commentary to=functions.hello")
+        .add(Harmony::TokenID::MESSAGE)
+        .add(R"({"Hello": "world!"})")
+        .add(Harmony::TokenID::END);
+
+    Harmony harmony(*gptOssTokenizer, builder.build());
+
+    ASSERT_TRUE(harmony.parse());
+    ASSERT_EQ(harmony.getContent(), "");
+    ASSERT_EQ(harmony.getReasoning(), "");
+    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+}
+
+TEST_F(GptOssOutputParserTest, MissingMessageTag) {
+    builder
+        .clear()
+        .add(Harmony::TokenID::CHANNEL)
+        .add("commentary to=functions.hello")
+        //  .add(Harmony::TokenID::MESSAGE)  // no message tag
+        .add(R"({"Hello": "world!"})")
+        .add(Harmony::TokenID::END);
+
+    Harmony harmony(*gptOssTokenizer, builder.build());
+
+    ASSERT_TRUE(harmony.parse());
+    ASSERT_EQ(harmony.getContent(), "");
+    ASSERT_EQ(harmony.getReasoning(), "");
+    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+}
+
+TEST_F(GptOssOutputParserTest, MissingEndTag) {
+    builder
+        .clear()
+        .add(Harmony::TokenID::CHANNEL)
+        .add("commentary to=functions.hello")
+        .add(Harmony::TokenID::MESSAGE)
+        .add(R"({"Hello": "world!"})");
+        // .add(Harmony::TokenID::END);  // no end tag
+
+    Harmony harmony(*gptOssTokenizer, builder.build());
+
+    ASSERT_TRUE(harmony.parse());
+    ASSERT_EQ(harmony.getContent(), "");
+    ASSERT_EQ(harmony.getReasoning(), "");
+    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+}
