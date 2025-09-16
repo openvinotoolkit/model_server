@@ -92,12 +92,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
             }
             return ov::genai::StreamingStatus::RUNNING;
         };
-        bool skipSpecialTokens = true;
         if (getProperties()->toolParserName == "gpt" || getProperties()->reasoningParserName == "gpt") {
-            skipSpecialTokens = false;
+            // This requires changes to GenAI repo, hence not yet merged
+            legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, ov::AnyMap{ov::genai::skip_special_tokens(false)});
+        } else {
+            legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
         }
-        // This requires changes to GenAI repo, hence not yet merged
-        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, skipSpecialTokens);
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
     legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());

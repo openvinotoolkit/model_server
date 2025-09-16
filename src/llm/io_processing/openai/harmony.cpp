@@ -118,6 +118,10 @@ ToolCalls Harmony::getToolCalls() {
 }
 
 bool Harmony::parse() {
+
+    // Simply display all text with special tokens
+    SPDLOG_INFO("AAAAA: [{}]", tokenizer.decode(tokens, ov::AnyMap{ov::genai::skip_special_tokens(false)}));
+
     if (tokens.empty())
         return true;
 
