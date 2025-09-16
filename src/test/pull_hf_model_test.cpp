@@ -133,7 +133,7 @@ const std::string expectedGraphContentsDraft = R"(
             enable_prefix_caching: true,
             cache_size: 10,
             # Speculative decoding configuration
-            draft_models_path: "OpenVINO/distil-small.en-int4-ov",
+            draft_models_path: "OpenVINO-distil-small.en-int4-ov",
         }
     }
     input_stream_handler {
@@ -196,7 +196,6 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
-    this->filesToPrintInCaseOfFailure.emplace_back("config.json");
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string draftModel = "OpenVINO/distil-small.en-int4-ov";
     std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
@@ -214,7 +213,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
 
     ASSERT_EQ(expectedGraphContentsDraft, removeVersionString(graphContents)) << graphContents;
 
-    std::string basePath2 = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "distil-small.en-int4-ov"});
+    std::string basePath2 = ovms::FileSystem::joinPath({basePath, "OpenVINO-distil-small.en-int4-ov"});
     std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
 
     ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
@@ -224,7 +223,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
 class TestOptimumDownloader : public ovms::OptimumDownloader {
 public:
     TestOptimumDownloader(const ovms::HFSettingsImpl& inHfSettings) :
-        ovms::OptimumDownloader(inHfSettings, inHfSettings.sourceModel, inHfSettings.downloadPath, inHfSettings.downloadType, inHfSettings.overwriteModels) {}
+        ovms::OptimumDownloader(inHfSettings, inHfSettings.sourceModel, inHfSettings.downloadPath, inHfSettings.overwriteModels) {}
     std::string getExportCmd() { return ovms::OptimumDownloader::getExportCmd(); }
     std::string getGraphDirectory() { return ovms::OptimumDownloader::getGraphDirectory(); }
     void setExportCliCheckCommand(const std::string& input) { this->OPTIMUM_CLI_CHECK_COMMAND = input; }

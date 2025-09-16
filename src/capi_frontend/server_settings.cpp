@@ -42,7 +42,7 @@ GraphExportType stringToEnum(const std::string& inString) {
 }
 
 bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename) {
-    return !startsWith(toLower(sourceModel), toLower("OpenVINO/")) && (ggufFilename == std::nullopt);
+    return !startsWith(toLower(sourceModel), "openvino/") && (ggufFilename == std::nullopt);
 }
 
 }  // namespace ovms

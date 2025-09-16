@@ -115,7 +115,6 @@ std::string OptimumDownloader::getExportCmd() {
 OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
-    this->downloadType = OPTIMUM_CLI_DOWNLOAD;
     this->overwriteModels = false;
 }
 
@@ -123,10 +122,9 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHFSettings, const std::string& inSourceModel, const std::string& inDownloadPath, ModelDownlaodType inDownloadType, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
+OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHFSettings, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
     this->sourceModel = inSourceModel;
     this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
-    this->downloadType = inDownloadType;
     this->overwriteModels = overwriteModels;
     this->hfSettings = inHFSettings;
     this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
@@ -147,10 +145,6 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
 }
 
 Status OptimumDownloader::cloneRepository() {
-    if (this->downloadType != OPTIMUM_CLI_DOWNLOAD) {
-        SPDLOG_ERROR("Wrong download type selected. Expected optiumum-cli type.");
-        return StatusCode::INTERNAL_ERROR;
-    }
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
