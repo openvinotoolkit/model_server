@@ -326,3 +326,72 @@ TEST_F(GptOssOutputParserTest, InvalidSingleToolCallWithConstrain) {
         }
     }
 }
+
+TEST_F(GptOssOutputParserTest, HolisticMultiTurn) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
+        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
+
+        // In regular scenarios it is never that complicated. But we test the parser, so why not.
+        // Usually the order is as follows:
+        // - Analysis (reasoning)
+        // - (optional) commentary (preamble, counts as final content as well)
+        // - (optional, multiple) commentary to=functions.* + constrain json (tool calls)
+        // - final (content)
+        builder
+            .clear()
+            .add(Harmony::TokenID::CHANNEL)
+            .add("analysis")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("I need to call a function.")
+            .add(closureToken)
+
+            // With constrain, but ignored anyway
+            .add(Harmony::TokenID::CHANNEL)
+            .add("commentary to=functions.hello")  // strict
+            .add(Harmony::TokenID::CONSTRAIN)
+            .add("json")
+            .add(Harmony::TokenID::MESSAGE)
+            .add(R"({"Hello": "world!"})")
+            .add(closureToken)
+
+            .add(Harmony::TokenID::CHANNEL)
+            .add("final")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("Dear User, I called function!")
+            .add(closureToken)
+
+            // Without constrain, it is ignored anyway
+            .add(Harmony::TokenID::CHANNEL)
+            .add("commentary ? to=functions.goodbye ")  // with space and anything in the middle
+            .add(Harmony::TokenID::MESSAGE)
+            .add("NOT A JSON")
+            .add(closureToken)
+
+            // Preamble
+            .add(Harmony::TokenID::CHANNEL)
+            .add("commentary")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("I called some functions. Will summarize now.")
+            .add(closureToken)
+
+            // Final v2
+            .add(Harmony::TokenID::CHANNEL)
+            .add("final")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("Dear User, I called second function!")
+            .add(closureToken);
+
+        Harmony harmony(*gptOssTokenizer, builder.build());
+
+        ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getContent(), "Dear User, I called function! I called some functions. Will summarize now. Dear User, I called second function!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getReasoning(), "I need to call a function.") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getToolCalls().size(), 2) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getToolCalls()[0].name, "hello") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getToolCalls()[0].arguments, R"({"Hello": "world!"})") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getToolCalls()[1].name, "goodbye") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getToolCalls()[1].arguments, "NOT A JSON") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+    }
+}
