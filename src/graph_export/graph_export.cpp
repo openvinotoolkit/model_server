@@ -73,10 +73,9 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     return modelsPath;
 }
 
-std::string GraphExport::getDraftModelDirectoryName(const std::string& draftModel) {
-    std::string newName = draftModel;
-    std::replace(newName.begin(), newName.end(), '/', '-');
-    return newName;
+std::string GraphExport::getDraftModelDirectoryName(std::string draftModel) {
+    std::replace(draftModel.begin(), draftModel.end(), '/', '-');
+    return draftModel;
 }
 
 std::string GraphExport::getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel) {
