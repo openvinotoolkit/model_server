@@ -118,14 +118,14 @@ Status HfPullModelModule::clone() const {
             return std::get<Status>(guardOrError);
         }
 
-        HfDownloader hfDownloader(this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        HfDownloader hfDownloader(this->hfSettings.sourceModel, HfDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
         auto status = hfDownloader.cloneRepository();
         if (!status.ok()) {
             return status;
         }
         graphDirectory = hfDownloader.getGraphDirectory();
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
-        OptimumDownloader optimumDownloader(this->hfSettings, this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.overwriteModels);
+        OptimumDownloader optimumDownloader(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, HfDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
         auto status = optimumDownloader.cloneRepository();
         if (!status.ok()) {
             return status;
@@ -149,8 +149,7 @@ Status HfPullModelModule::clone() const {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         // Optimum model
         if (isOptimumCliDownload(graphSettings.draftModelDirName.value(), std::nullopt)) {
-            OptimumDownloader optimumDownloader2(this->hfSettings, graphSettings.draftModelDirName.value(), graphDirectory, this->hfSettings.overwriteModels);
-            optimumDownloader2.setGraphDirectory(GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()));
+            OptimumDownloader optimumDownloader2(this->hfSettings.exportSettings, this->hfSettings.task, graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->hfSettings.overwriteModels);
             auto status = optimumDownloader2.cloneRepository();
             if (!status.ok()) {
                 return status;
@@ -162,15 +161,14 @@ Status HfPullModelModule::clone() const {
                 return std::get<Status>(guardOrError2);
             }
 
-            HfDownloader hfDownloader2(graphSettings.draftModelDirName.value(), graphDirectory, this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-            hfDownloader2.setGraphDirectory(GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()));
+            HfDownloader hfDownloader2(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
             auto status = hfDownloader2.cloneRepository();
             if (!status.ok()) {
                 return status;
             }
         }
 
-        std::cout << "Model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << graphDirectory << std::endl;
+        std::cout << "Model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
     GraphExport graphExporter;

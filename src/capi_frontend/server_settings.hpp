@@ -143,14 +143,18 @@ struct ImageGenerationGraphSettingsImpl {
     std::string pluginConfig;
 };
 
-struct HFSettingsImpl {
+struct ExportSettings {
     std::string targetDevice = "CPU";
+    std::optional<std::string> extraQuantizationParams;
+    std::string precision = "int8";
+};
+
+struct HFSettingsImpl {
+    ExportSettings exportSettings;
     std::string sourceModel = "";
     std::optional<std::string> ggufFilename;
     std::string downloadPath = "";
     bool overwriteModels = false;
-    std::optional<std::string> extraQuantizationParams;
-    std::string precision = "int8";
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;

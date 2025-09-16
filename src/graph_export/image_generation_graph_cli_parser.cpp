@@ -115,7 +115,7 @@ std::vector<std::string> ImageGenerationGraphCLIParser::parse(const std::vector<
 
 void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, HFSettingsImpl& hfSettings, const std::string& modelName) {
     ImageGenerationGraphSettingsImpl imageGenerationGraphSettings = ImageGenerationGraphCLIParser::defaultGraphSettings();
-    imageGenerationGraphSettings.targetDevice = hfSettings.targetDevice;
+    imageGenerationGraphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
         imageGenerationGraphSettings.modelName = modelName;

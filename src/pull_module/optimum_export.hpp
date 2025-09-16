@@ -24,14 +24,15 @@ class Status;
 
 class OptimumDownloader : public HfDownloader {
 public:
-    OptimumDownloader(const HFSettingsImpl& hfSettings, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
+    OptimumDownloader(const ExportSettings& exportSettings,const GraphExportType& task, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
     Status cloneRepository();
     std::string getGraphDirectory();
 
 protected:
     std::string sourceModel;
     std::string downloadPath;
-    HFSettingsImpl hfSettings;
+    ExportSettings exportSettings;
+    GraphExportType task;
     bool overwriteModels;
     std::string OPTIMUM_CLI_EXPORT_COMMAND;
     std::string OPTIMUM_CLI_CHECK_COMMAND;

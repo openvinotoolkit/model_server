@@ -31,15 +31,15 @@ namespace ovms {
 std::string OptimumDownloader::getExportCmdText() {
     std::ostringstream oss;
     // NPU specific settings
-    if (this->hfSettings.targetDevice == "NPU" && !this->hfSettings.extraQuantizationParams.has_value()) {
-        this->hfSettings.extraQuantizationParams.value() = "--sym --ratio 1.0 --group-size -1";
+    if (this->exportSettings.targetDevice == "NPU" && !this->exportSettings.extraQuantizationParams.has_value()) {
+        this->exportSettings.extraQuantizationParams.value() = "--sym --ratio 1.0 --group-size -1";
     }
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--model " << this->sourceModel << " --trust-remote-code ";
-    oss << " --weight-format " << this->hfSettings.precision << " ";
-    if (this->hfSettings.extraQuantizationParams.has_value()) {
-        oss << this->hfSettings.extraQuantizationParams.value() << " ";
+    oss << " --weight-format " << this->exportSettings.precision << " ";
+    if (this->exportSettings.extraQuantizationParams.has_value()) {
+        oss << this->exportSettings.extraQuantizationParams.value() << " ";
     }
     oss << this->downloadPath;
     // clang-format on
@@ -52,7 +52,7 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
     oss << " --model " << this->sourceModel << " --trust-remote-code ";
-    oss << " --weight-format " << this->hfSettings.precision;
+    oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
 
@@ -65,7 +65,7 @@ std::string OptimumDownloader::getExportCmdRerank() {
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--disable-convert-tokenizer --model " << this->sourceModel;
     oss << " --trust-remote-code ";
-    oss << " --weight-format " << this->hfSettings.precision;
+    oss << " --weight-format " << this->exportSettings.precision;
     oss << " --task text-classification ";
     oss << " " << this->downloadPath;
     // clang-format on
@@ -78,7 +78,7 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--model " << this->sourceModel;
-    oss << " --weight-format " << this->hfSettings.precision;
+    oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
 
@@ -87,7 +87,7 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
 
 std::string OptimumDownloader::getExportCmd() {
     std::string cmd = "";
-    switch (this->hfSettings.task) {
+    switch (this->task) {
     case TEXT_GENERATION_GRAPH: {
         cmd = getExportCmdText();
         break;
@@ -116,17 +116,19 @@ OptimumDownloader::OptimumDownloader() {
     this->sourceModel = "";
     this->downloadPath = "";
     this->overwriteModels = false;
+    this->task = UNKNOWN_GRAPH;
 }
 
 std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const HFSettingsImpl& inHFSettings, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
+OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings,const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
     this->sourceModel = inSourceModel;
-    this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
+    this->downloadPath = inDownloadPath;
     this->overwriteModels = overwriteModels;
-    this->hfSettings = inHFSettings;
+    this->exportSettings = inExportSettings;
+    this->task = inTask;
     this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
     this->OPTIMUM_CLI_EXPORT_COMMAND = cliExportCmd;
 }

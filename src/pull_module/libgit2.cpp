@@ -173,10 +173,6 @@ std::string HfDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-void HfDownloader::setGraphDirectory(const std::string& newDirectory) {
-    this->downloadPath = newDirectory;
-}
-
 std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
     std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
     return fullPath;
@@ -184,7 +180,7 @@ std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, c
 
 HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) {
     this->sourceModel = inSourceModel;
-    this->downloadPath = HfDownloader::getGraphDirectory(inDownloadPath, inSourceModel);
+    this->downloadPath = inDownloadPath;
     this->hfEndpoint = inHfEndpoint;
     this->hfToken = inHfToken;
     this->httpProxy = inHttpProxy;
