@@ -73,7 +73,7 @@ private:
     std::vector<int64_t> tokenIDs;
 };
 
-class GptOssOutputParserTest : public ::testing::Test {
+class GptOssOutputUnaryParserTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
         try {
@@ -101,18 +101,25 @@ protected:
     TokenBuilder builder;
 };
 
-TEST_F(GptOssOutputParserTest, SimpleContent) {
+//
+//
+// Unary
+//
+//
+
+
+TEST_F(GptOssOutputUnaryParserTest, SimpleContent) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>final<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>final<|message|>Hello, world!<|end|>
         Harmony::TokenID::CALL}) {  // <|channel|>final<|message|>Hello, world!<|call|>
         builder
             .clear()
-            .add(Harmony::TokenID::CHANNEL)
+            .add(Harmony::TokenID::CHANNEL)  // <|channel|>
             .add("final")
-            .add(Harmony::TokenID::MESSAGE)
+            .add(Harmony::TokenID::MESSAGE)  // <|message|>
             .add("Hello, world!")
-            .add(closureToken);
+            .add(closureToken);  // <|end|> or <|return|> or <|call|>
 
         Harmony harmony(*gptOssTokenizer, builder.build());
 
@@ -123,7 +130,7 @@ TEST_F(GptOssOutputParserTest, SimpleContent) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, NegativeFinalChannel) {
+TEST_F(GptOssOutputUnaryParserTest, NegativeFinalChannel) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>WRONG<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>WRONG<|message|>Hello, world!<|end|>
@@ -157,7 +164,7 @@ TEST_F(GptOssOutputParserTest, NegativeFinalChannel) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, PreambleOnly) {
+TEST_F(GptOssOutputUnaryParserTest, PreambleOnly) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
@@ -179,7 +186,7 @@ TEST_F(GptOssOutputParserTest, PreambleOnly) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, NegativePreamble) {
+TEST_F(GptOssOutputUnaryParserTest, NegativePreamble) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|end|>
@@ -212,7 +219,7 @@ TEST_F(GptOssOutputParserTest, NegativePreamble) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, ReasoningOnly) {
+TEST_F(GptOssOutputUnaryParserTest, ReasoningOnly) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
@@ -234,7 +241,7 @@ TEST_F(GptOssOutputParserTest, ReasoningOnly) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, NegativeReasoning) {
+TEST_F(GptOssOutputUnaryParserTest, NegativeReasoning) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|return|>
         Harmony::TokenID::END,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|end|>
@@ -266,7 +273,7 @@ TEST_F(GptOssOutputParserTest, NegativeReasoning) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, SingleToolCallWithConstrain) {
+TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
         Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
@@ -297,7 +304,7 @@ TEST_F(GptOssOutputParserTest, SingleToolCallWithConstrain) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, InvalidSingleToolCallWithConstrain) {
+TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
         Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
@@ -327,7 +334,7 @@ TEST_F(GptOssOutputParserTest, InvalidSingleToolCallWithConstrain) {
     }
 }
 
-TEST_F(GptOssOutputParserTest, HolisticMultiTurn) {
+TEST_F(GptOssOutputUnaryParserTest, HolisticMultiTurn) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
         Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
         Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
@@ -397,7 +404,7 @@ TEST_F(GptOssOutputParserTest, HolisticMultiTurn) {
 }
 
 // Negative
-TEST_F(GptOssOutputParserTest, MissingChannel) {
+TEST_F(GptOssOutputUnaryParserTest, MissingChannel) {
     builder
         .clear()
         // .add(Harmony::TokenID::CHANNEL)  // no channel
@@ -414,7 +421,7 @@ TEST_F(GptOssOutputParserTest, MissingChannel) {
     ASSERT_EQ(harmony.getToolCalls().size(), 0);
 }
 
-TEST_F(GptOssOutputParserTest, MissingMessageTag) {
+TEST_F(GptOssOutputUnaryParserTest, MissingMessageTag) {
     builder
         .clear()
         .add(Harmony::TokenID::CHANNEL)
@@ -431,7 +438,7 @@ TEST_F(GptOssOutputParserTest, MissingMessageTag) {
     ASSERT_EQ(harmony.getToolCalls().size(), 0);
 }
 
-TEST_F(GptOssOutputParserTest, MissingEndTag) {
+TEST_F(GptOssOutputUnaryParserTest, MissingEndTag) {
     builder
         .clear()
         .add(Harmony::TokenID::CHANNEL)
@@ -446,4 +453,125 @@ TEST_F(GptOssOutputParserTest, MissingEndTag) {
     ASSERT_EQ(harmony.getContent(), "");
     ASSERT_EQ(harmony.getReasoning(), "");
     ASSERT_EQ(harmony.getToolCalls().size(), 0);
+}
+
+
+//
+//
+// Streaming
+//
+//
+
+class GptOssOutputStreamParserTest : public GptOssOutputUnaryParserTest {
+protected:
+    std::unique_ptr<OutputParser> outputParser;
+
+    void SetUp() override {
+        GptOssOutputUnaryParserTest::SetUp();
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gpt", "gpt");
+    }
+};
+
+TEST_F(GptOssOutputStreamParserTest, HolisticStreaming) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Reasoning
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"I"}})"}},
+        {" will", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" will"}})"}},
+        {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" call"}})"}},
+        {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" fun"}})"}},
+        {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ction."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // // Preamble // Implementation missing
+        // {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
+        // {" have", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" have"}})"}},
+        // {" to", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" to"}})"}},
+        // {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" call"}})"}},
+        // {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" fun"}})"}},
+        // {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"ction."}})"}},
+        // {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"=fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".hello ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // TODO(from: Milosz) -> need to handle glueing of special tokens and regular tokens, for now we do test positive path
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"hello\"}}]}}"},
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" {\""}}]}})"},
+        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
+        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
+        {"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
+        {"\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}}"}}]}})"},
+        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // TODO(milosz) -> streaming content after tools is not supported
+        // {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"final", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // {"Dear", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"Dear"}})"}},
+        // {" User,", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" User,"}})"}},
+        // {" I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" I"}})"}},
+        // {" called", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" called"}})"}},
+        // {" function!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" function!"}})"}},
+        // {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    // Need to have new output parser per case to simulate separate request processing
+    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gpt", "gpt");
+    auto chunkToDeltaVecCopy = chunkToDeltaVec;
+    int64_t chunkIteration = -1;
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
+        chunkIteration++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
+            }
+        } else if (expectedDelta.has_value()) {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
+        } else if (doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
+        } else {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
+        }
+    }
 }

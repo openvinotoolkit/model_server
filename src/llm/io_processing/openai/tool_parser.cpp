@@ -166,7 +166,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
             if (startsWith(futureCache, " to=functions.")) {
                 isStreamingFunctionName = true;
                 functionNameCache.clear();
-                // Cut everything after first .
+                // Cut everything after                                    first .
                 // Remove and take only remaining part
                 // The harmony format is: <|channel|>commentary to=functions.<function_name> <|constrain|>json<|message|>{...}<|call|>
                 std::size_t pos = chunk.find('.');
