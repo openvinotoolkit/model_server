@@ -725,7 +725,7 @@ void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& serve
 }
 
 void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
-std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
+    std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds) {
     server.setShutdownRequest(0);
     char* argv[] = {(char*)"ovms",
         (char*)"--pull",
@@ -736,8 +736,7 @@ std::string& draftModel, std::string& source_model, std::string& download_path, 
         (char*)"--task",
         (char*)task.c_str(),
         (char*)"--draft_source_model",
-        (char*)draftModel.c_str()
-    };
+        (char*)draftModel.c_str()};
 
     int argc = 10;
     t.reset(new std::thread([&argc, &argv, &server, expected_code]() {

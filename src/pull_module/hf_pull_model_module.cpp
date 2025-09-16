@@ -125,7 +125,7 @@ Status HfPullModelModule::clone() const {
         }
         graphDirectory = hfDownloader.getGraphDirectory();
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
-        OptimumDownloader optimumDownloader(this->hfSettings, this->hfSettings.sourceModel ,this->hfSettings.downloadPath, this->hfSettings.downloadType, this->hfSettings.overwriteModels);
+        OptimumDownloader optimumDownloader(this->hfSettings, this->hfSettings.sourceModel, this->hfSettings.downloadPath, this->hfSettings.downloadType, this->hfSettings.overwriteModels);
         auto status = optimumDownloader.cloneRepository();
         if (!status.ok()) {
             return status;
@@ -145,17 +145,17 @@ Status HfPullModelModule::clone() const {
     std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
 
     // Text gen with draft source model case - downloads second model
-    if(std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()){
-        auto graphSettings =  std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
+    if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
+        auto graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         // Optimum model
-        if(isOptimumCliDownload(graphSettings.draftModelDirName.value(), std::nullopt)) {
+        if (isOptimumCliDownload(graphSettings.draftModelDirName.value(), std::nullopt)) {
             OptimumDownloader optimumDownloader(this->hfSettings, graphSettings.draftModelDirName.value(), this->hfSettings.downloadPath, OPTIMUM_CLI_DOWNLOAD, this->hfSettings.overwriteModels);
             auto status = optimumDownloader.cloneRepository();
             if (!status.ok()) {
                 return status;
             }
         } else {
-        // Git clone model
+            // Git clone model
             auto guardOrError2 = createGuard();
             if (std::holds_alternative<Status>(guardOrError2)) {
                 return std::get<Status>(guardOrError2);

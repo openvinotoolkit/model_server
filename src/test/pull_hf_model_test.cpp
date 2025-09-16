@@ -224,7 +224,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
 class TestOptimumDownloader : public ovms::OptimumDownloader {
 public:
     TestOptimumDownloader(const ovms::HFSettingsImpl& inHfSettings) :
-        ovms::OptimumDownloader(inHfSettings, inHfSettings.sourceModel ,inHfSettings.downloadPath, inHfSettings.downloadType, inHfSettings.overwriteModels) {}
+        ovms::OptimumDownloader(inHfSettings, inHfSettings.sourceModel, inHfSettings.downloadPath, inHfSettings.downloadType, inHfSettings.overwriteModels) {}
     std::string getExportCmd() { return ovms::OptimumDownloader::getExportCmd(); }
     std::string getGraphDirectory() { return ovms::OptimumDownloader::getGraphDirectory(); }
     void setExportCliCheckCommand(const std::string& input) { this->OPTIMUM_CLI_CHECK_COMMAND = input; }
