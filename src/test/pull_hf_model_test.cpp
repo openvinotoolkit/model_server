@@ -46,6 +46,10 @@ protected:
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 15) {
+        ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
+    }
+
     void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
@@ -105,6 +109,46 @@ const std::string expectedGraphContents = R"(
     }
 )";
 
+const std::string expectedGraphContentsDraft = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node: {
+    name: "LLMExecutor"
+    calculator: "HttpLLMCalculator"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    input_side_packet: "LLM_NODE_RESOURCES:llm"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    node_options: {
+        [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+            max_num_seqs:256,
+            device: "CPU",
+            models_path: "./",
+            plugin_config: '{ }',
+            enable_prefix_caching: true,
+            cache_size: 10,
+            # Speculative decoding configuration
+            draft_models_path: "OpenVINO/distil-small.en-int4-ov",
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+            tag_index: "LOOPBACK:0"
+            }
+        }
+        }
+    }
+    }
+)";
+
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
@@ -145,6 +189,36 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
+    // EnvGuard guard;
+    // guard.set("HF_ENDPOINT", "https://modelscope.cn");
+    // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    this->filesToPrintInCaseOfFailure.emplace_back("config.json");
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string draftModel = "OpenVINO/distil-small.en-int4-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModelWithDraft(draftModel, modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContentsDraft, removeVersionString(graphContents)) << graphContents;
+
+    std::string basePath2 = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "distil-small.en-int4-ov"});
+    std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
+    ASSERT_EQ(std::filesystem::file_size(modelPath2), 2022483);
 }
 
 class TestOptimumDownloader : public ovms::OptimumDownloader {

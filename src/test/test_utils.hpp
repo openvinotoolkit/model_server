@@ -777,6 +777,8 @@ void EnsureServerModelDownloadFinishedWithTimeout(ovms::Server& server, int time
  */
 void SetUpServerForDownload(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& source_model, std::string& download_path, std::string& task, int expected_code = EXIT_SUCCESS, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
+void SetUpServerForDownloadWithDraft(std::unique_ptr<std::thread>& t, ovms::Server& server,
+std::string& draftModel, std::string& source_model, std::string& download_path, std::string& task, int expected_code, int timeoutSeconds = 2 * SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 /*
  *  starts loading OVMS on separate thread but waits until it is shutdowned or model is downloaded and check if model is started in ovms
  *  --source_model Qwen/Qwen3-8B-GGUF  --model_repository_path /models --gguf_filename Qwen3-8B-Q4_K_M.gguf
