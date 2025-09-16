@@ -75,9 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 997b5c48447a1856728b5d6107bcac21fb1f6053 # master 2025/08/28
+OV_SOURCE_BRANCH ?= 05bf2133ac23f33957b87ce2eff184c2f8922f8d # master 2025/09/11
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= 9a8ae92ce8197752c415de6200197c46fa1a8e0e # master 2025/08/22
+OV_TOKENIZERS_BRANCH ?= 196fb0dc4b2f5cdf5a993a43293011761534aaa4 # master 2025/09/11
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
@@ -162,11 +162,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "25.31.34666"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19862-997b5c48447/openvino_toolkit_ubuntu24_2025.4.0.dev20250829_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19947-05bf2133ac2/openvino_toolkit_ubuntu24_2025.4.0.dev20250911_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19862-997b5c48447/openvino_toolkit_ubuntu22_2025.4.0.dev20250829_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19947-05bf2133ac2/openvino_toolkit_ubuntu22_2025.4.0.dev20250911_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -175,7 +175,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19862-997b5c48447/openvino_toolkit_rhel8_2025.4.0.dev20250829_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-19947-05bf2133ac2/openvino_toolkit_rhel8_2025.4.0.dev20250911_x86_64.tgz
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
@@ -188,7 +188,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2025.3.0"
+PRODUCT_VERSION ?= "2025.4.0"
 PROJECT_VER_PATCH =
 
 $(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)

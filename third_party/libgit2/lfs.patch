@@ -287,10 +287,10 @@ index 58cb4b424..00ddee9f3 100644
  	git_writestream **out,
 diff --git a/src/libgit2/lfs_filter.c b/src/libgit2/lfs_filter.c
 new file mode 100644
-index 000000000..cd3aa39fd
+index 000000000..0ac7b40a2
 --- /dev/null
 +++ b/src/libgit2/lfs_filter.c
-@@ -0,0 +1,500 @@
+@@ -0,0 +1,567 @@
 +/*
 +/ Copyright 2025 Intel Corporation
 +/
@@ -331,8 +331,12 @@ index 000000000..cd3aa39fd
 +static size_t get_digit(const char *buffer)
 +{
 +	char *endptr;
-+	size_t number = strtoul(buffer, &endptr, 10);
++	errno = 0;
++	size_t number = strtoull(buffer, &endptr, 10);
 +
++	if (errno == ERANGE) {
++	    fprintf(stderr, "Conversion error\n");
++	}
 +	if (endptr == buffer) {
 +		fprintf(stderr, "No digits were found\n");
 +	} else if (*endptr != '\0') {
@@ -480,6 +484,12 @@ index 000000000..cd3aa39fd
 +		self, lfs_apply, NULL, payload, src, next);
 +}
 +
++struct progress_data {
++	time_t started_download;
++	time_t last_print_time;
++	bool fullDownloadPrinted;
++};
++
 +struct memory {
 +	char *response;
 +	size_t size;
@@ -488,32 +498,32 @@ index 000000000..cd3aa39fd
 +struct FtpFile {
 +	const char *filename;
 +	FILE *stream;
-+	size_t full_size;
-+	size_t already_copied;
-+	time_t started_download;
-+	time_t last_write_call;
 +};
 +
++static const char *sizeUnits[] = { "B", "KB", "MB", "GB", "TB", NULL };
 +static void print_download_speed_info(size_t received_size, size_t elapsed_time)
 +{
 +	double recv_len = (double)received_size;
-+	char *rate_units[] = { "B/s", "KiB/s", "MiB/s", "GiB/s", "TiB/s", NULL };
 +	uint64_t elapsed = (uint64_t)elapsed_time;
 +	double rate;
 +	rate = elapsed ? recv_len / elapsed : received_size;
 +
 +	size_t rate_unit_idx = 0;
-+	while (rate > 1024 && rate_units[rate_unit_idx + 1]) {
-+		rate /= 1024.0;
++	while (rate > 1000 && sizeUnits[rate_unit_idx + 1]) {
++		rate /= 1000.0;
 +		rate_unit_idx++;
 +	}
-+	
-+	printf(" [%.2f %s] ", rate, rate_units[rate_unit_idx]);
++
++	printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
 +}
 +
-+void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time)
++void print_progress(
++        size_t count,
++        size_t max,
++        bool first_run,
++        size_t elapsed_time)
 +{
-+	float progress = (float)count / max ;
++	float progress = (float)count / max;
 +	if (!first_run && progress < 0.01 && count > 0)
 +		return;
 +
@@ -528,11 +538,57 @@ index 000000000..cd3aa39fd
 +	for (i = bar_length; i < bar_width; ++i) {
 +		printf(" ");
 +	}
-+	printf("] %.2f%%", progress * 100);
++	size_t totalSizeUnitId = 0;
++	double totalSize = max;
++	while (totalSize > 1000 && sizeUnits[totalSizeUnitId + 1]) {
++		totalSize /= 1000.0;
++		totalSizeUnitId++;
++	}
++	printf("] %.2f%% of %.2f %s", progress * 100, totalSize,
++	       sizeUnits[totalSizeUnitId]);
 +	print_download_speed_info(count, elapsed_time);
 +	if (progress == 1.0)
 +		printf("\n");
 +	fflush(stdout);
++}
++
++int progress_callback(
++        void *clientp,
++        curl_off_t dltotal,
++        curl_off_t dlnow,
++        curl_off_t ultotal,
++        curl_off_t ulnow)
++{
++	struct progress_data *pcs = (struct progress_data *)clientp;
++	if (dlnow == 0) {
++		pcs->started_download = time(NULL);
++		pcs->last_print_time = time(NULL);
++	}
++	time_t currentTime = time(NULL);
++	bool shouldPrintDueToTime = (currentTime - pcs->last_print_time >= 1);
++	if ((dltotal == dlnow) && dltotal < 10000) {
++		/* Usually with first messages we don't get the full size and we
++		   don't want to print progress bar so we assume that until
++		   dltotal is less than 1000 we don't have full size otherwise
++		   we would print 100% progress bar */
++		return 0;
++	}
++	/* called multiple times, so we want to print progress bar only once reached 100% */
++	if (pcs->fullDownloadPrinted) {
++		return 0;
++	}
++	if (!shouldPrintDueToTime && (dltotal != dlnow)) {
++		/* we dont want to skip printing progress bar for the 100% but
++		   we don't want to spam stdout either */
++		return 0;
++	}
++	pcs->fullDownloadPrinted = (dltotal == dlnow);
++	pcs->last_print_time = currentTime;
++	print_progress(
++	        dlnow, dltotal, (dlnow == 0),
++	        currentTime - pcs->started_download);
++	fflush(stdout);
++	return 0;
 +}
 +
 +static size_t file_write_callback(void *buffer, size_t size, size_t nmemb, void *stream)
@@ -546,19 +602,6 @@ index 000000000..cd3aa39fd
 +			        out->filename);
 +			return 0; /* failure, cannot open file to write */
 +		}
-+	}
-+	bool first_run = false;
-+	if (out->already_copied == 0)
-+		first_run = true;
-+
-+	out->already_copied += size * nmemb;
-+	time_t currentTime = time(NULL);
-+	if (currentTime - out->last_write_call >= 1 ||
-+	    out->already_copied == out->full_size) {
-+		print_progress(
-+		        out->already_copied, out->full_size, first_run,
-+		        currentTime - out->started_download );
-+		out->last_write_call = currentTime;
 +	}
 +	
 +	return fwrite(buffer, size, nmemb, out->stream);
@@ -586,14 +629,19 @@ index 000000000..cd3aa39fd
 +{
 +	double recv_len = (double)bytes;
 +	size_t recv_unit_idx = 0;
-+	char *recv_units[] = { "B", "KiB", "MiB", "GiB", "TiB", NULL };
-+	while (recv_len > 1024 && recv_units[recv_unit_idx + 1]) {
-+		recv_len /= 1024.0;
++	while (recv_len > 1000 && sizeUnits[recv_unit_idx + 1]) {
++		recv_len /= 1000.0;
 +		recv_unit_idx++;
 +	}
-+	printf("\nDownloading lfs size: %.2f %s file: %s\n", recv_len, recv_units[recv_unit_idx], 
++	printf("\nDownloading lfs size: %.2f %s file: %s\n", recv_len,
++	       sizeUnits[recv_unit_idx], 
 +	       filename);
 +}
++
++#define CURL_SETOPT(setopt)       \
++	if (status == CURLE_OK) { \
++		status = setopt;  \
++	}
 +
 +/**
 + * lfs_download - Downloads a file using the LFS (Large File Storage) mechanism.
@@ -624,7 +672,8 @@ index 000000000..cd3aa39fd
 +	char *tmp_out_file = append_char_to_buffer(la->full_path, '2');
 +
 +	CURL *info_curl,*dl_curl;
-+	CURLcode res;
++	CURLcode res = CURLE_OK;
++	CURLcode status = CURLE_OK;
 +	git_str res_str = GIT_STR_INIT;
 +	/* get a curl handle */
 +	info_curl = curl_easy_init();
@@ -645,12 +694,16 @@ index 000000000..cd3aa39fd
 +		/* Add a custom header */
 +		chunk = curl_slist_append(chunk, "Content-Type: application/vnd.git-lfs+json");
 +		/* set our custom set of headers */
-+		curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_HTTPHEADER, chunk));
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_URL, lfs_info_url.ptr));
 +
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			goto info_cleaup;
++		}
 +		git_str lfs_info_data = GIT_STR_INIT;
 +
 +		/* "{\"operation\":\"download\",\"transfer\":[\"basic\"],\"objects\":[{\"oid\":\"9556d0a12310629e217450ac4198c49f5457f1a69e22ce7c9f8e81fab4d530a7\",\"size\":499723}]}" */
@@ -671,17 +724,19 @@ index 000000000..cd3aa39fd
 +		}
 +
 +		/* Now specify the POST data */
-+		curl_easy_setopt(info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr);
-+		curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-+		curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_POSTFIELDS, lfs_info_data.ptr));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_FOLLOWLOCATION, 1L));
 +
 +		struct memory response = { 0 };
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_WRITEFUNCTION, write_callback);
-+		curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
-+		curl_easy_setopt(
-+		        info_curl, CURLOPT_WRITEDATA, (void *)&response);
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEFUNCTION, write_callback));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0"));
++		CURL_SETOPT(curl_easy_setopt(info_curl, CURLOPT_WRITEDATA, (void *)&response));
 +
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			goto info_cleaup;
++		}
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(info_curl);
 +		/* Check for errors */
@@ -699,18 +754,19 @@ index 000000000..cd3aa39fd
 +		res_str.asize = response.size;
 +		res_str.size = response.size;
 +		res_str.ptr = git__strdup(response.response);
-+		/* always cleanup */
-+		curl_easy_cleanup(info_curl);
-+		/* free the custom headers */
-+		curl_slist_free_all(chunk);
++		info_cleaup:
++		    /* always cleanup */
++		    curl_easy_cleanup(info_curl);
++		    /* free the custom headers */
++		    curl_slist_free_all(chunk);
++		    if (status != CURLE_OK)
++			    goto on_error;
 +	}
 +
 +	/* get a curl handle */
 +	dl_curl = curl_easy_init();
 +	if (dl_curl) {
-+		struct FtpFile ftpfile = { tmp_out_file, NULL,
-+					   get_digit(la->lfs_size), 0,
-+			                   time(NULL), time(NULL) };
++		struct FtpFile ftpfile = { tmp_out_file, NULL };
 +
 +		const char *href_regexp = "\"download\"\\s*:\\s*\\{\\s*\"href\":\"([^\"]+)\"";
 +		if (get_lfs_info_match(&res_str, href_regexp) < 0) {
@@ -721,15 +777,26 @@ index 000000000..cd3aa39fd
 +		/* First set the URL that is about to receive our POST. This URL
 +		   can just as well be an https:// URL if that is what should
 +		   receive the data. */
-+		curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr);
-+		curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-+		curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L);
-+		curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-+		curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0");
-+		curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback);
-+		curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile);
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_URL, res_str.ptr));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_FOLLOWLOCATION, 1L));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_USE_SSL, CURLUSESSL_ALL));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_USERAGENT,"git-lfs/3.5.0"));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEFUNCTION, file_write_callback));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_WRITEDATA, (void *)&ftpfile));
 +
-+		print_download_info(la->full_path, ftpfile.full_size);
++		/* progress bar options */
++		struct progress_data progress_d = { time(NULL), time(NULL) , false };
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_NOPROGRESS, 0L));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFOFUNCTION, progress_callback));
++		CURL_SETOPT(curl_easy_setopt(dl_curl, CURLOPT_XFERINFODATA, &progress_d));
++
++		if (status != CURLE_OK) {
++			fprintf(stderr, "curl_easy_setopt() failed: %s\n", curl_easy_strerror(status));
++			curl_easy_cleanup(dl_curl);
++			goto on_error;
++		}
++		print_download_info(la->full_path, get_digit(la->lfs_size));
 +		/* Perform the request, res gets the return code */
 +		res = curl_easy_perform(dl_curl);
 +		/* Check for errors */

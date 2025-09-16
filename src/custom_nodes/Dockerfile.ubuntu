@@ -38,6 +38,7 @@ WORKDIR /custom_nodes/common
 RUN g++ -c -std=c++17 *.cpp ${OPS} -I/opt/opencv/include/opencv4
 WORKDIR /custom_nodes/${NODE_NAME}/
 RUN mkdir -p /custom_nodes/lib
+COPY ./opencv.hpp /deps/
 RUN g++ -c -std=c++17 ${NODE_NAME}.${NODE_TYPE} ${OPS} -I/opt/opencv/include/opencv4
 RUN g++ -shared ${OPS} -o /custom_nodes/lib/libcustom_node_${NODE_NAME}.so ${NODE_NAME}.o /custom_nodes/common/*.o \
     -L/opt/opencv/lib/ -I/opt/opencv/include/opencv4 -lopencv_core -lopencv_imgproc -lopencv_imgcodecs

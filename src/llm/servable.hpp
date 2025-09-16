@@ -105,7 +105,6 @@ struct GenAiServableProperties {
     ov::genai::Tokenizer tokenizer;
 #if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
-    std::optional<std::string> ggufEosToken;  // TODO: Remove this once GGUF genai is fixed
 #endif
 };
 

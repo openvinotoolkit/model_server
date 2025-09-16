@@ -39,9 +39,9 @@ int get_int_parameter(const std::string& name, const struct CustomNodeParam* par
         if (name == params[i].key) {
             try {
                 return std::stoi(params[i].value);
-            } catch (std::invalid_argument& e) {
+            } catch (std::invalid_argument&) {
                 return defaultValue;
-            } catch (std::out_of_range& e) {
+            } catch (std::out_of_range&) {
                 return defaultValue;
             }
         }
@@ -54,9 +54,9 @@ float get_float_parameter(const std::string& name, const struct CustomNodeParam*
         if (name == params[i].key) {
             try {
                 return std::stof(params[i].value);
-            } catch (std::invalid_argument& e) {
+            } catch (std::invalid_argument&) {
                 return defaultValue;
-            } catch (std::out_of_range& e) {
+            } catch (std::out_of_range&) {
                 return defaultValue;
             }
         }
@@ -70,10 +70,10 @@ float get_float_parameter(const std::string& name, const struct CustomNodeParam*
         if (name == params[i].key) {
             try {
                 return std::stof(params[i].value);
-            } catch (std::invalid_argument& e) {
+            } catch (std::invalid_argument&) {
                 isDefined = false;
                 return defaultValue;
-            } catch (std::out_of_range& e) {
+            } catch (std::out_of_range&) {
                 isDefined = false;
                 return defaultValue;
             }
@@ -115,10 +115,10 @@ std::vector<float> get_float_list_parameter(const std::string& name, const struc
         try {
             float e = std::stof(element.c_str());
             result.push_back(e);
-        } catch (std::invalid_argument& e) {
+        } catch (std::invalid_argument&) {
             NODE_EXPECT(false, "error parsing list parameter");
             return {};
-        } catch (std::out_of_range& e) {
+        } catch (std::out_of_range&) {
             NODE_EXPECT(false, "error parsing list parameter");
             return {};
         }

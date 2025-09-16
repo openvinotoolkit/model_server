@@ -28,6 +28,7 @@
 #include "../server.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
+#include "platform_utils.hpp"
 
 class HttpOpenAIHandlerTest : public ::testing::Test {
 protected:

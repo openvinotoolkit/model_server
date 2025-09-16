@@ -20,8 +20,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "test_utils.hpp"
-#include "../filesystem.hpp"
+#include "src/test/env_guard.hpp"
+#include "src/test/light_test_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/test_with_temp_dir.hpp"
+#include "src/filesystem.hpp"
 #include "src/pull_module/hf_pull_model_module.hpp"
 #include "src/pull_module/libgit2.hpp"
 #include "src/pull_module/optimum_export.hpp"
@@ -33,57 +36,6 @@
 #include "../status.hpp"
 #include "src/stringutils.hpp"
 #include "../timer.hpp"
-
-struct EnvGuard {
-    EnvGuard() {
-        SPDLOG_TRACE("EnvGuardConstructor");
-    }
-    void set(const std::string& name, const std::string& value) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set");
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        SetEnvironmentVar(name, value);
-    }
-    void unset(const std::string& name) {
-        std::optional<std::string> originalValue = std::nullopt;
-        const char* currentVal = std::getenv(name.c_str());
-        if (currentVal) {
-            SPDLOG_TRACE("Var:{} is set to value:{}", name, currentVal);
-            originalValue = std::string(currentVal);
-        } else {
-            SPDLOG_TRACE("Var:{} was not set");
-        }
-        if (originalValues.find(name) == originalValues.end()) {
-            SPDLOG_TRACE("Var:{} value was not stored yet", name);
-            originalValues[name] = originalValue;
-        }
-        UnSetEnvironmentVar(name);
-    }
-    ~EnvGuard() {
-        SPDLOG_TRACE("EnvGuardDestructor");
-        for (auto& [k, v] : originalValues) {
-            if (v.has_value()) {
-                SPDLOG_TRACE("Var:{} was set to value:{}", k, v.value());
-                SetEnvironmentVar(k, v.value());
-            } else {
-                SPDLOG_TRACE("Var:{} was empty", k);
-                UnSetEnvironmentVar(k);
-            }
-        }
-    }
-
-private:
-    std::unordered_map<std::string, std::optional<std::string>> originalValues;
-};
 
 class HfDownloaderPullHfModel : public TestWithTempDir {
 protected:
