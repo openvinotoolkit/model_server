@@ -21,7 +21,6 @@
 
 namespace ovms {
 class Status;
-enum GraphExportType : unsigned int;
 
 class OptimumDownloader : public HfDownloader {
 public:

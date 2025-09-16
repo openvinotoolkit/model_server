@@ -36,7 +36,7 @@ std::string OptimumDownloader::getExportCmdText() {
     }
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << "--model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision << " ";
     if (this->hfSettings.extraQuantizationParams.has_value()) {
         oss << this->hfSettings.extraQuantizationParams.value() << " ";
@@ -51,7 +51,7 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
-    oss << " --model " << this->hfSettings.sourceModel << " --trust-remote-code ";
+    oss << " --model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
@@ -63,7 +63,7 @@ std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--disable-convert-tokenizer --model " << this->hfSettings.sourceModel;
+    oss << "--disable-convert-tokenizer --model " << this->sourceModel;
     oss << " --trust-remote-code ";
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " --task text-classification ";
@@ -77,7 +77,7 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->hfSettings.sourceModel;
+    oss << "--model " << this->sourceModel;
     oss << " --weight-format " << this->hfSettings.precision;
     oss << " " << this->downloadPath;
     // clang-format on
@@ -136,7 +136,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Target folder {} not found, trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->hfSettings.downloadPath, this->hfSettings.sourceModel);
+        SPDLOG_ERROR("Target folder {} not found, trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->downloadPath, this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
