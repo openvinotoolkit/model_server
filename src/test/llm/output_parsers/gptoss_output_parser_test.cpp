@@ -125,9 +125,9 @@ TEST_F(GptOssOutputParserTest, SimpleContent) {
 
 TEST_F(GptOssOutputParserTest, NegativeFinalChannel) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>?<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>?<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>?<|message|>Hello, world!<|call|>
+        Harmony::TokenID::RETURN,  // <|channel|>WRONG<|message|>Hello, world!<|return|>
+        Harmony::TokenID::END,  // <|channel|>WRONG<|message|>Hello, world!<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>WRONG<|message|>Hello, world!<|call|>
 
         for (auto wrongChannel : std::vector<std::string>{
                  "finalextra",  // finalextra is not final
@@ -150,9 +150,179 @@ TEST_F(GptOssOutputParserTest, NegativeFinalChannel) {
 
             // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
-            ASSERT_EQ(harmony.getContent(), "2") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_TRUE(harmony.getToolCalls().empty()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+        }
+    }
+}
+
+TEST_F(GptOssOutputParserTest, PreambleOnly) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
+        Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>commentary<|message|>Hello, world!<|call|>
+        builder
+            .clear()
+            .add(Harmony::TokenID::CHANNEL)
+            .add("commentary")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("Hello, world!")
+            .add(closureToken);
+
+        Harmony harmony(*gptOssTokenizer, builder.build());
+
+        ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getContent(), "Hello, world!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_TRUE(harmony.getToolCalls().empty()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+    }
+}
+
+TEST_F(GptOssOutputParserTest, NegativePreamble) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|return|>
+        Harmony::TokenID::END,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|call|>
+
+        for (auto wrongChannel : std::vector<std::string>{
+                 "commentary ", 
+                 " commentary", 
+                 " commentary ",
+                 "comment ary",  // space inside
+                 "commenTary",   // case sensitive
+                 ""}) {
+
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(wrongChannel)
+                .add(Harmony::TokenID::MESSAGE)
+                .add("Hello, world!")
+                .add(closureToken);
+
+            Harmony harmony(*gptOssTokenizer, builder.build());
+
+            // TODO: Fail such responses completely instead of ignoring them?
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_TRUE(harmony.getToolCalls().empty()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+        }
+    }
+}
+
+TEST_F(GptOssOutputParserTest, ReasoningOnly) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
+        Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>commentary<|message|>Hello, world!<|call|>
+        builder
+            .clear()
+            .add(Harmony::TokenID::CHANNEL)
+            .add("analysis")
+            .add(Harmony::TokenID::MESSAGE)
+            .add("Hello, world!")
+            .add(closureToken);
+
+        Harmony harmony(*gptOssTokenizer, builder.build());
+
+        ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_EQ(harmony.getReasoning(), "Hello, world!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+        ASSERT_TRUE(harmony.getToolCalls().empty()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
+    }
+}
+
+TEST_F(GptOssOutputParserTest, NegativeReasoning) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|return|>
+        Harmony::TokenID::END,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>WRONG REASONING<|message|>Hello, world!<|call|>
+
+        for (auto wrongChannel : std::vector<std::string>{
+                 "analysis ",
+                 " analysis ",
+                 "analy sis",  // space inside
+                 "analYsis",   // case sensitive
+                 ""}) {
+
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(wrongChannel)
+                .add(Harmony::TokenID::MESSAGE)
+                .add("Hello, world!")
+                .add(closureToken);
+
+            Harmony harmony(*gptOssTokenizer, builder.build());
+
+            // TODO: Fail such responses completely instead of ignoring them?
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+            ASSERT_TRUE(harmony.getToolCalls().empty()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
+        }
+    }
+}
+
+TEST_F(GptOssOutputParserTest, SingleToolCallWithConstrain) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
+        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
+        for (auto functionDeclaration : std::vector<std::string>{
+                "commentary to=functions.hello",  // valid channel with to=
+                "commentary to=functions.hello ",
+                "commentary   to=functions.hello",
+                "commentary  ANYTHING IN BETWEEN to=functions.hello",
+            }) { // spaces after hello
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(functionDeclaration)
+                .add(Harmony::TokenID::MESSAGE)
+                .add(R"({"Hello": "world!"})")
+                .add(closureToken);
+
+            Harmony harmony(*gptOssTokenizer, builder.build());
+
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls().size(), 1) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].name, "hello") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls()[0].arguments, R"({"Hello": "world!"})") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+        }
+    }
+}
+
+TEST_F(GptOssOutputParserTest, InvalidSingleToolCallWithConstrain) {
+    for (auto closureToken : std::vector<Harmony::TokenID>{
+        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
+        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
+        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
+        for (auto functionDeclaration : std::vector<std::string>{
+                "commentary to = functions.hello",
+                "commentary to= functions.hello ",
+                "commentary functions.hello",
+                "commentary to=hello",
+                "commentary hello"
+            }) {
+            builder
+                .clear()
+                .add(Harmony::TokenID::CHANNEL)
+                .add(functionDeclaration)
+                .add(Harmony::TokenID::MESSAGE)
+                .add(R"({"Hello": "world!"})")
+                .add(closureToken);
+
+            Harmony harmony(*gptOssTokenizer, builder.build());
+
+            ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
+            ASSERT_EQ(harmony.getToolCalls().size(), 0) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
         }
     }
 }
