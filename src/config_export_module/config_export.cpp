@@ -50,13 +50,27 @@ Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& conf
 
 Status createModelConfig(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
     std::ostringstream oss;
+    
+    auto escapeBackslashes = [](const std::string& path) -> std::string {
+        std::string result;
+        result.reserve(path.size());
+        for (char c : path) {
+            if (c == '\\') {
+                result += "\\\\";
+            } else {
+                result += c;
+            }
+        }
+        return result;
+    };
+
     // clang-format off
     oss << R"({
     "model_config_list": [
         { 
             "config": {
                 "name": ")" << modelSettings.modelName << R"(",
-                "base_path": ")" << modelSettings.modelPath << R"("
+                "base_path": ")" << escapeBackslashes(modelSettings.modelPath) << R"("
             }
         }
     ]
