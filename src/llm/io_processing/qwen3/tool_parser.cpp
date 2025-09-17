@@ -40,13 +40,112 @@ const std::string Qwen3CoderToolParser::parameterPrefixTag = "<parameter=";
 const std::string Qwen3CoderToolParser::parameterEndTag = "</parameter>";
 const std::string Qwen3CoderToolParser::tagEnd = ">";
 
-std::string toJson(const std::vector<std::pair<std::string, std::string>>& parameters) {
+static void trimNewline(std::string& str) {
+    if (str.empty()) {
+        return;
+    }
+    if (str.back() == '\n') {
+        str.pop_back();
+    }
+    if (str.empty()) {
+        return;
+    }
+    if (str.front() == '\n') {
+        str.erase(str.begin());
+    }
+}
+static bool isNumber(const std::string& s) {
+    if (s.empty())
+        return false;
+    char* endptr = nullptr;
+    strtod(s.c_str(), &endptr);
+    return (*endptr == '\0');
+}
+static bool isBoolean(const std::string& s) {
+    return (s == "true" ||
+            s == "false" ||
+            s == "True" ||
+            s == "False");
+}
+static bool isJsonLike(const std::string& s) {
+    if (s.empty())
+        return false;
+    return (s.front() == '{' && s.back() == '}');
+}
+static bool isArrayLike(const std::string& s) {
+    if (s.empty())
+        return false;
+    return (s.front() == '[' && s.back() == ']');
+}
+/*static std::string toJsonLike(const std::string_view& s) {
+    // use recursion to handle nested arrays and objects
+    // first check if it is array
+    // then check if it is object
+    // then check if it is number or boolean
+    // otherwise treat as string
+    // note that array could be nested, and its elemetns can be strings
+    // note that object could contain array
+    // note that array could contain object
+    // note that object could contain object
+    // note that object could contain string
+    // note that object could contain number
+    // note that object could contain boolean
+    // note that array could contain number
+    // note that array could contain boolean
+    // note that array could contain array
+    if (s.empty()) {
+        return "\"\"";  // empty string
+    }
+    return std::string(s);
+}*/
+
+// write toJson function
+// it shoudl know based on content of value from pair if it is string or number or bool
+// if number or bool, or array or json object. Note that array could be nested, and its elemetns can be strings
+static std::string toJson(const std::vector<std::pair<std::string, std::string>>& items) {
+    std::ostringstream oss;
+    oss << "{";
+/*    for (size_t i = 0; i < items.size(); ++i) {
+        const auto& [key, value] = items[i];
+        oss << "\"" << key << "\": ";
+        oss << toJsonLike(value);
+        if (i + 1 < items.size()) {
+            oss << ", ";
+        }
+    }
+}*/
+
+    for (size_t i = 0; i < items.size(); ++i) {
+        const auto& [key, value] = items[i];
+        oss << "\"" << key << "\": ";
+
+        if (isNumber(value) ||
+            isBoolean(value) ||
+            isJsonLike(value) ||
+            isArrayLike(value)) {
+            oss << value;  // no quotes
+        } else {
+            oss << "\"" << value << "\"";
+        }
+
+        if (i + 1 < items.size()) {
+            oss << ", ";
+        }
+    }
+    oss << "}";
+    return oss.str();
+}
+
+// write toJson function
+// it shoudl know based on content of value from pair if it is string or number or bool
+/*static std::string toJson2(const std::vector<std::pair<std::string, std::string>>& parameters) {
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     for (const auto& param : parameters) {
         SPDLOG_DEBUG("Adding parameter to json: {}: {}", param.first, param.second);
+        
         rapidjson::Value key(param.first.c_str(), allocator);
         rapidjson::Value value(param.second.c_str(), allocator);
         doc.AddMember(key, value, allocator);
@@ -58,31 +157,36 @@ std::string toJson(const std::vector<std::pair<std::string, std::string>>& param
 
     return buffer.GetString();
 }
-#define CHECK_IF_FOUND(POS, TAG) \
-do { \
-    if (POS == std::string::npos) {SPDLOG_TRACE("Did not find:{}", TAG); return;} \
-} while(0)
-#define CHECK_IF_FOUND2(POS, TAG, STATE) \
-do { \
-    if (POS == std::string::npos) { \
-        SPDLOG_TRACE("Did not find:{} in str:{}", TAG, content.substr(this->currentPosition, 20)); \
-        this->currentPosition = POS; \
-        this->currentState = STATE; \
-        if (STATE == State::End) { \
-            this->removeToolCallsFromContent(); \
-            /*ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};*/ \
-/*            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.parameters);*/ \
-/*            toolCalls.emplace_back(std::move(toolCall));*/ \
-        } \
-        return false;} \
-} while(0)
+*/
+#define CHECK_IF_FOUND(POS, TAG)                  \
+    do {                                          \
+        if (POS == std::string::npos) {           \
+            SPDLOG_TRACE("Did not find:{}", TAG); \
+            return;                               \
+        }                                         \
+    } while (0)
+#define CHECK_IF_FOUND2(POS, TAG, STATE)                                                                                                      \
+    do {                                                                                                                                      \
+        if (POS == std::string::npos) {                                                                                                       \
+            SPDLOG_TRACE("Did not find:{} in str:{}", TAG, content.substr(this->currentPosition, 20));                                        \
+            this->currentPosition = POS;                                                                                                      \
+            this->currentState = STATE;                                                                                                       \
+            if (STATE == State::End) {                                                                                                        \
+                this->removeToolCallsFromContent();                                                                                           \
+                /*ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};*/              \
+                /*            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.parameters);*/ \
+                /*            toolCalls.emplace_back(std::move(toolCall));*/                                                                  \
+            }                                                                                                                                 \
+            return false;                                                                                                                     \
+        }                                                                                                                                     \
+    } while (0)
 void Parser::removeToolCallsFromContent() {
     if (toolsBeginStack.size() != toolsEndStack.size()) {
         SPDLOG_WARN("Mismatched tool tags, begin: {}, end: {}", toolsBeginStack.size(), toolsEndStack.size());
-        throw std::runtime_error("Mismatched tool tags"); // FIXME replace with status
+        throw std::runtime_error("Mismatched tool tags");  // FIXME replace with status
     }
     SPDLOG_TRACE("Removing {} tool calls from content", toolsBeginStack.size());
-    while(!toolsBeginStack.empty() && !toolsEndStack.empty()) {
+    while (!toolsBeginStack.empty() && !toolsEndStack.empty()) {
         auto posBegin = toolsBeginStack.top();
         auto posEnd = toolsEndStack.top();
         SPDLOG_TRACE("Removing tool call from content begin:{}, end:{}, removing:{}XYZ", posBegin, posEnd, content.substr(posBegin, posEnd - posBegin));
@@ -132,7 +236,8 @@ bool Parser::step(ToolCalls& toolCalls) {
         SPDLOG_TRACE("State: InsideParameterName");
         auto pos = content.find(Qwen3CoderToolParser::tagEnd, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::tagEnd, State::ErrorEnd);
-        this->currentParameterName = content.substr(currentPosition, pos - currentPosition);;
+        this->currentParameterName = content.substr(currentPosition, pos - currentPosition);
+        ;
         currentPosition = pos + Qwen3CoderToolParser::tagEnd.length();
         currentState = State::InsideParameter;
         break;
@@ -142,6 +247,8 @@ bool Parser::step(ToolCalls& toolCalls) {
         auto pos = content.find(Qwen3CoderToolParser::parameterEndTag, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::parameterEndTag, State::ErrorEnd);
         std::string parameterValue(content.substr(currentPosition, pos - currentPosition));
+        if (this->removeNewlineAroundParameters)
+            trimNewline(parameterValue);
         currentFunction.parameters.emplace_back(this->currentParameterName, parameterValue);
         currentPosition = pos + Qwen3CoderToolParser::parameterEndTag.length();
         currentState = State::AfterParameter;
@@ -165,8 +272,8 @@ bool Parser::step(ToolCalls& toolCalls) {
             CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::toolsEndTag, State::ErrorEnd);
             currentPosition = pos + Qwen3CoderToolParser::toolsEndTag.length();
             toolsEndStack.push(currentPosition);
-            ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)}; \
-            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments); \
+            ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};
+            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
             toolCalls.emplace_back(std::move(toolCall));
             currentFunction.clear();
             currentState = State::Content;
@@ -177,10 +284,10 @@ bool Parser::step(ToolCalls& toolCalls) {
         break;
     }
     case ErrorEnd:
-                         SPDLOG_TRACE("State: ErrorEnd");
+        SPDLOG_TRACE("State: ErrorEnd");
         return false;
     case End:
-                         SPDLOG_TRACE("State: End");
+        SPDLOG_TRACE("State: End");
         return false;
     }
     return true;
@@ -200,48 +307,18 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     // FIXME check for npos at each step
     // For each if (itFunctionNameEnd == std::string::npos) {SPDLOG_ERROR("No tag end found"); return;}
     // we need to replace it with macro
-    Functool currentFunction;
-    std::stack<size_t> toolsStack;
-    size_t itToolStart = parsedOutput.content.find(toolsStartTag);
-    CHECK_IF_FOUND(itToolStart, toolsStartTag);
-    toolsStack.push(itToolStart);
-    size_t itFunctionStart = parsedOutput.content.find(toolPrefixTag, itToolStart);
-    CHECK_IF_FOUND(itFunctionStart, toolPrefixTag);
-    size_t itFunctionNameEnd = parsedOutput.content.find(tagEnd, itFunctionStart);
-    CHECK_IF_FOUND(itFunctionNameEnd, tagEnd);
-    const std::string functionName(parsedOutput.content.begin() + itFunctionStart + toolPrefixTag.length(),
-                                   parsedOutput.content.begin() + itFunctionNameEnd);
-    size_t itParameterStart = parsedOutput.content.find(parameterPrefixTag, itFunctionNameEnd);
-    CHECK_IF_FOUND(itParameterStart, parameterPrefixTag);
-    size_t itParameterNameEnd = parsedOutput.content.find(tagEnd, itParameterStart);
-    CHECK_IF_FOUND(itParameterNameEnd, tagEnd);
-    const std::string parameterName(parsedOutput.content.begin() + itParameterStart + parameterPrefixTag.length(),
-                                    parsedOutput.content.begin() + itParameterNameEnd);
-    size_t itParameterValueEnd = parsedOutput.content.find(parameterEndTag, itParameterNameEnd);
-    CHECK_IF_FOUND(itParameterValueEnd, parameterEndTag);
-    const std::string parameterValue(parsedOutput.content.begin() + itParameterNameEnd + tagEnd.length(),
-                                     parsedOutput.content.begin() + itParameterValueEnd);
-    // Now we could have anoter parameter or function end
-    // Now in theory we could check that we end function call and tool call properly
-    size_t itFunctionEnd = parsedOutput.content.find(toolEndTag, itParameterValueEnd);
-    CHECK_IF_FOUND(itFunctionEnd, toolEndTag);
-    size_t itToolEnd = parsedOutput.content.find(toolsEndTag, itFunctionEnd);
-    CHECK_IF_FOUND(itToolEnd, toolsEndTag);
-    // FIXME now if we didn't hit npos we could assume that tool is parsed correctly
-    // now we could add parameter to parameters
-    currentFunction.name = functionName;
-    currentFunction.parameters.emplace_back(parameterName, parameterValue);
-    // here we could have other parameteres potentially
-    // but for now we assume only one parameter per function
-    //
-    // FIXME now e assume that this is the end
-    ToolCall toolCall{generateRandomId(), currentFunction.name, toJson(currentFunction.parameters)};
-    parsedOutput.content.erase(itToolStart, itToolEnd + toolsEndTag.length());
-    parsedOutput.toolCalls.emplace_back(std::move(toolCall));
+    Parser parser(parsedOutput.content);
+    while (parser.step(parsedOutput.toolCalls))
+        ;
+    if (parser.currentState != Parser::State::End) {
+        SPDLOG_DEBUG("Parsing ended with error, leaving content as is");
+        return;
+    }
+    return;
 }
 
 std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
-        return std::nullopt; // FIXME
+    return std::nullopt;  // FIXME
 }
 
 }  // namespace ovms

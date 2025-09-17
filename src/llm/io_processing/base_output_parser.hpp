@@ -35,7 +35,7 @@ namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
-    std::string arguments; // JSON "{"a":"1", "b":"MISZCZ"}"
+    std::string arguments;  // JSON "{"a":"1", "b":"MISZCZ"}"
 };
 
 using ToolCalls = std::vector<ToolCall>;

@@ -35,24 +35,26 @@ namespace ovms {
 struct Functool {
     std::string name;
     std::vector<std::pair<std::string, std::string>> parameters;
-//    std::unordered_set<std::string> usedParameterNames;
-void clear() {
-    name.clear();
-    parameters.clear();
-//    usedParameterNames.clear();
-}
+    //    std::unordered_set<std::string> usedParameterNames;
+    void clear() {
+        name.clear();
+        parameters.clear();
+        //    usedParameterNames.clear();
+    }
 };
 struct Parser {
     enum State {
-        Content, // here we expect either tools start tag or end of content
-        InsideToolCall, // here we expect function start tag
-        InsideFunctionName, // here we expect parameter start tag
-        InsideFunction, // here we expect parameter start tag
-        InsideParameterName, // here we expect parameter end tag
-        InsideParameter, // here we expect parameter end tag
-        AfterParameter, // here we expect either next parameter or function & tools end
-        ErrorEnd, // we reached the end with error
-        End // we reached the end successfully
+        Content,              // (C) here we expect either tools start tag or end of content
+        InsideToolCall,       // (ITC) here we expect function start tag
+        InsideFunctionName,   // (IFN) here we expect parameter start tag
+        InsideFunction,       // (IF) here we expect parameter start tag
+        InsideParameterName,  // (IPN) here we expect parameter end tag
+        InsideParameter,      // (IP) here we expect parameter end tag
+        AfterParameter,       // (AP) here we expect either next parameter or function & tools end
+        ErrorEnd,             // (EE) we reached the end with error
+        End                   // (E) we reached the end successfully
+        // C->ITC->IFN->IF->IPN->IP->AP->(IPN|E)
+        // all states beside C could reach EE
     };
     std::string& content;
     // string iterator to current position in content
@@ -62,16 +64,18 @@ struct Parser {
     std::string currentParameterName;
     std::stack<size_t> toolsBeginStack;
     std::stack<size_t> toolsEndStack;
+    bool removeNewlineAroundParameters = true;
     void removeToolCallsFromContent();
     /*
      * Returns true if step was successful, false if we reached the end or error occurred
      */
     bool step(ToolCalls& toolCalls);
-    Parser(std::string& content) : content(content) {}
+    Parser(std::string& content) :
+        content(content) {}
 };
 
 class Qwen3CoderToolParser : public BaseOutputParser {
-        public:
+public:
     static const std::string toolsStartTag;
     static const std::string toolsEndTag;
     static const std::string toolPrefixTag;
@@ -79,6 +83,7 @@ class Qwen3CoderToolParser : public BaseOutputParser {
     static const std::string parameterPrefixTag;
     static const std::string parameterEndTag;
     static const std::string tagEnd;
+
 protected:
     bool stripNewline = false;
 
@@ -103,15 +108,15 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        return toolsStartTag; // FIXME CHECK
+        return toolsStartTag;  // FIXME CHECK
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag}; // FIXME CHECK
+        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag};  // FIXME CHECK
         return specialParsingStartTags;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return toolsEndTag; // FIXME CHECK
+        return toolsEndTag;  // FIXME CHECK
     }
 };
 }  // namespace ovms
