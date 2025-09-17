@@ -18,9 +18,9 @@ index 73731c0..0d966ed 100644
 +        is_fc_model=True,
 +        underscore_to_dot=True,
 +    ),
-+    "ovms_model_stream": ModelConfig(
++    "ovms-model-stream": ModelConfig(
 +        model_name="ovms-model-stream",
-+        display_name="ovms_model_stream",
++        display_name="ovms-model-stream",
 +        url="http://localhost:8000/v3",
 +        org="ovms",
 +        license="apache-2.0",
@@ -70,7 +70,7 @@ index 9ce4e7d..076e706 100644
          )
  
      #### FC methods ####
-@@ -38,9 +38,9 @@ class QwenAPIHandler(OpenAICompletionsHandler):
+@@ -38,9 +38,10 @@ class QwenAPIHandler(OpenAICompletionsHandler):
              model=self.model_name.replace("-FC", ""),
              tools=tools,
              parallel_tool_calls=True,
@@ -80,6 +80,7 @@ index 9ce4e7d..076e706 100644
 +            extra_body={ "chat_template_kwargs": {
 +                "enable_thinking": False
 +            }},
++            temperature=self.temperature,
              stream=True,
              stream_options={
                  "include_usage": True
