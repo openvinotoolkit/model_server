@@ -116,12 +116,18 @@ git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64
 curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v
 pip install -e . 
 ```
-The commands below assumes the models is deployed with the name `ovms_model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
-Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
+The commands below assumes the models is deployed with the name `ovms-model`. It must match the name set in the `bfcl_eval/constants/model_config.py`.
 ```bash
 export OPENAI_BASE_URL=http://localhost:8000/v3
 bfcl generate --model ovms-model --test-category simple,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
-bfcl evaluate --model ovms_model --result-dir model_name_dir 
+bfcl evaluate --model ovms-model --result-dir model_name_dir 
+```
+
+Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
+```bash
+export OPENAI_BASE_URL=http://localhost:8000/v3
+bfcl generate --model ovms-model-stream --test-category simple,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
+bfcl evaluate --model ovms-model-stream --result-dir model_name_dir 
 ```
 
 **Analyzing results**
