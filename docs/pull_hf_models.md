@@ -1,19 +1,20 @@
 # OVMS Pull mode {#ovms_docs_pull}
 
-This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [Hugging Face Hub](https://huggingface.co/), no additional steps are required. However, when pulling models [outside of the OpenVINO](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md) organization you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or docker image `openvino/models_server:latest-py`. In summary you have 2 options:
+This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment configuration with Generative AI models. When pulling from [Hugging Face Hub](https://huggingface.co/), no additional steps are required. However, when pulling models in Pytorch format, you have to install additional python dependencies when using baremetal execution so that optimum-cli is available for ovms executable or rely on the docker image `openvino/models_server:latest-py`. In summary you have 2 options:
 
-- pulling preconfigured models in IR format from OpenVINO organization
-- pulling models with automatic conversion and quantization (requires optimum-cli). Include additional consideration like longer time for deployment and pulling model data (original model) from HF, model memory for conversion, diskspace - described [here](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
+- pulling pre-configured models in IR format (described below)
+- pulling models with automatic conversion and quantization via optimum-cli. Described in the [pulling with conversion](https://github.com/openvinotoolkit/model_server/blob/main/docs/pull_optimum_cli.md)
 
-### Pulling the models
+> **Note:** Models in IR format must be exported using `optimum-cli` including tokenizer and detokenizer files also in IR format, if applicable. If missing, tokenizer and detokenizer should be added using `convert_tokenizer --with-detokenizer` tool.
 
-There is a special mode to make OVMS pull the model from Hugging Face before starting the service:
+## Pulling pre-configured models
+
+There is a special OVMS mode to pull the model from Hugging Face before starting the service. It is triggered by `--source_models` parameter. In addition, `--pull` parameter is for pulling alone. The application quits after the model is downloaded. Without `--pull` option, the model will be deployed and server started.
 
 ::::{tab-set}
 :::{tab-item} With Docker
 :sync: docker
 **Required:** Docker Engine installed
-
 ```text
 docker run $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --task <task> [TASK_SPECIFIC_PARAMETERS]
 ```
@@ -55,9 +56,8 @@ ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_r
 ::::
 
 
-It will prepare all needed configuration files to support LLMS with OVMS in the model repository. Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
+Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
-In case you want to setup model and start server in one step follow instructions on [this page](./starting_server.md).
+In case you want to setup model and start server in one step, follow [instructions](./starting_server.md).
 
-*Note:*
-When using pull mode you need both read and write access rights to models repository.
+> **Note:**  When using pull mode you need both read and write access rights to models repository.
