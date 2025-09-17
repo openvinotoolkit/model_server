@@ -223,6 +223,10 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         streamOutputCache.add(toolParser->getParsingStartTag());
     }
 
+   // if (chunkResponse.find("arguments") != std::string::npos) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Raw chunk response: {}", chunkResponse);
+    //}
+
     streamOutputCache.add(chunkResponse);
 
     if (processingPhase == UNKNOWN) {

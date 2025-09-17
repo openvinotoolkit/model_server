@@ -37,6 +37,25 @@ protected:
     const std::string parsingStartTag = "functools";
     const std::string parsingEndTag = "";
 
+    // Streaming required members
+
+    enum InternalState {
+        AWAITING_START_TAG,
+        AWAITING_TOOL_CALLS_OPENING_BRACKET,
+        PROCESSING_TOOL_CALLS
+    };
+
+    InternalState internalState = AWAITING_START_TAG;
+    rapidjson::Document lastJson;
+    PartialJsonBuilder jsonBuilder;
+    // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
+    int toolCallIndex = -1;
+    // Storing last two chunks of arguments to return delta with delay.
+    // We do this to properly close arguments when tool call end tag is received.
+    // With support for more models this could be moved to the base class.
+    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
+    std::string unprocessedBuffer;
+
 public:
     Phi4ToolParser() = delete;
     explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
