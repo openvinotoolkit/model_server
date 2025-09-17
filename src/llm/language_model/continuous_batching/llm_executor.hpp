@@ -24,8 +24,7 @@
 #include <thread>
 #include <utility>
 
-#include <openvino/genai/continuous_batching_pipeline.hpp>
-
+#include "../../generation_config_header.hpp"
 #include "../../../logging.hpp"
 #include "../../../profiler.hpp"
 

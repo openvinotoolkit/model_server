@@ -3159,10 +3159,8 @@ ovms_cc_library(
             "//src:libovms_ovinferrequestsqueue",
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
-            "@com_github_tencent_rapidjson//:rapidjson",] + select({
-            "//conditions:default": ["//third_party:genai", "@llm_engine//:llm_engine"],
-            "//:not_genai_bin" : ["@llm_engine//:llm_engine"],
-    }),
+            "@com_github_tencent_rapidjson//:rapidjson", 
+            "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

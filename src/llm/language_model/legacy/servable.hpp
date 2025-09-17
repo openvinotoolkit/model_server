@@ -17,8 +17,7 @@
 #include <memory>
 #include <string>
 
-#include "openvino/genai/llm_pipeline.hpp"
-
+#include "../../generation_config_header.hpp"
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"

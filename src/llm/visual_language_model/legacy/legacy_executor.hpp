@@ -25,8 +25,7 @@
 #include <utility>
 #include <queue>
 
-#include <openvino/genai/visual_language/pipeline.hpp>
-
+#include "../../generation_config_header.hpp"
 #include "../../../logging.hpp"
 #include "../../../profiler.hpp"
 

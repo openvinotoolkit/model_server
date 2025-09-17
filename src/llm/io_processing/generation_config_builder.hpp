@@ -18,9 +18,9 @@
 #include <memory>
 #include <iostream>
 #include <string>
-#include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
+#include "../generation_config_header.hpp"
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"

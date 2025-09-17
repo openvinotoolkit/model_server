@@ -199,9 +199,9 @@ WORKDIR $TEMP_DIR
 RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
     wget -nv $DLDT_PACKAGE_URL && \
     mkdir /opt/intel && \
-    tar -zxf ./*openvino_toolkit*.tgz -C /opt/intel && \
-    ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino && \
-    ln -s /opt/intel/*openvino_toolkit* /opt/intel/openvino_2025
+    tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
+    ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2025
 
 # install sample apps including benchmark_app
 # hadolint ignore=DL3041
