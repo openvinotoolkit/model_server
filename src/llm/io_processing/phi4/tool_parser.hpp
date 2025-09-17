@@ -37,6 +37,28 @@ protected:
     const std::string parsingStartTag = "functools";
     const std::string parsingEndTag = "";
 
+    // Streaming required members
+
+    enum InternalState {
+        AWAITING_START_TAG,
+        AWAITING_TOOL_CALLS_OPENING_BRACKET,
+        AWAITING_TOOL_CALL_OPENING_BRACE,
+        PROCESSING_TOOL_CALL
+    };
+
+    InternalState internalState = AWAITING_START_TAG;
+    rapidjson::Document lastJson;
+    PartialJsonBuilder jsonBuilder;
+    // Index to track the current tool call being processed (-1 means no tool call has been started yet)
+    int toolCallIndex = -1;
+    // Flag to indicate if double quote has been added at the beginning of arguments
+    bool argumentsQuotesOpened = false;
+    std::string unprocessedBuffer;
+
+    // Stack of opened braces to track nested structures while in arguments collection phase
+    // Starting with 1, since we count the tool call opening brace and expect it to be closed as arguments end
+    size_t openBracesCount = 1;
+
 public:
     Phi4ToolParser() = delete;
     explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :
