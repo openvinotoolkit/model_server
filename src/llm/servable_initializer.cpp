@@ -93,27 +93,6 @@ static bool checkIfGGUFModel(const std::string& modelDirectoryPath) {
     return false;
 }
 
-static std::pair<std::optional<std::string>, std::optional<std::string>> getBosAndEosTokenFromTokenizerVocab(const ov::genai::Tokenizer& tokenizer) {
-    auto vocab = tokenizer.get_vocab();
-    SPDLOG_TRACE("Tokenizer vocab size: {}", vocab.size());
-    auto bosTokenId = tokenizer.get_bos_token_id();
-    auto eosTokenId = tokenizer.get_eos_token_id();
-    std::optional<std::string> bosToken;
-    std::optional<std::string> eosToken;
-    // since tokenizer get_bos_token does not work for gguf we will search in map by value
-    for (const auto& [token, id] : vocab) {
-        if (id == bosTokenId) {
-            bosToken = token;
-        } else if (id == eosTokenId) {
-            eosToken = token;
-        }
-        if ((bosToken != std::nullopt) && (eosToken != std::nullopt)) {
-            break;
-        }
-    }
-    return std::make_pair(bosToken, eosToken);
-}
-
 ExtraGenerationInfo GenAiServableInitializer::readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     ExtraGenerationInfo extraGenInfo;
     bool isGgufModel = checkIfGGUFModel(chatTemplateDirectory);
@@ -127,27 +106,9 @@ ExtraGenerationInfo GenAiServableInitializer::readExtraGenerationInfo(std::share
         tokenizerBosToken = properties->tokenizer.get_bos_token();
         tokenizerEosToken = properties->tokenizer.get_eos_token();
 
-        // Workaround for CVS-172426
-        if (tokenizerBosToken.empty() || tokenizerEosToken.empty()) {
-            // time measure following if statement
-            std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-            // if tokenizer bos/eos tokens are empty, we will try to get them from tokenizer vocab
-            std::pair<std::optional<std::string>, std::optional<std::string>> tokens;
-            tokens = getBosAndEosTokenFromTokenizerVocab(properties->tokenizer);
-            if (tokens.first.has_value()) {
-                tokenizerBosToken = tokens.first.value();
-            }
-            if (tokens.second.has_value()) {
-                tokenizerEosToken = tokens.second.value();
-            }
-            SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
-                tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGgufModel, tokenizerTemplate);
+        SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
+            tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGgufModel, tokenizerTemplate);
 
-            std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-            SPDLOG_TRACE("Time to get bos/eos tokens from tokenizer: {} ms", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0);
-        }
-
-        properties->ggufEosToken = tokenizerEosToken;
         extraGenInfo.bosTokenFromTokenizer = tokenizerBosToken;
         extraGenInfo.bosTokenIdFromTokenizer = properties->tokenizer.get_bos_token_id();
         extraGenInfo.eosTokenFromTokenizer = tokenizerEosToken;
