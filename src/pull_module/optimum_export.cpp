@@ -112,12 +112,6 @@ std::string OptimumDownloader::getExportCmd() {
 
     return cmd;
 }
-OptimumDownloader::OptimumDownloader() {
-    this->sourceModel = "";
-    this->downloadPath = "";
-    this->overwriteModels = false;
-    this->task = UNKNOWN_GRAPH;
-}
 
 std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;

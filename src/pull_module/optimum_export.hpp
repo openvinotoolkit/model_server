@@ -37,7 +37,6 @@ protected:
     std::string OPTIMUM_CLI_EXPORT_COMMAND;
     std::string OPTIMUM_CLI_CHECK_COMMAND;
 
-    OptimumDownloader();
     Status checkRequiredToolsArePresent();
     std::string getExportCmd();
     std::string getExportCmdText();
