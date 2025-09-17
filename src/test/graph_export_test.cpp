@@ -207,7 +207,7 @@ const std::string expectedDraftAndFuseGraphContents = R"(
             cache_size: 10,
             dynamic_split_fuse: false,
             # Speculative decoding configuration
-            draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m",
+            draft_models_path: "-ovms-src-test-llm_testing-facebook-opt-125m",
         }
     }
     input_stream_handler {
