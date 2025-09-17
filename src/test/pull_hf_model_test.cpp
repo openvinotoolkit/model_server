@@ -191,18 +191,17 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadWithDraftModel) {
+TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
     this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string draftModel = "OpenVINO/distil-small.en-int4-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
     std::string task = "text_generation";
-    this->ServerPullHfModelWithDraft(draftModel, modelName, downloadPath, task);
+    this->ServerPullHfModelWithDraft(draftModel, modelName, this->directoryPath, task);
 
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
 
