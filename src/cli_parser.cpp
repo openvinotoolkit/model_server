@@ -590,8 +590,13 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (isOptimumCliDownload(serverSettings.hfSettings.sourceModel, hfSettings.ggufFilename)) {
+            // Cloning the repository is allowed only for OpenVINO models determined by the name pattern
+            // Other models will be downloaded and converted using optimum-cli or just downloaded as GGUF
+            std::string lowerSourceModel = toLower(serverSettings.hfSettings.sourceModel);
+            if (lowerSourceModel.find("openvino") == std::string::npos &&
+                lowerSourceModel.find("-ov") == std::string::npos &&
+                lowerSourceModel.find("_ov") == std::string::npos &&
+                (hfSettings.ggufFilename == std::nullopt)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
@@ -600,7 +605,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
         }
         if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+            throw std::logic_error("--extra_quantization_params parameter unsupported for OpenVINO models.");
         }
 
         if (result->count("weight-format"))
