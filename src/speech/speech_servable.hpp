@@ -39,6 +39,8 @@ struct SpeechServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> whisperPipeline;
     std::shared_ptr<ov::genai::Text2SpeechPipeline> text2SpeechPipeline;
+    std::mutex whisperPipelineMutex;
+    std::mutex text2SpeechPipelineMutex;
 
     SpeechServable(const std::string& modelDir, const std::string& targetDevice, const std::string& graphPath, mediapipe::SpeechCalculatorOptions::Mode mode) {
         auto fsModelsPath = std::filesystem::path(modelDir);
