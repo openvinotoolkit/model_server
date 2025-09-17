@@ -80,7 +80,12 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
             return ov::genai::StreamingStatus::RUNNING;
         };
 
-        executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
+        if (executionContext->apiHandler->getOutputParser() != nullptr &&
+            (executionContext->apiHandler->getOutputParser()->anyParserRequiresStreamingWithSpecialTokens())) {
+            executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, ov::AnyMap{ov::genai::skip_special_tokens(false)});
+        } else {
+            executionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
+        }
     }
     executionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
     executionContext->generationConfigBuilder->parseConfigFromRequest(executionContext->apiHandler->getRequest());

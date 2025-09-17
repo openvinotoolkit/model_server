@@ -20,7 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
-#include "../../../llm/io_processing/openai/harmony.hpp"
+#include "../../../llm/io_processing/gptoss/harmony.hpp"
 #include "../../platform_utils.hpp"
 
 using namespace ovms;
@@ -468,7 +468,7 @@ protected:
 
     void SetUp() override {
         GptOssOutputUnaryParserTest::SetUp();
-        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gpt", "gpt");
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
     }
 };
 
@@ -523,7 +523,7 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreaming) {
     };
 
     // Need to have new output parser per case to simulate separate request processing
-    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gpt", "gpt");
+    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
     auto chunkToDeltaVecCopy = chunkToDeltaVec;
     int64_t chunkIteration = -1;
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {

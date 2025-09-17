@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -30,27 +31,34 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
+class GptToolParser : public BaseOutputParser {
+    // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
+    const std::string parsingStartTag = "<|channel|>commentary";
 
-/*
-    This parser handles reasoning, but is also responsible for parsing regular content.
-    This model group requires use of reasoning to work even if reasoning is not needed.
-    This is due to the fact that regular content is placed in harmony format in similar fashion as reasoning.
-*/
-class GptReasoningParser : public BaseOutputParser {
-protected:
-    const std::string parsingStartTag = "<|channel|>analysis<|message|>";
-    const std::string parsingEndTag = "<|end|>";
+    // TODO: There should be more end tags: <|end|> and <|return|>, implement on upper level, find some example prompt that uses them
+    const std::string parsingEndTag = "<|call|>";
 
     enum class StreamState : int {
-        UNKNOWN = 0,
-        READING_REASONING = 1,
-        READING_CONTENT = 2,
+        READING_CHANNEL,
+        READING_CONSTRAIN,
+        READING_MESSAGE,
     };
-    StreamState state = StreamState::UNKNOWN;
+
+    // Streaming temp variables
+    StreamState streamState = StreamState::READING_CHANNEL;
+    std::string cache;
+    bool isStreamingFunctionName = false;
+    int toolCallIndex = -1;
+    std::string functionNameCache;
+
+
+    std::optional<rapidjson::Document> wrapDeltaIntoDocument(const std::string& chunk);
+
+    void clearState();
 
 public:
-    GptReasoningParser() = delete;
-    explicit GptReasoningParser(ov::genai::Tokenizer& tokenizer) :
+    GptToolParser() = delete;
+    explicit GptToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     // Unary
@@ -63,14 +71,16 @@ public:
     }
 
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {
-            "<|channel|>commentary<|message|>",  // Preable to reasoning, users usually sees that
-            "<|start|>assistant<|channel|>final<|message|>",  // Final content users sees
-        };
+        static const std::unordered_set<std::string> specialParsingStartTags = {};
         return specialParsingStartTags;
     }
+
     const std::string& getParsingEndTag() const override {
         return parsingEndTag;
+    }
+
+    bool requiresStreamingWithSpecialTokens() const override {
+        return true;
     }
 };
 }  // namespace ovms

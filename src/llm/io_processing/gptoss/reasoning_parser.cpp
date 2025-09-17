@@ -36,19 +36,19 @@ namespace ovms {
 void GptReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Harmony parsing failed");
         return;
     }
 
     // TODO: How to enforce users to select reasoning parser even if they do not need reasoning?
     parsedOutput.content = harmony.getContent();
-    SPDLOG_INFO("DEBUG Unary | GPT Content | [{}]", parsedOutput.content);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Content | [{}]", parsedOutput.content);
     parsedOutput.reasoning = harmony.getReasoning();
-    SPDLOG_INFO("DEBUG Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Reasoning | [{}]", parsedOutput.reasoning);
 }
 
 std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("DEBUG Streaming | GPT Reason | Chunk [{}]", newChunk);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Processing Chunk [{}]", newChunk);
 
     if (newChunk.empty()) {
         return std::nullopt;
@@ -96,9 +96,9 @@ std::optional<rapidjson::Document> GptReasoningParser::parseChunk(const std::str
             doc.Parse(buffer.GetString());
 
             if (state == StreamState::READING_REASONING)
-                SPDLOG_INFO("DEBUG Streaming | GPT Reason-Think | Send [{}]", chunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Reasoning [{}]", chunk);
             else
-                SPDLOG_INFO("DEBUG Streaming | GPT Reason-Content | Send [{}]", chunk);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Content [{}]", chunk);
             return doc;
         }
         case StreamState::UNKNOWN:

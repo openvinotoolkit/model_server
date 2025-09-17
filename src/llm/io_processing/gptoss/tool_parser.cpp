@@ -47,7 +47,7 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     parsedOutput.content = harmony.getContent();
     parsedOutput.toolCalls = harmony.getToolCalls();
     for (const auto& toolCall : parsedOutput.toolCalls) {
-        SPDLOG_INFO("DEBUG Unary | GPT Tool Call | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Tool | id: [{}], name: [{}], arguments: [{}]", toolCall.id, toolCall.name, toolCall.arguments);
     }
 }
 
@@ -80,8 +80,14 @@ std::optional<rapidjson::Document> GptToolParser::wrapDeltaIntoDocument(const st
     return wrappedDelta;
 }
 
+void GptToolParser::clearState() {
+    cache.clear();
+    isStreamingFunctionName = false;
+    functionNameCache.clear();
+}
+
 std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
-    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Chunk [{}]", newChunk);
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
@@ -92,65 +98,58 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
     }
 
     // This should only happen during channel read if model does not produce garbage
-    if (chunk == "<|constrain|>") {
+    if (chunk == openai::Harmony::TOKEN_CONSTAIN) {
         // If previous state was channel, it means constrain was skipped
         // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
             if (functionNameCache.size()) {
-                SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
-            } else {
-                SPDLOG_DEBUG("<|constrain|> appearance without previous <|channel|>");
             }
-            cache.clear();
+        } else {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Error: <|constrain|> appearance without previous <|channel|>, ignoring");
         }
 
         streamState = StreamState::READING_CONSTRAIN;
-        isStreamingFunctionName = false;
-        functionNameCache.clear();
+        clearState();
         return result;
     }
 
     // Message appears after channel and constrain, before actual message
-    if (chunk == "<|message|>") {
+    if (chunk == openai::Harmony::TOKEN_MESSAGE) {
         // If previous state was channel, it means constrain was skipped
         // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
             if (functionNameCache.size()) {
-                SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send Function Name [{}]", functionNameCache);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Function Name [{}]", functionNameCache);
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
             }
-            cache.clear();
         }
         if (streamState == StreamState::READING_CONSTRAIN) {
             // Constrains are ignored, not needed for end user
-            cache.clear();
         }
 
         streamState = StreamState::READING_MESSAGE;
-        isStreamingFunctionName = false;
-        functionNameCache.clear();
+        clearState();
         return result;
     }
     
-    if (endsWith(chunk, "<|call|>") || endsWith(chunk, "<|end|>") || endsWith(chunk, "<|return|>")) {
+    if (endsWith(chunk, openai::Harmony::TOKEN_CALL) || endsWith(chunk, openai::Harmony::TOKEN_END) || endsWith(chunk, openai::Harmony::TOKEN_RETURN)) {
         // find last <| and remove from chunk everything after it
         std::size_t pos = chunk.rfind("<|");
         if (pos != std::string::npos) {
             if (pos > 0) {
-                std::string toAdd = chunk.substr(0, pos);
-                if (!toAdd.empty()) {
-                    cache += toAdd;
-                    SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", toAdd);
-                    result = wrapDeltaIntoDocument(toAdd);
+                std::string clearedChunk = chunk.substr(0, pos);
+                if (!clearedChunk.empty()) {
+                    //cache += clearedChunk;
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", clearedChunk);
+                    result = wrapDeltaIntoDocument(clearedChunk);
                 }
             }
         }
 
-        cache.clear();
         streamState = StreamState::READING_CHANNEL;
-        isStreamingFunctionName = false;
-        functionNameCache.clear();
+        clearState();
 
         return result;
     }
@@ -197,7 +196,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
         // Ignored, not needed for end user
         break;
     case StreamState::READING_MESSAGE: {
-        SPDLOG_INFO("DEBUG Streaming | GPT Tool | Send [{}]", chunk);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", chunk);
         return wrapDeltaIntoDocument(chunk);
     }
     }
