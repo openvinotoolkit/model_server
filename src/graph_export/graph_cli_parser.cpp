@@ -115,7 +115,7 @@ std::vector<std::string> GraphCLIParser::parse(const std::vector<std::string>& u
 
 void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     TextGenGraphSettingsImpl graphSettings = GraphCLIParser::defaultGraphSettings();
-    graphSettings.targetDevice = hfSettings.targetDevice;
+    graphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     // Deduct model name
     if (modelName != "") {
         graphSettings.modelName = modelName;
