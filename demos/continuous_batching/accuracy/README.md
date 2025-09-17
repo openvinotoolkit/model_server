@@ -120,7 +120,7 @@ The commands below assumes the models is deployed with the name `ovms_model`. It
 Alternatively, use the model name `ovms-model-stream` to run the tests with stream requests. The results should be the same.
 ```bash
 export OPENAI_BASE_URL=http://localhost:8000/v3
-bfcl generate --model ovms-model --test-category simple,multiple --num-threads 100 -o --result-dir model_name_dir 
+bfcl generate --model ovms-model --test-category simple,multiple --temperature 0.0 --num-threads 100 -o --result-dir model_name_dir
 bfcl evaluate --model ovms_model --result-dir model_name_dir 
 ```
 
