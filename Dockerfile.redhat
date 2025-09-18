@@ -223,7 +223,7 @@ RUN if [ "$ov_use_binary" == "0" ] && [[ $debug_bazel_flags == *"_py_off"* ]]; t
     git clone https://github.com/openvinotoolkit/openvino.genai /openvino_genai && cd /openvino_genai && git checkout $ov_genai_branch && git submodule update --init --recursive ; \
     cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS}  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_SYSTEM_ICU="True" -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON -S ./ -B ./build/ ; \ 
     cmake --build ./build/ --parallel $JOBS && cp /openvino_genai/build/openvino_genai/lib*.so* /opt/intel/openvino/runtime/lib/intel64/ ; \
-    cp -r /openvino_genai/src/cpp/include/openvino/* /opt/intel/openvino/runtime/include ; \
+    cp -r /openvino_genai/src/cpp/include/* /opt/intel/openvino/runtime/include ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp /openvino_genai/thirdparty/openvino_tokenizers/python/openvino_tokenizers/* /opt/intel/openvino/python/ ; \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers-2025.4.dist-info ; \
