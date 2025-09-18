@@ -98,6 +98,13 @@ protected:
     void SetUp() override {
     }
 
+    void assertParseIgnoredNoResults(Harmony& harmony) {
+        ASSERT_TRUE(harmony.parse());
+        ASSERT_EQ(harmony.getContent(), "");
+        ASSERT_EQ(harmony.getReasoning(), "");
+        ASSERT_EQ(harmony.getToolCalls().size(), 0);
+    }
+
     TokenBuilder builder;
 };
 
@@ -381,10 +388,7 @@ TEST_F(GptOssOutputUnaryParserTest, MissingChannel) {
         .add(R"({"Hello": "world!"})")
         .add(Harmony::TokenID::END);
     Harmony harmony(*gptOssTokenizer, builder.build());
-    ASSERT_TRUE(harmony.parse());
-    ASSERT_EQ(harmony.getContent(), "");
-    ASSERT_EQ(harmony.getReasoning(), "");
-    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+    assertParseIgnoredNoResults(harmony);
 }
 
 TEST_F(GptOssOutputUnaryParserTest, MissingMessageTag) {
@@ -396,10 +400,8 @@ TEST_F(GptOssOutputUnaryParserTest, MissingMessageTag) {
         .add(R"({"Hello": "world!"})")
         .add(Harmony::TokenID::END);
     Harmony harmony(*gptOssTokenizer, builder.build());
-    ASSERT_TRUE(harmony.parse());
-    ASSERT_EQ(harmony.getContent(), "");
-    ASSERT_EQ(harmony.getReasoning(), "");
-    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+    ASSERT_TRUE(harmony.parse());  // TODO: Make ignore assert function, think of more edge cases, corner cases to write test for
+    assertParseIgnoredNoResults(harmony);
 }
 
 TEST_F(GptOssOutputUnaryParserTest, MissingEndTag) {
@@ -411,10 +413,7 @@ TEST_F(GptOssOutputUnaryParserTest, MissingEndTag) {
         .add(R"({"Hello": "world!"})");
     // .add(Harmony::TokenID::END);  // no end tag
     Harmony harmony(*gptOssTokenizer, builder.build());
-    ASSERT_TRUE(harmony.parse());
-    ASSERT_EQ(harmony.getContent(), "");
-    ASSERT_EQ(harmony.getReasoning(), "");
-    ASSERT_EQ(harmony.getToolCalls().size(), 0);
+    assertParseIgnoredNoResults(harmony);
 }
 
 //

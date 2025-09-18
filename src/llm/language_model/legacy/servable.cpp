@@ -203,13 +203,8 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         }
         // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
 
-        // FIXME:
-        // This error is suppressed in order for BFCL benchmark to work since BFCL relies on usage in streaming mode.
-        // When running BFCL benchmark, the scripts need to be modified to ignore missing usage in streaming mode.
-        // The real use case will be with Continuous Batching pipelines, which provide usage.
-        // We need to remove it before release.
-        // if (executionContext->apiHandler->getStreamOptions().includeUsage)
-        //    return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
+        if (executionContext->apiHandler->getStreamOptions().includeUsage)
+            return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
 
         // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 

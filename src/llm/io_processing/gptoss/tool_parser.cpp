@@ -41,7 +41,6 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
         return;
     }
 
-    // TODO: How to enforce users to select some parser even if they do not need reasoning?
     // Yes, getContent is called twice, once in reasoning parser and once here, in tool parser.
     // This is because we have no guarantee that user will use both parsers, they might use only one of them.
     parsedOutput.content = harmony.getContent();
