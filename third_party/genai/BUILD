@@ -31,6 +31,7 @@ cc_library(
     name = "genai",
     srcs = glob([
         "lib/intel64/libopenvino_genai.so",
+        "lib/intel64/libopenvino_genai.so.2540",
         "lib/intel64/libopenvino_tokenizers.so",
     ]),
     visibility = ["//visibility:public"],
