@@ -64,7 +64,8 @@ public:
 
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
         static const std::unordered_set<std::string> specialParsingStartTags = {
-            "<|channel|>commentary<|message|>",  // Preable to reasoning, users usually sees that
+            "<|channel|>final<|message|>",
+            "<|channel|>commentary<|message|>",               // Preable to reasoning, users usually sees that
             "<|start|>assistant<|channel|>final<|message|>",  // Final content users sees
         };
         return specialParsingStartTags;

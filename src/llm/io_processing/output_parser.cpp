@@ -165,6 +165,13 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: " + reasoningParserName);
     }
+
+    if (toolParser && reasoningParser) {
+        if (toolParser->requiresStreamingWithSpecialTokens() != reasoningParser->requiresStreamingWithSpecialTokens()) {
+            throw std::runtime_error("Cannot use tool parser " + toolParserName + " with reasoning parser " + reasoningParserName +
+                                     " as they have different requirements for special tokens in streaming mode");
+        }
+    }
 }
 
 bool OutputParser::isToolParserAvailable() const {

@@ -30,7 +30,10 @@ class Message {
     std::string content;
 
 public:
-    Message(const std::string& channel, const std::string& constrain, const std::string& content) : channel(channel), constrain(constrain), content(content) {}
+    Message(const std::string& channel, const std::string& constrain, const std::string& content) :
+        channel(channel),
+        constrain(constrain),
+        content(content) {}
     std::string getChannel() const { return channel; }
     std::string getConstrain() const { return constrain; }
     std::string getContent() const { return content; }
@@ -61,7 +64,7 @@ public:
     static const std::string TOKEN_END;
     static const std::string TOKEN_MESSAGE;
     static const std::string TOKEN_CHANNEL;
-    static const std::string TOKEN_CONSTAIN;
+    static const std::string TOKEN_CONSTRAIN;
     static const std::string TOKEN_RETURN;
     static const std::string TOKEN_CALL;
 
@@ -81,7 +84,7 @@ inline bool operator==(Harmony::TokenID token, int64_t value) {
 }
 
 inline bool operator==(int64_t value, Harmony::TokenID token) {
-    return token == value; // reuse above
+    return token == value;  // reuse above
 }
 
 }  // namespace openai

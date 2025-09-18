@@ -87,8 +87,8 @@ public:
     // or nullopt if no response can be produced.
     std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
-    bool anyParserRequiresStreamingWithSpecialTokens() const {
-        return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) ||
+    bool requiresStreamingWithSpecialTokens() const {
+        return (reasoningParser && reasoningParser->requiresStreamingWithSpecialTokens()) &&
                (toolParser && toolParser->requiresStreamingWithSpecialTokens());
     }
 };

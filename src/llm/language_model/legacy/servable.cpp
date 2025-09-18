@@ -92,12 +92,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
             }
             return ov::genai::StreamingStatus::RUNNING;
         };
+        ov::AnyMap streamerConfig;
         if (legacyExecutionContext->apiHandler->getOutputParser() != nullptr &&
-            (legacyExecutionContext->apiHandler->getOutputParser()->anyParserRequiresStreamingWithSpecialTokens())) {
-            legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, ov::AnyMap{ov::genai::skip_special_tokens(false)});
-        } else {
-            legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback);
+            (legacyExecutionContext->apiHandler->getOutputParser()->requiresStreamingWithSpecialTokens())) {
+            streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
+        legacyExecutionContext->textStreamer = std::make_shared<ov::genai::TextStreamer>(getProperties()->tokenizer, callback, streamerConfig);
     }
     legacyExecutionContext->generationConfigBuilder = std::make_shared<GenerationConfigBuilder>(getProperties()->baseGenerationConfig, getProperties()->toolParserName, getProperties()->enableToolGuidedGeneration);
     legacyExecutionContext->generationConfigBuilder->parseConfigFromRequest(legacyExecutionContext->apiHandler->getRequest());
@@ -204,13 +204,13 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
 
         // FIXME:
-        // This error is surpressed in order for BFCL benchmark to work since BFCL relies on usage in streaming mode.
+        // This error is suppressed in order for BFCL benchmark to work since BFCL relies on usage in streaming mode.
         // When running BFCL benchmark, the scripts need to be modified to ignore missing usage in streaming mode.
         // The real use case will be with Continuous Batching pipelines, which provide usage.
         // We need to remove it before release.
-        //if (executionContext->apiHandler->getStreamOptions().includeUsage)
+        // if (executionContext->apiHandler->getStreamOptions().includeUsage)
         //    return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
-        
+
         // executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
 
         executionContext->response += wrapTextInServerSideEventMessage("[DONE]");

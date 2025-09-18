@@ -91,14 +91,14 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
 
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
-    
+
     if (chunk.find(getParsingStartTag()) != std::string::npos) {
         toolCallIndex++;  // starting with -1, first call will be 0
         return std::nullopt;
     }
 
     // This should only happen during channel read if model does not produce garbage
-    if (chunk == openai::Harmony::TOKEN_CONSTAIN) {
+    if (chunk == openai::Harmony::TOKEN_CONSTRAIN) {
         // If previous state was channel, it means constrain was skipped
         // We can push function name in case there is some in cache
         if (streamState == StreamState::READING_CHANNEL) {
@@ -125,15 +125,13 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
                 result = wrapFirstDelta(functionNameCache, toolCallIndex);
             }
         }
-        if (streamState == StreamState::READING_CONSTRAIN) {
-            // Constrains are ignored, not needed for end user
-        }
+        // StreamState::READING_CONSTRAIN implement here if required
 
         streamState = StreamState::READING_MESSAGE;
         clearState();
         return result;
     }
-    
+
     if (endsWith(chunk, openai::Harmony::TOKEN_CALL) || endsWith(chunk, openai::Harmony::TOKEN_END) || endsWith(chunk, openai::Harmony::TOKEN_RETURN)) {
         // find last <| and remove from chunk everything after it
         std::size_t pos = chunk.rfind("<|");
@@ -141,7 +139,6 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
             if (pos > 0) {
                 std::string clearedChunk = chunk.substr(0, pos);
                 if (!clearedChunk.empty()) {
-                    //cache += clearedChunk;
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", clearedChunk);
                     result = wrapDeltaIntoDocument(clearedChunk);
                 }
@@ -161,11 +158,10 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
         // Reading channel, but function name has not appeared yet
         if (!isStreamingFunctionName) {
             // Look ahead, and check if the function name reading state will begin now
-            std::string futureCache = cache + chunk;
-            if (startsWith(futureCache, " to=functions.")) {
+            if (startsWith(cache, "functions.")) {
                 isStreamingFunctionName = true;
                 functionNameCache.clear();
-                // Cut everything after                                    first .
+                // Cut everything after first .
                 // Remove and take only remaining part
                 // The harmony format is: <|channel|>commentary to=functions.<function_name> <|constrain|>json<|message|>{...}<|call|>
                 std::size_t pos = chunk.find('.');
@@ -203,4 +199,8 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
 
     return std::nullopt;
 }
+
+const std::string GptToolParser::parsingStartTag = "<|channel|>commentary to=";
+const std::string GptToolParser::parsingEndTag = "<|call|>";
+
 }  // namespace ovms

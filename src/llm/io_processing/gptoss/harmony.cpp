@@ -24,7 +24,9 @@
 namespace ovms {
 namespace openai {
 
-Harmony::Harmony(ov::genai::Tokenizer& tokenizer, const std::vector<int64_t>& tokens) : tokenizer(tokenizer), tokens(tokens) {}
+Harmony::Harmony(ov::genai::Tokenizer& tokenizer, const std::vector<int64_t>& tokens) :
+    tokenizer(tokenizer),
+    tokens(tokens) {}
 
 enum class HarmonyState : int {
     UNKNOWN,
@@ -90,10 +92,10 @@ std::string Harmony::getReasoning() {
     <|channel|>commentary to=functions.get_humidity <|message|>{"location":"Paris"}<|end|>
 */
 ToolCalls Harmony::getToolCalls() {
+    const static std::string tool_prefix = "to=functions.";
     ToolCalls toolCalls;
     for (const auto& msg : messages) {
         if (startsWith(msg.getChannel(), "commentary")) {
-            const static std::string tool_prefix = "to=functions.";
             size_t marker = msg.getChannel().find(tool_prefix);
             if (marker != std::string::npos) {
                 marker += tool_prefix.length();
@@ -131,7 +133,7 @@ bool Harmony::parse() {
 
     while (pos < tokens.size()) {
         int64_t token = tokens[pos];
- 
+
         // New channel starts
         if (token == TokenID::CHANNEL) {
             currentState = HarmonyState::READING_CHANNEL;
@@ -140,57 +142,44 @@ bool Harmony::parse() {
             tokenCache.clear();
             pos++;
             continue;
-        }
-
-        // Constrain starts. Can appear only inside channel definition
-        else if (token == TokenID::CONSTRAIN) {
+        } else if (token == TokenID::CONSTRAIN) {
+            // Constrain starts. Can appear only inside channel definition
             if (currentState != HarmonyState::READING_CHANNEL) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Error parsing harmony format - found <|constrain|> outside of channel reading state");
                 return false;
             }
-
             // Reading channel finished, save channel title
             if (!tokenCache.empty()) {
-                std::string decoded = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                 if (currentState == HarmonyState::READING_CHANNEL) {
-                    currentChannel = decoded;
+                    currentChannel = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_CONSTRAIN;
                 }
                 tokenCache.clear();
             }
             pos++;
             continue;
-        }
-
-        // Message starts. Can appear only after channel definition and optionally after constrain
-        else if (token == TokenID::MESSAGE) {
+        } else if (token == TokenID::MESSAGE) {
+            // Message starts. Can appear only after channel definition and optionally after constrain
             if (!tokenCache.empty()) {
-                std::string decoded = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
-                
                 // Depending on current state, save channel or constrain and clear the cache - prepare clean state for reading message
                 if (currentState == HarmonyState::READING_CHANNEL) {
-                    currentChannel = decoded;
+                    currentChannel = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;
-                }
-                if (currentState == HarmonyState::READING_CONSTRAIN) {
-                    currentConstrain = decoded;
+                } else if (currentState == HarmonyState::READING_CONSTRAIN) {
+                    currentConstrain = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
                     currentState = HarmonyState::READING_MESSAGE;
                 }
                 tokenCache.clear();
             }
             pos++;
             continue;
-        }
-
-        // Finished reading entire message. Message can be regular content, reasoning or tool call
-        // Channel name, metadata, constrains should be already read at this point
-        else if (token == TokenID::END || token == TokenID::RETURN || token == TokenID::CALL) {
+        } else if (token == TokenID::END || token == TokenID::RETURN || token == TokenID::CALL) {
+            // Finished reading entire message. Message can be regular content, reasoning or tool call
+            // Channel name, metadata, constrains should be already read at this point
             if (!tokenCache.empty()) {
-                std::string decoded = tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)});
-                
                 // Message reading is complete. Pushing its content
                 if (currentState == HarmonyState::READING_MESSAGE) {
-                    messages.emplace_back(currentChannel, currentConstrain, decoded);
+                    messages.emplace_back(currentChannel, currentConstrain, tokenizer.decode(tokenCache, ov::AnyMap{ov::genai::skip_special_tokens(false)}));
                 }
                 currentState = HarmonyState::UNKNOWN;
                 tokenCache.clear();
@@ -208,9 +197,9 @@ const std::string Harmony::TOKEN_START = "<|start|>";
 const std::string Harmony::TOKEN_END = "<|end|>";  // valid stop token (sometimes)
 const std::string Harmony::TOKEN_MESSAGE = "<|message|>";
 const std::string Harmony::TOKEN_CHANNEL = "<|channel|>";
-const std::string Harmony::TOKEN_CONSTAIN = "<|constain|>";
+const std::string Harmony::TOKEN_CONSTRAIN = "<|constrain|>";
 const std::string Harmony::TOKEN_RETURN = "<|return|>";  // valid stop token
-const std::string Harmony::TOKEN_CALL = "<|call|>";  // valid stop token
+const std::string Harmony::TOKEN_CALL = "<|call|>";      // valid stop token
 
 }  // namespace openai
 }  // namespace ovms

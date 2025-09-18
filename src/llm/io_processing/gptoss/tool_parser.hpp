@@ -33,10 +33,8 @@
 namespace ovms {
 class GptToolParser : public BaseOutputParser {
     // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
-    const std::string parsingStartTag = "<|channel|>commentary";
-
-    // TODO: There should be more end tags: <|end|> and <|return|>, implement on upper level, find some example prompt that uses them
-    const std::string parsingEndTag = "<|call|>";
+    static const std::string parsingStartTag;
+    static const std::string parsingEndTag;
 
     enum class StreamState : int {
         READING_CHANNEL,
@@ -50,7 +48,6 @@ class GptToolParser : public BaseOutputParser {
     bool isStreamingFunctionName = false;
     int toolCallIndex = -1;
     std::string functionNameCache;
-
 
     std::optional<rapidjson::Document> wrapDeltaIntoDocument(const std::string& chunk);
 

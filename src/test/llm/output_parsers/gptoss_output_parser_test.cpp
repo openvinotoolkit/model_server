@@ -107,12 +107,11 @@ protected:
 //
 //
 
-
 TEST_F(GptOssOutputUnaryParserTest, SimpleContent) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>final<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>final<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>final<|message|>Hello, world!<|call|>
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         builder
             .clear()
             .add(Harmony::TokenID::CHANNEL)  // <|channel|>
@@ -120,9 +119,7 @@ TEST_F(GptOssOutputUnaryParserTest, SimpleContent) {
             .add(Harmony::TokenID::MESSAGE)  // <|message|>
             .add("Hello, world!")
             .add(closureToken);  // <|end|> or <|return|> or <|call|>
-
         Harmony harmony(*gptOssTokenizer, builder.build());
-
         ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getContent(), "Hello, world!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
@@ -132,19 +129,17 @@ TEST_F(GptOssOutputUnaryParserTest, SimpleContent) {
 
 TEST_F(GptOssOutputUnaryParserTest, NegativeFinalChannel) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>WRONG<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>WRONG<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>WRONG<|message|>Hello, world!<|call|>
-
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         for (auto wrongChannel : std::vector<std::string>{
                  "finalextra",  // finalextra is not final
-                 "Final",      // case sensitive
-                 " finale",    // leading space
-                 "final ",     // trailing space
-                 " final",     // trailing space
-                 "fi nal",     // space inside
-                 ""}) {        // empty channel
-
+                 "Final",       // case sensitive
+                 " finale",     // leading space
+                 "final ",      // trailing space
+                 " final",      // trailing space
+                 "fi nal",      // space inside
+                 ""}) {         // empty channel
             builder
                 .clear()
                 .add(Harmony::TokenID::CHANNEL)
@@ -152,9 +147,7 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeFinalChannel) {
                 .add(Harmony::TokenID::MESSAGE)
                 .add("Hello, world!")
                 .add(closureToken);
-
             Harmony harmony(*gptOssTokenizer, builder.build());
-
             // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -166,9 +159,9 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeFinalChannel) {
 
 TEST_F(GptOssOutputUnaryParserTest, PreambleOnly) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>commentary<|message|>Hello, world!<|call|>
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         builder
             .clear()
             .add(Harmony::TokenID::CHANNEL)
@@ -176,9 +169,7 @@ TEST_F(GptOssOutputUnaryParserTest, PreambleOnly) {
             .add(Harmony::TokenID::MESSAGE)
             .add("Hello, world!")
             .add(closureToken);
-
         Harmony harmony(*gptOssTokenizer, builder.build());
-
         ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getContent(), "Hello, world!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
@@ -188,18 +179,16 @@ TEST_F(GptOssOutputUnaryParserTest, PreambleOnly) {
 
 TEST_F(GptOssOutputUnaryParserTest, NegativePreamble) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>WRONG PREAMBLE<|message|>Hello, world!<|call|>
-
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         for (auto wrongChannel : std::vector<std::string>{
-                 "commentary ", 
-                 " commentary", 
+                 "commentary ",
+                 " commentary",
                  " commentary ",
                  "comment ary",  // space inside
                  "commenTary",   // case sensitive
                  ""}) {
-
             builder
                 .clear()
                 .add(Harmony::TokenID::CHANNEL)
@@ -207,9 +196,7 @@ TEST_F(GptOssOutputUnaryParserTest, NegativePreamble) {
                 .add(Harmony::TokenID::MESSAGE)
                 .add("Hello, world!")
                 .add(closureToken);
-
             Harmony harmony(*gptOssTokenizer, builder.build());
-
             // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -221,9 +208,9 @@ TEST_F(GptOssOutputUnaryParserTest, NegativePreamble) {
 
 TEST_F(GptOssOutputUnaryParserTest, ReasoningOnly) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>commentary<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>commentary<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>commentary<|message|>Hello, world!<|call|>
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         builder
             .clear()
             .add(Harmony::TokenID::CHANNEL)
@@ -231,9 +218,7 @@ TEST_F(GptOssOutputUnaryParserTest, ReasoningOnly) {
             .add(Harmony::TokenID::MESSAGE)
             .add("Hello, world!")
             .add(closureToken);
-
         Harmony harmony(*gptOssTokenizer, builder.build());
-
         ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getReasoning(), "Hello, world!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
@@ -243,17 +228,15 @@ TEST_F(GptOssOutputUnaryParserTest, ReasoningOnly) {
 
 TEST_F(GptOssOutputUnaryParserTest, NegativeReasoning) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|return|>
-        Harmony::TokenID::END,  // <|channel|>WRONG REASONING<|message|>Hello, world!<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>WRONG REASONING<|message|>Hello, world!<|call|>
-
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         for (auto wrongChannel : std::vector<std::string>{
                  "analysis ",
                  " analysis ",
                  "analy sis",  // space inside
                  "analYsis",   // case sensitive
                  ""}) {
-
             builder
                 .clear()
                 .add(Harmony::TokenID::CHANNEL)
@@ -261,9 +244,7 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeReasoning) {
                 .add(Harmony::TokenID::MESSAGE)
                 .add("Hello, world!")
                 .add(closureToken);
-
             Harmony harmony(*gptOssTokenizer, builder.build());
-
             // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -275,15 +256,15 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeReasoning) {
 
 TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
-        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         for (auto functionDeclaration : std::vector<std::string>{
-                "commentary to=functions.hello",  // valid channel with to=
-                "commentary to=functions.hello ",
-                "commentary   to=functions.hello",
-                "commentary  ANYTHING IN BETWEEN to=functions.hello",
-            }) { // spaces after hello
+                 "commentary to=functions.hello",  // valid channel with to=
+                 "commentary to=functions.hello ",
+                 "commentary   to=functions.hello",
+                 "commentary  ANYTHING IN BETWEEN to=functions.hello",
+             }) {  // spaces after hello
             builder
                 .clear()
                 .add(Harmony::TokenID::CHANNEL)
@@ -291,9 +272,7 @@ TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
                 .add(Harmony::TokenID::MESSAGE)
                 .add(R"({"Hello": "world!"})")
                 .add(closureToken);
-
             Harmony harmony(*gptOssTokenizer, builder.build());
-
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
@@ -306,16 +285,15 @@ TEST_F(GptOssOutputUnaryParserTest, SingleToolCallWithConstrain) {
 
 TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
-        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         for (auto functionDeclaration : std::vector<std::string>{
-                "commentary to = functions.hello",
-                "commentary to= functions.hello ",
-                "commentary functions.hello",
-                "commentary to=hello",
-                "commentary hello"
-            }) {
+                 "commentary to = functions.hello",
+                 "commentary to= functions.hello ",
+                 "commentary functions.hello",
+                 "commentary to=hello",
+                 "commentary hello"}) {
             builder
                 .clear()
                 .add(Harmony::TokenID::CHANNEL)
@@ -323,9 +301,7 @@ TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
                 .add(Harmony::TokenID::MESSAGE)
                 .add(R"({"Hello": "world!"})")
                 .add(closureToken);
-
             Harmony harmony(*gptOssTokenizer, builder.build());
-
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " function declaration: " << functionDeclaration;
@@ -336,10 +312,9 @@ TEST_F(GptOssOutputUnaryParserTest, InvalidSingleToolCallWithConstrain) {
 
 TEST_F(GptOssOutputUnaryParserTest, HolisticMultiTurn) {
     for (auto closureToken : std::vector<Harmony::TokenID>{
-        Harmony::TokenID::RETURN,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|return|>
-        Harmony::TokenID::END,  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|end|>
-        Harmony::TokenID::CALL}) {  // <|channel|>commentary to=functions.hello<|constrain|>json<|message|>{"Hello": "world!"}<|call|>
-
+             Harmony::TokenID::RETURN,   // ending with <|return|>
+             Harmony::TokenID::END,      // ending with <|end|>
+             Harmony::TokenID::CALL}) {  // ending with <|call|>
         // In regular scenarios it is never that complicated. But we test the parser, so why not.
         // Usually the order is as follows:
         // - Analysis (reasoning)
@@ -353,7 +328,6 @@ TEST_F(GptOssOutputUnaryParserTest, HolisticMultiTurn) {
             .add(Harmony::TokenID::MESSAGE)
             .add("I need to call a function.")
             .add(closureToken)
-
             // With constrain, but ignored anyway
             .add(Harmony::TokenID::CHANNEL)
             .add("commentary to=functions.hello")  // strict
@@ -362,36 +336,30 @@ TEST_F(GptOssOutputUnaryParserTest, HolisticMultiTurn) {
             .add(Harmony::TokenID::MESSAGE)
             .add(R"({"Hello": "world!"})")
             .add(closureToken)
-
             .add(Harmony::TokenID::CHANNEL)
             .add("final")
             .add(Harmony::TokenID::MESSAGE)
             .add("Dear User, I called function!")
             .add(closureToken)
-
             // Without constrain, it is ignored anyway
             .add(Harmony::TokenID::CHANNEL)
             .add("commentary ? to=functions.goodbye ")  // with space and anything in the middle
             .add(Harmony::TokenID::MESSAGE)
             .add("NOT A JSON")
             .add(closureToken)
-
             // Preamble
             .add(Harmony::TokenID::CHANNEL)
             .add("commentary")
             .add(Harmony::TokenID::MESSAGE)
             .add("I called some functions. Will summarize now.")
             .add(closureToken)
-
             // Final v2
             .add(Harmony::TokenID::CHANNEL)
             .add("final")
             .add(Harmony::TokenID::MESSAGE)
             .add("Dear User, I called second function!")
             .add(closureToken);
-
         Harmony harmony(*gptOssTokenizer, builder.build());
-
         ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getContent(), "Dear User, I called function! I called some functions. Will summarize now. Dear User, I called second function!") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
         ASSERT_EQ(harmony.getReasoning(), "I need to call a function.") << "Failed for closure token: " << static_cast<int64_t>(closureToken);
@@ -412,9 +380,7 @@ TEST_F(GptOssOutputUnaryParserTest, MissingChannel) {
         .add(Harmony::TokenID::MESSAGE)
         .add(R"({"Hello": "world!"})")
         .add(Harmony::TokenID::END);
-
     Harmony harmony(*gptOssTokenizer, builder.build());
-
     ASSERT_TRUE(harmony.parse());
     ASSERT_EQ(harmony.getContent(), "");
     ASSERT_EQ(harmony.getReasoning(), "");
@@ -429,9 +395,7 @@ TEST_F(GptOssOutputUnaryParserTest, MissingMessageTag) {
         //  .add(Harmony::TokenID::MESSAGE)  // no message tag
         .add(R"({"Hello": "world!"})")
         .add(Harmony::TokenID::END);
-
     Harmony harmony(*gptOssTokenizer, builder.build());
-
     ASSERT_TRUE(harmony.parse());
     ASSERT_EQ(harmony.getContent(), "");
     ASSERT_EQ(harmony.getReasoning(), "");
@@ -445,16 +409,13 @@ TEST_F(GptOssOutputUnaryParserTest, MissingEndTag) {
         .add("commentary to=functions.hello")
         .add(Harmony::TokenID::MESSAGE)
         .add(R"({"Hello": "world!"})");
-        // .add(Harmony::TokenID::END);  // no end tag
-
+    // .add(Harmony::TokenID::END);  // no end tag
     Harmony harmony(*gptOssTokenizer, builder.build());
-
     ASSERT_TRUE(harmony.parse());
     ASSERT_EQ(harmony.getContent(), "");
     ASSERT_EQ(harmony.getReasoning(), "");
     ASSERT_EQ(harmony.getToolCalls().size(), 0);
 }
-
 
 //
 //
@@ -472,7 +433,93 @@ protected:
     }
 };
 
-TEST_F(GptOssOutputStreamParserTest, HolisticStreaming) {
+TEST_F(GptOssOutputStreamParserTest, HolisticStreamingReasoning) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // Reasoning
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"analysis", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"I"}})"}},
+        {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" am"}})"}},
+        {" reaso", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" reaso"}})"}},
+        {"ning.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ning."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Preamble
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
+        {" am", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" am"}})"}},
+        {" producing", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" producing"}})"}},
+        {" preamble", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" preamble"}})"}},
+        {".", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Final content
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"final", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"Dear", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"Dear"}})"}},
+        {" User,", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" User,"}})"}},
+        {" I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" I"}})"}},
+        {" reason!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" reason!"}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    // Need to have new output parser per case to simulate separate request processing
+    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+    auto chunkToDeltaVecCopy = chunkToDeltaVec;
+    int64_t chunkIteration = -1;
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
+        chunkIteration++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
+            }
+        } else if (expectedDelta.has_value()) {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
+        } else if (doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
+        } else {
+            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
+        }
+    }
+}
+
+TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Reasoning
         {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -484,42 +531,49 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreaming) {
         {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":" fun"}})"}},
         {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"reasoning_content":"ction."}})"}},
         {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // // Preamble // Implementation missing
-        // {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
-        // {" have", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" have"}})"}},
-        // {" to", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" to"}})"}},
-        // {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" call"}})"}},
-        // {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" fun"}})"}},
-        // {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"ction."}})"}},
-        // {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Preamble
         {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {" to", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"=fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"I"}})"}},
+        {" have", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" have"}})"}},
+        {" to", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" to"}})"}},
+        {" call", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" call"}})"}},
+        {" fun", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" fun"}})"}},
+        {"ction.", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"ction."}})"}},
+        {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool 1
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {".hello ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // TODO(from: Milosz) -> need to handle glueing of special tokens and regular tokens, for now we do test positive path
         {"<|message|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"hello\"}}]}}"},
         {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" {\""}}]}})"},
         {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
         {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
         {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
         {"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
-        {"\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}}"}}]}})"},
+        {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
         {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // TODO(milosz) -> streaming content after tools is not supported
-        // {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"final", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // {"Dear", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":"Dear"}})"}},
-        // {" User,", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" User,"}})"}},
-        // {" I", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" I"}})"}},
-        // {" called", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" called"}})"}},
-        // {" function!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" function!"}})"}},
-        // {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Tool 2 (with ignored constrain)
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" to=", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctions", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {".world ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|constrain|>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":1,\"function\":{\"name\":\"world\"}}]}}"},
+        {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" {\""}}]}})"},
+        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
+        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
+        {"Warsaw", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"Warsaw"}}]}})"},
+        {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\"}"}}]}})"},
+        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
 
     // Need to have new output parser per case to simulate separate request processing
