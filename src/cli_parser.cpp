@@ -592,7 +592,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // Cloning the repository is allowed only for OpenVINO models determined by the name pattern
             // Other models will be downloaded and converted using optimum-cli or just downloaded as GGUF
-            std::string lowerSourceModel = toLower(serverSettings.hfSettings.sourceModel);
+            std::string lowerSourceModel = toLower(hfSettings.sourceModel);
             if (lowerSourceModel.find("openvino") == std::string::npos &&
                 lowerSourceModel.find("-ov") == std::string::npos &&
                 lowerSourceModel.find("_ov") == std::string::npos &&

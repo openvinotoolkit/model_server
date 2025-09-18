@@ -1,6 +1,6 @@
 # OVMS Pull mode with optimum cli {#ovms_docs_pull_optimum}
 
-This documents describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment of generative models from HF with conversion and quantization in runtime.
+This document describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment of generative models from HF with conversion and quantization in runtime.
 
 You have to use docker image with optimum-cli `openvino/model_server:latest-py` or install additional python dependencies to the baremetal package. Follow the steps described below.
 
