@@ -214,7 +214,7 @@ TEST_F(ConfigCreationTest, positiveAddModel) {
 
 #ifdef _WIN32
     const std::string* expectedConfig = &expectedConfigContentsWindows;
-#elif __linux___
+#elif __linux__
     const std::string* expectedConfig = &expectedConfigContents;
 #endif
 
