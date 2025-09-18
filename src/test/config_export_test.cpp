@@ -46,7 +46,7 @@ const std::string expectedConfigContentsWindows = R"({
         { 
             "config": {
                 "name": "model1",
-                "base_path": "model1\\\\Path"
+                "base_path": "model1\\Path"
             }
         }
     ]
