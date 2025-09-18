@@ -92,7 +92,7 @@ std::string Harmony::getReasoning() {
     <|channel|>commentary to=functions.get_humidity <|message|>{"location":"Paris"}<|end|>
 */
 ToolCalls Harmony::getToolCalls() {
-    const static std::string tool_prefix = "to=functions.";
+    static const std::string tool_prefix = "to=functions.";
     ToolCalls toolCalls;
     for (const auto& msg : messages) {
         if (startsWith(msg.getChannel(), "commentary")) {
