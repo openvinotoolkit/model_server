@@ -50,7 +50,7 @@ Status loadJsonConfig(const std::string& jsonFilename, rapidjson::Document& conf
 
 Status createModelConfig(const std::string& fullPath, const ModelsSettingsImpl& modelSettings) {
     std::ostringstream oss;
-    
+
     auto escapeBackslashes = [](const std::string& path) -> std::string {
         std::string result;
         result.reserve(path.size());

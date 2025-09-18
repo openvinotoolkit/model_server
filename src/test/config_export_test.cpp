@@ -204,20 +204,20 @@ TEST_F(ConfigCreationTest, negativeRemoveModelWithDirectConfigFilePathNotExistin
 }
 
 TEST_F(ConfigCreationTest, positiveAddModel) {
-    #ifdef _WIN32
+#ifdef _WIN32
     this->modelsSettings.modelPath = "model1\\Path";
-    #endif
+#endif
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configContents = GetFileContents(this->modelsSettings.configPath);
-    
-    #ifdef _WIN32
+
+#ifdef _WIN32
     const std::string* expectedConfig = &expectedConfigContentsWindows;
-    #elif __linux___
+#elif __linux___
     const std::string* expectedConfig = &expectedConfigContents;
-    #endif
-    
+#endif
+
     ASSERT_EQ(*expectedConfig, configContents) << configContents;
 }
 
