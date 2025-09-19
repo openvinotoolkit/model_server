@@ -155,7 +155,6 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeFinalChannel) {
                 .add("Hello, world!")
                 .add(closureToken);
             Harmony harmony(*gptOssTokenizer, builder.build());
-            // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -204,7 +203,6 @@ TEST_F(GptOssOutputUnaryParserTest, NegativePreamble) {
                 .add("Hello, world!")
                 .add(closureToken);
             Harmony harmony(*gptOssTokenizer, builder.build());
-            // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -252,7 +250,6 @@ TEST_F(GptOssOutputUnaryParserTest, NegativeReasoning) {
                 .add("Hello, world!")
                 .add(closureToken);
             Harmony harmony(*gptOssTokenizer, builder.build());
-            // TODO: Fail such responses completely instead of ignoring them?
             ASSERT_TRUE(harmony.parse()) << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getContent(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
             ASSERT_EQ(harmony.getReasoning(), "") << "Failed for closure token: " << static_cast<int64_t>(closureToken) << " channel " << wrongChannel;
@@ -400,7 +397,6 @@ TEST_F(GptOssOutputUnaryParserTest, MissingMessageTag) {
         .add(R"({"Hello": "world!"})")
         .add(Harmony::TokenID::END);
     Harmony harmony(*gptOssTokenizer, builder.build());
-    ASSERT_TRUE(harmony.parse());  // TODO: Make ignore assert function, think of more edge cases, corner cases to write test for
     assertParseIgnoredNoResults(harmony);
 }
 
@@ -429,6 +425,61 @@ protected:
     void SetUp() override {
         GptOssOutputUnaryParserTest::SetUp();
         outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+    }
+
+    void test(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
+        // Need to have new output parser per case to simulate separate request processing
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+        auto chunkToDeltaVecCopy = chunkToDeltaVec;
+        int64_t chunkIteration = -1;
+        for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
+            chunkIteration++;
+            std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
+            if (!expectedDelta.has_value() && !doc.has_value()) {
+                continue;  // Both are nullopt, OK
+            }
+            if (expectedDelta.has_value() && doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+                std::string expected = expectedDelta.value();
+                std::string idKey = "\"id\":\"";
+                auto docIdPos = docStr.find(idKey);
+                auto expectedIdPos = expected.find(idKey);
+                if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                    auto docIdStart = docIdPos + idKey.size();
+                    auto docIdEnd = docStr.find("\"", docIdStart);
+                    auto expectedIdStart = expectedIdPos + idKey.size();
+                    auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                    ASSERT_NE(docIdEnd, std::string::npos);
+                    ASSERT_NE(expectedIdEnd, std::string::npos);
+                    std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                    std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                    EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                    EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                    // Compare everything except the id value
+                    std::string docStrNoId = docStr;
+                    std::string expectedNoId = expected;
+                    docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                    expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                    EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+                } else {
+                    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
+                }
+            } else if (expectedDelta.has_value()) {
+                FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
+            } else if (doc.has_value()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                doc->Accept(writer);
+                std::string docStr = buffer.GetString();
+                FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
+            } else {
+                FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
+            }
+        }
     }
 };
 
@@ -463,59 +514,7 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreamingReasoning) {
         {" reason!", ov::genai::GenerationFinishReason::NONE, {R"({"delta":{"content":" reason!"}})"}},
         {"<|end|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
-
-    // Need to have new output parser per case to simulate separate request processing
-    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
-    auto chunkToDeltaVecCopy = chunkToDeltaVec;
-    int64_t chunkIteration = -1;
-    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
-        chunkIteration++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
-        if (!expectedDelta.has_value() && !doc.has_value()) {
-            continue;  // Both are nullopt, OK
-        }
-        if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
-            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
-            std::string expected = expectedDelta.value();
-            std::string idKey = "\"id\":\"";
-            auto docIdPos = docStr.find(idKey);
-            auto expectedIdPos = expected.find(idKey);
-            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
-                auto docIdStart = docIdPos + idKey.size();
-                auto docIdEnd = docStr.find("\"", docIdStart);
-                auto expectedIdStart = expectedIdPos + idKey.size();
-                auto expectedIdEnd = expected.find("\"", expectedIdStart);
-                ASSERT_NE(docIdEnd, std::string::npos);
-                ASSERT_NE(expectedIdEnd, std::string::npos);
-                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
-                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
-                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
-                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                // Compare everything except the id value
-                std::string docStrNoId = docStr;
-                std::string expectedNoId = expected;
-                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
-                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
-                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
-            } else {
-                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
-            }
-        } else if (expectedDelta.has_value()) {
-            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
-        } else if (doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
-            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
-        } else {
-            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
-        }
-    }
+    test(chunkToDeltaVec);
 }
 
 TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {
@@ -574,57 +573,5 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {
         {"\"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\"}"}}]}})"},
         {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
-
-    // Need to have new output parser per case to simulate separate request processing
-    outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
-    auto chunkToDeltaVecCopy = chunkToDeltaVec;
-    int64_t chunkIteration = -1;
-    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {
-        chunkIteration++;
-        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, finishReason);
-        if (!expectedDelta.has_value() && !doc.has_value()) {
-            continue;  // Both are nullopt, OK
-        }
-        if (expectedDelta.has_value() && doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
-            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
-            std::string expected = expectedDelta.value();
-            std::string idKey = "\"id\":\"";
-            auto docIdPos = docStr.find(idKey);
-            auto expectedIdPos = expected.find(idKey);
-            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
-                auto docIdStart = docIdPos + idKey.size();
-                auto docIdEnd = docStr.find("\"", docIdStart);
-                auto expectedIdStart = expectedIdPos + idKey.size();
-                auto expectedIdEnd = expected.find("\"", expectedIdStart);
-                ASSERT_NE(docIdEnd, std::string::npos);
-                ASSERT_NE(expectedIdEnd, std::string::npos);
-                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
-                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
-                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
-                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                // Compare everything except the id value
-                std::string docStrNoId = docStr;
-                std::string expectedNoId = expected;
-                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
-                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
-                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
-            } else {
-                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: [" << chunk << "] got [" << docStr << "] but expected [" << expected << "]" << chunkIteration;
-            }
-        } else if (expectedDelta.has_value()) {
-            FAIL() << "Mismatch for chunk: [" << chunk << "] got nothing but expected [" << expectedDelta.value() << "]" << chunkIteration;
-        } else if (doc.has_value()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc->Accept(writer);
-            std::string docStr = buffer.GetString();
-            FAIL() << "Mismatch for chunk: [" << chunk << "] expected nothing but got [" << docStr << "]" << chunkIteration;
-        } else {
-            FAIL() << "Mismatch for chunk: [" << chunk << "] " << chunkIteration;
-        }
-    }
+    test(chunkToDeltaVec);
 }

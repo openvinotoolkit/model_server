@@ -201,8 +201,8 @@ absl::Status LegacyServable::preparePartialResponse(std::shared_ptr<GenAiServabl
         if (!serializedChunk.empty()) {
             executionContext->response = wrapTextInServerSideEventMessage(serializedChunk);
         }
-        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
 
+        // Disabling usage in streaming mode in legacy servable due to the issue with token counting.
         if (executionContext->apiHandler->getStreamOptions().includeUsage)
             return absl::InvalidArgumentError("Usage is not supported in legacy servable in streaming mode.");
 

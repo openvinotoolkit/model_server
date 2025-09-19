@@ -49,7 +49,7 @@ std::string Harmony::getContent() {
         // Regular content. Usually appears at the end of generation.
         if (msg.getChannel() == "final") {
             if (i++ > 0) {
-                content += " ";  // TODO: how to separate multiple preambles/content? For now this is space
+                content += " ";  // Undocumented in OpenAI Harmony format
             }
             content += msg.getContent();
         }
@@ -62,7 +62,7 @@ std::string Harmony::getContent() {
         */
         if (msg.getChannel() == "commentary") {
             if (i++ > 0) {
-                content += " ";  // TODO: how to separate multiple preambles/content? For now this is space
+                content += " ";  // Undocumented in OpenAI Harmony format
             }
             content += msg.getContent();
         }

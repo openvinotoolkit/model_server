@@ -39,7 +39,6 @@ void GptOssReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<
         return;
     }
 
-    // TODO: How to enforce users to select reasoning parser even if they do not need reasoning?
     parsedOutput.content = harmony.getContent();
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Unary | GPT Content | [{}]", parsedOutput.content);
     parsedOutput.reasoning = harmony.getReasoning();
