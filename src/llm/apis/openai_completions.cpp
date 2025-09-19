@@ -739,10 +739,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
-
     if (status != absl::OkStatus())
         return status;
-
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
@@ -764,7 +762,7 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
         parsedOutput.content = tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
+        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable(), this->request.toolNameSchemaMap);
     }
     return parsedOutput;
 }
@@ -1058,6 +1056,7 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (outputParser != nullptr) {
+            // FIXME need tool maps for streaming
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 return "";

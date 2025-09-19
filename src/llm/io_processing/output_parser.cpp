@@ -201,7 +201,7 @@ std::string OutputParser::getToolParserStartTag() const {
     }
 }
 
-ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
+ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable, const ToolsSchemas_t& toolNameSchemaMap) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
@@ -212,11 +212,12 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {
-        reasoningParser->parse(parsedOutput, generatedTokens);
+        reasoningParser->parse(parsedOutput, generatedTokens, toolNameSchemaMap);
     }
     // We run tool parser only if the parser is available and tools have been provided in the request.
     if (toolParser && toolsAvailable) {
-        toolParser->parse(parsedOutput, generatedTokens);
+        SPDLOG_ERROR("tool_parser schema size:{} address:{}", toolNameSchemaMap.size(), (void*)&toolNameSchemaMap);
+        toolParser->parse(parsedOutput, generatedTokens, toolNameSchemaMap);
     }
     return parsedOutput;
 }
