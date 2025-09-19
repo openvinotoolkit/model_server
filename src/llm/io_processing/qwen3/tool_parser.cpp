@@ -54,7 +54,7 @@ static void trimNewline(std::string& str) {
         str.erase(str.begin());
     }
 }
-static bool isNumber(const std::string& s) {
+/*static bool isNumber(const std::string& s) {
     if (s.empty())
         return false;
     char* endptr = nullptr;
@@ -76,7 +76,7 @@ static bool isArrayLike(const std::string& s) {
     if (s.empty())
         return false;
     return (s.front() == '[' && s.back() == ']');
-}
+}*/
 /*static std::string toJsonLike(const std::string_view& s) {
     // use recursion to handle nested arrays and objects
     // first check if it is array
@@ -105,7 +105,7 @@ static bool isArrayLike(const std::string& s) {
 static std::string toJson(const std::vector<std::pair<std::string, std::string>>& items) {
     std::ostringstream oss;
     oss << "{";
-/*    for (size_t i = 0; i < items.size(); ++i) {
+    /*    for (size_t i = 0; i < items.size(); ++i) {
         const auto& [key, value] = items[i];
         oss << "\"" << key << "\": ";
         oss << toJsonLike(value);
@@ -119,14 +119,15 @@ static std::string toJson(const std::vector<std::pair<std::string, std::string>>
         const auto& [key, value] = items[i];
         oss << "\"" << key << "\": ";
 
-        if (isNumber(value) ||
+        oss << value;  // no quotes
+                       /*        if (isNumber(value) ||
             isBoolean(value) ||
             isJsonLike(value) ||
             isArrayLike(value)) {
             oss << value;  // no quotes
         } else {
             oss << "\"" << value << "\"";
-        }
+        }*/
 
         if (i + 1 < items.size()) {
             oss << ", ";
@@ -196,6 +197,76 @@ void Parser::removeToolCallsFromContent() {
         toolsEndStack.pop();
     }
 }
+
+// {"type":"object","properties":{"location":{"type":"string"},"provide_temperature":{"type":"boolean"}},"required":["location"]}
+// {"type":"object","required":["location"],"properties":{"location":{"type":"string","description":"The location for which to get the weather, in the format of 'City, State', such as 'San Francisco, CA' if State for the city exists. 'City, Country' if State for the city doesn't exist."},"unit":{"type":"string","description":"The unit of temperature for the weather report.","enum":["celsius","fahrenheit"],"default":"fahrenheit"}}}
+
+static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const std::string& schema) {
+    ParametersTypeMap_t result;
+    rapidjson::Document doc;
+    if (doc.Parse(schema.c_str()).HasParseError()) {
+        SPDLOG_WARN("Tool schema is not valid JSON for tool: {}, schema: {}", functionName, schema);
+        return result;
+    }
+    if (!doc.IsObject()) {
+        SPDLOG_WARN("Tool schema is not a JSON object for tool: {}, schema: {}", functionName, schema);
+        return result;
+    }
+    if (!doc.HasMember("properties") || !doc["properties"].IsObject()) {
+        SPDLOG_WARN("Tool schema does not have properties object for tool: {}, schema: {}", functionName, schema);
+        return result;
+    }
+    const rapidjson::Value& properties = doc["properties"];
+    for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
+        if (!it->value.IsObject()) {
+            SPDLOG_WARN("Tool schema property: {} is not an object for tool: {}, schema: {}", it->name.GetString(), functionName, schema);
+            continue;
+        }
+        if (!it->value.HasMember("type") || !it->value["type"].IsString()) {
+            SPDLOG_WARN("Tool schema property: {} does not have type string for tool: {}, schema: {}", it->name.GetString(), functionName, schema);
+            continue;
+        }
+        std::string paramName = it->name.GetString();
+        std::string typeStr = it->value["type"].GetString();
+        ParameterType_t type = ParameterType_t::UNKNOWN;
+        if (typeStr == "string") {
+            type = ParameterType_t::STRING;
+        } else if (typeStr == "number" || typeStr == "integer") {
+            type = ParameterType_t::NUMBER;
+        } else if (typeStr == "boolean") {
+            type = ParameterType_t::BOOLEAN;
+        } else if (typeStr == "array") {
+            type = ParameterType_t::ARRAY;
+        } else if (typeStr == "object") {
+            type = ParameterType_t::OBJECT;
+        } else {
+            SPDLOG_WARN("Tool schema property: {} has unknown type: {} for tool: {}, schema: {}", paramName, typeStr, functionName, schema);
+        }
+        SPDLOG_TRACE("Tool:{} param:{} type:{}", functionName, paramName, typeStr);
+        result.emplace(paramName, type);
+    }
+    return result;
+}
+
+static std::string setCorrectValueType(std::string& inputValue, const std::string& currentParameterName, const ParametersTypeMap_t& parametersType) {
+    auto paramIt = parametersType.find(currentParameterName);
+    if (paramIt == parametersType.end()) {
+        SPDLOG_WARN("Parameter: {} schema not found for tool: {}, leaving as string", currentParameterName);
+        return inputValue;
+    }
+    if (paramIt->second == ParameterType_t::STRING) {
+        inputValue = "\"" + inputValue + "\"";
+        return inputValue;  // no change needed
+    }
+    if (paramIt->second == ParameterType_t::BOOLEAN) {
+        // in case of bool we need to convert to lower case
+        std::transform(inputValue.begin(), inputValue.end(), inputValue.begin(), ::tolower);
+        return inputValue;
+    }
+    // FIXME at error handling
+    return inputValue;
+}
+
 bool Parser::step(ToolCalls& toolCalls) {
     switch (currentState) {
     case Content: {
@@ -249,6 +320,13 @@ bool Parser::step(ToolCalls& toolCalls) {
         std::string parameterValue(content.substr(currentPosition, pos - currentPosition));
         if (this->removeNewlineAroundParameters)
             trimNewline(parameterValue);
+        // now we have parameter value in string format. We need to use toolsSchemas to determine if it is string, number, bool, array or object
+        auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
+        if (paramIt == this->toolsParametersTypeMap.end()) {
+            SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
+        } else {
+            parameterValue = setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second);
+        }
         currentFunction.parameters.emplace_back(this->currentParameterName, parameterValue);
         currentPosition = pos + Qwen3CoderToolParser::parameterEndTag.length();
         currentState = State::AfterParameter;
@@ -293,7 +371,7 @@ bool Parser::step(ToolCalls& toolCalls) {
     return true;
 }
 
-void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t& toolsSchemas) {
     // there may be multiple parameters per function, there may be multiple linses per parameter value
     // there is only one function per tool call
     // <tool_call>
@@ -303,11 +381,12 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     // </parameter>
     // </function>
     // </tool_call>a
-    //
-    // FIXME check for npos at each step
-    // For each if (itFunctionNameEnd == std::string::npos) {SPDLOG_ERROR("No tag end found"); return;}
-    // we need to replace it with macro
-    Parser parser(parsedOutput.content);
+    ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
+    for (const auto& [toolName, schema] : toolsSchemas) {
+        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, schema));
+    }
+
+    Parser parser(parsedOutput.content, toolsParametersTypes);
     while (parser.step(parsedOutput.toolCalls))
         ;
     if (parser.currentState != Parser::State::End) {
@@ -320,5 +399,7 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
 std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     return std::nullopt;  // FIXME
 }
-
+Parser::Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
+    content(content),
+    toolsParametersTypeMap(toolsParametersTypeMap) {}
 }  // namespace ovms

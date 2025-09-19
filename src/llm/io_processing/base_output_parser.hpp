@@ -30,6 +30,7 @@
 #pragma warning(pop)
 
 #include "partial_json_builder.hpp"
+#include "../apis/openai_request.hpp"
 
 namespace ovms {
 struct ToolCall {
@@ -48,6 +49,17 @@ struct ParsedOutput {
     // Decoded reasoning from the response
     std::string reasoning;
 };
+
+enum class ParameterType_t {
+    STRING,
+    NUMBER,
+    BOOLEAN,
+    ARRAY,
+    OBJECT,
+    UNKNOWN
+};
+using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType_t>;       // param name -> param type
+using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMap_t>;  // tool name -> (param name -> param type)
 
 class BaseOutputParser {
 protected:
@@ -79,7 +91,7 @@ public:
     // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
     // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
     // Parser is also responsible for removing extracted part from the parsedOutput.content if necessary.
-    virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) = 0;
+    virtual void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t& toolNameSchemaMap) = 0;
 
     // Parse model output chunk in the streaming mode. If in result of processing the chunk we cannot produce meaningful response, we return std::nullopt.
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.

@@ -64,14 +64,14 @@ struct Parser {
     std::string currentParameterName;
     std::stack<size_t> toolsBeginStack;
     std::stack<size_t> toolsEndStack;
+    const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     bool removeNewlineAroundParameters = true;
     void removeToolCallsFromContent();
     /*
      * Returns true if step was successful, false if we reached the end or error occurred
      */
     bool step(ToolCalls& toolCalls);
-    Parser(std::string& content) :
-        content(content) {}
+    Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap);
 };
 
 class Qwen3CoderToolParser : public BaseOutputParser {
@@ -105,7 +105,7 @@ public:
     explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t& toolSchemas) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
         return toolsStartTag;  // FIXME CHECK
