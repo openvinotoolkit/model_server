@@ -538,7 +538,7 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("target_device")) {
         modelsSettings.targetDevice = result->operator[]("target_device").as<std::string>();
         if (isHFPullOrPullAndStart(this->result)) {
-            hfSettings.targetDevice = modelsSettings.targetDevice;
+            hfSettings.exportSettings.targetDevice = modelsSettings.targetDevice;
         } else {
             modelsSettings.userSetSingleModelArguments.push_back("target_device");
         }
@@ -591,8 +591,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (!startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/")) &&
-                (hfSettings.ggufFilename == std::nullopt)) {
+            if (isOptimumCliDownload(serverSettings.hfSettings.sourceModel, hfSettings.ggufFilename)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
@@ -605,9 +604,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
 
         if (result->count("weight-format"))
-            hfSettings.precision = result->operator[]("weight-format").as<std::string>();
+            hfSettings.exportSettings.precision = result->operator[]("weight-format").as<std::string>();
         if (result->count("extra_quantization_params"))
-            hfSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
+            hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         if (result->count("model_repository_path"))
             hfSettings.downloadPath = result->operator[]("model_repository_path").as<std::string>();
         if (result->count("task")) {

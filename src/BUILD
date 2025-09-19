@@ -181,7 +181,7 @@ ovms_cc_library(
     name = "libovms_server_settings",
     hdrs = ["capi_frontend/server_settings.hpp"],
     srcs = ["capi_frontend/server_settings.cpp"],
-    deps = [],
+    deps = ["libovmsstring_utils"],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2334,7 +2334,7 @@ ovms_cc_library( # TODO split further
         "module_names.hpp",
         "module_names.cpp",
     ],
-    deps = ["libovmslogging"],
+    deps = ["libovmslogging", "libovmsstring_utils"],
     visibility = ["//visibility:public"],
 )
 

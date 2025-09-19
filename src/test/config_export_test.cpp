@@ -41,6 +41,18 @@ const std::string expectedConfigContents = R"({
 }
 )";
 
+const std::string expectedConfigContentsWindows = R"({
+    "model_config_list": [
+        { 
+            "config": {
+                "name": "model1",
+                "base_path": "model1\\Path"
+            }
+        }
+    ]
+}
+)";
+
 const std::string expectedConfigContentsTwoModels = R"({
     "model_config_list": [
         {
@@ -192,11 +204,21 @@ TEST_F(ConfigCreationTest, negativeRemoveModelWithDirectConfigFilePathNotExistin
 }
 
 TEST_F(ConfigCreationTest, positiveAddModel) {
+#ifdef _WIN32
+    this->modelsSettings.modelPath = "model1\\Path";
+#endif
     auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
     ASSERT_EQ(status, ovms::StatusCode::OK);
 
     std::string configContents = GetFileContents(this->modelsSettings.configPath);
-    ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+
+#ifdef _WIN32
+    const std::string* expectedConfig = &expectedConfigContentsWindows;
+#elif __linux__
+    const std::string* expectedConfig = &expectedConfigContents;
+#endif
+
+    ASSERT_EQ(*expectedConfig, configContents) << configContents;
 }
 
 TEST_F(ConfigCreationTest, positiveRemoveOneModelToEmptyConfig) {
