@@ -1,0 +1,15 @@
+input_stream: "OVMS_PY_TENSOR:pipeline_input"
+output_stream: "OVMS_PY_TENSOR:pipeline_output"
+
+node {
+  name: "python_node"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "PIPELINE_INPUT:pipeline_input"
+  output_stream: "PIPELINE_OUTPUT:pipeline_output"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/pipeline/ovmsmodel.py"
+    }
+  }
+}
