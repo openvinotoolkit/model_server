@@ -36,7 +36,7 @@ namespace ovms {
     This model group requires use of reasoning to work even if reasoning is not needed.
     This is due to the fact that regular content is placed in harmony format in similar fashion as reasoning.
 */
-class GptReasoningParser : public BaseOutputParser {
+class GptOssReasoningParser : public BaseOutputParser {
 protected:
     const std::string parsingStartTag = "<|channel|>analysis<|message|>";
     const std::string parsingEndTag = "<|end|>";
@@ -49,8 +49,8 @@ protected:
     StreamState state = StreamState::UNKNOWN;
 
 public:
-    GptReasoningParser() = delete;
-    explicit GptReasoningParser(ov::genai::Tokenizer& tokenizer) :
+    GptOssReasoningParser() = delete;
+    explicit GptOssReasoningParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     // Unary

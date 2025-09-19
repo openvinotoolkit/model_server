@@ -153,7 +153,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "mistral") {
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (toolParserName == "gptoss") {
-        toolParser = std::make_unique<GptToolParser>(tokenizer);
+        toolParser = std::make_unique<GptOssToolParser>(tokenizer);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
@@ -161,7 +161,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     if (reasoningParserName == "qwen3") {
         reasoningParser = std::make_unique<Qwen3ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "gptoss") {
-        reasoningParser = std::make_unique<GptReasoningParser>(tokenizer);
+        reasoningParser = std::make_unique<GptOssReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: " + reasoningParserName);
     }
@@ -306,7 +306,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
         return parseContentChunk();
     } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
         // Processing TOOL_CALLS is the last phase, so we always return the result of tool parser.
-        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());  // TODO: Implement more end tags for GPT
+        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingEndTag());
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }

@@ -31,7 +31,7 @@
 #include "../base_output_parser.hpp"
 
 namespace ovms {
-class GptToolParser : public BaseOutputParser {
+class GptOssToolParser : public BaseOutputParser {
     // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
     static const std::string parsingStartTag;
     static const std::string parsingEndTag;
@@ -54,8 +54,8 @@ class GptToolParser : public BaseOutputParser {
     void clearState();
 
 public:
-    GptToolParser() = delete;
-    explicit GptToolParser(ov::genai::Tokenizer& tokenizer) :
+    GptOssToolParser() = delete;
+    explicit GptOssToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
     // Unary

@@ -34,7 +34,7 @@
 
 namespace ovms {
 
-void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
+void GptOssToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     openai::Harmony harmony(tokenizer, generatedTokens);
     if (!harmony.parse()) {
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Harmony parsing failed");
@@ -54,7 +54,7 @@ void GptToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>
     Prepares document with {"arguments": "escaped_chunk"}
     String gets escaped automatically by rapidjson
 */
-std::optional<rapidjson::Document> GptToolParser::wrapDeltaIntoDocument(const std::string& chunk) {
+std::optional<rapidjson::Document> GptOssToolParser::wrapDeltaIntoDocument(const std::string& chunk) {
     rapidjson::Document newDelta;
     newDelta.SetObject();
     rapidjson::Value argumentsValue;
@@ -79,13 +79,13 @@ std::optional<rapidjson::Document> GptToolParser::wrapDeltaIntoDocument(const st
     return wrappedDelta;
 }
 
-void GptToolParser::clearState() {
+void GptOssToolParser::clearState() {
     cache.clear();
     isStreamingFunctionName = false;
     functionNameCache.clear();
 }
 
-std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
     std::string chunk = newChunk;
@@ -199,7 +199,7 @@ std::optional<rapidjson::Document> GptToolParser::parseChunk(const std::string& 
     return std::nullopt;
 }
 
-const std::string GptToolParser::parsingStartTag = "<|channel|>commentary to=";
-const std::string GptToolParser::parsingEndTag = "<|call|>";
+const std::string GptOssToolParser::parsingStartTag = "<|channel|>commentary to=";
+const std::string GptOssToolParser::parsingEndTag = "<|call|>";
 
 }  // namespace ovms
