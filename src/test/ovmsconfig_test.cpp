@@ -1161,10 +1161,10 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.precision, "int8");
-    ASSERT_EQ(hfSettings.targetDevice, "CPU");
+    ASSERT_EQ(hfSettings.exportSettings.precision, "int8");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "CPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
-    ASSERT_EQ(hfSettings.extraQuantizationParams.has_value(), false);
+    ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.has_value(), false);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1197,10 +1197,10 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.precision, "fp64");
-    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.exportSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
-    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1234,10 +1234,10 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
-    ASSERT_EQ(hfSettings.precision, "fp64");
-    ASSERT_EQ(hfSettings.targetDevice, "NPU");
+    ASSERT_EQ(hfSettings.exportSettings.precision, "fp64");
+    ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
-    ASSERT_EQ(hfSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
 }
 

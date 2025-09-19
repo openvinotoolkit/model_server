@@ -46,6 +46,10 @@ protected:
         ::SetUpServerForDownload(this->t, this->server, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
     }
 
+    void ServerPullHfModelWithDraft(std::string& draftModel, std::string& sourceModel, std::string& downloadPath, std::string& task, int expected_code = 0, int timeoutSeconds = 30) {
+        ::SetUpServerForDownloadWithDraft(this->t, this->server, draftModel, sourceModel, downloadPath, task, expected_code, timeoutSeconds);
+    }
+
     void SetUpServerForDownloadAndStart(std::string& sourceModel, std::string& downloadPath, std::string& task, int timeoutSeconds = 15) {
         ::SetUpServerForDownloadAndStart(this->t, this->server, sourceModel, downloadPath, task, timeoutSeconds);
     }
@@ -105,6 +109,46 @@ const std::string expectedGraphContents = R"(
     }
 )";
 
+const std::string expectedGraphContentsDraft = R"(
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node: {
+    name: "LLMExecutor"
+    calculator: "HttpLLMCalculator"
+    input_stream: "LOOPBACK:loopback"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    input_side_packet: "LLM_NODE_RESOURCES:llm"
+    output_stream: "LOOPBACK:loopback"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    input_stream_info: {
+        tag_index: 'LOOPBACK:0',
+        back_edge: true
+    }
+    node_options: {
+        [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+            max_num_seqs:256,
+            device: "CPU",
+            models_path: "./",
+            plugin_config: '{ }',
+            enable_prefix_caching: true,
+            cache_size: 10,
+            # Speculative decoding configuration
+            draft_models_path: "OpenVINO-distil-small.en-int4-ov",
+        }
+    }
+    input_stream_handler {
+        input_stream_handler: "SyncSetInputStreamHandler",
+        options {
+        [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+            sync_set {
+            tag_index: "LOOPBACK:0"
+            }
+        }
+        }
+    }
+    }
+)";
+
 TEST_F(HfDownloaderPullHfModel, PositiveDownload) {
     GTEST_SKIP() << "Skipping test in CI - PositiveDownloadAndStart has full scope testing.";
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
@@ -147,10 +191,38 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
+TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
+    // EnvGuard guard;
+    // guard.set("HF_ENDPOINT", "https://modelscope.cn");
+    // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string draftModel = "OpenVINO/distil-small.en-int4-ov";
+    std::string task = "text_generation";
+    this->ServerPullHfModelWithDraft(draftModel, modelName, this->directoryPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContentsDraft, removeVersionString(graphContents)) << graphContents;
+
+    std::string basePath2 = ovms::FileSystem::joinPath({basePath, "OpenVINO-distil-small.en-int4-ov"});
+    std::string modelPath2 = ovms::FileSystem::appendSlash(basePath2) + "openvino_tokenizer.bin";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath2), true) << modelPath2;
+    ASSERT_EQ(std::filesystem::file_size(modelPath2), 2022483);
+}
+
 class TestOptimumDownloader : public ovms::OptimumDownloader {
 public:
     TestOptimumDownloader(const ovms::HFSettingsImpl& inHfSettings) :
-        ovms::OptimumDownloader(inHfSettings) {}
+        ovms::OptimumDownloader(inHfSettings.exportSettings, inHfSettings.task, inHfSettings.sourceModel, ovms::HfDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel), inHfSettings.overwriteModels) {}
     std::string getExportCmd() { return ovms::OptimumDownloader::getExportCmd(); }
     std::string getGraphDirectory() { return ovms::OptimumDownloader::getGraphDirectory(); }
     void setExportCliCheckCommand(const std::string& input) { this->OPTIMUM_CLI_CHECK_COMMAND = input; }
@@ -179,11 +251,11 @@ TEST(HfDownloaderClassTest, Methods) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, downloadPath, hfEndpoint, hfToken, httpProxy, false);
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
     ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
@@ -203,8 +275,8 @@ public:
     void SetUp() override {
         inHfSettings.sourceModel = "model/name";
         inHfSettings.downloadPath = "/path/to/Download";
-        inHfSettings.precision = "fp64";
-        inHfSettings.extraQuantizationParams = "--param --param value";
+        inHfSettings.exportSettings.precision = "fp64";
+        inHfSettings.exportSettings.extraQuantizationParams = "--param --param value";
         inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
         inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
 #ifdef _WIN32
@@ -271,18 +343,6 @@ TEST_F(TestOptimumDownloaderSetup, NegativeWrongPath) {
     ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::PATH_INVALID);
 }
 
-TEST_F(TestOptimumDownloaderSetup, NegativeWrongDownloadType) {
-    inHfSettings.downloadType = ovms::GIT_CLONE_DOWNLOAD;
-    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::INTERNAL_ERROR);
-}
-
-TEST_F(TestOptimumDownloaderSetup, NegativeUnknownDownloadType) {
-    inHfSettings.downloadType = ovms::UNKNOWN_DOWNLOAD;
-    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::INTERNAL_ERROR);
-}
-
 TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     optimumDownloader->setExportCliCheckCommand("ls");
@@ -320,30 +380,30 @@ TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
     std::string downloadPath = "/path/to/Download";
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
     hfEndpoint = "https://www.new_hf.com/";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
     hfEndpoint = "www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "http://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "git://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "ssh://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "what_ever_is_here://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, downloadPath, hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
 }
 
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-    EXPECT_EQ(TestHfDownloader("name/test", this->directoryPath, "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+    EXPECT_EQ(TestHfDownloader("name/test", ovms::HfDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {
