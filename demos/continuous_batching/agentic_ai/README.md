@@ -473,3 +473,65 @@ python openai_agent.py --query "What is the current weather in Tokyo?" --model O
 > **Note:** The tool checking the weather forecast in the demo is making a remote call to a REST API server. Make sure you have internet connection and proxy configured while running the agent. 
 
 > **Note:**  For more interactive mode you can run the application with streaming enabled by providing `--stream` parameter to the script. Currently streaming is enabled models using `hermes3` tool parser.
+
+## Testing efficiency in agentic use case
+
+Using LLM models with AI agents has a unique load characteristics with multi-turn communication and resending bit parts of the prompt as the previous conversation.
+To simulate such type of load, we should use a dedicated tool [multi_turn benchmark](https://github.com/vllm-project/vllm/tree/main/benchmarks/multi_turn).
+```bash
+git clone -b v0.10.2 https://github.com/vllm-project/vllm
+cd vllm/benchmarking/multi-turn
+pip install -r requirements.txt
+sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' benchmark_serving_multi_turn.py
+# Testing single client scenario, for example with GPU execution
+docker run -d --name ovms --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest-gpu \
+--rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 2 --task text_generation --target_device GPU
+
+python benchmark_serving_multi_turn.py -m Qwen/Qwen3-8B --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 1 -n 50
+
+# Testing high concurrency, for example on Xeon CPU with constrained resources
+docker run -d --name ovms --cpuset-cpus 0-15 --user $(id -u):$(id -g) --rm -p 8000:8000 -v $(pwd)/models:/models openvino/model_server:latest --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --enable_prefix_caching true --cache_size 20 --task text_generation
+
+python benchmark_serving_multi_turn.py -m Qwen/Qwen3-8B --url http://localhost:8000/v3 -i generate_multi_turn.json --served-model-name OpenVINO/Qwen3-8B-int4-ov --num-clients 24 
+```
+Below is an example of the output captured on iGPU:
+```
+Parameters:
+model=OpenVINO/Qwen3-8B-int4-ov
+num_clients=1
+num_conversations=100
+active_conversations=None
+seed=0
+Conversations Generation Parameters:
+text_files=pg1184.txt
+input_num_turns=UniformDistribution[12, 18]
+input_common_prefix_num_tokens=Constant[500]
+input_prefix_num_tokens=LognormalDistribution[6, 4]
+input_num_tokens=UniformDistribution[120, 160]
+output_num_tokens=UniformDistribution[80, 120]
+----------------------------------------------------------------------------------------------------
+Statistics summary:
+runtime_sec = 307.569
+requests_per_sec = 0.163
+----------------------------------------------------------------------------------------------------
+                   count     mean      std      min      25%      50%      75%      90%      max
+ttft_ms             50.0  1052.97   987.30   200.61   595.29   852.08  1038.50  1193.38  4265.27
+tpot_ms             50.0    51.37     2.37    47.03    49.67    51.45    53.16    54.42    55.23
+latency_ms          50.0  6128.26  1093.40  4603.86  5330.43  5995.30  6485.20  7333.73  9505.51
+input_num_turns     50.0     7.64     4.72     1.00     3.00     7.00    11.00    15.00    17.00
+input_num_tokens    50.0  2298.92   973.02   520.00  1556.50  2367.00  3100.75  3477.70  3867.00
+```
+
+
+## Testing accuracy
+
+Testing model accuracy is critical for a successful adoption in AI application. The recommended methodology is to use BFCL tool like describe in the [testing guide](../accuracy/README.md#running-the-tests-for-agentic-models-with-function-calls).
+Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
+```
+{"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
+{"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+{"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+{"accuracy": 0.825, "correct_count": 198, "total_count": 240}
+```
+
+Models can be also compared using the [leaderboard reports](https://gorilla.cs.berkeley.edu/leaderboard.html#leaderboard).
