@@ -358,25 +358,32 @@ def get_models_max_context(tmpdirname, config_filename):
             return config_data['n_positions']
         return None
 
-def add_servable_to_config(config_path, mediapipe_name, base_path):
+def add_servable_to_config(config_path, model_name, base_path):
     base_path = Path(base_path).as_posix()
-    print(config_path, mediapipe_name, base_path)
+    print(config_path, model_name, base_path)
     if not os.path.isfile(config_path):
         print("Creating new config file")
         with open(config_path, 'w') as config_file:
             json.dump({'mediapipe_config_list': [], "model_config_list": []}, config_file, indent=4)
     with open(config_path, 'r') as config_file:
         config_data = json.load(config_file)
-        if 'mediapipe_config_list' not in config_data:
-            config_data['mediapipe_config_list'] = []
-        mp_list = config_data['mediapipe_config_list']
+        if 'model_config_list' not in config_data:
+            config_data['model_config_list'] = []
+        ## read legacy mediapipe_config_list to model_config_list
+        if 'mediapipe_config_list' in config_data:
+            for mp_config in config_data['mediapipe_config_list']:
+                if 'name' in mp_config and 'base_path' in mp_config:
+                    if not any(d['config']['name'] == mp_config['name'] + "_model" for d in config_data['model_config_list']):
+                        config_data['model_config_list'].append({'config': {'name': mp_config['name'] + "_model", 'base_path': mp_config['base_path']}})
+            del config_data['mediapipe_config_list']
+        model_list = config_data['model_config_list']
         updated = False
-        for mp_config in mp_list:
-            if mp_config['name'] == mediapipe_name:
-                mp_config['base_path'] = base_path
+        for model_config in model_list:
+            if model_config['config']['name'] == model_name:
+                model_config['config']['base_path'] = base_path
                 updated = True
         if not updated:
-            mp_list.append({'name': mediapipe_name, 'base_path': base_path})
+            model_list.append({'config': {'name': model_name, 'base_path': base_path}})
     with open(config_path, 'w') as config_file:
         json.dump(config_data, config_file, indent=4)
     print("Added servable to config file", config_path)
@@ -423,7 +430,7 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         elif source_model.startswith("OpenVINO/"):
             if precision:
                 print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
-            hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(model_repository_path, model_name))
+            hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(draft_llm_model_path, draft_source_model))
             if os.system(hugging_face_cmd):
                 raise ValueError("Failed to download llm model", source_model)    
         else: # assume HF model name or local pytorch model folder
