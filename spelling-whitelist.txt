@@ -1,3 +1,5 @@
+Dockerfile.redhat:228: thirdparty ==> third party, third-party
+Dockerfile.ubuntu:206: thirdparty ==> third party, third-party
 client/common/resnet_labels.txt
 demos/common/python/classes.py
 demos/image_classification/go/labels.go

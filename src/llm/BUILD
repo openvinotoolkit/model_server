@@ -18,11 +18,11 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "COPTS_PYTHON")
 
 ovms_cc_library(
-    name = "llm_engine",
+    name = "genai_proxy",
+    hdrs = ["generation_config_header.hpp"],
     srcs = [],
-    deps =  ["@llm_engine//:llm_engine"],
+    deps = ["//third_party:genai"],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(
@@ -35,11 +35,8 @@ ovms_cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
-        "//src:httppayload"
-    ]+ select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//src:httppayload",
+        ":genai_proxy",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON,
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
@@ -69,10 +66,7 @@ ovms_cc_library(
         "@stb//:image",
         ":openai_request",
         ":output_parsers",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        ":genai_proxy",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -81,10 +75,7 @@ ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+    deps = [":genai_proxy",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -113,10 +104,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        ":genai_proxy",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -135,10 +123,7 @@ ovms_cc_library(
     deps = [
         ":openai_request",
         "//src:libovmslogging",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        ":genai_proxy",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -185,10 +170,7 @@ ovms_cc_library(
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }) + select({
+        ":genai_proxy",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
     }),

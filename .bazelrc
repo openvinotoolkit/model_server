@@ -56,6 +56,8 @@ build --define=MEDIAPIPE_DISABLE_GPU=1
 build --define=MEDIAPIPE_DISABLE=0
 build --define=CLOUD_DISABLE=0
 build --define=PYTHON_DISABLE=0
+build --define=GENAI_USE_BINARY=1
+build --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
 
 # Sets the default Apple platform to macOS.
 build --apple_platform_type=macos
@@ -91,7 +93,6 @@ build:linux --host_cxxopt=-std=c++17
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
 
-build:linux --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
 # Security options ######################################################################################################
 # TODO: Add equivalent windows flag
 build:linux --cxxopt=-fno-strict-overflow
@@ -232,7 +233,6 @@ build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/
 
 # Windows build ssl headers for GRPC workaround
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"
-
 #Add this parameter for windows local builds, its added on jenkins via windows_build.bat. Must be short path on C:\ for mediapipe to compile
 #startup --output_user_root=C:/b_tmp
 
@@ -246,8 +246,6 @@ build:windows --action_env OpenVINO_DIR="c:/opt/openvino/runtime/cmake"
 build:windows --action_env OpenCV_DIR="c:/opt/opencv_4.12.0"
 
 build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.12
-build:windows --define=USE_DROGON=1
-build:windows --define=GENAI_USE_BINARY=1
 
 build:win_mp_on_py_on --config=windows
 build:win_mp_on_py_on --define=MEDIAPIPE_DISABLE=0
@@ -262,8 +260,6 @@ test --experimental_ui_max_stdouterr_bytes=304857600
 
 # envs below are required to succesfully run binaries in bazel as bazel is very strict in sandboxing
 test:linux --test_env LD_LIBRARY_PATH=/opt/opencv/lib/:/opt/intel/openvino/runtime/lib/intel64/:/opt/intel/openvino/runtime/3rdparty/tbb/lib/
-# genai hardcodes path during build time so without this so is not visible
-test:linux --test_env OPENVINO_TOKENIZERS_PATH_GENAI=/opt/intel/openvino/runtime/lib/intel64/libopenvino_tokenizers.so
 test:linux --test_env PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 test:linux --test_env no_proxy=localhost
 
