@@ -77,6 +77,7 @@ FUZZER_BUILD ?= 0
 
 OV_SOURCE_BRANCH ?= 05bf2133ac23f33957b87ce2eff184c2f8922f8d # master 2025/09/11
 OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
+OV_TOKENIZERS_BRANCH ?= 196fb0dc4b2f5cdf5a993a43293011761534aaa4 # master 2025/09/11
 OV_GENAI_BRANCH ?= a4f4272e49ed363fb7fa79faf379f4287317832a # master 2025/09/11
 
 OV_SOURCE_ORG ?= openvinotoolkit
@@ -227,6 +228,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
 	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
+	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
