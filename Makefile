@@ -82,6 +82,8 @@ OV_GENAI_BRANCH ?= a4f4272e49ed363fb7fa79faf379f4287317832a # master 2025/09/11
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_CONTRIB_ORG ?= openvinotoolkit
+OV_GENAI_ORG ?= openvinotoolkit
+OV_TOKENIZERS_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
@@ -213,7 +215,12 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
 	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
+	--build-arg ov_genai_org=$(OV_GENAI_ORG)\
+	--build-arg ov_tokenizers_org=$(OV_TOKENIZERS_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
+	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
+	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
+	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
@@ -227,9 +234,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
-	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
-	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
-	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
