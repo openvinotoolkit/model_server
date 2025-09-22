@@ -76,6 +76,7 @@ protected:
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
+// FIXME after streaming is done
 // test \n no \n
 // test argument for multiple lines
 // check nested tools tags etc
