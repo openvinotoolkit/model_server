@@ -191,6 +191,46 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartExistingModelOutsideOpenvino) {
+    // EnvGuard guard;
+    // guard.set("HF_ENDPOINT", "https://modelscope.cn");
+    // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
+
+    std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->ServerPullHfModel(modelName, downloadPath, task);
+
+    // Shutdown
+    server.setShutdownRequest(1);
+    if (t)
+        t->join();
+    server.setShutdownRequest(0);
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 52417240);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+
+    std::string changePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO"});
+    std::string newPath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "META"});
+    try {
+        std::filesystem::rename(changePath, newPath);
+        std::cout << "Directory renamed successfully.\n";
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cout << "Error: " << e.what() << '\n';
+        ASSERT_EQ(1,0);
+    }
+
+    std::string modelName2 = "META/Phi-3-mini-FastDraft-50M-int8-ov";
+    this->SetUpServerForDownloadAndStart(modelName2, downloadPath, task);
+}
+
 TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
