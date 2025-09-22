@@ -83,7 +83,7 @@ protected:
 // check nested function/arguments tags
 // check non-finished tools calls
 // check non-finished function
-// check non-finished argumenst
+// check non-finished arguments
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
     // std::string input = "<tool_call>{\"name\": \"string_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     std::string input = R"(

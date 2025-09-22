@@ -37,7 +37,7 @@ namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
-    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}" TODO rename to know in context thats JSON
+    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}" TODO rename to know in context that's JSON
 };
 
 using ToolsSchemas_t = std::map<std::string, std::string>;
