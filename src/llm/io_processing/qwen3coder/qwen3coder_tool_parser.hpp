@@ -85,22 +85,6 @@ public:
     static const std::string parameterEndTag;
     static const std::string tagEnd;
 
-protected:
-    bool stripNewline = false;
-
-    // ";" is used as a separator between tool calls in the response
-    const std::string separator = ";";
-
-    // Streaming required members
-    rapidjson::Document lastJson;
-    PartialJsonBuilder jsonBuilder;
-    int toolCallIndex = -1;  // Index to track the current tool call being processed, -1 means we are not processing any tool call yet
-    // Storing last two chunks of arguments to return delta with delay.
-    // We do this to properly close arguments when tool call end tag is received.
-    // With support for more models this could be moved to the base class.
-    std::array<std::string, 2> argumentsDelayWindow{{"", ""}};
-    int escapeLevel = 0;
-
 public:
     Qwen3CoderToolParser() = delete;
     explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer) :
