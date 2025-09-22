@@ -67,13 +67,13 @@ Check also other instructions:
 
 * [OpenVINO&trade;](https://software.intel.com/en-us/openvino-toolkit)
 
+* [ADVANCING GENAI WITH CPU OPTIMIZATION](https://cdrdv2-public.intel.com/864404/vFINAL_Intel%20SLM%20Whitepaper.pdf)
+
+* [Manage deep learning models with OpenVINO Model Server](https://developers.redhat.com/articles/2024/07/03/manage-deep-learning-models-openvino-model-server#)
+
 * [RAG building blocks made easy and affordable with OpenVINO Model Server](https://medium.com/openvino-toolkit/rag-building-blocks-made-easy-and-affordable-with-openvino-model-server-e7b03da5012b)
 
-* [Simplified Deployments with OpenVINO™ Model Server and TensorFlow Serving](https://community.intel.com/t5/Blogs/Tech-Innovation/Artificial-Intelligence-AI/Simplified-Deployments-with-OpenVINO-Model-Server-and-TensorFlow/post/1353218)
-
 * [Simple deployment with KServe API](https://blog.openvino.ai/blog-posts/kserve-api)
-
-* [Inference Scaling with OpenVINO™ Model Server in Kubernetes and OpenShift Clusters](https://www.intel.com/content/www/us/en/developer/articles/technical/deploy-openvino-in-openshift-and-kubernetes.html)
 
 * [Benchmarking results](https://docs.openvino.ai/2025/about-openvino/performance-benchmarks.html)
 
