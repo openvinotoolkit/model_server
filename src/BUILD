@@ -2692,7 +2692,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
-                ":llm_output_parsers_tests",
+                ":test_llm_output_parser_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3113,7 +3113,7 @@ cc_library(
 )
 
 cc_library(
-    name = "llm_output_parsers_tests",
+    name = "test_llm_output_parser_tests",
     linkstatic = 1,
     alwayslink = True,
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),

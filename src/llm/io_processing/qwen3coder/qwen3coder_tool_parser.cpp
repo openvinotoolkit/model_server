@@ -27,9 +27,9 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../../../logging.hpp"
-#include "tool_parser.hpp"
-#include "../utils.hpp"
+#include "src/llm/io_processing/utils.hpp"
+#include "src/logging.hpp"
+#include "qwen3coder_tool_parser.hpp"
 
 namespace ovms {
 const std::string Qwen3CoderToolParser::toolsStartTag = "<tool_call>";

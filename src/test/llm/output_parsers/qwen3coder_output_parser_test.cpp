@@ -19,10 +19,10 @@
 #include <string>
 #include <vector>
 
-#include "../../../llm/io_processing/base_output_parser.hpp"
-#include "../../../llm/io_processing/output_parser.hpp"
-#include "../../../llm/io_processing/qwen3/tool_parser.hpp"
-#include "../../platform_utils.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/output_parser.hpp"
+#include "src/llm/io_processing/qwen3coder/qwen3coder_tool_parser.hpp"
+#include "src/test/platform_utils.hpp"
 
 using namespace ovms;
 

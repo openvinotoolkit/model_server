@@ -26,7 +26,7 @@
 #include "mistral/tool_parser.hpp"
 #include "gptoss/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
-#include "qwen3/tool_parser.hpp"
+#include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 
 namespace ovms {
@@ -216,7 +216,6 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     }
     // We run tool parser only if the parser is available and tools have been provided in the request.
     if (toolParser && toolsAvailable) {
-        SPDLOG_ERROR("tool_parser schema size:{} address:{}", toolNameSchemaMap.size(), (void*)&toolNameSchemaMap);
         toolParser->parse(parsedOutput, generatedTokens, toolNameSchemaMap);
     }
     return parsedOutput;

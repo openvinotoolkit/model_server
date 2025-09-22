@@ -22,8 +22,6 @@
 #include <unordered_set>
 
 #include "base_output_parser.hpp"
-// FIXME
-#include "../apis/openai_request.hpp"
 
 namespace ovms {
 

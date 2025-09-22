@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -31,15 +32,15 @@
 #pragma warning(pop)
 
 #include "partial_json_builder.hpp"
-#include "../apis/openai_request.hpp"
 
 namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
-    std::string arguments;  // JSON "{"a":"1", "b":"MISZCZ"}"
+    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}" TODO rename to know in context thats JSON
 };
 
+using ToolsSchemas_t = std::map<std::string, std::string>;
 using ToolCalls = std::vector<ToolCall>;
 
 struct ParsedOutput {
