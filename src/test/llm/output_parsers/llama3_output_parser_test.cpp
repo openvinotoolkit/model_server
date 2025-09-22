@@ -31,6 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
 #endif
 
+static ovms::ToolsSchemas_t toolsSchemas;  // can be empty for llama3
 static std::unique_ptr<ov::genai::Tokenizer> llama3Tokenizer;
 
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
@@ -68,7 +69,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     generatedTokens.insert(generatedTokens.begin(), botTokenId);
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, true, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
         ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
@@ -83,7 +84,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputNoToolsInTheRequest) {
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, false, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, input);
         EXPECT_EQ(parsedOutput.reasoning, "");
         ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
@@ -96,7 +97,7 @@ TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputToolsInTheRequest) {
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, true, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
         ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
@@ -109,7 +110,7 @@ TEST_F(Llama3OutputParserTest, ParseRegularJsonOutputNoToolsInTheRequest) {
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false) : outputParserWithRegularToolParsing->parse(generatedTokens, false);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, false, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, false, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, input);
         EXPECT_EQ(parsedOutput.reasoning, "");
     }
@@ -122,7 +123,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, true, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, "");
         EXPECT_EQ(parsedOutput.reasoning, "");
         ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
@@ -149,7 +150,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     auto generatedTensor = llama3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, true, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, immediateParsing ? "" : "This is a regular model response without tool calls.");
         ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
         EXPECT_EQ(parsedOutput.reasoning, "");
@@ -168,7 +169,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     generatedTokens.insert(generatedTokens.end(), botTokenId);
     generatedTokens.insert(generatedTokens.end(), generatedToolCallTokens.begin(), generatedToolCallTokens.end());
     for (bool immediateParsing : {false, true}) {
-        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true) : outputParserWithRegularToolParsing->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = immediateParsing ? outputParserWithImmediateToolParsing->parse(generatedTokens, true, toolsSchemas) : outputParserWithRegularToolParsing->parse(generatedTokens, true, toolsSchemas);
         EXPECT_EQ(parsedOutput.content, immediateParsing ? "" : "This is a content part and next will be a tool call.");
         EXPECT_EQ(parsedOutput.reasoning, "");
         ASSERT_EQ(parsedOutput.toolCalls.size(), immediateParsing ? 0 : 1);

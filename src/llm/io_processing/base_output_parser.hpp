@@ -17,6 +17,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <unordered_map>
 #include <unordered_set>
 #include <string>
 #include <optional>
@@ -58,7 +59,7 @@ enum class ParameterType_t {
     OBJECT,
     UNKNOWN
 };
-using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType_t>;       // param name -> param type
+using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType_t>;          // param name -> param type
 using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMap_t>;  // tool name -> (param name -> param type)
 
 class BaseOutputParser {
