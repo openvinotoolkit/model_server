@@ -154,7 +154,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ![select documents](./select_documents.png)
 
-3. Enter a query and sent
+3. Enter a query and send
 
 ![chat with RAG demo](./chat_with_RAG_demo.png)
 
@@ -214,7 +214,7 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 Method 1:
 1. Toggle the **Image** switch to on
-2. Enter a query and sent
+2. Enter a query and send
 
 ![image generation method 1 demo](./image_generation_method_1_demo.png)
 
@@ -253,7 +253,7 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
-3. Enter a query and sent
+3. Enter a query and send
 
 ![chat with VLM demo](./chat_with_VLM_demo.png)
 
@@ -291,7 +291,7 @@ uvicorn main:app --host 0.0.0.0 --port 18000 --reload
    
 ![activate the tool](./activate_the_tool.png)
 
-2. Enter a query and sent
+2. Enter a query and send
 
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
