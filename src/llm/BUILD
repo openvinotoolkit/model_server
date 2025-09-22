@@ -97,7 +97,7 @@ ovms_cc_library(
             "io_processing/phi4/tool_parser.hpp",
             "io_processing/mistral/tool_parser.hpp",
             "io_processing/qwen3/reasoning_parser.hpp",
-            "io_processing/qwen3/tool_parser.hpp",
+            "io_processing/qwen3coder/qwen3coder_tool_parser.hpp",
             "io_processing/output_parser.hpp",
             "io_processing/partial_json_builder.hpp",
             "io_processing/utils.hpp"],
@@ -107,7 +107,7 @@ ovms_cc_library(
             "io_processing/phi4/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
             "io_processing/qwen3/reasoning_parser.cpp",
-            "io_processing/qwen3/tool_parser.cpp",
+            "io_processing/qwen3coder/qwen3coder_tool_parser.cpp",
             "io_processing/output_parser.cpp",
             "io_processing/partial_json_builder.cpp",
             "io_processing/utils.cpp"],
@@ -115,7 +115,6 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
-        "openai_request", # FIXME remove
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
