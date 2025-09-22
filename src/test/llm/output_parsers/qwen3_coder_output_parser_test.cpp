@@ -33,7 +33,19 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 #endif
 
+using ovms::ParameterType_t;
+using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
+static ovms::ToolsSchemas_t toolsSchemas = {
+    {"string_tool", R"({"description": "A tool that takes a string argument.", "parameters": {"type": "object", "properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]}})"}};  // can be empty for phi
+static ToolsParameterTypeMap_t toolsParametersTypeMap = {
+    {"string_tool", {{"arg1", ParameterType_t::STRING}}},
+    {"string_int_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
+    {"string_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
+    {"string_int_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}, {"arg3", ParameterType_t::NUMBER}}},
+    {"object_tool", {{"param1", ParameterType_t::OBJECT}}},
+    {"calculate_triangle_area", {{"base", ParameterType_t::NUMBER}, {"height", ParameterType_t::NUMBER}}},
+};
 
 class Qwen3CoderOutputParserTest : public ::testing::Test {
 protected:
@@ -60,7 +72,7 @@ protected:
     std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> doTheWork(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
+        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true, toolsSchemas);
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
@@ -72,10 +84,10 @@ protected:
 // check non-finished function
 // check non-finished argumenst
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
-    //std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
+    // std::string input = "<tool_call>{\"name\": \"string_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     std::string input = R"(
 "<tool_call>
-<function=example_tool>
+<function=string_tool>
 <parameter=arg1>
 value1
 </parameter>
@@ -84,7 +96,7 @@ value1
     auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
     // Parser removes whitespaces, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
@@ -92,7 +104,7 @@ value1
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserJustToolCall) {
     const std::string input = R"(
 <tool_call>
-<function=example_tool>
+<function=string_tool>
 <parameter=arg1>
 value1
 </parameter>
@@ -100,11 +112,11 @@ value1
 </tool_call>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, "string_tool");
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\"}");
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
@@ -115,8 +127,9 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithNoToolCall) {
     const std::string expectedContent = input;
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls));
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 0) << input;
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
@@ -127,7 +140,7 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithContent) {
     const std::string input = R"(
 Before
 <tool_call>
-<function=example_tool>
+<function=string_tool>
 <parameter=arg1>
 value1
 </parameter>
@@ -138,20 +151,20 @@ After)";
 
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, "string_tool");
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\"}");
     EXPECT_EQ(expectedContent, content);
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithThreeParameters) {
     const std::string input = R"(
 <tool_call>
-<function=example_tool>
+<function=string_int_float_tool>
 <parameter=arg1>
 value1
 </parameter>
@@ -165,11 +178,11 @@ value1
 </tool_call>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, "string_int_float_tool");
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\", \"arg2\": 42, \"arg3\": 52.32}");
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
@@ -178,7 +191,7 @@ value1
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithJsonObjectArgument) {
     const std::string input = R"(
 <tool_call>
-<function=example_tool>
+<function=object_tool>
 <parameter=arg1>
 {"a": 1, "b": {"c": "asd"}}
 </parameter>
@@ -186,11 +199,11 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithJsonObjectArgument) {
 </tool_call>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, "object_tool");
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": {\"a\": 1, \"b\": {\"c\": \"asd\"}}}");
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
@@ -200,32 +213,32 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithJsonObjectArgument) {
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserWithTwoToolCalls) {
     const std::string input = R"(
 <tool_call>
-<function=example_tool>
+<function=string_tool>
 <parameter=arg1>
 value1
 </parameter>
 </function>
 </tool_call>
 <tool_call>
-<function=another_tool>
-<parameter=param1>
+<function=string_float_tool>
+<parameter=arg1>
 data
 </parameter>
-<parameter=param2>
-true
+<parameter=arg2>
+25.2
 </parameter>
 </function>
 </tool_call>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 2) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, "string_tool");
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\"}");
-    EXPECT_EQ(calls[1].name, "another_tool");
-    EXPECT_EQ(calls[1].arguments, "{\"param1\": \"data\", \"param2\": true}");
+    EXPECT_EQ(calls[1].name, "string_float_tool");
+    EXPECT_EQ(calls[1].arguments, "{\"arg1\": \"data\", \"arg2\": 25.2}");
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
     EXPECT_EQ(content, "\n\n");
@@ -234,46 +247,48 @@ true
 // write parametrized test code where I would just insert PARAM VALUE and EXPECTED ARGUMENTS
 // to test various argument types
 // int, float, string, json object, array of int, array of string, array of json object
-class Qwen3CoderOutputParserParametrizedTest : public Qwen3CoderOutputParserTest, public ::testing::WithParamInterface<std::pair<std::string, std::string>> {
+class Qwen3CoderOutputParserParametrizedTest : public Qwen3CoderOutputParserTest, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string>> {
 };
 
 TEST_P(Qwen3CoderOutputParserParametrizedTest, TestJustParserWithVariousArgumentTypes) {
-    const std::string paramValue = GetParam().first;
-    const std::string expectedArguments = GetParam().second;
+    const std::string& toolName = std::get<0>(GetParam());
+    const std::string& argName = std::get<1>(GetParam());
+    const std::string& paramValue = std::get<2>(GetParam());
+    const std::string& expectedArguments = std::get<3>(GetParam());
     const std::string input = R"(
 <tool_call>
-<function=example_tool>
-<parameter=arg1>
+<function=)" + toolName +
+                              R"(>
+<parameter=)" + argName + R"(>
 )" + paramValue + R"(
 </parameter>
 </function>
 </tool_call>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls))
-        ;
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
-    EXPECT_EQ(calls[0].name, "example_tool");
+    EXPECT_EQ(calls[0].name, toolName);
     EXPECT_EQ(calls[0].arguments, expectedArguments) << input;
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
     EXPECT_EQ(content, "\n");
 }
 
-const std::vector<std::pair<std::string, std::string>> paramValueAndExpectedArgumentsVec = {
-     {"value1", "{\"arg1\": \"value1\"}"},
-     {"42", "{\"arg1\": 42}"},
-     {"52.32", "{\"arg1\": 52.32}"},
-     {"true", "{\"arg1\": true}"},
-     {"false", "{\"arg1\": false}"},
-     {"True", "{\"arg1\": True}"},
-     {"False", "{\"arg1\": False}"},
-     {"{\"a\": 1, \"b\": {\"c\": \"asd\"}}", "{\"arg1\": {\"a\": 1, \"b\": {\"c\": \"asd\"}}}"},
-     {"[1, 2, 3]", "{\"arg1\": [1, 2, 3]}"},
-     {"[\"a\", \"b\", \"c\"]", "{\"arg1\": [\"a\", \"b\", \"c\"]}"},
-     {"[{\"a\": 1}, {\"b\": 2}]", "{\"arg1\": [{\"a\": 1}, {\"b\": 2}]}"}
-};
+const std::vector<std::tuple<std::string, std::string, std::string, std::string>> paramValueAndExpectedArgumentsVec = {
+    {"string_tool", "arg1", "value1", "{\"arg1\": \"value1\"}"},
+    {"int_tool", "arg1", "42", "{\"arg1\": 42}"},
+    {"float_tool", "arg1", "52.32", "{\"arg1\": 52.32}"},
+    {"bool_tool", "arg1", "true", "{\"arg1\": true}"},
+    {"bool_tool", "arg1", "false", "{\"arg1\": false}"},
+    {"bool_tool", "arg1", "True", "{\"arg1\": True}"},
+    {"bool_tool", "arg1", "False", "{\"arg1\": False}"},
+    {"object_tool", "arg1", "{\"a\": 1, \"b\": {\"c\": \"asd\"}}", "{\"arg1\": {\"a\": 1, \"b\": {\"c\": \"asd\"}}}"},
+    {"list_tool", "arg1", "[1, 2, 3]", "{\"arg1\": [1, 2, 3]}"},
+    {"list_tool", "arg1", "[\"a\", \"b\", \"c\"]", "{\"arg1\": [\"a\", \"b\", \"c\"]}"},
+    {"object_tool", "arg1", "[{\"a\": 1}, {\"b\": 2}]", "{\"arg1\": [{\"a\": 1}, {\"b\": 2}]}"}};
 // write printer for test name with first argument as a name
 
 INSTANTIATE_TEST_SUITE_P(
@@ -281,7 +296,7 @@ INSTANTIATE_TEST_SUITE_P(
     Qwen3CoderOutputParserParametrizedTest,
     ::testing::ValuesIn(paramValueAndExpectedArgumentsVec),
     [](const ::testing::TestParamInfo<Qwen3CoderOutputParserParametrizedTest::ParamType>& info) {
-        std::string name = info.param.first;
+        std::string name = std::get<0>(info.param) + "_" + std::get<2>(info.param);
         // Replace non-alphanumeric characters with underscore
         std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(c); }, '_');
         // Limit length to 30 characters
@@ -290,8 +305,6 @@ INSTANTIATE_TEST_SUITE_P(
         }
         return name;
     });
-
-
 
 TEST_F(Qwen3CoderOutputParserTest, JustToolParserBfclCalculateTriangle) {
     std::string input = R"(<tool_call>
@@ -306,8 +319,9 @@ TEST_F(Qwen3CoderOutputParserTest, JustToolParserBfclCalculateTriangle) {
 </tool_call><|im_end|>)";
     auto content = input;
     ToolCalls calls;
-    ovms::Parser parser(content);
-    while (parser.step(calls));
+    ovms::Parser parser(content, toolsParametersTypeMap);
+    while (parser.step(calls)) {
+    }
     EXPECT_EQ(calls.size(), 1) << input;
     EXPECT_EQ(calls[0].name, "calculate_triangle_area");
     EXPECT_EQ(calls[0].arguments, "{\"base\":10, \"height\":5}");

@@ -15,10 +15,10 @@
 //*****************************************************************************
 
 #include <openvino/genai/tokenizer.hpp>
+#include <algorithm>
 #include <string>
 #include <stack>
 #include <vector>
-#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 6313)
@@ -308,7 +308,6 @@ bool Parser::step(ToolCalls& toolCalls) {
         auto pos = content.find(Qwen3CoderToolParser::tagEnd, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::tagEnd, State::ErrorEnd);
         this->currentParameterName = content.substr(currentPosition, pos - currentPosition);
-        ;
         currentPosition = pos + Qwen3CoderToolParser::tagEnd.length();
         currentState = State::InsideParameter;
         break;
@@ -387,8 +386,8 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     }
 
     Parser parser(parsedOutput.content, toolsParametersTypes);
-    while (parser.step(parsedOutput.toolCalls))
-        ;
+    while (parser.step(parsedOutput.toolCalls)) {
+    }
     if (parser.currentState != Parser::State::End) {
         SPDLOG_DEBUG("Parsing ended with error, leaving content as is");
         return;
