@@ -130,6 +130,34 @@ def build(){
     }
 }
 
+def sign(){
+    if(env.OVMS_SIGN != "1"){
+        println "Skipping code signing"
+        return
+    }
+    println "Starting code signing"
+    def status = bat(returnStatus: true, script: 'windows_sign.bat ' + get_short_bazel_path())
+    if (status != 0) {
+        error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
+    } else {
+        echo "Code signing successful."
+    }
+}
+
+def bdba(){
+    if(env.OVMS_BDBA_SCAN != "1"){
+        println "Skipping BDBA scan"
+        return
+    }
+    println "Starting BDBA scan"
+    def status = bat(returnStatus: true, script: 'windows_bdba.bat ' + env.BDBA_KEY)
+    if (status != 0) {
+        error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
+    } else {
+        echo "BDBA scan successful."
+    }   
+}
+
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
     def pythonOption = env.OVMS_PYTHON_ENABLED == "1" ? "--with_python" : "--no_python"
