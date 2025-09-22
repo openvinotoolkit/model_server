@@ -117,15 +117,14 @@ std::string OptimumDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
 
-OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
-    this->sourceModel = inSourceModel;
-    this->downloadPath = inDownloadPath;
-    this->overwriteModels = inOverwrite;
-    this->exportSettings = inExportSettings;
-    this->task = inTask;
-    this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
-    this->OPTIMUM_CLI_EXPORT_COMMAND = cliExportCmd;
-}
+OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) :
+    sourceModel(inSourceModel),
+    downloadPath(inDownloadPath),
+    overwriteModels(inOverwrite),
+    exportSettings(inExportSettings),
+    task(inTask),
+    OPTIMUM_CLI_CHECK_COMMAND(cliCheckCmd),
+    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd) {}
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     int retCode = -1;

@@ -224,11 +224,14 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartExistingModelOutsideOpen
         std::cout << "Directory renamed successfully.\n";
     } catch (const std::filesystem::filesystem_error& e) {
         std::cout << "Error: " << e.what() << '\n';
-        ASSERT_EQ(1,0);
+        ASSERT_EQ(1, 0);
     }
 
     std::string modelName2 = "META/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::filesystem::file_time_type ftime1 = std::filesystem::last_write_time(newPath);
     this->SetUpServerForDownloadAndStart(modelName2, downloadPath, task);
+    std::filesystem::file_time_type ftime2 = std::filesystem::last_write_time(newPath);
+    ASSERT_EQ(ftime1, ftime2);
 }
 
 TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {

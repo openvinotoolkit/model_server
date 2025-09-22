@@ -29,13 +29,13 @@ public:
     std::string getGraphDirectory();
 
 protected:
-    std::string sourceModel;
-    std::string downloadPath;
+    const std::string sourceModel;
+    const std::string downloadPath;
+    const bool overwriteModels;
     ExportSettings exportSettings;
-    GraphExportType task;
-    bool overwriteModels;
-    std::string OPTIMUM_CLI_EXPORT_COMMAND;
+    const GraphExportType task;
     std::string OPTIMUM_CLI_CHECK_COMMAND;
+    std::string OPTIMUM_CLI_EXPORT_COMMAND;
 
     Status checkRequiredToolsArePresent();
     std::string getExportCmd();
