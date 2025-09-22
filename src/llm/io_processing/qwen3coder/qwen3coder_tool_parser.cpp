@@ -83,7 +83,7 @@ static bool isArrayLike(const std::string& s) {
     // then check if it is object
     // then check if it is number or boolean
     // otherwise treat as string
-    // note that array could be nested, and its elemetns can be strings
+    // note that array could be nested, and its elements can be strings
     // note that object could contain array
     // note that array could contain object
     // note that object could contain object
@@ -100,8 +100,8 @@ static bool isArrayLike(const std::string& s) {
 }*/
 
 // write toJson function
-// it shoudl know based on content of value from pair if it is string or number or bool
-// if number or bool, or array or json object. Note that array could be nested, and its elemetns can be strings
+// it should know based on content of value from pair if it is string or number or bool
+// if number or bool, or array or json object. Note that array could be nested, and its elements can be strings
 static std::string toJson(const std::vector<std::pair<std::string, std::string>>& items) {
     std::ostringstream oss;
     oss << "{";
@@ -138,7 +138,7 @@ static std::string toJson(const std::vector<std::pair<std::string, std::string>>
 }
 
 // write toJson function
-// it shoudl know based on content of value from pair if it is string or number or bool
+// it should know based on content of value from pair if it is string or number or bool
 /*static std::string toJson2(const std::vector<std::pair<std::string, std::string>>& parameters) {
     rapidjson::Document doc;
     doc.SetObject();
