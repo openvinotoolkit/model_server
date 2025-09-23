@@ -140,7 +140,7 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
         rate /= 1000.0;
         rate_unit_idx++;
     }
-    printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
+    printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 }
 
 void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {
