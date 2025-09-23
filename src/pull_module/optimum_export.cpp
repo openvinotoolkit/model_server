@@ -25,6 +25,7 @@
 #include "../stringutils.hpp"
 #include "../status.hpp"
 #include "cmd_exec.hpp"
+#include "model_downloader.hpp"
 
 namespace ovms {
 
@@ -139,7 +140,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     return StatusCode::OK;
 }
 
-Status OptimumDownloader::cloneRepository() {
+Status OptimumDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
@@ -157,7 +158,7 @@ Status OptimumDownloader::cloneRepository() {
         return status;
     }
 
-    status = checkIfOverwriteAndRemove(this->downloadPath);
+    status = IModelDownloader::checkIfOverwriteAndRemove(this->downloadPath, this->overwriteModels);
     if (!status.ok()) {
         return status;
     }

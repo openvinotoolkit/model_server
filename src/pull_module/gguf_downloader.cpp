@@ -37,7 +37,7 @@ namespace ovms {
 std::string GGUFDownloader::getGraphDirectory() {
     return this->downloadPath;
 }
-static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
+static Status checkIfOverwriteAndRemoveGGUF(const HFSettingsImpl& hfSettings, const std::string& path) {
     auto lfstatus = StatusCode::OK;
     if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
         auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
@@ -101,7 +101,7 @@ Status GGUFDownloader::downloadModel() {
         SPDLOG_ERROR("GGUF filename must be specified for GGUF download type, and shouldn't be empty.");
         return StatusCode::INTERNAL_ERROR;
     }
-    auto status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
+    auto status = checkIfOverwriteAndRemoveGGUF(this->hfSettings, this->downloadPath);
     if (!status.ok()) {
         return status;
     }

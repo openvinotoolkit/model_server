@@ -280,8 +280,6 @@ public:
     std::string GetRepoUrl() { return HfDownloader::GetRepoUrl(); }
     std::string GetRepositoryUrlWithPassword() { return HfDownloader::GetRepositoryUrlWithPassword(); }
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
-    void setProxy(const std::string& proxy) { this->httpProxy = proxy; }
-    void setEndpoint(const std::string& endpoint) { this->hfEndpoint = endpoint; }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
     std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getGraphDirectory(downloadPath, sourceModel); }
@@ -383,7 +381,7 @@ TEST_F(TestOptimumDownloaderSetup, UnknownExportCmd) {
 TEST_F(TestOptimumDownloaderSetup, NegativeWrongPath) {
     inHfSettings.downloadPath = "../path/to/Download";
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::PATH_INVALID);
+    ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::PATH_INVALID);
 }
 
 TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
@@ -393,7 +391,7 @@ TEST_F(TestOptimumDownloaderSetup, NegativeExportCommandFailed) {
     optimumDownloader->setExportCliCheckCommand("dir");
 #endif
     optimumDownloader->setExportCliExportCommand("NonExistingCommand22");
-    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED);
+    ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED);
 }
 
 TEST_F(TestOptimumDownloaderSetup, NegativeCheckOptimumExistsCommandFailed) {
@@ -415,7 +413,7 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     optimumDownloader->setExportCliCheckCommand(cliCheckCommand);
     cliMockPath += " export";
     optimumDownloader->setExportCliExportCommand(cliMockPath);
-    ASSERT_EQ(optimumDownloader->cloneRepository(), ovms::StatusCode::OK);
+    ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::OK);
 }
 
 TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
@@ -444,9 +442,9 @@ TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
 }
 
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
-    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).cloneRepository(), ovms::StatusCode::PATH_INVALID);
+    EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).downloadModel(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-    EXPECT_EQ(TestHfDownloader("name/test", ovms::HfDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).cloneRepository(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+    EXPECT_EQ(TestHfDownloader("name/test", ovms::HfDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {

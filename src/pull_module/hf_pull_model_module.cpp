@@ -119,14 +119,14 @@ Status HfPullModelModule::clone() const {
         }
 
         HfDownloader hfDownloader(this->hfSettings.sourceModel, HfDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-        auto status = hfDownloader.cloneRepository();
+        auto status = hfDownloader.downloadModel();
         if (!status.ok()) {
             return status;
         }
         graphDirectory = hfDownloader.getGraphDirectory();
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
         OptimumDownloader optimumDownloader(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, HfDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
-        auto status = optimumDownloader.cloneRepository();
+        auto status = optimumDownloader.downloadModel();
         if (!status.ok()) {
             return status;
         }
@@ -150,7 +150,7 @@ Status HfPullModelModule::clone() const {
         // Optimum model
         if (isOptimumCliDownload(graphSettings.draftModelDirName.value(), std::nullopt)) {
             OptimumDownloader optimumDownloader2(this->hfSettings.exportSettings, this->hfSettings.task, graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->hfSettings.overwriteModels);
-            auto status = optimumDownloader2.cloneRepository();
+            auto status = optimumDownloader2.downloadModel();
             if (!status.ok()) {
                 return status;
             }
@@ -162,7 +162,7 @@ Status HfPullModelModule::clone() const {
             }
 
             HfDownloader hfDownloader2(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-            auto status = hfDownloader2.cloneRepository();
+            auto status = hfDownloader2.downloadModel();
             if (!status.ok()) {
                 return status;
             }

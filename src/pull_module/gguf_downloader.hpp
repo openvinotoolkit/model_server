@@ -19,18 +19,11 @@
 #include <vector>
 
 #include "../capi_frontend/server_settings.hpp"
+#include "model_downloader.hpp"
 
 namespace ovms {
 class Status;
 enum GraphExportType : unsigned int;
-
-class IModelDownloader {
-public:
-    virtual ~IModelDownloader() = default;
-
-    virtual Status downloadModel() = 0;
-    virtual std::string getGraphDirectory() = 0;
-};
 
 class GGUFDownloader : public IModelDownloader {
 public:
