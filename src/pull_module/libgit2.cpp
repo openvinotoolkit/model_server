@@ -164,7 +164,7 @@ HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& 
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     hfEndpoint(inHfEndpoint),
     hfToken(inHfToken),
-    httpProxy(inHttpProxy){}
+    httpProxy(inHttpProxy) {}
 
 Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
     for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {

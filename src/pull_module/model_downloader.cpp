@@ -23,7 +23,7 @@
 
 namespace ovms {
 
-IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels) : 
+IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels) :
     sourceModel(inSourceModel),
     downloadPath(inDownloadPath),
     overwriteModels(inOverwriteModels) {}
