@@ -160,22 +160,11 @@ std::string HfDownloader::GetRepoUrl() {
     return repoUrl;
 }
 
-std::string HfDownloader::getGraphDirectory() {
-    return this->downloadPath;
-}
-
-std::string HfDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
-    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
-    return fullPath;
-}
-
 HfDownloader::HfDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const std::string& inHfEndpoint, const std::string& inHfToken, const std::string& inHttpProxy, bool inOverwrite) :
-    sourceModel(inSourceModel),
-    downloadPath(inDownloadPath),
+    IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     hfEndpoint(inHfEndpoint),
     hfToken(inHfToken),
-    httpProxy(inHttpProxy),
-    overwriteModels(inOverwrite) {}
+    httpProxy(inHttpProxy){}
 
 Status HfDownloader::RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath) {
     for (const std::filesystem::directory_entry& dir_entry : std::filesystem::recursive_directory_iterator(directoryPath)) {
@@ -202,7 +191,7 @@ Status HfDownloader::downloadModel() {
         return StatusCode::OK;
     }
 
-    auto status = IModelDownloader::checkIfOverwriteAndRemove(this->downloadPath, this->overwriteModels);
+    auto status = IModelDownloader::checkIfOverwriteAndRemove();
     if (!status.ok()) {
         return status;
     }

@@ -282,7 +282,7 @@ public:
     bool CheckIfProxySet() { return HfDownloader::CheckIfProxySet(); }
     const std::string& getEndpoint() { return this->hfEndpoint; }
     const std::string& getProxy() { return this->httpProxy; }
-    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return HfDownloader::getGraphDirectory(downloadPath, sourceModel); }
+    std::string getGraphDirectory(const std::string& downloadPath, const std::string& sourceModel) { return IModelDownloader::getGraphDirectory(downloadPath, sourceModel); }
     std::string getGraphDirectory() { return HfDownloader::getGraphDirectory(); }
 };
 
@@ -292,11 +292,11 @@ TEST(HfDownloaderClassTest, Methods) {
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "123$$o_O123!AAbb";
     std::string httpProxy = "https://proxy_test1:123";
-    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
+    std::unique_ptr<TestHfDownloader> hfDownloader = std::make_unique<TestHfDownloader>(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, httpProxy, false);
     ASSERT_EQ(hfDownloader->getProxy(), httpProxy);
     ASSERT_EQ(hfDownloader->CheckIfProxySet(), true);
 
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).CheckIfProxySet(), false);
     ASSERT_EQ(hfDownloader->getEndpoint(), "www.new_hf.com/");
     ASSERT_EQ(hfDownloader->GetRepoUrl(), "www.new_hf.com/model/name");
     ASSERT_EQ(hfDownloader->GetRepositoryUrlWithPassword(), "123$$o_O123!AAbb:123$$o_O123!AAbb@www.new_hf.com/model/name");
@@ -421,30 +421,30 @@ TEST(HfDownloaderClassTest, ProtocollsWithPassword) {
     std::string downloadPath = "/path/to/Download";
     std::string hfEndpoint = "www.new_hf.com/";
     std::string hfToken = "";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "www.new_hf.com/model/name");
     hfEndpoint = "https://www.new_hf.com/";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "https://www.new_hf.com/model/name");
     hfEndpoint = "www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "http://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "http://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "git://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "git://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "ssh://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "ssh://123!$token:123!$token@www.new_hf.com/model/name");
     hfEndpoint = "what_ever_is_here://www.new_hf.com/";
     hfToken = "123!$token";
-    EXPECT_EQ(TestHfDownloader(modelName, ovms::HfDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
+    EXPECT_EQ(TestHfDownloader(modelName, ovms::IModelDownloader::getGraphDirectory(downloadPath, modelName), hfEndpoint, hfToken, "", false).GetRepositoryUrlWithPassword(), "what_ever_is_here://123!$token:123!$token@www.new_hf.com/model/name");
 }
 
 TEST_F(HfDownloaderPullHfModel, MethodsNegative) {
     EXPECT_EQ(TestHfDownloader("name/test", "../some/path", "", "", "", false).downloadModel(), ovms::StatusCode::PATH_INVALID);
     // Library not initialized
-    EXPECT_EQ(TestHfDownloader("name/test", ovms::HfDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
+    EXPECT_EQ(TestHfDownloader("name/test", ovms::IModelDownloader::getGraphDirectory(this->directoryPath, "name2/test"), "", "", "", false).downloadModel(), ovms::StatusCode::HF_GIT_CLONE_FAILED);
 }
 
 class TestHfPullModelModule : public ovms::HfPullModelModule {

@@ -26,12 +26,9 @@ class OptimumDownloader : public IModelDownloader {
 public:
     OptimumDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
     Status downloadModel() override;
-    std::string getGraphDirectory() override;
 
 protected:
     const std::string sourceModel;
-    const std::string downloadPath;
-    const bool overwriteModels;
     ExportSettings exportSettings;
     const GraphExportType task;
     std::string OPTIMUM_CLI_CHECK_COMMAND;

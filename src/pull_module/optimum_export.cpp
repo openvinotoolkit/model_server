@@ -114,14 +114,8 @@ std::string OptimumDownloader::getExportCmd() {
     return cmd;
 }
 
-std::string OptimumDownloader::getGraphDirectory() {
-    return this->downloadPath;
-}
-
 OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) :
-    sourceModel(inSourceModel),
-    downloadPath(inDownloadPath),
-    overwriteModels(inOverwrite),
+    IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     exportSettings(inExportSettings),
     task(inTask),
     OPTIMUM_CLI_CHECK_COMMAND(cliCheckCmd),
@@ -158,7 +152,7 @@ Status OptimumDownloader::downloadModel() {
         return status;
     }
 
-    status = IModelDownloader::checkIfOverwriteAndRemove(this->downloadPath, this->overwriteModels);
+    status = IModelDownloader::checkIfOverwriteAndRemove();
     if (!status.ok()) {
         return status;
     }

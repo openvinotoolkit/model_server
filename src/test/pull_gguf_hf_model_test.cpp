@@ -214,7 +214,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithNoOve
         {"Llama-3.2-1B-Instruct-Q8_0.gguf", 1321082528}};
     for (const auto& [ggufFilename, expectedSize] : quantizations) {
         hfSettings.ggufFilename = ggufFilename;
-        GGUFDownloader downloader(hfEndpoint, hfSettings);
+        GGUFDownloader downloader(hfSettings.sourceModel, ovms::IModelDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel), hfSettings.overwriteModels, hfSettings.ggufFilename, hfEndpoint);
         auto status = downloader.downloadModel();
         ASSERT_TRUE(status.ok()) << status.string();
         std::string fullPath = FileSystem::joinPath({downloadPath, hfSettings.sourceModel, ggufFilename});
@@ -239,7 +239,7 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldFailWhenTargetPathEscapes) {
     hfSettings.downloadPath = FileSystem::joinPath({directoryPath, "..", "ShouldFailWhenTargetPathEscapes"});
     hfSettings.downloadType = ModelDownlaodType::GGUF_DOWNLOAD;
     hfSettings.ggufFilename = "Llama-3.2-1B-Instruct-Q8_0.gguf";
-    GGUFDownloader downloader("https://huggingface.co/", hfSettings);
+    GGUFDownloader downloader(hfSettings.sourceModel, ovms::IModelDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel), hfSettings.overwriteModels, hfSettings.ggufFilename, "https://huggingface.co/");
     auto status = downloader.downloadModel();
     ASSERT_EQ(status.getCode(), StatusCode::PATH_INVALID) << status.string();
     bool exist = false;
@@ -257,7 +257,7 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldFailWhenTargetPathIsFile) {
     hfSettings.downloadPath = downloadPath;
     hfSettings.downloadType = ModelDownlaodType::GGUF_DOWNLOAD;
     hfSettings.ggufFilename = "Llama-3.2-1B-Instruct-Q8_0.gguf";
-    GGUFDownloader downloader("https://huggingface.co/", hfSettings);
+    GGUFDownloader downloader(hfSettings.sourceModel, ovms::IModelDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel), hfSettings.overwriteModels, hfSettings.ggufFilename, "https://huggingface.co/");
     // now we create a file at downloadPath
     auto filePathDir = FileSystem::joinPath({downloadPath, "unsloth"});
     ASSERT_TRUE(std::filesystem::create_directories(filePathDir)) << downloadPath << " " << filePathDir;
@@ -293,7 +293,7 @@ TEST_F(GGUFDownloaderPullHfModel, ShouldSkipDownloadWithNoOverrideWhenSomePartsE
     hfSettings.downloadPath = downloadPath;
     hfSettings.downloadType = ModelDownlaodType::GGUF_DOWNLOAD;
     hfSettings.ggufFilename = ggufFilename;
-    GGUFDownloader downloader(hfEndpoint, hfSettings);
+    GGUFDownloader downloader(hfSettings.sourceModel, ovms::IModelDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel), hfSettings.overwriteModels, hfSettings.ggufFilename, hfEndpoint);
     auto dirPath = FileSystem::joinPath({downloadPath, sourceModel});
     std::filesystem::create_directories(dirPath);
     auto filePath = FileSystem::joinPath({dirPath, ggufFilename});
@@ -362,7 +362,7 @@ TEST_F(GGUFDownloaderPullHfModel, PositiveDownloadMultipleQuantizationsWithOverr
     // first we pull first with override true to see if it worksa even if no files exist
     ////////
     hfSettings.ggufFilename = quantizations[0].first;
-    auto downloader = std::make_unique<GGUFDownloader>(hfEndpoint, hfSettings);
+    auto downloader = std::make_unique<GGUFDownloader>(hfSettings.sourceModel, ovms::IModelDownloader::getGraphDirectory(hfSettings.downloadPath, hfSettings.sourceModel), hfSettings.overwriteModels, hfSettings.ggufFilename, hfEndpoint);
     auto status = downloader->downloadModel();
     ASSERT_TRUE(status.ok()) << status.string();
     std::string fullPath = FileSystem::joinPath({downloadPath, hfSettings.sourceModel, hfSettings.ggufFilename.value()});

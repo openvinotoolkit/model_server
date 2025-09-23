@@ -20,10 +20,17 @@ namespace ovms {
 class Status;
 class IModelDownloader {
 public:
+    IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels);
     virtual ~IModelDownloader() = default;
     virtual Status downloadModel() = 0;
-    virtual std::string getGraphDirectory() = 0;
-    static Status checkIfOverwriteAndRemove(const std::string& path, const bool overwriteFlag);
+    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
+    std::string getGraphDirectory();
+
+protected:
+    Status checkIfOverwriteAndRemove();
+    const std::string sourceModel;
+    const std::string downloadPath;
+    const bool overwriteModels;
 };
 
 }  // namespace ovms

@@ -52,16 +52,11 @@ class HfDownloader : public IModelDownloader {
 public:
     HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
     Status downloadModel() override;
-    std::string getGraphDirectory() override;
-    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
 
 protected:
-    const std::string sourceModel;
-    const std::string downloadPath;
     const std::string hfEndpoint;
     const std::string hfToken;
     const std::string httpProxy;
-    const bool overwriteModels;
 
     std::string GetRepoUrl();
     std::string GetRepositoryUrlWithPassword();

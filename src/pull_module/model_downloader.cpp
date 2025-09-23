@@ -23,20 +23,34 @@
 
 namespace ovms {
 
-Status IModelDownloader::checkIfOverwriteAndRemove(const std::string& path, const bool overwriteFlag) {
+IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels) : 
+    sourceModel(inSourceModel),
+    downloadPath(inDownloadPath),
+    overwriteModels(inOverwriteModels) {}
+
+Status IModelDownloader::checkIfOverwriteAndRemove() {
     auto lfstatus = StatusCode::OK;
-    if (overwriteFlag && std::filesystem::is_directory(path)) {
+    if (this->overwriteModels && std::filesystem::is_directory(this->downloadPath)) {
         LocalFileSystem lfs;
-        lfstatus = lfs.deleteFileFolder(path);
+        lfstatus = lfs.deleteFileFolder(this->downloadPath);
         if (lfstatus != StatusCode::OK) {
             SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}",
-                path,
+                this->downloadPath,
                 lfstatus);
         } else {
-            SPDLOG_DEBUG("Path deleted: {}", path);
+            SPDLOG_DEBUG("Path deleted: {}", this->downloadPath);
         }
     }
 
     return lfstatus;
+}
+
+std::string IModelDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
+    return fullPath;
+}
+
+std::string IModelDownloader::getGraphDirectory() {
+    return this->downloadPath;
 }
 }  // namespace ovms
