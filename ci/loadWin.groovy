@@ -128,6 +128,13 @@ def build(){
     } else {
         echo "Windows package created successfully."
     }
+    def unzipCmd = "tar -xf dist\\windows\\ovms.zip"
+    def status_unzip = bat(returnStatus: true, script: "${unzipCmd}")
+    if (status_unzip != 0) {
+        error "Error: Unzipping package failed: ${status_unzip}."
+    } else {
+        echo "Package unzipped successfully."
+    }
 }
 
 def sign(){
