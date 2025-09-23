@@ -132,7 +132,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Target folder {} not found, trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->downloadPath, this->sourceModel);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
