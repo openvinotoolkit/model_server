@@ -24,7 +24,7 @@ def llm_engine():
     new_git_repository(
         name = "llm_engine",
         remote = "https://github.com/openvinotoolkit/openvino.genai",
-        commit = "a4f4272e49ed363fb7fa79faf379f4287317832a", # master 2025-09-11 Check available memory before allocating KV-cache.
+        commit = "8e86a984f7ab14579a6ab7c58258abdbababa38b", # master 2025-09-13 Increase GGUF timeouts (#2756)
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,
