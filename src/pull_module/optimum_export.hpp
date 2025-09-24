@@ -28,7 +28,6 @@ public:
     Status downloadModel() override;
 
 protected:
-    const std::string sourceModel;
     ExportSettings exportSettings;
     const GraphExportType task;
     std::string OPTIMUM_CLI_CHECK_COMMAND;
