@@ -43,18 +43,22 @@ pipeline {
             }
         }
         stage ("SDL actions"){
-            def windows = load 'ci/loadWin.groovy'
-            if (windows != null) {
-                try {
-                    windows.sign()
-                    windows.bdba()
-                } finally {
-                    windows.archive_bdba_reports()
-                    windows.archive_sign_results()
+            steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.sign()
+                            windows.bdba()
+                        } finally {
+                            windows.archive_bdba_reports()
+                            windows.archive_sign_results()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
                 }
-            } else {
-                error "Cannot load ci/loadWin.groovy file."
             }
-}
+        }
     }
 }
