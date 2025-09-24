@@ -98,10 +98,10 @@ pipeline {
                 label "${agent_name_linux}"
               }
               when { expression { image_build_needed == "true" } }
-                steps {
-                      if (! env.OVMS_BAZEL_REMOTE_CACHE_URL) {
-                        env.OVMS_BAZEL_REMOTE_CACHE_URL = "http://mclx-23.sclab.intel.com:8666"
-                      }
+              environment {
+                OVMS_BAZEL_REMOTE_CACHE_URL = "${env.OVMS_BAZEL_REMOTE_CACHE_URL ?: 'http://mclx-23.sclab.intel.com:8666'}"
+              }
+              steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
                       sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                       sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
