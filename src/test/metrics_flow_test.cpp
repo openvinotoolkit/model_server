@@ -38,8 +38,12 @@
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../shape.hpp"
+#include "constructor_enabled_model_manager.hpp"
+#include "platform_utils.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using namespace ovms;
 

@@ -22,7 +22,10 @@
 #include "../modelmanager.hpp"
 #include "../servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 static const char* configWith1Dummy = R"(
 {

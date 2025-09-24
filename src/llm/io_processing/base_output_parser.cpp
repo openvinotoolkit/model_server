@@ -31,14 +31,6 @@
 
 namespace ovms {
 
-void BaseOutputParser::enableImmediateParsing() {
-    immediateParsingEnabled = true;
-}
-
-bool BaseOutputParser::isImmediateParsingEnabled() const {
-    return immediateParsingEnabled;
-}
-
 rapidjson::Document BaseOutputParser::wrapFirstDelta(const std::string& functionName, int toolCallIndex) {
     rapidjson::Document wrappedDelta;
     wrappedDelta.SetObject();
@@ -79,4 +71,13 @@ rapidjson::Document BaseOutputParser::wrapDelta(const rapidjson::Document& delta
     wrappedDelta.AddMember("delta", deltaWrapper, wrappedDelta.GetAllocator());
     return wrappedDelta;
 }
+
+void BaseOutputParser::enableImmediateParsing() {
+    immediateParsingEnabled = true;
+}
+
+bool BaseOutputParser::isImmediateParsingEnabled() const {
+    return immediateParsingEnabled;
+}
+
 }  // namespace ovms

@@ -28,7 +28,9 @@ pipeline {
                           } else {
                               python_presence = "without_python"
                           }
-                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
+                          if (env.OV_SHARE_05_IP != null && env.OV_SHARE_05_IP != "") {
+                            bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
+                            }
                           } finally {
                           windows.archive_build_artifacts()
                           windows.archive_test_artifacts()

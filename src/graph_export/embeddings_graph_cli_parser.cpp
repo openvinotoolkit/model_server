@@ -81,7 +81,7 @@ std::vector<std::string> EmbeddingsGraphCLIParser::parse(const std::vector<std::
 
 void EmbeddingsGraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettings, const std::string& modelName) {
     EmbeddingsGraphSettingsImpl embeddingsGraphSettings = EmbeddingsGraphCLIParser::defaultGraphSettings();
-    embeddingsGraphSettings.targetDevice = hfSettings.targetDevice;
+    embeddingsGraphSettings.targetDevice = hfSettings.exportSettings.targetDevice;
     if (modelName != "") {
         embeddingsGraphSettings.modelName = modelName;
     } else {

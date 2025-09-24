@@ -73,6 +73,16 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     return modelsPath;
 }
 
+std::string GraphExport::getDraftModelDirectoryName(std::string draftModel) {
+    std::replace(draftModel.begin(), draftModel.end(), '/', '-');
+    return draftModel;
+}
+
+std::string GraphExport::getDraftModelDirectoryPath(const std::string& directoryPath, const std::string& draftModel) {
+    std::string fullPath = FileSystem::joinPath({directoryPath, GraphExport::getDraftModelDirectoryName(draftModel)});
+    return fullPath;
+}
+
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings, const std::optional<std::string> ggufFilename) {
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
@@ -136,7 +146,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             # Speculative decoding configuration)";
         oss << R"(
-            draft_models_path: )" << graphSettings.draftModelDirName.value() << R"(,)";
+            draft_models_path: ")" << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << R"(",)";
     }
     oss << R"(
         }

@@ -22,7 +22,7 @@
 #include "../model.hpp"
 #include "../modelmanager.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
+#include "test_models_configs.hpp"
 
 class ModelDefaultVersions : public ::testing::Test {
 protected:

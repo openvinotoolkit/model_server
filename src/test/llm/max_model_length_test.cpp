@@ -20,7 +20,9 @@
 #include <openvino/genai/tokenizer.hpp>
 
 #include "../../llm/servable_initializer.hpp"
-#include "../test_utils.hpp"
+#include "src/test/test_utils.hpp"
+#include "src/test/light_test_utils.hpp"
+#include "src/test/test_with_temp_dir.hpp"
 
 using namespace ovms;
 

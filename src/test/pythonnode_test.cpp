@@ -47,15 +47,17 @@
 #include "../shape.hpp"
 #include "../stringutils.hpp"
 #include "../tfs_frontend/tfs_utils.hpp"
-#include "c_api_test_utils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/calculator_runner.h"
 #pragma GCC diagnostic pop
+#include "opencv2/opencv.hpp"
 
 #include "../python/python_backend.hpp"
-#include "opencv2/opencv.hpp"
+#include "c_api_test_utils.hpp"
+#include "constructor_enabled_model_manager.hpp"
+#include "platform_utils.hpp"
 #include "test_utils.hpp"
 
 namespace py = pybind11;

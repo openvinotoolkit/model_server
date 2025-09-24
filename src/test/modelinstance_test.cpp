@@ -25,7 +25,8 @@
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "gpuenvironment.hpp"
-#include "test_utils.hpp"
+#include "test_models_configs.hpp"
+#include "test_with_temp_dir.hpp"
 
 using testing::Return;
 

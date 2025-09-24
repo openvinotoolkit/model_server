@@ -141,7 +141,7 @@ libraries = {
         'icudt70.dll',
         'icuuc70.dll',
         'libcurl-x64.dll',
-        'opencv_world4100.dll',
+        'opencv_world4120.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
         'openvino_auto_plugin.dll',
@@ -230,7 +230,9 @@ packages = {
         'libpython3.8-stdlib',
         'mime-support',
     },
-    OvmsBaseType.UBUNTU22: {'libicu70'},
+    OvmsBaseType.UBUNTU22: {
+        'libicu70'
+    },
     OvmsBaseType.UBUNTU22_PYTHON: {
         'libmpdec3',
         'libreadline8',
@@ -239,7 +241,8 @@ packages = {
         'libpython3.10-stdlib',
         'media-types',
     },
-    OvmsBaseType.UBUNTU24: {'libicu74',
+    OvmsBaseType.UBUNTU24: {
+        'libicu74',
         'tzdata',
         'netbase',
         'libreadline8t64'},
@@ -254,8 +257,8 @@ packages = {
         'intel-fw-npu',
         'intel-igc-core-2',
         'intel-igc-opencl-2',
-        'intel-level-zero-gpu',
         'intel-level-zero-npu',
+        'intel-ocloc',
         'intel-opencl-icd',
         'level-zero',
         'libhwloc15',
@@ -264,6 +267,7 @@ packages = {
         'libtbb12',
         'libtbbbind-2-5',
         'libtbbmalloc2',
+        'libze-intel-gpu1',
         'ocl-icd-libopencl1',
     },
     OvmsBaseType.UBUNTU_NGINX: {

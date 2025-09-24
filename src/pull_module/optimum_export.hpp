@@ -16,28 +16,23 @@
 //*****************************************************************************
 #include <string>
 
-#include "libgit2.hpp"
+#include "model_downloader.hpp"
 #include "../capi_frontend/server_settings.hpp"
 
 namespace ovms {
 class Status;
-enum GraphExportType : unsigned int;
 
-class OptimumDownloader : public HfDownloader {
+class OptimumDownloader : public IModelDownloader {
 public:
-    OptimumDownloader(const HFSettingsImpl& hfSettings, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
-    Status cloneRepository();
-    std::string getGraphDirectory();
+    OptimumDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
+    Status downloadModel() override;
 
 protected:
-    std::string sourceModel;
-    std::string downloadPath;
-    HFSettingsImpl hfSettings;
-    bool overwriteModels;
-    std::string OPTIMUM_CLI_EXPORT_COMMAND;
+    ExportSettings exportSettings;
+    const GraphExportType task;
     std::string OPTIMUM_CLI_CHECK_COMMAND;
+    std::string OPTIMUM_CLI_EXPORT_COMMAND;
 
-    OptimumDownloader();
     Status checkRequiredToolsArePresent();
     std::string getExportCmd();
     std::string getExportCmdText();

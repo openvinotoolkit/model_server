@@ -25,7 +25,8 @@
 #include "../dags/pipelinedefinition.hpp"
 #include "../model_version_policy.hpp"
 #include "../modelinstance.hpp"
-#include "test_utils.hpp"
+#include "constructor_enabled_model_manager.hpp"
+#include "test_models_configs.hpp"
 
 using namespace ovms;
 

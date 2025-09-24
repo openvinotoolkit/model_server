@@ -26,6 +26,7 @@
 #include "rapidjson/writer.h"        // TODO: Move out together with rerank tests
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
+#include "platform_utils.hpp"
 
 using namespace ovms;
 

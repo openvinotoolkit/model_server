@@ -24,7 +24,7 @@
 #include "../modelmanager.hpp"
 #include "../status.hpp"
 #include "mockmodelinstancechangingstates.hpp"
-#include "test_utils.hpp"
+#include "test_models_configs.hpp"
 
 using ::testing::NiceMock;
 using ::testing::Return;

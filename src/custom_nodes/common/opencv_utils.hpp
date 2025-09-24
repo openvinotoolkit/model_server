@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "../../custom_node_interface.h"
-#include "opencv2/opencv.hpp"
+#include "../../deps/opencv.hpp"
 
 template <typename T>
 void reorder_to_nhwc_2(const T* sourceNchwBuffer, T* destNhwcBuffer, int rows, int cols, int channels) {

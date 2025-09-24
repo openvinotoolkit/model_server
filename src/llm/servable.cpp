@@ -91,13 +91,6 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         executionContext->generationConfigBuilder->unsetStructuredOutputConfig();
     }
 
-#if (PYTHON_DISABLE == 0)
-    // Due to issues in GGUF models EOS token generation, we add EOS tag as a stop string to properly handle end of generation
-    if (this->getProperties()->ggufEosToken.has_value()) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Adding GGUF model stop string: [{}]", this->getProperties()->ggufEosToken.value());
-        executionContext->generationConfigBuilder->addStopString(this->getProperties()->ggufEosToken.value());
-    }
-#endif
     return absl::OkStatus();
 }
 

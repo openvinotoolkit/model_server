@@ -178,7 +178,7 @@ documents = [
     document_template.format(doc=doc, suffix=suffix) for doc in documents
 ]
 
-response = requests.post("http://127.0.0.1:8125/v3/rerank",
+response = requests.post("http://localhost:8125/v3/rerank",
                          json={
                              "model": "tomaarsen/Qwen3-Reranker-0.6B-seq-cls",
                              "query": query,

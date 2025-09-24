@@ -62,17 +62,19 @@ public:
         tokenizer(tokenizer) {}
     virtual ~BaseOutputParser() = default;
 
-    // Calling this method should put parser into immediate parsing mode where it starts parsing immediately, without seeking the start tag.
-    void enableImmediateParsing();
-
-    bool isImmediateParsingEnabled() const;
-
     // Common function to wrap first delta with full function name in a JSON object that conforms to OpenAI API response format:
     // {"tool_calls":[{"id": <id>, "type": "function", "index":<index>,"function":<delta>}]}
     static rapidjson::Document wrapFirstDelta(const std::string& functionName, int toolCallIndex);
     // Common function to wrap subsequent deltas in a JSON object that conforms to OpenAI API response format
     // {"tool_calls":[{"index":0,"function":<delta>}]}
     static rapidjson::Document wrapDelta(const rapidjson::Document& delta, int toolCallIndex);
+
+    // Calling this method should put parser into immediate parsing mode where it starts parsing immediately, without seeking the start tag.
+    void enableImmediateParsing();
+
+    bool isImmediateParsingEnabled() const;
+
+    // --- Specialized output parsers interface ---
 
     // Parse model output and extract relevant information to parsedOutput fields. Raw generated tokens are provided as an argument.
     // Additionally parsedOutput.content is already filled with decoded content when this method is called, enabling chain or parsing.
@@ -90,6 +92,7 @@ public:
 
     // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
     // These tags are considered only if they are the first output produced by the model.
+    // In streaming mode it means that they are considered only in UNKNOWN phase.
     virtual const std::unordered_set<std::string>& getSpecialParsingStartTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.

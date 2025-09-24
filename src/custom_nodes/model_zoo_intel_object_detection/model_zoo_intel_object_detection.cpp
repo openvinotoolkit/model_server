@@ -22,7 +22,10 @@
 #include "../common/custom_node_library_internal_manager.hpp"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6269 6294 6201)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 
 using CustomNodeLibraryInternalManager = ovms::custom_nodes_common::CustomNodeLibraryInternalManager;
 

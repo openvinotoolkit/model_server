@@ -26,11 +26,6 @@ On the server side, the Base64 encoded data is decoded to raw binary and loaded 
 - [TensorFlow Serving gRPC API Reference Guide](./model_server_grpc_api_tfs.md)
 - [TensorFlow Serving REST API Reference Guide](./model_server_rest_api_tfs.md)
 
-## Usage examples
-
-Sample clients that use binary inputs via TFS API can be found here ([REST sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/http_predict_binary_resnet.py))/([GRPC sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/grpc_predict_binary_resnet.py))
-Also, see the ([README](https://github.com/openvinotoolkit/model_server/blob/main/client/python/ovmsclient/samples/README.md))
-
 
 ## Recommendations:
 

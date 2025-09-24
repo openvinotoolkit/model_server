@@ -90,6 +90,7 @@ find /ovms_release/lib/ -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIG
 
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
+patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
 if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf  --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
 

@@ -18,7 +18,10 @@
 #include "../../custom_node_interface.h"
 #include "../common/opencv_utils.hpp"
 #include "../common/utils.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6269)
 #include "opencv2/opencv.hpp"
+#pragma warning(pop)
 
 static constexpr const char* IMAGE_TENSOR_NAME = "image";
 static constexpr const char* DETECTION_TENSOR_NAME = "detection";

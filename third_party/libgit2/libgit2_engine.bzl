@@ -52,7 +52,7 @@ def _impl(repository_ctx):
         out_libs = "out_shared_libs = [\"{lib_name}.dll\"],".format(lib_name=lib_name)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1",
+        "CMAKE_CXX_FLAGS": " /guard:cf /GS -s -D_GLIBCXX_USE_CXX11_ABI=1",
         "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "Debug",
         "WIN32": "True",
         "X86_64": "True",
@@ -67,7 +67,7 @@ def _impl(repository_ctx):
         out_libs = "out_shared_libs = [\"{lib_name}.so\"],".format(lib_name=lib_name)
         cache_entries = """
         "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
+        "CMAKE_CXX_FLAGS": " /guard:cf -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized",
         "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "lib",
         "CMAKE_INSTALL_LIBDIR": "lib",
         "BUILD_EXAMPLES": "OFF",

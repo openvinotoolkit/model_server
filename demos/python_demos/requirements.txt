@@ -7,7 +7,7 @@ huggingface_hub==0.32.0
 nncf>=2.11.0
 sentence_transformers
 sentencepiece==0.2.0
-transformers<4.53
+transformers<=4.53
 einops
 torchvision
 timm==1.0.15

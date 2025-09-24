@@ -53,6 +53,9 @@
 #include "../tfs_frontend/tfs_utils.hpp"
 #include "c_api_test_utils.hpp"
 #include "test_utils.hpp"
+#include "light_test_utils.hpp"
+#include "platform_utils.hpp"
+#include "test_with_temp_dir.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
