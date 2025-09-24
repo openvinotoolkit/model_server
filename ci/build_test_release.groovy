@@ -5,6 +5,9 @@ pipeline {
     agent {
         label 'win_ovms'
     }
+    environment {
+        BDBA_KEY = credentials('BDBA_KEY')
+    }
     stages {
         stage ("Build and test windows") {
             steps {
@@ -19,8 +22,6 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.sign()
-                          windows.bdba()
                           windows.unit_test()
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
@@ -41,5 +42,19 @@ pipeline {
                 }
             }
         }
+        stage ("SDL actions"){
+            def windows = load 'ci/loadWin.groovy'
+            if (windows != null) {
+                try {
+                    windows.sign()
+                    windows.bdba()
+                } finally {
+                    windows.archive_bdba_reports()
+                    windows.archive_sign_results()
+                }
+            } else {
+                error "Cannot load ci/loadWin.groovy file."
+            }
+}
     }
 }
