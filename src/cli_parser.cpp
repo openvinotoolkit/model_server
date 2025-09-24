@@ -586,8 +586,9 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
             hfSettings.ggufFilename = result->operator[]("gguf_filename").as<std::string>();
             hfSettings.downloadType = GGUF_DOWNLOAD;
         }
-        if (result->count("overwrite_models"))
+        if (result->count("overwrite_models")) {
             hfSettings.overwriteModels = result->operator[]("overwrite_models").as<bool>();
+        }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
             // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
