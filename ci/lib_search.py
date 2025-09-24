@@ -149,6 +149,8 @@ def check_dir(start_dir):
         "lib_custom_nodes_files",
         "spelling-whitelist.txt",
         "results.txt",
+        "windows_bdba.bat",
+        "windows_sign.bat",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
@@ -242,6 +244,8 @@ def check_func(start_dir):
         "internal_tests",
         'cleanup_jenkins.bat',
         ".bazelversion",
+        "windows_bdba.bat",
+        "windows_sign.bat",
     ]
 
     exclude_directories = ['/dist/']
