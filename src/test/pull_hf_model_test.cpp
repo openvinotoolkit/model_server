@@ -191,13 +191,13 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStart) {
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 }
 
-TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartExistingModelOutsideOpenvino) {
+TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
     // guard.set("HF_ENDPOINT", "https://hf-mirror.com");
 
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
-    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string downloadPath = this->directoryPath;
     std::string task = "text_generation";
     this->ServerPullHfModel(modelName, downloadPath, task);
 
@@ -206,7 +206,7 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartExistingModelOutsideOpen
     if (t)
         t->join();
     server.setShutdownRequest(0);
-    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO", "Phi-3-mini-FastDraft-50M-int8-ov"});
     std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
     std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
 
@@ -217,8 +217,8 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartExistingModelOutsideOpen
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
 
-    std::string changePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "OpenVINO"});
-    std::string newPath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "META"});
+    std::string changePath = ovms::FileSystem::joinPath({this->directoryPath, "OpenVINO"});
+    std::string newPath = ovms::FileSystem::joinPath({this->directoryPath, "META"});
     try {
         std::filesystem::rename(changePath, newPath);
         std::cout << "Directory renamed successfully.\n";
