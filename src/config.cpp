@@ -37,6 +37,7 @@ const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 // For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
+
 #if (USE_DROGON == 0)
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
 #else
