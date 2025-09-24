@@ -1,6 +1,7 @@
 @echo off
 set "BDBA_KEY=%1"
-REM 
+set "OVMS_PATH=%2"
+REM
 git clone https://github.com/intel-innersource/frameworks.ai.openvino.ci.infrastructure repo_ci_infra
 
 REM
@@ -27,7 +28,11 @@ set timestamp=%datetime:~8,4%
 set filename=ovms_%datestamp%_%timestamp%.zip
 
 REM
-copy dist\windows\ovms.zip dist\windows\%filename%
+copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%filename%
 
 REM
-python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir dist\windows --artifacts dist\windows\%filename% --report_name %filename% > bdba_windows.log 2>&1
+python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %OVMS_PATH%\%filename% --report_name %filename% 2>&1 | tee win_bdba.log
+REM
+deactivate
+REM
+tar -cvf %2\ovms_windows_bdba_reports.zip -C %2 ovms_windows_*

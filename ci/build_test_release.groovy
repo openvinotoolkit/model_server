@@ -5,6 +5,9 @@ pipeline {
     agent {
         label 'win_ovms'
     }
+    environment {
+        BDBA_KEY = credentials('BDBA_KEY')
+    }
     stages {
         stage ("Build and test windows") {
             steps {
@@ -19,8 +22,6 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.sign()
-                          windows.bdba()
                           windows.unit_test()
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
@@ -30,9 +31,7 @@ pipeline {
                           } else {
                               python_presence = "without_python"
                           }
-                          if (env.OV_SHARE_05_IP != null && env.OV_SHARE_05_IP != "") {
-                            bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
-                            }
+                          bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
                           } finally {
                           windows.archive_build_artifacts()
                           windows.archive_test_artifacts()
@@ -43,5 +42,19 @@ pipeline {
                 }
             }
         }
+        stage ("SDL actions"){
+            def windows = load 'ci/loadWin.groovy'
+            if (windows != null) {
+                try {
+                    windows.sign()
+                    windows.bdba()
+                } finally {
+                    windows.archive_bdba_reports()
+                    windows.archive_sign_results()
+                }
+            } else {
+                error "Cannot load ci/loadWin.groovy file."
+            }
+}
     }
 }

@@ -8,4 +8,4 @@ tar -xf signfile-win-x64-4.0.180.zip
 REM
 set PATH=%PATH%;%CD%\signfile-win-x64-4.0.180
 REM
-python check_signing.py --user %USERNAME% --path %OVMS_FILES% --auto --verbose --print_all
+python check_signing.py --user %USERNAME% --path %OVMS_FILES% --auto --verbose --print_all 2>&1 | tee win_sign.log
