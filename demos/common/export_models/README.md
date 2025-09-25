@@ -97,7 +97,7 @@ options:
 
 #### Text Generation CPU Deployment
 ```console
-python export_model.py text_generation --source_model meta-llama/Meta-Llama-3-8B-Instruct --weight-format fp16 --kv_cache_precision u8 --config_file_path models/config_all.json --model_repository_path models
+python demos\common\export_models\export_model.py text_generation --source_model meta-llama/Llama-3.2-1B-Instruct --weight-format int4 --kv_cache_precision u8 --config_file_path config.json --model_repository_path audio
 ```
 
 #### GPU Deployment (Low Concurrency, Limited Memory)
