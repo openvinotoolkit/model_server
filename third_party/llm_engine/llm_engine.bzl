@@ -23,8 +23,8 @@ def llm_engine():
     llm_engine_repository(name="_llm_engine")
     new_git_repository(
         name = "llm_engine",
-        remote = "https://github.com/dkalinowski/openvino.genai",
-        commit = "6b48331963809e95be8bb30727c0b6cbe63f645f", # my fork based on 2025-09-11 
+        remote = "https://github.com/openvinotoolkit/openvino.genai",
+        commit = "8e86a984f7ab14579a6ab7c58258abdbababa38b", # master 2025-09-13 Increase GGUF timeouts (#2756)
         build_file = "@_llm_engine//:BUILD",
         init_submodules = True,
         recursive_init_submodules = True,

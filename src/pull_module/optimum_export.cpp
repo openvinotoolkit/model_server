@@ -25,6 +25,7 @@
 #include "../stringutils.hpp"
 #include "../status.hpp"
 #include "cmd_exec.hpp"
+#include "model_downloader.hpp"
 
 namespace ovms {
 
@@ -113,26 +114,19 @@ std::string OptimumDownloader::getExportCmd() {
     return cmd;
 }
 
-std::string OptimumDownloader::getGraphDirectory() {
-    return this->downloadPath;
-}
-
-OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) {
-    this->sourceModel = inSourceModel;
-    this->downloadPath = inDownloadPath;
-    this->overwriteModels = overwriteModels;
-    this->exportSettings = inExportSettings;
-    this->task = inTask;
-    this->OPTIMUM_CLI_CHECK_COMMAND = cliCheckCmd;
-    this->OPTIMUM_CLI_EXPORT_COMMAND = cliExportCmd;
-}
+OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) :
+    IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
+    exportSettings(inExportSettings),
+    task(inTask),
+    OPTIMUM_CLI_CHECK_COMMAND(cliCheckCmd),
+    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd) {}
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     int retCode = -1;
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Target folder {} not found, trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->downloadPath, this->sourceModel);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
@@ -140,7 +134,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     return StatusCode::OK;
 }
 
-Status OptimumDownloader::cloneRepository() {
+Status OptimumDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
@@ -158,7 +152,7 @@ Status OptimumDownloader::cloneRepository() {
         return status;
     }
 
-    status = checkIfOverwriteAndRemove(this->downloadPath);
+    status = IModelDownloader::checkIfOverwriteAndRemove();
     if (!status.ok()) {
         return status;
     }

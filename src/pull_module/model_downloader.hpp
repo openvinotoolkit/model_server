@@ -16,28 +16,21 @@
 //*****************************************************************************
 #include <string>
 
-#include "model_downloader.hpp"
-#include "../capi_frontend/server_settings.hpp"
-
 namespace ovms {
 class Status;
-
-class OptimumDownloader : public IModelDownloader {
+class IModelDownloader {
 public:
-    OptimumDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
-    Status downloadModel() override;
+    IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels);
+    virtual ~IModelDownloader() = default;
+    virtual Status downloadModel() = 0;
+    static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
+    std::string getGraphDirectory();
 
 protected:
-    ExportSettings exportSettings;
-    const GraphExportType task;
-    std::string OPTIMUM_CLI_CHECK_COMMAND;
-    std::string OPTIMUM_CLI_EXPORT_COMMAND;
-
-    Status checkRequiredToolsArePresent();
-    std::string getExportCmd();
-    std::string getExportCmdText();
-    std::string getExportCmdEmbeddings();
-    std::string getExportCmdRerank();
-    std::string getExportCmdImageGeneration();
+    Status checkIfOverwriteAndRemove();
+    const std::string sourceModel;
+    const std::string downloadPath;
+    const bool overwriteModels;
 };
+
 }  // namespace ovms

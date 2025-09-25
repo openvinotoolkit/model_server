@@ -34,28 +34,26 @@
 #include <stdio.h>
 
 namespace ovms {
-std::string GGUFDownloader::getGraphDirectory() {
-    return this->downloadPath;
-}
-static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const std::string& path) {
+
+Status GGUFDownloader::checkIfOverwriteAndRemove() {
     auto lfstatus = StatusCode::OK;
-    if (hfSettings.overwriteModels && std::filesystem::is_directory(path)) {
-        auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+    if (this->overwriteModels && std::filesystem::is_directory(this->downloadPath)) {
+        auto allSpecifiedQuantizationPartsFilenamesOrStatus = GGUFDownloader::createGGUFFilenamesToDownload(this->ggufFilename.value());
         if (std::holds_alternative<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus)) {
             return std::get<Status>(allSpecifiedQuantizationPartsFilenamesOrStatus);
         }
         auto& allSpecifiedQuantizationPartsFilenames = std::get<std::vector<std::string>>(allSpecifiedQuantizationPartsFilenamesOrStatus);
         LocalFileSystem lfs;
         for (const auto& file : allSpecifiedQuantizationPartsFilenames) {
-            auto filePath = FileSystem::joinPath({path, file});
+            auto filePath = FileSystem::joinPath({this->downloadPath, file});
             SPDLOG_TRACE("Checking if model file exists for overwrite: {}", filePath);
             if (std::filesystem::exists(filePath)) {
                 SPDLOG_TRACE("Model file already exists and will be removed due to overwrite flag: {}", filePath);
                 lfstatus = lfs.deleteFileFolder(filePath);
                 if (lfstatus != StatusCode::OK) {
-                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", path, lfstatus);
+                    SPDLOG_ERROR("Error occurred while deleting path: {} reason: {}", this->downloadPath, lfstatus);
                 } else {
-                    SPDLOG_TRACE("Path deleted: {}", path);
+                    SPDLOG_TRACE("Path deleted: {}", this->downloadPath);
                 }
             }
         }
@@ -63,8 +61,8 @@ static Status checkIfOverwriteAndRemove(const HFSettingsImpl& hfSettings, const 
     return lfstatus;
 }
 
-std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettingsImpl& hfSettings, const std::string& path) {
-    auto ggufFilesOrStatus = createGGUFFilenamesToDownload(hfSettings.ggufFilename.value());
+std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const std::optional<std::string> ggufFilename, const std::string& path) {
+    auto ggufFilesOrStatus = createGGUFFilenamesToDownload(ggufFilename.value());
     if (std::holds_alternative<Status>(ggufFilesOrStatus)) {
         SPDLOG_ERROR("Could not create GGUF filenames to download for checking existing files");
         return std::get<Status>(ggufFilesOrStatus);
@@ -83,25 +81,21 @@ std::variant<Status, bool> GGUFDownloader::checkIfAlreadyExists(const HFSettings
     return false;
 }
 
-GGUFDownloader::GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings) :
-    hfSettings(hfSettings),
-    hfEndpoint(hfEndpoint),
-    downloadPath(FileSystem::joinPath({this->hfSettings.downloadPath, this->hfSettings.sourceModel})) {}
+GGUFDownloader::GGUFDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::optional<std::string> inGgufFilename, const std::string& hfEndpoint) :
+    IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
+    ggufFilename(inGgufFilename),
+    hfEndpoint(hfEndpoint) {}
 
 Status GGUFDownloader::downloadModel() {
-    if (this->hfSettings.downloadType != GGUF_DOWNLOAD) {
-        SPDLOG_ERROR("Wrong download type selected. Expected GGUF download type.");
-        return StatusCode::INTERNAL_ERROR;
-    }
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
         return StatusCode::PATH_INVALID;
     }
-    if (!this->hfSettings.ggufFilename.has_value() || this->hfSettings.ggufFilename->empty()) {
+    if (!this->ggufFilename.has_value() || this->ggufFilename->empty()) {
         SPDLOG_ERROR("GGUF filename must be specified for GGUF download type, and shouldn't be empty.");
         return StatusCode::INTERNAL_ERROR;
     }
-    auto status = checkIfOverwriteAndRemove(this->hfSettings, this->downloadPath);
+    auto status = this->checkIfOverwriteAndRemove();
     if (!status.ok()) {
         return status;
     }
@@ -116,19 +110,19 @@ Status GGUFDownloader::downloadModel() {
         SPDLOG_ERROR("Model path exists and is not a directory: {}", this->downloadPath);
         return StatusCode::DIRECTORY_NOT_CREATED;
     }
-    if (!this->hfSettings.overwriteModels) {
-        auto statusOrBool = checkIfAlreadyExists(this->hfSettings, this->downloadPath);
+    if (!this->overwriteModels) {
+        auto statusOrBool = checkIfAlreadyExists(this->ggufFilename, this->downloadPath);
         if (std::holds_alternative<Status>(statusOrBool)) {
             return std::get<Status>(statusOrBool);
         }
         if (std::get<bool>(statusOrBool)) {
-            SPDLOG_DEBUG("Model files already exist and overwrite is disabled, skipping download for model: {}", this->hfSettings.sourceModel);
+            SPDLOG_DEBUG("Model files already exist and overwrite is disabled, skipping download for model: {}", this->sourceModel);
             return StatusCode::OK;
         }
     }
-    status = downloadWithCurl(this->hfEndpoint, this->hfSettings.sourceModel, "/resolve/main/", this->hfSettings.ggufFilename.value(), this->downloadPath);
+    status = downloadWithCurl(this->hfEndpoint, this->sourceModel, "/resolve/main/", this->ggufFilename.value(), this->downloadPath);
     if (!status.ok()) {
-        SPDLOG_ERROR("Error occurred while downloading GGUF model: {} reason: {}", this->hfSettings.sourceModel, status.string());
+        SPDLOG_ERROR("Error occurred while downloading GGUF model: {} reason: {}", this->sourceModel, status.string());
         return status;
     }
     return StatusCode::OK;
@@ -146,7 +140,7 @@ static void print_download_speed_info(size_t received_size, size_t elapsed_time)
         rate /= 1000.0;
         rate_unit_idx++;
     }
-    printf(" [%.2f %s] ", rate, sizeUnits[rate_unit_idx]);
+    printf(" [%.2f %s/s] ", rate, sizeUnits[rate_unit_idx]);
 }
 
 void print_progress(size_t count, size_t max, bool first_run, size_t elapsed_time) {

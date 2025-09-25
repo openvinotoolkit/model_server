@@ -72,7 +72,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     if [[ "$(python3 --version)" =~ "Python 3.12" ]] ; then
         set +x
         # Tests starting python interpreter should be executed separately for Python 3.12 due to issues with multiple reinitialization of the interpreter
-        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="-HfDownloaderPullHfModel.*:-LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep -vE '^ ' | cut -d. -f1` ; do
             if bazel test ${SHARED_OPTIONS} --test_filter="$i.*" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else
@@ -82,7 +82,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             fi
             cat tmp.log >> ${TEST_LOG}
         done
-        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep '^  '` ; do
+        for i in `./bazel-bin/src/ovms_test --gtest_list_tests --gtest_filter="HfDownloaderPullHfModel.*:LLMChatTemplateTest.*:LLMOptionsHttpTest.*:LLMVLMOptionsHttpTest.*" | grep '^  '` ; do
             if bazel test ${SHARED_OPTIONS} --test_filter="*.$i" //src:ovms_test > tmp.log 2>&1 ; then
                 echo -n .
             else

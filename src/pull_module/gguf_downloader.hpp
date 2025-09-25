@@ -19,32 +19,24 @@
 #include <vector>
 
 #include "../capi_frontend/server_settings.hpp"
+#include "model_downloader.hpp"
 
 namespace ovms {
 class Status;
 enum GraphExportType : unsigned int;
 
-class IModelDownloader {
-public:
-    virtual ~IModelDownloader() = default;
-
-    virtual Status downloadModel() = 0;
-    virtual std::string getGraphDirectory() = 0;
-};
-
 class GGUFDownloader : public IModelDownloader {
 public:
-    GGUFDownloader(const std::string& hfEndpoint, const HFSettingsImpl& hfSettings);
+    GGUFDownloader(const std::string& sourceModel, const std::string& downloadPath, bool inOverwrite, const std::optional<std::string> ggufFilename, const std::string& hfEndpoint);
     Status downloadModel() override;
-    std::string getGraphDirectory() override;
+    Status checkIfOverwriteAndRemove();
     static Status downloadWithCurl(const std::string& hfEndpoint, const std::string& modelName, const std::string& filenamePrefix, const std::string& ggufFilename, const std::string& downloadPath);
     static std::variant<Status, std::string> preparePartFilename(const std::string& ggufFilename, int part, int totalParts);
     static std::variant<Status, std::vector<std::string>> createGGUFFilenamesToDownload(const std::string& ggufFilename);
-    static std::variant<Status, bool> checkIfAlreadyExists(const HFSettingsImpl& hfSettings, const std::string& path);
+    static std::variant<Status, bool> checkIfAlreadyExists(const std::optional<std::string> ggufFilename, const std::string& path);
 
 protected:
-    const HFSettingsImpl& hfSettings;
+    const std::optional<std::string> ggufFilename;
     const std::string hfEndpoint;
-    const std::string downloadPath;
 };
 }  // namespace ovms
