@@ -143,6 +143,12 @@ def sign(){
         return
     }
     println "Starting code signing"
+    def statusPull = bat(returnStatus: true, script: 'curl https://raw.githubusercontent.com/intel-innersource/frameworks.ai.openvino.model-server.bdba/refs/heads/main/windows_signing/check_signing.py -o check_signing.py')
+    if (statusPull != 0) {
+        error "Error: Downloading check_signing.py failed ${statusPull}. Check piepeline.log for details."
+    } else {
+        echo "check_signing.py downloaded successfully."
+    }
     def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + get_short_bazel_path())
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
@@ -157,6 +163,7 @@ def bdba(){
         return
     }
     println "Starting BDBA scan"
+    def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/intel-innersource/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
     def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_KEY + ' ' + get_short_bazel_path())
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
