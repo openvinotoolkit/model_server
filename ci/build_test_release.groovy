@@ -7,6 +7,7 @@ pipeline {
     }
     environment {
         BDBA_KEY = credentials('BDBA_KEY')
+        OVMS_PASS = credentials('PRERELEASE_SIGN')
     }
     stages {
         stage ("Build and test windows") {
