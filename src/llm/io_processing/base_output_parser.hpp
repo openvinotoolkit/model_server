@@ -99,5 +99,13 @@ public:
     // This method is used in streaming mode to determine if the parser should stop processing the content.
     // If empty string is returned, it means that the parser will keep processing until the end of the content.
     virtual const std::string& getParsingEndTag() const = 0;
+
+    // Indicates whether the parser requires special tokens to be present in the streaming output.
+    // If true, the tokenizer used in the TextStreamer should be configured to not skip special tokens.
+    // This is important for parsers that rely on special tokens to identify parsing boundaries or
+    // specific segments of the output.
+    virtual bool requiresStreamingWithSpecialTokens() const {
+        return false;
+    }
 };
 }  // namespace ovms

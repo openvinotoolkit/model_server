@@ -41,8 +41,9 @@ set "LLAMA3_MODEL=meta-llama/Llama-3.1-8B-Instruct"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
 set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
+set "GPTOSS_MODEL=openai/gpt-oss-20b"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE%
+set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE% %GPTOSS_MODEL%\%TOKENIZER_FILE%
 
 set "ALL_EXIST=1"
 for %%M in (%MODELS_LIST%) do (
@@ -207,6 +208,19 @@ if exist "%~1\%MISTRAL_MODEL%\%TOKENIZER_FILE%" (
 )
 if not exist "%~1\%MISTRAL_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%MISTRAL_MODEL%\%TOKENIZER_FILE% does not exists.
+  exit /b 1
+)
+
+if exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%GPTOSS_MODEL%\%TOKENIZER_FILE% exists. Skipping downloading models.
+) else (
+  echo Downloading tokenizer and detokenizer for Mistral model to %~1\%GPTOSS_MODEL% directory.
+  mkdir "%~1\%GPTOSS_MODEL%"
+  convert_tokenizer "%GPTOSS_MODEL%" --with_detokenizer -o "%~1\%GPTOSS_MODEL%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+if not exist "%~1\%GPTOSS_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%GPTOSS_MODEL%\%TOKENIZER_FILE% does not exists.
   exit /b 1
 )
 
