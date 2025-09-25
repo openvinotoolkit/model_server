@@ -8,6 +8,7 @@ pipeline {
     environment {
         BDBA_KEY = credentials('BDBA_KEY')
         OVMS_PASS = credentials('PRERELEASE_SIGN')
+        NODE_NAME = 'Windows_SDL'
     }
     stages {
         stage ("Build and test windows") {
@@ -54,6 +55,22 @@ pipeline {
                         } finally {
                             windows.archive_bdba_reports()
                             windows.archive_sign_results()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
+        }
+        stage ("Cleanup"){
+            steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.sdl_cleanup()
+                        } finally {
+                            echo "Cleanup finished"
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
