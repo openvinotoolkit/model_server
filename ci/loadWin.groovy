@@ -143,7 +143,7 @@ def sign(){
         return
     }
     println "Starting code signing"
-    def statusPull = bat(returnStatus: true, script: 'curl https://github.com/intel-innersource/frameworks.ai.openvino.model-server.bdba/raw/refs/heads/main/windows_signing/check_signing.py -o check_signing.py')
+    def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/intel-innersource/frameworks.ai.openvino.model-server.bdba repo_signing')
     if (statusPull != 0) {
         error "Error: Downloading check_signing.py failed ${statusPull}. Check piepeline.log for details."
     } else {
