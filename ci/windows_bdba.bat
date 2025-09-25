@@ -2,9 +2,6 @@
 set "BDBA_KEY=%1"
 set "OVMS_PATH=%2"
 REM
-git clone https://github.com/intel-innersource/frameworks.ai.openvino.ci.infrastructure repo_ci_infra
-
-REM
 cd repo_ci_infra
 
 REM
