@@ -28,7 +28,7 @@ REM
 copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%filename%
 
 REM
-python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %OVMS_PATH%\%filename% --report_name %filename% 2>&1 | tee win_bdba.log
+python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %OVMS_PATH%\%filename% --report_name %filename% 2>&1 | tee ..\win_bdba.log
 REM
 deactivate
 REM
