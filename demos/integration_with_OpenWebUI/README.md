@@ -2,9 +2,9 @@
 
 ## Description
 
-[Open WebUI](https://github.com/open-webui/open-webui) is a very popular component that provides a user interface to generative models. It supports use cases related to text generation, RAG, image generation, and many more. It also supports integration with remote execution servings compatible with standard APIs like OpenAI for chat completions and image generation.  
+[Open WebUI](https://github.com/open-webui/open-webui) is a very popular component that provides a user interface for generative models. It supports use cases related to text generation, RAG, image generation, and many more. It also supports integration with remote execution services compatible with standard APIs like OpenAI for chat completion and image generation.  
 
-The goal of this demo is to integrate Open WebUI with [OpenVINO Model Server](https://github.com/openvinotoolkit/model_server). It would include instructions for deploying the serving with a set of models and configuring Open WebUI to delegate generation to the serving endpoints.
+The goal of this demo is to integrate Open WebUI with [OpenVINO Model Server](https://github.com/openvinotoolkit/model_server). It includes instructions for deploying the server with a set of models and configuring Open WebUI to delegate generation to the serving endpoints.
 
 ---
 
@@ -20,13 +20,13 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
-There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/nightly/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
+There are other options to fulfill the prerequisites like [OpenVINO Model Server deployment on baremetal Linux or Windows](https://docs.openvino.ai/2025/model-server/ovms_docs_deploying_server_baremetal.html) and [Open WebUI installation with Docker](https://docs.openwebui.com/#quick-start-with-docker-). The steps in this demo can be reused across different options, and the reference for each step cover both deployments.
 
 This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
 
 ### Step 1: Preparation
 
-Download export script, install its dependencies and create the directory for models:
+Download the export script, install its dependencies and create the directory for models:
 
 ```bash
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
@@ -36,7 +36,7 @@ mkdir models
 
 ### Step 2: Export Model
 
-The text generation model used in this demo is [meta-llama/Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). If the model is not downloaded before, access must be requested. Run export script to download and quantize the model:
+The text generation model used in this demo is [meta-llama/Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). If the model is not downloaded before, access must be requested. Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py text_generation --source_model meta-llama/Llama-3.2-1B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json
@@ -70,7 +70,7 @@ Running Open WebUI:
 open-webui serve
 ```
 
-Go to [http://localhost:8080](http://localhost:8080) and create admin account to get started.
+Go to [http://localhost:8080](http://localhost:8080) and create admin account to get started
 
 ![get started with Open WebUI](./get_started_with_Open_WebUI.png)
 
@@ -94,7 +94,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 ![connection setting](./connection_setting.png)
 ### Step 2: Start Chatting
 
-Click **New Chat** and select the model to start chatting.
+Click **New Chat** and select the model to start chatting
 
 ![chat demo](./chat_demo.png)
 
@@ -107,7 +107,7 @@ Click **New Chat** and select the model to start chatting.
 
 ### Step 1: Model Preparation
 
-In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run export script to download and quantize the models:
+In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run the export script to download and quantize the models:
 ```bash
 python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L6-v2 --weight-format int8 --config_file_path models/config.json
 python export_model.py rerank_ov --source_model BAAI/bge-reranker-base --weight-format int8 --config_file_path models/config.json
@@ -150,8 +150,11 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 ### Step 4: Chat with RAG
 
 1. Click **New Chat**. Enter `#` symbol
-2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a message**
-3. Enter a query and sent
+2. Select documents that appear above the chat box for retrieval. Document icons will appear above **Send a Message**.
+
+![select documents](./select_documents.png)
+
+3. Enter a query and send
 
 ![chat with RAG demo](./chat_with_RAG_demo.png)
 
@@ -160,19 +163,19 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 1. Go to **Workspace** → **Models** → **+Add New Model** ([http://localhost:8080/workspace/models/create](http://localhost:8080/workspace/models/create))
 2. Configure the Model:
    * Name the model
-   * Select a base model from list
+   * Select a base model from the list
    * Click **Select Knowledge** and select a knowledge base for retrieval
-
+3. Click **Save & Create**
+   
 ![create and configure the RAG-enabled model](./create_and_configure_the_RAG-enabled_model.png)
 
-3. Click **Save & Create**
 4. Click the created model and start chatting
 
 ![RAG-enabled model demo](./RAG-enabled_model_demo.png)
 
 ### Reference
 
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_rag.html#export-models-from-huggingface-hub-including-conversion-to-openvino-format-using-the-python-script)
 
 [https://docs.openwebui.com/tutorials/tips/rag-tutorial](https://docs.openwebui.com/tutorials/tips/rag-tutorial/#setup)
 
@@ -182,7 +185,7 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ### Step 1: Model Preparation
 
-The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1.0](https://huggingface.co/dreamlike-art/dreamlike-anime-1.0). Run export script to download and quantize the model:
+The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1.0](https://huggingface.co/dreamlike-art/dreamlike-anime-1.0). Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py image_generation --source_model dreamlike-art/dreamlike-anime-1.0 --weight-format int8 --config_file_path models/config.json
@@ -211,7 +214,7 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
 
 Method 1:
 1. Toggle the **Image** switch to on
-2. Enter a query and sent
+2. Enter a query and send
 
 ![image generation method 1 demo](./image_generation_method_1_demo.png)
 
@@ -223,7 +226,7 @@ Method 2:
 ![image generation method 2 demo](./image_generation_method_2_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html](https://docs.openvino.ai/2025/model-server/ovms_demos_image_generation.html#export-model-for-cpu)
 
 [https://docs.openwebui.com/tutorials/images](https://docs.openwebui.com/tutorials/images/#using-image-generation)
 
@@ -232,7 +235,7 @@ Method 2:
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run export script to download and quantize the model:
+The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run the export script to download and quantize the model:
 
 ```bash
 python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json
@@ -241,21 +244,21 @@ python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --w
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is one the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`.
-2. Click **+more** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model\_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/2/demos/common/static/images/zebra.jpeg).
+1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`
+2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
-3. Enter a query and sent
+3. Enter a query and send
 
 ![chat with VLM demo](./chat_with_VLM_demo.png)
 
 ### Reference
-[https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/nightly/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
+[https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html](https://docs.openvino.ai/2025/model-server/ovms_demos_continuous_batching_vlm.html#model-preparation)
 
 ---
 
@@ -284,8 +287,11 @@ uvicorn main:app --host 0.0.0.0 --port 18000 --reload
 
 ### Step 3: Chat with AI Agent
 
-1. Click **+more** and toggle on the tool
-2. Enter a query and sent
+1. Click **+More** and toggle on the tool
+   
+![activate the tool](./activate_the_tool.png)
+
+2. Enter a query and send
 
 ![chat with AI Agent demo](./chat_with_AI_Agent_demo.png)
 
