@@ -1037,7 +1037,7 @@ Status ModelInstance::loadModelImpl(const ModelConfig& config, const DynamicMode
 Status ModelInstance::setCacheOptions(const ModelConfig& config) {
     if (!config.getCacheDir().empty()) {
         if (!config.isAllowCacheSetToTrue() && (config.isCustomLoaderRequiredToLoadModel() || config.anyShapeSetToAuto() || (config.getBatchingMode() == Mode::AUTO))) {
-            OV_LOGGER("ov::Core: {}, ieCore.set_property(ov::cache_dir({}))", reinterpret_cast<const void*>(this->compiledModel.get()), "");
+            OV_LOGGER("ov::Core: {}, ieCore.set_property(ov::cache_dir({}))", reinterpret_cast<const void*>(&this->ieCore), "");
             this->ieCore.set_property(ov::cache_dir(""));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has disabled caching", this->getName());
             this->cacheDisabled = true;
@@ -1045,7 +1045,7 @@ Status ModelInstance::setCacheOptions(const ModelConfig& config) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model: {} has allow cache set to true while using custom loader", this->getName());
             return StatusCode::ALLOW_CACHE_WITH_CUSTOM_LOADER;
         } else {
-            OV_LOGGER("ov::Core: {}, ieCore.set_property(ov::cache_dir({}))", reinterpret_cast<const void*>(this->compiledModel.get()), config.getCacheDir());
+            OV_LOGGER("ov::Core: {}, ieCore.set_property(ov::cache_dir({}))", reinterpret_cast<const void*>(&this->ieCore), config.getCacheDir());
             this->ieCore.set_property(ov::cache_dir(config.getCacheDir()));
             SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {} has enabled caching", this->getName());
         }
