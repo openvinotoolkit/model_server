@@ -30,7 +30,7 @@ pipeline {
         )
         string (
             name: "MODELS_REPOSITORY_PATH",
-            defaultValue: "models",
+            defaultValue: "",
             description: "Path to models repository"
         )
         booleanParam(
@@ -62,6 +62,10 @@ pipeline {
 
     agent {
         label "${params.TARGET_ENV}"
+    }
+
+    if ( params.MODELS_REPOSITORY_PATH.trim() == "" ) {
+        params.MODELS_REPOSITORY_PATH = "${env.WORKSPACE}/models"
     }
 
     stages {
