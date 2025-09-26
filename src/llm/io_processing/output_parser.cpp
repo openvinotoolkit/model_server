@@ -143,8 +143,9 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
     tokenizer(tokenizer) {
+    SPDLOG_ERROR("OutputParser created with toolNameSchemaMap of size: {}", toolNameSchemaMap.size());
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
@@ -156,7 +157,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "gptoss") {
         toolParser = std::make_unique<GptOssToolParser>(tokenizer);
     } else if (toolParserName == "qwen3coder") {
-        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer);
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
@@ -201,7 +202,7 @@ std::string OutputParser::getToolParserStartTag() const {
     }
 }
 
-ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable, const ToolsSchemas_t& toolNameSchemaMap) {
+ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable) {
     // Model output is processed by the chain of parsers. Each parser extracts relevant part of the output and fills the ParsedOutput structure.
     // At the beginning, the content field of ParsedOutput is already filled with decoded content from generatedTokens.
     // When parser extracts relevant information, it should remove it from the content field, so we don't duplicate it in the final output.
@@ -212,11 +213,11 @@ ParsedOutput OutputParser::parse(const std::vector<int64_t>& generatedTokens, co
     ParsedOutput parsedOutput;
     parsedOutput.content = tokenizer.decode(generatedTokens);
     if (reasoningParser) {
-        reasoningParser->parse(parsedOutput, generatedTokens, toolNameSchemaMap);
+        reasoningParser->parse(parsedOutput, generatedTokens);
     }
     // We run tool parser only if the parser is available and tools have been provided in the request.
     if (toolParser && toolsAvailable) {
-        toolParser->parse(parsedOutput, generatedTokens, toolNameSchemaMap);
+        toolParser->parse(parsedOutput, generatedTokens);
     }
     return parsedOutput;
 }
@@ -231,7 +232,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
     */
 
     bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingStartTag().empty() && !reasoningParser->getParsingEndTag().empty();
-    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTag().empty();
+    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTag().empty(); // FIXME why not check for parsingEntTag not empty?
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
     if (applyToolParser && toolParser->isImmediateParsingEnabled() && processingPhase == UNKNOWN) {

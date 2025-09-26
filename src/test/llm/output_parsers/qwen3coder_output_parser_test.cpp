@@ -36,8 +36,10 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 using ovms::ParameterType_t;
 using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
+//static ovms::ToolsSchemas_t toolsSchemas = {
+//    {"string_tool", R"({"description": "A tool that takes a string argument.", "parameters": {"type": "object", "properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]}})"}};  // can be empty for phi
 static ovms::ToolsSchemas_t toolsSchemas = {
-    {"string_tool", R"({"description": "A tool that takes a string argument.", "parameters": {"type": "object", "properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]}})"}};  // can be empty for phi
+    {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"}};  // can be empty for phi
 static ToolsParameterTypeMap_t toolsParametersTypeMap = {
     {"string_tool", {{"arg1", ParameterType_t::STRING}}},
     {"string_int_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
@@ -67,12 +69,12 @@ protected:
 
     void SetUp() override {
         // For Qwen3 model we use hermes3 tool parser (due to the same format of generated tool calls) and qwen3 reasoning parser
-        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "qwen3coder", "");
+        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "qwen3coder", "", toolsSchemas);
     }
     std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> doTheWork(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true, toolsSchemas);
+        ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
@@ -329,6 +331,74 @@ TEST_F(Qwen3CoderOutputParserTest, JustToolParserBfclCalculateTriangle) {
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
     EXPECT_EQ(content, "<|im_end|>") << input;
+}
+
+TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
+        int i = -1;
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE,std::nullopt},
+        {"<function=string_tool", ov::genai::GenerationFinishReason::NONE,std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"string_tool"}}]}})"},
+        {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<parameter=arg1", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"STRING_VALUE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"}//,
+//        {"I finished", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \"Paris\"}"}}]}})"});
+    };
+    for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
+            i++;
+        std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
+        if (!expectedDelta.has_value() && !doc.has_value()) {
+            continue;  // Both are nullopt, OK
+        }
+        if (expectedDelta.has_value() && doc.has_value()) {
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            doc->Accept(writer);
+            std::string docStr = buffer.GetString();
+            // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
+            std::string expected = expectedDelta.value();
+            std::string idKey = "\"id\":\"";
+            auto docIdPos = docStr.find(idKey);
+            auto expectedIdPos = expected.find(idKey);
+            if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
+                auto docIdStart = docIdPos + idKey.size();
+                auto docIdEnd = docStr.find("\"", docIdStart);
+                auto expectedIdStart = expectedIdPos + idKey.size();
+                auto expectedIdEnd = expected.find("\"", expectedIdStart);
+                ASSERT_NE(docIdEnd, std::string::npos);
+                ASSERT_NE(expectedIdEnd, std::string::npos);
+                std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
+                std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
+                EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
+                EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
+                // Compare everything except the id value
+                std::string docStrNoId = docStr;
+                std::string expectedNoId = expected;
+                docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
+                expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
+                EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
+            } else {
+                SPDLOG_ERROR("Expected:\n{}", expected);
+                SPDLOG_ERROR("Got:\n{}", docStr);
+                EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
+            }
+        } else {
+            EXPECT_TRUE(false) << "Mismatch between expectedDelta and doc for id: " << i << " chunk:\n" << chunk
+                    << "\nexpectedDelta:\n" << (expectedDelta.has_value() ? expectedDelta.value() : "EMPTY_DELTA")
+                    << "\nGot doc:\n" << (doc.has_value() ? /*convert doc to string*/ [&]() {
+                                    rapidjson::StringBuffer buffer;
+                                        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                                        doc->Accept(writer);
+                                        return std::string(buffer.GetString());
+                                        }() : "NO_DOC");
+            //FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
+        }
+    }
 }
 
 /*

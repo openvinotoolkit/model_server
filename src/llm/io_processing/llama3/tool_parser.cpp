@@ -31,7 +31,7 @@
 #include "../utils.hpp"
 
 namespace ovms {
-void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) {
+void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     // TODO: check if we can rely on decoded <|python_tag|> token to be present in the content, so we can drop multiple detokenizations and copies
     // and just extract substrings from the content and modify content in-place
 

@@ -31,7 +31,7 @@
 
 namespace ovms {
 
-void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) {
+void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     const std::string startTag = "<tool_call>";
     const std::string endTag = "</tool_call>";
     std::vector<std::string> tools;

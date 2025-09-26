@@ -38,7 +38,7 @@ protected:
     const std::string parsingEndTag = "";
 
     // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
-    static const int64_t botTokenId = 128010;
+    int64_t botTokenId = 128010;
     // ";" is used as a separator between tool calls in the response
     std::string separator = ";";
 
@@ -59,7 +59,7 @@ public:
     explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer) :
         BaseOutputParser(tokenizer) {}
 
-    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) override;
+    void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
         return parsingStartTag;
