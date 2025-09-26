@@ -16,8 +16,8 @@
 
 #include <limits>
 #include <string>
-#include <openvino/genai/generation_config.hpp>
 #include "base_generation_config_builder.hpp"
+#include "../generation_config_header.hpp"
 
 namespace ovms {
 void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig) {

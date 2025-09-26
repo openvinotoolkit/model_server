@@ -16,9 +16,9 @@
 #pragma once
 #include <string>
 
-#include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "../apis/openai_request.hpp"
+#include "../generation_config_header.hpp"
 
 namespace ovms {
 

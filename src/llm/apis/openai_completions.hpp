@@ -24,11 +24,8 @@
 #include <utility>
 #include <vector>
 
-#include <openvino/genai/generation_config.hpp>
-#include <openvino/genai/generation_handle.hpp>
-#include <openvino/genai/llm_pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
-#include <openvino/genai/visual_language/pipeline.hpp>
+
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -39,6 +36,7 @@
 #include "absl/status/status.h"
 #pragma warning(pop)
 #include "../io_processing/output_parser.hpp"
+#include "../generation_config_header.hpp"
 #include "openai_request.hpp"
 
 using namespace rapidjson;
