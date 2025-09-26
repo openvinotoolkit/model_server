@@ -15,7 +15,7 @@ pipeline {
         )
         string (
             name: "MODEL",
-            defaultValue: "Qwen3-4B-int4-ov",
+            defaultValue: "OpenVINO/Qwen3-4B-int4-ov",
             description: "Model to use in tests"
         )
         string (
@@ -71,7 +71,7 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${params.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --device ${params.DEVICE} --log_level INFO"
+                sh "docker run --rm -d --user \$(id -u):\$(id -g) --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${params.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
                 sh "echo wait for model server to be ready"
                 sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running latency test"
