@@ -86,7 +86,7 @@ public:
         endpoint(endpoint),
         created(creationTime),
         tokenizer(tokenizer) {
-        // FIXME we should delay creating output parser until we have requiest with toolNameSchemaMap parsed
+        // FIXME we should delay creating output parser until we have request with toolNameSchemaMap parsed
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
             outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }

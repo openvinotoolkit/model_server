@@ -269,13 +269,13 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
 }
 
 #define RETURN_NULL_IF_NOT_FOUND(POS) \
-    if (POS == std::string::npos) {       \
-        return std::nullopt;              \
+    if (POS == std::string::npos) {   \
+        return std::nullopt;          \
     }
 
-#define LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(STATE, TAG) \
+#define LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(STATE, TAG)                                                         \
     SPDLOG_TRACE("State: {}, current content:{} current pos:{}", #STATE, streamContent, this->lastStreamProcessedPosition); \
-    auto pos = streamContent.find(TAG, this->lastStreamProcessedPosition); \
+    auto pos = streamContent.find(TAG, this->lastStreamProcessedPosition);                                                  \
     RETURN_NULL_IF_NOT_FOUND(pos)
 
 std::optional<ToolCalls> Parser::streamStep(const std::string& chunk) {
@@ -285,11 +285,11 @@ std::optional<ToolCalls> Parser::streamStep(const std::string& chunk) {
     this->streamContent += chunk;
     switch (this->currentState) {
     case State::Content: {
-         LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(Content, Qwen3CoderToolParser::toolsStartTag);
-         this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolsStartTag.length();
-         this->currentState = State::InsideToolCall;
-         return std::nullopt;
-         break;
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(Content, Qwen3CoderToolParser::toolsStartTag);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolsStartTag.length();
+        this->currentState = State::InsideToolCall;
+        return std::nullopt;
+        break;
     }
     case State::InsideToolCall: {
         LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideToolCall, Qwen3CoderToolParser::toolPrefixTag);
@@ -341,7 +341,7 @@ std::optional<ToolCalls> Parser::streamStep(const std::string& chunk) {
         break;
     }
     case State::AfterParameter: {
-/*      
+        /*      
         SPDLOG_TRACE("State: AfterParameter current content:{} current pos:{}", streamContent, this->lastStreamProcessedPosition);
         auto posToolEnd = streamContent.find(Qwen3CoderToolParser::toolEndTag, this->lastStreamProcessedPosition);
         auto posNewParameter = streamContent.find(Qwen3CoderToolParser::parameterPrefixTag, this->lastStreamProcessedPosition);
@@ -544,9 +544,11 @@ void Qwen3CoderToolParser::lazyFillInitToolParamatersTypsMap() {
 }
 
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
-        BaseOutputParser(tokenizer), toolSchemas(toolSchemas), streamParser(NULL_STRING_CONTENT, this->toolsParametersTypes) {
-        SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", toolsParametersTypes.size());
-        }
+    BaseOutputParser(tokenizer),
+    toolSchemas(toolSchemas),
+    streamParser(NULL_STRING_CONTENT, this->toolsParametersTypes) {
+    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", toolsParametersTypes.size());
+}
 
 void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     // there may be multiple parameters per function, there may be multiple linses per parameter value
@@ -589,7 +591,6 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
 // then we will send only one delta with all arguments
 // we already have toJson functiont that turns all parameters into JSON string
 
-
 static std::string documentToString(const rapidjson::Document& doc) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -630,35 +631,20 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::s
     }
     if (toolCallsOpt.has_value()) {
         // TODO we assume we could only get one by one
-       SPDLOG_ERROR("Has value but not insideFunction");
-       /*
-        Expected equality of these values:
-  docStr
-    Which is: "{\"arguments\":{\"delta\":{\"tool_calls\":[{\"\":0,\"function\":{\"arg1\":\"STRING_VALUE\"}}]}}}"
-  expected
-    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":{\"arg1\":\"STRING_VALUE\"}}}]}}"
-        */
-       auto& toolCalls = toolCallsOpt.value();
-       if (toolCalls.size() != 1) {
-           SPDLOG_WARN("Expected one tool call, got: {}", toolCalls.size());
-           throw 42;
-       }
-       if (toolCalls.size() < 1) {
-           return std::nullopt;
-       }
-       auto& toolCall = toolCalls[0];
-       rapidjson::Document argsDelta;
-       argsDelta.Parse(toolCall.arguments.c_str());
-       this->returnedCompleteDeltas.insert(this->streamParser.toolCallIndex);
-       // we currently have this fail so we need to wrap argsDelta in the arguments fielda
-       /*
-Expected equality of these values:
-  docStr
-    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arg1\":\"STRING_VALUE\"}}]}}"
-  expected
-    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":{\"arg1\":\"STRING_VALUE\"}}}]}}"
-       */
-       rapidjson::Document argumentsWrapper;
+        SPDLOG_ERROR("Has value but not insideFunction");
+        auto& toolCalls = toolCallsOpt.value();
+        if (toolCalls.size() != 1) {
+            SPDLOG_WARN("Expected one tool call, got: {}", toolCalls.size());
+            throw 42;
+        }
+        if (toolCalls.size() < 1) {
+            return std::nullopt;
+        }
+        auto& toolCall = toolCalls[0];
+        rapidjson::Document argsDelta;
+        argsDelta.Parse(toolCall.arguments.c_str());
+        this->returnedCompleteDeltas.insert(this->streamParser.toolCallIndex);
+        rapidjson::Document argumentsWrapper;
         argumentsWrapper.SetObject();
         rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
         // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
@@ -666,24 +652,11 @@ Expected equality of these values:
         toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
         argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
 
-
-       auto currentDelta = wrapDelta(argumentsWrapper, this->streamParser.toolCallIndex);
-       // now we need wrap current delta in the required JSON structure
-       // {"arguments" : currentDelta}
-       /*
-       rapidjson::Document returnedDelta;
-       // create returned delta from scratch
-       returnedDelta.SetObject();
-       rapidjson::Document::AllocatorType& allocator = returnedDelta.GetAllocator();
-       returnedDelta.AddMember("arguments", currentDelta, allocator);
-       */
-       //return returnedDelta;
+        auto currentDelta = wrapDelta(argumentsWrapper, this->streamParser.toolCallIndex);
         SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
         return currentDelta;
     }
-
     if (parserState != streamParser.currentState) {
-        //SPDLOG_DEBUG("Parser state changed from {} to {}", static_cast<int>(parserState), static_cast<int>(streamParser.currentState));
         SPDLOG_DEBUG("Parser state changed from {} to {}", parserState, this->streamParser.currentState);
     }
     parserState = streamParser.currentState;
