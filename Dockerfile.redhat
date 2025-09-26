@@ -164,7 +164,7 @@ ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
 ARG ov_contrib_branch=master
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
-ARG ov_use_binary=0
+ENV ov_use_binary=0
 ARG DLDT_PACKAGE_URL
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
