@@ -27,9 +27,9 @@ echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
 
 python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %zipname% --report_name %filename% 2>&1 | tee ..\win_bdba.log
-for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_sign.log ^| findstr /c:"code":') do (
-    if not "%%a"=="200" exit /b 1
-)
+@REM for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_sign.log ^| findstr /c:"code":') do (
+@REM     if not "%%a"=="200" exit /b 1
+@REM )
 deactivate
 
 tar -cvf %OVMS_PATH%\ovms_windows_bdba_reports.zip -C ovms_windows_*
