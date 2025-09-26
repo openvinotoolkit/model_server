@@ -91,7 +91,7 @@ pipeline {
                 sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_ttft_ms')" < 300.0 | bc) -eq 0 ] ; then exit 1; fi'''
                 sh '''if [ $(echo "$(cat results/results.json | jq -r '.completed')" == 50 | bc) -eq 0 ] ; then exit 1; fi'''
                 sh "echo Stop docker container"
-                sh "docker stop model_server_${BUILD_NUMBER}"
+                sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
         }
         stage('Throughput') {
@@ -134,6 +134,17 @@ pipeline {
                 sh "echo Running agentic accuracy test"
                 sh "echo Stop docker container"
             }
+        }
+    }
+    post {
+        always {
+            sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
