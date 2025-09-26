@@ -68,7 +68,7 @@ pipeline {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
-                            windows.sdl_cleanup()
+                            windows.cleanup_sdl()
                         } finally {
                             echo "Cleanup finished"
                         }

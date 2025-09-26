@@ -165,7 +165,7 @@ def sign(){
     } else {
         echo "check_signing.py downloaded successfully."
     }
-    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + env.OVMS_PASS + ' ' + get_short_bazel_path())
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + env.OVMS_PASS + ' ' + get_short_bazel_path() + ' ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
     } else {
