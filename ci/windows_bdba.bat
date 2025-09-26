@@ -16,7 +16,7 @@ if exist requirements.txt (
 for /f "tokens=2 delims==." %%I in ('wmic os get localdatetime /value') do set datetime=%%I
 set datestamp=%datetime:~0,8%
 set timestamp=%datetime:~8,4%
-set filename=ovms_%datestamp%_%timestamp%.zip
+set filename=ovms_windows_%datestamp%_%timestamp%.zip
 
 copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%filename%
 
@@ -27,4 +27,5 @@ python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OV
 
 deactivate
 
-tar -cvf %OVMS_PATH%\ovms_windows_bdba_reports.zip -C %OVMS_PATH% ovms_windows_*
+tar -cvf %OVMS_PATH%\ovms_windows_bdba_reports.zip -C ovms_windows_*
+rm -rf %OVMS_PATH%\\%filename%
