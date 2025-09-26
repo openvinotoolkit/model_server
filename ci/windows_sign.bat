@@ -12,6 +12,11 @@ if /I "%PYTHON%"=="1" (
 )
 
 python repo_signing\windows_signing\check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee win_sign.log
-for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_sign.log ^| findstr /c:"code":') do (
-    if not "%%a"=="200" exit /b 1
+for /f "tokens=* delims=" %%a in ('type win_sign.log ^| tail -n 1') do (
+    echo %%a | findstr /C:"[ OK ]" >nul
+    if not errorlevel 1 (
+        exit /b 0
+    ) else (
+        exit /b 1
+    )
 )
