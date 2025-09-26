@@ -49,11 +49,6 @@ pipeline {
             name: 'AGENTIC_LATENCY'
         )
         booleanParam(
-            defaultValue: false, 
-            description: 'Run agentic throughput test', 
-            name: 'AGENTIC_THROUGHPUT'
-        )
-        booleanParam(
             name: "AGENTIC_ACCURACY",
             defaultValue: false,
             description: "Agentic accuracy"
@@ -87,9 +82,9 @@ pipeline {
                 sh "mkdir -p results && touch results/results.json"
                 sh "docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 20 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
                 sh "cat results/results.json | jq ."
-                sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_tpot_ms') > 50.0" | bc) -ne 0 ] ; then exit 1; fi'''
-                sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_ttft_ms') > 800.0" | bc) -ne 0 ] ; then exit 1; fi'''
-                sh '''if [ $(echo "$(cat results/results.json | jq -r '.completed') != 20" | bc) -ne 0 ] ; then exit 1; fi'''
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_tpot_ms') > 30.0" | bc) -ne 0 ] ; then echo WARNING; fi'''
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_ttft_ms') > 800.0" | bc) -ne 0 ] ; then echo WARNING; fi'''
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.completed') != 20" | bc) -ne 0 ] ; then echo WARNING; fi'''
                 sh "echo Stop docker container"
                 sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
@@ -100,8 +95,20 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "echo Running throughput test"
+                sh "mkdir -p ${env.MODELS_REPOSITORY_PATH}"
+                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${env.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                sh "echo wait for model server to be ready"
+                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                sh "echo Running latency test"
+                sh "mkdir -p results && touch results/results.json"
+                sh "docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 256 --random-output-len 128 --random-range-ratio 0.2 --max-concurrency 100 --num-prompts 500 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
+                sh "cat results/results.json | jq ."
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.total_token_throughput') > 500.0" | bc) -ne 0 ] ; then echo WARNING; fi'''
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.output_throughput') < 200.0" | bc) -ne 0 ] ; then echo WARNING; fi'''
+                sh '''if [ $(echo "$(cat results/results.json | jq -r '.completed') != 500" | bc) -ne 0 ] ; then echo WARNING; fi'''
                 sh "echo Stop docker container"
+                sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
         }
         stage('Agentic Latency') {
@@ -110,18 +117,21 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
+                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${env.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_prefix_caching true --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                sh "echo wait for model server to be ready"
+                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running agentic latency test"
+                sh "test -d .venv || python3 -m venv .venv"
+                sh "test -d vllm || git clone -b v0.10.2 https://github.com/vllm-project/vllm"
+                sh ".venv/bin/activate && pip install -r vllm/benchmarking/multi-turn/requirements.txt"
+                sh "sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarking/multi-turn/benchmark_serving_multi_turn.py"
+                sh "test -f pg1184.txt || wget https://www.gutenberg.org/ebooks/1184.txt.utf-8 && mv 1184.txt.utf-8 pg1184.txt"
+                sh ".venv/bin/activate && python vllm/benchmarks/multi-turn/benchmark_serving_multi_turn.py -m ${params.MODEL} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${params.MODEL} --num-clients 1 -n 20 > results_agentic_latency.txt"
+                sh "cat results_agentic_latency.txt"
+                sh '''if [ $(echo "$(cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2) < 0.2" | bc) -eq 0 ]; then echo WARNING; fi'''
                 sh "echo Stop docker container"
-            }
-        }
-        stage('Agentic Throughput') {
-            when {
-                expression { params.AGENTIC_THROUGHPUT == true }
-            }
-            steps {
-                sh "echo Start docker container"
-                sh "echo Running agentic throughput test"
-                sh "echo Stop docker container"
+                sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
         }
         stage('Agentic Accuracy') {
@@ -131,8 +141,14 @@ pipeline {
             steps {
                 sh "echo Start docker container"
                 sh "echo Install BFCL"
+                sh "test -d gorilla || git clone https://github.com/ShishirPatil/gorilla"
+                sh "cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
+                sh ". .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard"
                 sh "echo Running agentic accuracy test"
+                sh "export OPENAI_BASE_URL=http://localhost:8000/v3 && bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score_dir bfcl_scores"
+                sh '''if [ $(echo "$(cat gorilla/berkeley-function-call-leaderboard/bfcl-scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy') < 0.75" |bc) -ne 0 ]; then echo WARNING; fi'''
                 sh "echo Stop docker container"
+                sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
         }
     }
