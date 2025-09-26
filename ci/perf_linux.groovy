@@ -127,10 +127,10 @@ pipeline {
                 sh "echo Running agentic latency test"
                 sh "test -d .venv || python3 -m venv .venv"
                 sh "test -d vllm || git clone -b v0.10.2 https://github.com/vllm-project/vllm"
-                sh ". .venv/bin/activate && pip install -r vllm/benchmarks/multi-turn/requirements.txt"
-                sh "sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarks/multi-turn/benchmark_serving_multi_turn.py"
+                sh ". .venv/bin/activate && pip install -r vllm/benchmarks/multi_turn/requirements.txt"
+                sh "sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py"
                 sh "test -f pg1184.txt || wget https://www.gutenberg.org/ebooks/1184.txt.utf-8 && mv 1184.txt.utf-8 pg1184.txt"
-                sh ". .venv/bin/activate && python vllm/benchmarks/multi-turn/benchmark_serving_multi_turn.py -m ${params.MODEL} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${params.MODEL} --num-clients 1 -n 20 > results_agentic_latency.txt"
+                sh ". .venv/bin/activate && python vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py -m ${params.MODEL} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${params.MODEL} --num-clients 1 -n 20 > results_agentic_latency.txt"
                 sh "cat results_agentic_latency.txt"
                 sh '''if [ $(echo "$(cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2) < 0.2" | bc) -eq 0 ]; then echo WARNING; fi'''
                 sh "echo Stop docker container"
