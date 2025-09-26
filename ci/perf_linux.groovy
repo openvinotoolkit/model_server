@@ -64,18 +64,21 @@ pipeline {
         label "${params.TARGET_ENV}"
     }
 
-    if ( params.MODELS_REPOSITORY_PATH.trim() == "" ) {
-        params.MODELS_REPOSITORY_PATH = "${env.WORKSPACE}/models"
-    }
-
     stages {
         stage('Latency') {
             when {
                 expression { params.LATENCY == true }
             }
             steps {
+                script {
+                    def modelsPath = params.MODELS_REPOSITORY_PATH
+                    if ( modelsPath.trim() == "" ) {
+                        modelsPath = "${env.WORKSPACE}/models"
+                    }
+                    env.MODELS_REPOSITORY_PATH = modelsPath
+                }
                 sh "echo Start docker container"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${params.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                sh "docker run --rm -d --user \$(id -u):\$(id -g) --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${env.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
                 sh "echo wait for model server to be ready"
                 sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running latency test"
