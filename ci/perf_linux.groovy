@@ -59,13 +59,16 @@ pipeline {
         label "${params.TARGET_ENV}"
     }
 
-    def modelsPath() {
-        if (params.MODELS_REPOSITORY_PATH.trim() == "" ) {
-            modelsPath = "${env.WORKSPACE}/models"
+    script {
+        def modelsPath() {
+            def path
+            if (params.MODELS_REPOSITORY_PATH.trim() == "") {
+                path = "${env.WORKSPACE}/models"
             } else {
-            modelsPath = params.MODELS_REPOSITORY_PATH
+                path = params.MODELS_REPOSITORY_PATH
             }
-        return modelsPath
+            return path
+        }
     }
 
     stages {
@@ -75,9 +78,12 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "mkdir -p ${modelsPath()}"
-                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath()}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                script {
+                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    sh "mkdir -p ${modelsPath}"
+                    sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                }
                 sh "echo wait for model server to be ready"
                 sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running latency test"
@@ -97,11 +103,14 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "mkdir -p ${modelsPath()}"
-                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath()}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
-                sh "echo wait for model server to be ready"
-                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                script {
+                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    sh "mkdir -p ${modelsPath}"
+                    sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                    sh "echo wait for model server to be ready"
+                    sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                }
                 sh "echo Running latency test"
                 sh "mkdir -p results && touch results/results.json"
                 sh "docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 256 --random-output-len 128 --random-range-ratio 0.2 --max-concurrency 100 --num-prompts 500 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
@@ -119,11 +128,14 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
-                sh "mkdir -p ${modelsPath()}"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath()}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_prefix_caching true --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
-                sh "echo wait for model server to be ready"
-                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                script {
+                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    sh "mkdir -p ${modelsPath}"
+                    sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_prefix_caching true --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                    sh "echo wait for model server to be ready"
+                    sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                }
                 sh "echo Running agentic latency test"
                 sh "test -d .venv || python3 -m venv .venv"
                 sh "test -d vllm || git clone -b v0.10.2 https://github.com/vllm-project/vllm"
@@ -143,11 +155,14 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "docker pull ${params.DOCKER_IMAGE_NAME}"
-                sh "mkdir -p ${modelsPath()}"
-                sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath()}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
-                sh "echo wait for model server to be ready"
-                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                script {
+                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    sh "docker pull ${params.DOCKER_IMAGE_NAME}"
+                    sh "mkdir -p ${modelsPath}"
+                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                    sh "echo wait for model server to be ready"
+                    sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                }
                 sh "echo Install BFCL"
                 sh "test -d gorilla || git clone https://github.com/ShishirPatil/gorilla"
                 sh "cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
