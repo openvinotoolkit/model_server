@@ -19,8 +19,6 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          windows.sign()
-                          windows.bdba()
                           windows.unit_test()
                           windows.check_tests()
                           def safeBranchName = env.BRANCH_NAME.replaceAll('/', '_')
