@@ -11,7 +11,6 @@ python -m pip install --upgrade pip
 
 if exist requirements.txt (
     pip install -r requirements.txt
-    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 for /f "tokens=2 delims==." %%I in ('wmic os get localdatetime /value') do set datetime=%%I
@@ -27,9 +26,9 @@ echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
 
 python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %zipname% --report_name %filename% 2>&1 | tee ..\win_bdba.log
-@REM for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_sign.log ^| findstr /c:"code":') do (
-@REM     if not "%%a"=="200" exit /b 1
-@REM )
+for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_bdba.log ^| findstr /c:"code":') do (
+    if not "%%a"=="200" exit /b 1
+)
 deactivate
 
 tar -cvf %OVMS_PATH%\ovms_windows_bdba_reports.zip -C ovms_windows_*
