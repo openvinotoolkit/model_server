@@ -165,7 +165,9 @@ def sign(){
     } else {
         echo "check_signing.py downloaded successfully."
     }
-    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + env.OVMS_PASS + ' ' + get_short_bazel_path() + ' ' + env.OVMS_PYTHON_ENABLED)
+    println "OVMS_USER=${env.OVMS_USER}"
+
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + env.OVMS_PASS + ' dist\\windows\\ovms ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
     } else {
@@ -180,7 +182,7 @@ def bdba(){
     }
     println "Starting BDBA scan"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/przepeck/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
-    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_KEY + ' ' + get_short_bazel_path())
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_KEY + ' dist\\windows')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
     } else {
