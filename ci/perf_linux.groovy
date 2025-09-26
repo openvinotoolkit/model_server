@@ -71,9 +71,9 @@ pipeline {
             }
             steps {
                 sh "echo Start docker container"
-                sh "docker run --rm -d --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${params.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --device ${params.DEVICE} --log_level INFO"
+                sh "docker run --rm -d --user $(id -u):$(id -g) --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${params.MODELS_REPOSITORY_PATH}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --port 9000 --task text_generation --device ${params.DEVICE} --log_level INFO"
                 sh "echo wait for model server to be ready"
-                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 0.5; done"
+                sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running latency test"
                 sh "mkdir -p results && touch results/results.json"
                 sh "docker run -v \$(pwd)/results:/results --rm --network host --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 50 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
