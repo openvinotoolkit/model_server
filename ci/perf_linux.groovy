@@ -85,7 +85,7 @@ pipeline {
                 sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 sh "echo Running latency test"
                 sh "mkdir -p results && touch results/results.json"
-                sh "docker run -v \$(pwd)/results:/results --rm --network host -e https_proxy=${env.HTTPS_PROXY} --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 50 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
+                sh "docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 50 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result"
                 sh "cat results/results.json | jq ."
                 sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_tpot_ms')" < 100.0 | bc) -eq 0 ] ; then exit 1; fi'''
                 sh '''if [ $(echo "$(cat results/results.json | jq -r '.mean_ttft_ms')" < 300.0 | bc) -eq 0 ] ; then exit 1; fi'''
