@@ -59,18 +59,6 @@ pipeline {
         label "${params.TARGET_ENV}"
     }
 
-    script {
-        def modelsPath() {
-            def path
-            if (params.MODELS_REPOSITORY_PATH.trim() == "") {
-                path = "${env.WORKSPACE}/models"
-            } else {
-                path = params.MODELS_REPOSITORY_PATH
-            }
-            return path
-        }
-    }
-
     stages {
         stage('Latency') {
             when {
