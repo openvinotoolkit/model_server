@@ -30,7 +30,7 @@
 #include "../utils.hpp"
 
 namespace ovms {
-void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) {
+void Qwen3ReasoningParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::string startReasoningTag = getParsingStartTag();
     std::string endReasoningTag = getParsingEndTag();
     size_t startPos = parsedOutput.content.find(startReasoningTag);

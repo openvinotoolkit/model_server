@@ -32,7 +32,7 @@
 
 namespace ovms {
 
-void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) {
+void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
     if (parsedOutput.content.empty() || generatedTokens.size() <= 0) {

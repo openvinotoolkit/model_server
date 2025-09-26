@@ -33,12 +33,12 @@
 
 namespace ovms {
 const std::string Qwen3CoderToolParser::toolsStartTag = "<tool_call>";
-const std::string Qwen3CoderToolParser::toolsEndTag = "</tool_call>";
 const std::string Qwen3CoderToolParser::toolPrefixTag = "<function=";
-const std::string Qwen3CoderToolParser::toolEndTag = "</function>";
+const std::string Qwen3CoderToolParser::tagEnd = ">";
 const std::string Qwen3CoderToolParser::parameterPrefixTag = "<parameter=";
 const std::string Qwen3CoderToolParser::parameterEndTag = "</parameter>";
-const std::string Qwen3CoderToolParser::tagEnd = ">";
+const std::string Qwen3CoderToolParser::toolEndTag = "</function>";
+const std::string Qwen3CoderToolParser::toolsEndTag = "</tool_call>";
 
 static void trimNewline(std::string& str) {
     if (str.empty()) {
@@ -202,6 +202,7 @@ void Parser::removeToolCallsFromContent() {
 // {"type":"object","required":["location"],"properties":{"location":{"type":"string","description":"The location for which to get the weather, in the format of 'City, State', such as 'San Francisco, CA' if State for the city exists. 'City, Country' if State for the city doesn't exist."},"unit":{"type":"string","description":"The unit of temperature for the weather report.","enum":["celsius","fahrenheit"],"default":"fahrenheit"}}}
 
 static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const std::string& schema) {
+    SPDLOG_ERROR("Parse tool schema for tool: {}, schema: {}", functionName, schema);
     ParametersTypeMap_t result;
     rapidjson::Document doc;
     if (doc.Parse(schema.c_str()).HasParseError()) {
@@ -251,7 +252,7 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
 static std::string setCorrectValueType(std::string& inputValue, const std::string& currentParameterName, const ParametersTypeMap_t& parametersType) {
     auto paramIt = parametersType.find(currentParameterName);
     if (paramIt == parametersType.end()) {
-        SPDLOG_WARN("Parameter: {} schema not found for tool: {}, leaving as string", currentParameterName);
+        SPDLOG_WARN("Parameter: {} schema not found , leaving as string", currentParameterName);
         return inputValue;
     }
     if (paramIt->second == ParameterType_t::STRING) {
@@ -267,9 +268,163 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
     return inputValue;
 }
 
+#define RETURN_NULL_IF_NOT_FOUND(POS) \
+    if (POS == std::string::npos) {       \
+        return std::nullopt;              \
+    }
+
+#define LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(STATE, TAG) \
+    SPDLOG_TRACE("State: {}, current content:{} current pos:{}", #STATE, streamContent, this->lastStreamProcessedPosition); \
+    auto pos = streamContent.find(TAG, this->lastStreamProcessedPosition); \
+    RETURN_NULL_IF_NOT_FOUND(pos)
+
+std::optional<ToolCalls> Parser::streamStep(const std::string& chunk) {
+    if (chunk.empty()) {
+        return std::nullopt;
+    }
+    this->streamContent += chunk;
+    switch (this->currentState) {
+    case State::Content: {
+         LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(Content, Qwen3CoderToolParser::toolsStartTag);
+         this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolsStartTag.length();
+         this->currentState = State::InsideToolCall;
+         return std::nullopt;
+         break;
+    }
+    case State::InsideToolCall: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideToolCall, Qwen3CoderToolParser::toolPrefixTag);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolPrefixTag.length();
+        this->currentState = State::InsideFunctionName;
+        return std::nullopt;
+        break;
+    }
+    case State::InsideFunctionName: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideFunctionName, Qwen3CoderToolParser::tagEnd);
+        this->currentFunction.name = streamContent.substr(this->lastStreamProcessedPosition, pos - this->lastStreamProcessedPosition);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::tagEnd.length();
+        // here in theory we could wrapFirstDelta to send function name TODO
+        this->currentState = State::InsideFunction;
+        return std::nullopt;
+        break;
+    }
+    case State::InsideFunction: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideFunction, Qwen3CoderToolParser::parameterPrefixTag);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::parameterPrefixTag.length();
+        this->currentState = State::InsideParameterName;
+        return std::nullopt;
+        break;
+    }
+    case State::InsideParameterName: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideParameterName, Qwen3CoderToolParser::tagEnd);
+        this->currentParameterName = streamContent.substr(this->lastStreamProcessedPosition, pos - this->lastStreamProcessedPosition);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::tagEnd.length();
+        this->currentState = State::InsideParameter;
+        return std::nullopt;
+        break;
+    }
+    case State::InsideParameter: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(InsideParameter, Qwen3CoderToolParser::parameterEndTag);
+        std::string parameterValue(streamContent.substr(this->lastStreamProcessedPosition, pos - this->lastStreamProcessedPosition));
+        if (this->removeNewlineAroundParameters)
+            trimNewline(parameterValue);
+        // now we have parameter value in string format. We need to use toolsSchemas to determine if it is string, number, bool, array or object
+        auto paramIt = this->toolsParametersTypeMap.find(this->currentFunction.name);
+        if (paramIt == this->toolsParametersTypeMap.end()) {
+            SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
+        } else {
+            parameterValue = setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second);
+        }
+        this->currentFunction.parameters.emplace_back(this->currentParameterName, parameterValue);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::parameterEndTag.length();
+        this->currentState = State::AfterParameter;
+        return std::nullopt;
+        break;
+    }
+    case State::AfterParameter: {
+/*      
+        SPDLOG_TRACE("State: AfterParameter current content:{} current pos:{}", streamContent, this->lastStreamProcessedPosition);
+        auto posToolEnd = streamContent.find(Qwen3CoderToolParser::toolEndTag, this->lastStreamProcessedPosition);
+        auto posNewParameter = streamContent.find(Qwen3CoderToolParser::parameterPrefixTag, this->lastStreamProcessedPosition);
+        SPDLOG_ERROR("ER: rest:{} {} {} {}", streamContent.substr(lastStreamProcessedPosition), this->lastStreamProcessedPosition, posToolEnd, posNewParameter);
+        if (posNewParameter < posToolEnd && posNewParameter != std::string::npos) {
+            SPDLOG_ERROR("ER");
+            this->lastStreamProcessedPosition = posNewParameter + Qwen3CoderToolParser::parameterPrefixTag.length();
+            this->currentState = State::InsideParameterName;
+            return std::nullopt;
+            break;
+        }
+        if (posToolEnd != std::string::npos) {
+            SPDLOG_ERROR("ER");
+            auto pos = posToolEnd;
+            this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolEndTag.length();
+            pos = streamContent.find(Qwen3CoderToolParser::toolsEndTag, this->lastStreamProcessedPosition);
+            RETURN_NULL_IF_NOT_FOUND(pos); // we do not switch state yet
+            this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolsEndTag.length();
+            this->currentState = State::Content;
+            ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};
+            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
+            toolCalls.emplace_back(std::move(toolCall));
+            currentFunction.clear();
+            currentState = State::Content;
+            return toolCalls;
+            break;
+        }
+        // we found neither
+            SPDLOG_ERROR("ER");
+        return std::nullopt; // we do not switch state yet
+        break;
+        */
+        SPDLOG_TRACE("State: AfterParameter current content:{} current pos:{}", streamContent, this->lastStreamProcessedPosition);
+        auto posToolEnd = streamContent.find(Qwen3CoderToolParser::toolEndTag, this->lastStreamProcessedPosition);
+        auto posNewParameter = streamContent.find(Qwen3CoderToolParser::parameterPrefixTag, this->lastStreamProcessedPosition);
+        SPDLOG_ERROR("ER: rest:{} {} {} {}", streamContent.substr(lastStreamProcessedPosition), this->lastStreamProcessedPosition, posToolEnd, posNewParameter);
+        if (posNewParameter == std::string::npos && posToolEnd == std::string::npos) {
+            SPDLOG_TRACE("ER: found neither no changing state");
+            return std::nullopt;  // we do not switch state yet
+        }
+        if (posToolEnd < posNewParameter) {
+            SPDLOG_TRACE("ER: found tool end");
+            this->lastStreamProcessedPosition = posToolEnd + Qwen3CoderToolParser::toolEndTag.length();
+            this->currentState = State::AfterFunction;
+            return std::nullopt;
+            break;
+        }
+        if (posNewParameter < posToolEnd) {
+            SPDLOG_TRACE("ER: found new param");
+            this->lastStreamProcessedPosition = posNewParameter + Qwen3CoderToolParser::parameterPrefixTag.length();
+            this->currentState = State::InsideParameterName;
+            return std::nullopt;
+            break;
+        }
+        throw 42;
+    }
+    case State::AfterFunction: {
+        LOG_AND_DEFINE_POS_AND_RETURN_NULL_IF_NOT_FOUND(AfterFunction, Qwen3CoderToolParser::toolsEndTag);
+        this->lastStreamProcessedPosition = pos + Qwen3CoderToolParser::toolsStartTag.length();
+        this->currentState = State::Content;
+        ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};
+        SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
+        ToolCalls toolCalls;
+        toolCalls.emplace_back(std::move(toolCall));
+        this->currentFunction.clear();
+        return toolCalls;
+        break;
+    }
+    case State::ErrorEnd: {
+        SPDLOG_TRACE("State: ErrorEnd");
+        return std::nullopt;
+    }
+    case State::End: {
+        SPDLOG_TRACE("State: End");
+        return std::nullopt;
+    }
+    }
+    return std::nullopt;
+}
+
 bool Parser::step(ToolCalls& toolCalls) {
     switch (currentState) {
-    case Content: {
+    case State::Content: {
         SPDLOG_TRACE("State: Content");
         auto pos = content.find(Qwen3CoderToolParser::toolsStartTag, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::toolsStartTag, State::End);
@@ -278,7 +433,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::InsideToolCall;
         break;
     }
-    case InsideToolCall: {
+    case State::InsideToolCall: {
         SPDLOG_TRACE("State: InsideToolCall");
         auto pos = content.find(Qwen3CoderToolParser::toolPrefixTag, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::toolPrefixTag, State::ErrorEnd);
@@ -286,7 +441,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::InsideFunctionName;
         break;
     }
-    case InsideFunctionName: {
+    case State::InsideFunctionName: {
         SPDLOG_TRACE("State: InsideFunctionName");
         auto pos = content.find(Qwen3CoderToolParser::tagEnd, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::tagEnd, State::ErrorEnd);
@@ -295,7 +450,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::InsideFunction;
         break;
     }
-    case InsideFunction: {
+    case State::InsideFunction: {
         SPDLOG_TRACE("State: InsideFunction");
         auto pos = content.find(Qwen3CoderToolParser::parameterPrefixTag, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::parameterPrefixTag, State::ErrorEnd);
@@ -303,7 +458,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::InsideParameterName;
         break;
     }
-    case InsideParameterName: {
+    case State::InsideParameterName: {
         SPDLOG_TRACE("State: InsideParameterName");
         auto pos = content.find(Qwen3CoderToolParser::tagEnd, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::tagEnd, State::ErrorEnd);
@@ -312,7 +467,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::InsideParameter;
         break;
     }
-    case InsideParameter: {
+    case State::InsideParameter: {
         SPDLOG_TRACE("State: InsideParameter");
         auto pos = content.find(Qwen3CoderToolParser::parameterEndTag, currentPosition);
         CHECK_IF_FOUND2(pos, Qwen3CoderToolParser::parameterEndTag, State::ErrorEnd);
@@ -331,7 +486,7 @@ bool Parser::step(ToolCalls& toolCalls) {
         currentState = State::AfterParameter;
         break;
     }
-    case AfterParameter: {
+    case State::AfterParameter: {
         SPDLOG_TRACE("State: AfterParameter");
         // now we have 2 options, either we have next parameter or function & tool end
         auto posToolEnd = content.find(Qwen3CoderToolParser::toolEndTag, currentPosition);
@@ -360,17 +515,40 @@ bool Parser::step(ToolCalls& toolCalls) {
         CHECK_IF_FOUND2(posNewParameter, Qwen3CoderToolParser::toolEndTag + " nor " + Qwen3CoderToolParser::parameterPrefixTag, State::ErrorEnd);
         break;
     }
-    case ErrorEnd:
-        SPDLOG_TRACE("State: ErrorEnd");
-        return false;
-    case End:
-        SPDLOG_TRACE("State: End");
+    case State::AfterFunction:
+    case State::ErrorEnd:
+    case State::End:
+        SPDLOG_TRACE("State: {}", this->currentState);
         return false;
     }
     return true;
 }
 
-void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t& toolsSchemas) {
+static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
+    SPDLOG_ERROR("Creating tools parameters types map");
+    ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
+    for (const auto& [toolName, schema] : toolsSchemas) {
+        SPDLOG_ERROR("Creating tools parameters types for tool: {}, schema: {}", toolName, schema);
+        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, schema));
+    }
+    return toolsParametersTypes;
+}
+
+void Qwen3CoderToolParser::lazyFillInitToolParamatersTypsMap() {
+    if (this->filledParametersTypesMap) {
+        return;
+    }
+    SPDLOG_DEBUG("Filling tools parameters types map");
+    this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
+    this->filledParametersTypesMap = true;
+}
+
+Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
+        BaseOutputParser(tokenizer), toolSchemas(toolSchemas), streamParser(NULL_STRING_CONTENT, this->toolsParametersTypes) {
+        SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", toolsParametersTypes.size());
+        }
+
+void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     // there may be multiple parameters per function, there may be multiple linses per parameter value
     // there is only one function per tool call
     // <tool_call>
@@ -380,12 +558,8 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     // </parameter>
     // </function>
     // </tool_call>a
-    ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
-    for (const auto& [toolName, schema] : toolsSchemas) {
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, schema));
-    }
-
-    Parser parser(parsedOutput.content, toolsParametersTypes);
+    this->lazyFillInitToolParamatersTypsMap();
+    Parser parser(parsedOutput.content, this->toolsParametersTypes);
     while (parser.step(parsedOutput.toolCalls)) {
     }
     if (parser.currentState != Parser::State::End) {
@@ -394,8 +568,125 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     }
     return;
 }
+/*
+{"type":"response.output_item.added","response_id":"resp_1234xyz","output_index":0,"item":{"type":"function_call","id":"fc_1234xyz","call_id":"call_1234xyz","name":"get_weather","arguments":""}}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"{\""}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"location"}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"\":\""}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"Paris"}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":","}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":" France"}
+{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"\"}"}
+{"type":"response.function_call_arguments.done","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"arguments":"{\"location\":\"Paris, France\"}"}
+{"type":"response.output_item.done","response_id":"resp_1234xyz","output_index":0,"item":{"type":"function_call","id":"fc_1234xyz","call_id":"call_1234xyz","name":"get_weather","arguments":"{\"location\":\"Paris, France\"}"}}
+*/
+// example1 {"location":"San Francisco"}
+// example1 {"city":"San Francisco","state":"CA", "length":5, "is_day":true, "temperatures":[5,6,7], "details":{"humidity":80,"condition":"sunny"}}]}
+// index is toolCallId
+// // write function that will wrap toolCall arguments in the required JSON structure as above
 
-std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
+// for Qwen3Coder we will send first response with function call name and id
+// then we will send only one delta with all arguments
+// we already have toJson functiont that turns all parameters into JSON string
+
+
+static std::string documentToString(const rapidjson::Document& doc) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
+
+std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
+    // parse Chunk needs to use streamParser to process the chunk
+    // streamParser will return optional toolCalls when a tool call is completed
+    // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
+    // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name
+    // otherwise nullopt
+    this->lazyFillInitToolParamatersTypsMap();
+    if (newChunk.empty()) {
+        return std::nullopt;
+    }
+    std::string chunk = newChunk;
+    SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", chunk, static_cast<int>(finishReason));
+    auto parserState = streamParser.currentState;
+    // need currentToolcalss
+    auto toolCallsOpt = streamParser.streamStep(chunk);
+    if (streamParser.currentState == Parser::State::InsideFunction) {
+        if (returnedFirstDeltas.size() != this->returnedCompleteDeltas.size()) {
+            SPDLOG_TRACE("Skipping first delta, already sent for current function, fi:{} co:{}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
+            // we can skip sending first delta since we sent it for current function
+            return std::nullopt;
+        }
+        int toolCallId = ++this->streamParser.toolCallIndex;
+        const std::string& toolCallName = this->streamParser.currentFunction.name;
+        SPDLOG_ERROR("Caught function name: {}, id: {}", toolCallName, toolCallId);
+        rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
+        this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
+        returnedFirstDeltas.insert(toolCallId);
+        // here log the doc
+        SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
+        return doc;
+    }
+    if (toolCallsOpt.has_value()) {
+        // TODO we assume we could only get one by one
+       SPDLOG_ERROR("Has value but not insideFunction");
+       /*
+        Expected equality of these values:
+  docStr
+    Which is: "{\"arguments\":{\"delta\":{\"tool_calls\":[{\"\":0,\"function\":{\"arg1\":\"STRING_VALUE\"}}]}}}"
+  expected
+    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":{\"arg1\":\"STRING_VALUE\"}}}]}}"
+        */
+       auto& toolCalls = toolCallsOpt.value();
+       if (toolCalls.size() != 1) {
+           SPDLOG_WARN("Expected one tool call, got: {}", toolCalls.size());
+           throw 42;
+       }
+       if (toolCalls.size() < 1) {
+           return std::nullopt;
+       }
+       auto& toolCall = toolCalls[0];
+       rapidjson::Document argsDelta;
+       argsDelta.Parse(toolCall.arguments.c_str());
+       this->returnedCompleteDeltas.insert(this->streamParser.toolCallIndex);
+       // we currently have this fail so we need to wrap argsDelta in the arguments fielda
+       /*
+Expected equality of these values:
+  docStr
+    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arg1\":\"STRING_VALUE\"}}]}}"
+  expected
+    Which is: "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":{\"arg1\":\"STRING_VALUE\"}}}]}}"
+       */
+       rapidjson::Document argumentsWrapper;
+        argumentsWrapper.SetObject();
+        rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
+        // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
+        rapidjson::Value toolCallsString(rapidjson::kStringType);
+        toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
+        argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
+
+
+       auto currentDelta = wrapDelta(argumentsWrapper, this->streamParser.toolCallIndex);
+       // now we need wrap current delta in the required JSON structure
+       // {"arguments" : currentDelta}
+       /*
+       rapidjson::Document returnedDelta;
+       // create returned delta from scratch
+       returnedDelta.SetObject();
+       rapidjson::Document::AllocatorType& allocator = returnedDelta.GetAllocator();
+       returnedDelta.AddMember("arguments", currentDelta, allocator);
+       */
+       //return returnedDelta;
+        SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
+        return currentDelta;
+    }
+
+    if (parserState != streamParser.currentState) {
+        //SPDLOG_DEBUG("Parser state changed from {} to {}", static_cast<int>(parserState), static_cast<int>(streamParser.currentState));
+        SPDLOG_DEBUG("Parser state changed from {} to {}", parserState, this->streamParser.currentState);
+    }
+    parserState = streamParser.currentState;
     return std::nullopt;  // FIXME
 }
 Parser::Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap) :

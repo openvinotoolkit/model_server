@@ -72,7 +72,7 @@ private:
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName);
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
 
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;
@@ -81,7 +81,7 @@ public:
     std::string getToolParserStartTag() const;
 
     // Parse model output in the unary mode. Returns ParsedOutput containing data extracted by internal parsers.
-    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable, const ToolsSchemas_t& toolNameSchemaMap);
+    ParsedOutput parse(const std::vector<int64_t>& generatedTokens, const bool toolsAvailable);
 
     // Parse model output chunk in the steaming mode. Returns a JSON object containing the delta that conforms to OpenAI API
     // or nullopt if no response can be produced.

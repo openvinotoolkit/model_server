@@ -32,7 +32,7 @@
 
 namespace ovms {
 
-void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens, const ToolsSchemas_t&) {
+void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
     // Phi4 with vLLM template produces tool calls in the format:

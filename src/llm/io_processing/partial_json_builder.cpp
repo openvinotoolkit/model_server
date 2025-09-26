@@ -263,5 +263,4 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     }
     return doc;
 }
-
 }  // namespace ovms
