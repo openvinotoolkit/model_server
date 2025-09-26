@@ -18,7 +18,7 @@ set datestamp=%datetime:~0,8%
 set timestamp=%datetime:~8,4%
 set filename=ovms_%datestamp%_%timestamp%.zip
 
-copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%filename%
+copy ..\\%OVMS_PATH%\\ovms.zip ..\\%OVMS_PATH%\\%filename%
 
 echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
