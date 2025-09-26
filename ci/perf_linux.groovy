@@ -132,7 +132,7 @@ pipeline {
                 sh "test -f pg1184.txt || wget https://www.gutenberg.org/ebooks/1184.txt.utf-8 && mv 1184.txt.utf-8 pg1184.txt"
                 sh ". .venv/bin/activate && python vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py -m ${params.MODEL} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${params.MODEL} --num-clients 1 -n 20 > results_agentic_latency.txt"
                 sh "cat results_agentic_latency.txt"
-                sh '''if [ $(echo "$(cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2) < 0.2" | bc) -eq 0 ]; then echo WARNING; fi'''
+                sh '''if [ $(echo "$(cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2) < 0.2" | bc) -ne 0 ]; then echo WARNING; fi'''
                 sh "echo Stop docker container"
                 sh "docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
             }
@@ -147,7 +147,7 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     sh "docker pull ${params.DOCKER_IMAGE_NAME}"
                     sh "mkdir -p ${modelsPath}"
-                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
+                    sh "docker run --rm -d --user \$(id -u):\$(id -g) -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --log_level INFO"
                     sh "echo wait for model server to be ready"
                     sh "while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
