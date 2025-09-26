@@ -1,6 +1,7 @@
 @echo off
 set "BDBA_KEY=%1"
-set "OVMS_PATH=%2"
+set "OVMS_PATH=..\%2"
+cd repo_ci_infra
 
 python -m venv venv
 
@@ -8,8 +9,8 @@ call venv\Scripts\activate
 
 python -m pip install --upgrade pip
 
-if exist repo_ci_infra\requirements.txt (
-    pip install -r repo_ci_infra\requirements.txt
+if exist requirements.txt (
+    pip install -r requirements.txt
 )
 
 for /f "tokens=2 delims==." %%I in ('wmic os get localdatetime /value') do set datetime=%%I
@@ -22,7 +23,7 @@ copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%filename%
 echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
 
-python repo_ci_infra\binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %filename% --report_name %filename% 2>&1 | tee win_bdba.log
+python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %filename% --report_name %filename% 2>&1 | tee ..\win_bdba.log
 
 deactivate
 
