@@ -20,7 +20,6 @@ set filename=ovms_windows_%datestamp%_%timestamp%
 set zipname="%filename%.zip"
 
 copy %OVMS_PATH%\\ovms.zip %OVMS_PATH%\\%zipname%
-if !errorlevel! neq 0 exit /b !errorlevel!
 
 echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
@@ -32,6 +31,4 @@ for /f "tokens=2 delims=: " %%a in ('tail -n 3 win_bdba.log ^| findstr /c:"code"
 deactivate
 
 tar -cvf %OVMS_PATH%\ovms_windows_bdba_reports.zip -C ovms_windows_*
-if !errorlevel! neq 0 exit /b !errorlevel!
 rm -rf %OVMS_PATH%\\%zipname%
-if !errorlevel! neq 0 exit /b !errorlevel!
