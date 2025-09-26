@@ -11,8 +11,4 @@ if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT="
 )
 
-echo "OVMS_USER=%OVMS_USER%"
-echo "OVMS_FILES=%OVMS_FILES%"
-echo "PYTHON_OPT=%PYTHON_OPT%"
-
-python repo_signing\windows_signing\check_signing.py --user %OVMS_USER% --path %OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee win_sign.log
+python repo_signing\windows_signing\check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee win_sign.log
