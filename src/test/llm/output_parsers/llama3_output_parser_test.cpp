@@ -31,7 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
 #endif
 
-static const ovms::ToolsSchemas_t EMPTY_TOOL_SCHEMA = {}; // not used for llama3
+static const ovms::ToolsSchemas_t EMPTY_TOOL_SCHEMA = {};  // not used for llama3
 static std::unique_ptr<ov::genai::Tokenizer> llama3Tokenizer;
 
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls

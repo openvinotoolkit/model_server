@@ -31,7 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/mistralai/Mistral-7B-Instruct-v0.3/";
 #endif
 
-static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {}; // not used for mistral
+static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for mistral
 static std::unique_ptr<ov::genai::Tokenizer> mistralTokenizer;
 
 class MistralOutputParserTest : public ::testing::Test {

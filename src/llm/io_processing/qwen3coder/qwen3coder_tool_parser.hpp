@@ -17,9 +17,11 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <optional>
+#include <set>
 #include <stack>
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -53,7 +55,7 @@ struct Parser {
         InsideParameterName,  // (IPN) here we expect parameter end tag
         InsideParameter,      // (IP) here we expect parameter end tag
         AfterParameter,       // (AP) here we expect either next parameter or function & tools end
-        AfterFunction,       // (AF) here we expect either next parameter or function & tools end FIXME TODO different for streaming?
+        AfterFunction,        // (AF) here we expect either next parameter or function & tools end FIXME TODO different for streaming?
         ErrorEnd,             // (EE) we reached the end with error
         End                   // (E) we reached the end successfully
         // C->ITC->IFN->IF->IPN->IP->AP->(IPN|E)
@@ -80,7 +82,7 @@ struct Parser {
     std::optional<ToolCalls> streamStep(const std::string& chunk);
     Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap);
 };
-static std::string NULL_STRING_CONTENT ="";
+static std::string NULL_STRING_CONTENT = "";
 
 class Qwen3CoderToolParser : public BaseOutputParser {
 public:
@@ -91,9 +93,10 @@ public:
     static const std::string parameterPrefixTag;
     static const std::string parameterEndTag;
     static const std::string tagEnd;
+
 private:
-    const ToolsSchemas_t& toolSchemas; // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
-    ToolsParameterTypeMap_t toolsParametersTypes; // FIXME do it once per request
+    const ToolsSchemas_t& toolSchemas;             // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
+    ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
     bool filledParametersTypesMap{false};
     // streaming
     Parser streamParser;
@@ -120,30 +123,31 @@ public:
     const std::string& getParsingEndTag() const override {
         return toolsEndTag;  // FIXME CHECK
     }
+
 private:
-void lazyFillInitToolParamatersTypsMap();
+    void lazyFillInitToolParamatersTypsMap();
 };
 }  // namespace ovms
-template<>
+template <>
 struct fmt::formatter<ovms::Parser::State> : fmt::formatter<std::string> {
-    auto format(const ovms::Parser::State& state, fmt::format_context& ctx) const  {
+    auto format(const ovms::Parser::State& state, fmt::format_context& ctx) const {
         // use unordered_map
-            std::unordered_map<ovms::Parser::State, std::string> stateMap = {
-                    {ovms::Parser::State::Content, "Content"},
-                    {ovms::Parser::State::InsideToolCall, "InsideToolCall"},
-                    {ovms::Parser::State::InsideFunctionName, "InsideFunctionName"},
-                    {ovms::Parser::State::InsideFunction, "InsideFunction"},
-                    {ovms::Parser::State::InsideParameterName, "InsideParameterName"},
-                    {ovms::Parser::State::InsideParameter, "InsideParameter"},
-                    {ovms::Parser::State::AfterParameter, "AfterParameter"},
-                    {ovms::Parser::State::ErrorEnd, "ErrorEnd"},
-                    {ovms::Parser::State::End, "End"},
-            };
-            auto it = stateMap.find(state);
-            if (it != stateMap.end()) {
-                return fmt::formatter<std::string>::format(it->second, ctx);
-            } else {
-                return fmt::formatter<std::string>::format("Unknown", ctx);
-            }
+        std::unordered_map<ovms::Parser::State, std::string> stateMap = {
+            {ovms::Parser::State::Content, "Content"},
+            {ovms::Parser::State::InsideToolCall, "InsideToolCall"},
+            {ovms::Parser::State::InsideFunctionName, "InsideFunctionName"},
+            {ovms::Parser::State::InsideFunction, "InsideFunction"},
+            {ovms::Parser::State::InsideParameterName, "InsideParameterName"},
+            {ovms::Parser::State::InsideParameter, "InsideParameter"},
+            {ovms::Parser::State::AfterParameter, "AfterParameter"},
+            {ovms::Parser::State::ErrorEnd, "ErrorEnd"},
+            {ovms::Parser::State::End, "End"},
+        };
+        auto it = stateMap.find(state);
+        if (it != stateMap.end()) {
+            return fmt::formatter<std::string>::format(it->second, ctx);
+        } else {
+            return fmt::formatter<std::string>::format("Unknown", ctx);
+        }
     }
 };

@@ -31,7 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 #endif
 
-static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {}; // not used for Qwen3
+static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for Qwen3
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 
 class Qwen3OutputParserTest : public ::testing::Test {

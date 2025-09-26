@@ -32,7 +32,7 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Herme
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> hermes3Tokenizer;
-static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {}; // not used in hermes3
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in hermes3
 
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
