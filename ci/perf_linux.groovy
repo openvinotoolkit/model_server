@@ -68,7 +68,7 @@ pipeline {
                 sh "echo Start docker container"
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
-                    def gpuFlags = "--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)"
+                    def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     sh "docker pull ${params.DOCKER_IMAGE_NAME}"
                     sh "docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
@@ -94,6 +94,7 @@ pipeline {
                 sh "echo Start docker container"
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     sh "docker pull ${params.DOCKER_IMAGE_NAME}"
                     sh "docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
@@ -119,6 +120,7 @@ pipeline {
                 sh "echo Start docker container"
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     sh "docker pull ${params.DOCKER_IMAGE_NAME}"
                     sh "docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_prefix_caching true --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO"
@@ -146,6 +148,7 @@ pipeline {
                 sh "echo Start docker container"
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "docker pull ${params.DOCKER_IMAGE_NAME}"
                     sh "mkdir -p ${modelsPath}"
                     sh "docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --log_level INFO"
