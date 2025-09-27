@@ -153,7 +153,7 @@ pipeline {
                 }
                 sh "echo Install BFCL"
                 sh "test -d gorilla || git clone https://github.com/ShishirPatil/gorilla"
-                sh "cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
+                sh "cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
                 sh ". .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard"
                 sh "echo Running agentic accuracy test"
                 sh "export OPENAI_BASE_URL=http://localhost:8000/v3 && . .venv/bin/activate && bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score_dir bfcl_scores"
