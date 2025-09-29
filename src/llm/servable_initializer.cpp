@@ -228,6 +228,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
             jinja_env.globals["raise_exception"] = raise_exception
+            jinja_env.filters["from_json"] = json.loads
             if jinja_file.is_file():
                 template = jinja_env.get_template("chat_template.jinja")
             elif jinja_file_legacy.is_file():
