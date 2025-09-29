@@ -129,6 +129,20 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
+:: Set default USE_OV_BINARY if not set
+if "%USE_OV_BINARY%"=="" (
+    set "USE_OV_BINARY=1"
+)
+
+set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
+set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
+set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
+
+echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
+IF "%USE_OV_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -190,8 +204,101 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
+echo [INFO] GenAI installed: %BAZEL_SHORT_PATH%\%genai_dir%
+goto :finished_openvino
 
+:install_openvino_from_src
+IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
+    rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
+)
+if "%OV_SOURCE_BRANCH%"=="" (
+    set "OV_SOURCE_BRANCH=4a90bedcdd64dc4d6fee54cf03de6c5617b35a48"
+)
+if "%OV_SOURCE_ORG%"=="" (
+    set "OV_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_ORG%"=="" (
+    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_BRANCH%"=="" (
+    set "TOKENIZER_SOURCE_BRANCH=bd47b33bcae913c59dcbe7e67ff52dbdf826ac32"
+)
+if "%GENAI_SOURCE_ORG%"=="" (
+    set "GENAI_SOURCE_ORG=openvinotoolkit"
+)
+if "%GENAI_SOURCE_BRANCH%"=="" (
+    set "GENAI_SOURCE_BRANCH=845ba50e83e3f2f436d3794044a87f767f76bfd7"
+)
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
+    git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
+)
+
+set "BACK_CWD=%cd%"
+cd %BAZEL_SHORT_PATH%\openvino_src
+git fetch origin
+git checkout %OV_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+git submodule update --init --recursive
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+set "TBB_DIR="
+cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: OpenVINO Tokenizers
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
+    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+)
+cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+git fetch origin
+git checkout %TOKENIZER_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: OpenVINO GenAI
+
+IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
+    git clone https://github.com/%GENAI_SOURCE_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+)
+cd %BAZEL_SHORT_PATH%\openvino_genai_src
+git fetch origin
+git checkout %GENAI_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
+cd !BACK_CWD!
+:finished_openvino
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
 echo [INFO] Installing OpenCL headers ...
