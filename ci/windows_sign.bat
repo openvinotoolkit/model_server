@@ -14,7 +14,7 @@ if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT="
 )
 
-echo %OVMS_PASS% >> "temp.txt"
+echo %2 >> "temp.txt"
 
 python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee ..\..\win_sign.log
 for /f "tokens=* delims=" %%a in ('type ..\..\win_sign.log ^| tail -n 1') do (
