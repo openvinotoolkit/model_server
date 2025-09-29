@@ -182,7 +182,7 @@ def bdba(){
     }
     println "Starting BDBA scan"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/przepeck/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
-    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows')
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat \"' + env.BDBA_CREDS_PSW + '\" dist\\windows')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
     } else {
