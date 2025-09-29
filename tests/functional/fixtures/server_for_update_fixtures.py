@@ -17,10 +17,10 @@
 import pytest
 import shutil
 
-import config
-from model.models_information import Resnet
-from utils.parametrization import get_tests_suffix
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.model.models_information import Resnet
+from tests.functional.utils.parametrization import get_tests_suffix
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")

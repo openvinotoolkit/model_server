@@ -16,7 +16,7 @@
 
 import logging
 
-import config
+import tests.functional.config as config
 
 LOGGER_LEVEL = "INFO"
 

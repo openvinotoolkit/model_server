@@ -20,10 +20,10 @@ from tensorflow import make_tensor_proto, make_ndarray
 from tensorflow_serving.apis import prediction_service_pb2_grpc, model_service_pb2_grpc, predict_pb2, \
     get_model_metadata_pb2, get_model_status_pb2
 
-from config import infer_timeout
-from config import grpc_ovms_starting_port, ports_pool_size
-from utils.port_manager import PortManager
-from constants import MODEL_SERVICE, PREDICTION_SERVICE
+from tests.functional.config import infer_timeout
+from tests.functional.config import grpc_ovms_starting_port, ports_pool_size
+from tests.functional.utils.port_manager import PortManager
+from tests.functional.constants.constants import MODEL_SERVICE, PREDICTION_SERVICE
 import logging
 
 logger = logging.getLogger(__name__)

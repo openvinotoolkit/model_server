@@ -15,11 +15,10 @@
 #
 from docker import DockerClient
 
-import config
-from object_model.docker import Docker
-from object_model.server import Server
-from utils.parametrization import generate_test_object_name
-from utils.helpers import SingletonMeta
+import tests.functional.config as config
+from tests.functional.object_model.docker import Docker
+from tests.functional.utils.parametrization import generate_test_object_name
+from tests.functional.utils.helpers import SingletonMeta
 
 
 class MinioDocker(Docker, metaclass=SingletonMeta):

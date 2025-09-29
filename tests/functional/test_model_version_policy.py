@@ -20,18 +20,20 @@ from google.protobuf.json_format import Parse
 from tensorflow_serving.apis import get_model_metadata_pb2, \
     get_model_status_pb2  # noqa
 
-from constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, NOT_TO_BE_REPORTED_IF_SKIPPED
-from config import target_device, skip_nginx_test
-from conftest import devices_not_supported_for_test
-from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
-from utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, model_metadata_response, \
-    get_model_status
+from tests.functional.constants.constants import MODEL_SERVICE, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, \
+    NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.config import skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2
+from tests.functional.utils.grpc import create_channel, get_model_metadata_request, get_model_metadata, \
+    model_metadata_response, get_model_status
 import logging
-from utils.models_utils import ModelVersionState, ErrorCode, \
+from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
+from tests.functional.utils.rest import get_metadata_url, get_status_url, get_model_status_response_rest
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA])
@@ -42,6 +44,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
+    @pytest.mark.api_enabling
     def test_get_model_metadata(self, model_version_policy_models,
                                 start_server_model_ver_policy,
                                 model_name, throw_error):
@@ -92,6 +95,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
+    @pytest.mark.api_enabling
     def test_get_model_status(self, model_version_policy_models,
                               start_server_model_ver_policy,
                               model_name, throw_error):
@@ -137,6 +141,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
+    @pytest.mark.api_enabling
     def test_get_model_metadata_rest(self, model_version_policy_models,
                                      start_server_model_ver_policy,
                                      model_name, throw_error):
@@ -209,6 +214,7 @@ class TestModelVerPolicy:
         ('specific', [False, True, False]),
         ('latest', [True, False, False]),
     ])
+    @pytest.mark.api_enabling
     def test_get_model_status_rest(self, model_version_policy_models,
                                    start_server_model_ver_policy,
                                    model_name, throw_error):

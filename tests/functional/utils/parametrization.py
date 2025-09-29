@@ -20,7 +20,7 @@ import socket
 import logging
 from datetime import datetime
 
-from utils.helpers import SingletonMeta
+from tests.functional.utils.helpers import SingletonMeta
 
 logger = logging.getLogger(__name__)
 

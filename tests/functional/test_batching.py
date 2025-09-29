@@ -17,15 +17,18 @@ import pytest
 import numpy as np
 import json
 import os
-from constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_HDDL
-from config import skip_nginx_test
-from conftest import devices_not_supported_for_test
-from model.models_information import ResnetBS8, AgeGender
-from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response
+from tests.functional.constants.constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED, \
+    TARGET_DEVICE_HDDL
+from tests.functional.config import skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import ResnetBS8, AgeGender
+from tests.functional.utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, \
+    model_metadata_response
 import logging
-from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
+from tests.functional.utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 class TestBatchModelInference:
@@ -47,6 +50,7 @@ class TestBatchModelInference:
         return in_name, out_names, json_dict["outputs"]
 
     @devices_not_supported_for_test([TARGET_DEVICE_HDDL])
+    @pytest.mark.api_enabling
     def test_run_inference(self, start_server_batch_model):
         """
         <b>Description</b>
@@ -78,41 +82,7 @@ class TestBatchModelInference:
         logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
         assert output[ResnetBS8.output_name].shape == ResnetBS8.output_shape, ERROR_SHAPE
 
-    @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
-    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
-    def test_run_inference_bs4(self, start_server_batch_model_bs4):
-
-        _, ports = start_server_batch_model_bs4
-
-        # Connect to grpc service
-        stub = create_channel(port=ports["grpc_port"])
-
-        batch_input = np.ones((4,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
-        output = infer(batch_input, input_tensor=ResnetBS8.input_name,
-                       grpc_stub=stub, model_spec_name=ResnetBS8.name,
-                       model_spec_version=None,
-                       output_tensors=[ResnetBS8.output_name])
-        logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
-        assert output[ResnetBS8.output_name].shape == (4,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
-
-    @devices_not_supported_for_test([TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD])
-    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
-    def test_run_inference_auto(self, start_server_batch_model_auto):
-
-        _, ports = start_server_batch_model_auto
-
-        # Connect to grpc service
-        stub = create_channel(port=ports["grpc_port"])
-
-        for batch_size in [1, 6]:
-            batch_input = np.ones((batch_size,) + ResnetBS8.input_shape[1:], ResnetBS8.dtype)
-            output = infer(batch_input, input_tensor=ResnetBS8.input_name,
-                           grpc_stub=stub, model_spec_name=ResnetBS8.name,
-                           model_spec_version=None,
-                           output_tensors=[ResnetBS8.output_name])
-            logger.info("Output shape: {}".format(output[ResnetBS8.output_name].shape))
-            assert output[ResnetBS8.output_name].shape == (batch_size,) + ResnetBS8.output_shape[1:], ERROR_SHAPE
-
+    @pytest.mark.api_enabling
     def test_get_model_metadata(self, start_server_batch_model):
 
         _, ports = start_server_batch_model
@@ -136,6 +106,7 @@ class TestBatchModelInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.api_enabling
     def test_run_inference_rest(self, start_server_batch_model_2out, mapping_names, request_format):
         """
             <b>Description</b>
@@ -169,98 +140,7 @@ class TestBatchModelInference:
         for output_names in out_names:
             assert output[output_names].shape == AgeGender.output_shape[out_mapping[output_names]], ERROR_SHAPE
 
-    @pytest.mark.parametrize("request_format",
-                             ['row_name', 'row_noname',
-                              'column_name', 'column_noname'])
-    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
-    def test_run_inference_bs4_rest(self, start_server_batch_model_auto_bs4_2out,
-                                    mapping_names,
-                                    request_format):
-        """
-            <b>Description</b>
-            Submit request to REST API interface serving
-            a single age-gender model with 2 outputs.
-            Parameter batch_size explicitly set to 4.
-
-            <b>input data</b>
-            - directory with the model in IR format
-            - docker image with ie-serving-py service
-
-            <b>fixtures used</b>
-            - model downloader
-            - service launching
-
-            <b>Expected results</b>
-            - response contains proper numpy shape
-
-        """
-
-        _, ports = start_server_batch_model_auto_bs4_2out
-
-        in_name, out_names, out_mapping = mapping_names
-
-        batch_size = 4
-        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
-        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
-        output = infer_rest(batch_input, input_tensor=in_name,
-                            rest_url=rest_url,
-                            output_tensors=out_names,
-                            request_format=request_format)
-        for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
-            assert output[output_names].shape == expected_shape, ERROR_SHAPE
-
-    @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
-    @pytest.mark.parametrize("request_format",
-                             ['row_name', 'row_noname',
-                              'column_name', 'column_noname'])
-    @pytest.mark.skipif(True, reason="CVS-73762 Setting batchsize is not supported")
-    def test_run_inference_rest_auto(self, start_server_batch_model_auto_2out,
-                                     mapping_names,
-                                     request_format):
-        """
-            <b>Description</b>
-            Submit request to REST API interface serving a single resnet model.
-            Parameter batch_size set to auto.
-
-            <b>input data</b>
-            - directory with the model in IR format
-            - docker image with ie-serving-py service
-
-            <b>fixtures used</b>
-            - model downloader
-            - service launching
-
-            <b>Expected results</b>
-            - response contains proper numpy shape
-
-        """
-
-        _, ports = start_server_batch_model_auto_2out
-
-        in_name, out_names, out_mapping = mapping_names
-
-        batch_size = 6
-        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
-        rest_url = get_predict_url(model=AgeGender.name, port=ports["rest_port"])
-        output = infer_rest(batch_input,
-                            input_tensor=in_name, rest_url=rest_url,
-                            output_tensors=out_names,
-                            request_format=request_format)
-        for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
-            assert output[output_names].shape == expected_shape, ERROR_SHAPE
-
-        batch_size = 3
-        batch_input = np.ones((batch_size,) + AgeGender.input_shape[1:], AgeGender.dtype)
-        output = infer_rest(batch_input, input_tensor=in_name,
-                            rest_url=rest_url,
-                            output_tensors=out_names,
-                            request_format=request_format)
-        for output_names in out_names:
-            expected_shape = (batch_size,) + AgeGender.output_shape[out_mapping[output_names]][1:]
-            assert output[output_names].shape == expected_shape, ERROR_SHAPE
-
+    @pytest.mark.api_enabling
     def test_get_model_metadata_rest(self, resnet_multiple_batch_sizes,
                                      start_server_batch_model):
 

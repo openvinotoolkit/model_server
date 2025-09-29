@@ -17,7 +17,7 @@
 BUILDKIT_STEP_LOG_MAX_SIZE=500000000
 BUILDKIT_STEP_LOG_MAX_SPEED=10000000
 
-VIRTUALENV_EXE := python3 -m virtualenv -p python3
+VIRTUALENV_EXE := python3 -m venv
 VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
 ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
@@ -255,7 +255,6 @@ spell: venv-style
 
 $(ACTIVATE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
-	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@. $(ACTIVATE); pip3 install --upgrade pip
 	@. $(ACTIVATE); pip3 install -vUqq "setuptools<80"
@@ -264,7 +263,6 @@ $(ACTIVATE):
 
 $(ACTIVATE_STYLE):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
-	@python3 -m pip install virtualenv
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
 	@. $(ACTIVATE_STYLE); pip3 install --upgrade pip
 	@. $(ACTIVATE_STYLE); pip3 install -vUqq "setuptools<80"

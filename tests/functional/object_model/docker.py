@@ -24,12 +24,12 @@ import docker
 from docker.types import DeviceRequest
 import logging
 from retry.api import retry_call
-from utils.files_operation import get_path_friendly_test_name
+from tests.functional.utils.files_operation import get_path_friendly_test_name
 
-import config
-from utils.grpc import port_manager_grpc
-from utils.rest import port_manager_rest
-from constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
+import tests.functional.config as config
+from tests.functional.utils.grpc import port_manager_grpc
+from tests.functional.utils.rest import port_manager_rest
+from tests.functional.constants.constants import TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_CPU, TARGET_DEVICE_MYRIAD
 
 
 logger = logging.getLogger(__name__)

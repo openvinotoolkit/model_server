@@ -15,25 +15,27 @@
 #
 import pytest
 import numpy as np
-from constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, NOT_TO_BE_REPORTED_IF_SKIPPED, \
-    TARGET_DEVICE_MYRIAD
-from config import  skip_nginx_test
-from conftest import devices_not_supported_for_test
-from model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
-from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, \
+from tests.functional.constants.constants import MODEL_SERVICE, ERROR_SHAPE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, \
+    NOT_TO_BE_REPORTED_IF_SKIPPED, TARGET_DEVICE_MYRIAD
+from tests.functional.config import  skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import Resnet, ResnetBS4, ResnetBS8, ResnetS3
+from tests.functional.utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, \
     model_metadata_response, get_model_status
 import logging
-from utils.models_utils import ModelVersionState, ErrorCode, \
+from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
+from tests.functional.utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU])
 class TestMultiModelInference:
 
+    @pytest.mark.api_enabling
     def test_run_inference(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -53,6 +55,7 @@ class TestMultiModelInference:
             assert_msg = "{} for model {}".format(ERROR_SHAPE, model.name)
             assert output[model.output_name].shape == model.output_shape, assert_msg
 
+    @pytest.mark.api_enabling
     def test_get_model_metadata(self, start_server_multi_model):
         _, ports = start_server_multi_model
 
@@ -73,6 +76,7 @@ class TestMultiModelInference:
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
+    @pytest.mark.api_enabling
     def test_get_model_status(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -90,6 +94,7 @@ class TestMultiModelInference:
             assert version_status.status.error_message == ERROR_MESSAGE[
                 ModelVersionState.AVAILABLE][ErrorCode.OK]
 
+    @pytest.mark.api_enabling
     def test_run_inference_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -105,6 +110,7 @@ class TestMultiModelInference:
             logger.info("Output shape: {}".format(output[model.output_name].shape))
             assert output[model.output_name].shape == model.output_shape, ERROR_SHAPE
 
+    @pytest.mark.api_enabling
     def test_get_model_metadata_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model
@@ -123,6 +129,7 @@ class TestMultiModelInference:
             assert expected_input_metadata == input_metadata
             assert expected_output_metadata == output_metadata
 
+    @pytest.mark.api_enabling
     def test_get_model_status_rest(self, start_server_multi_model):
 
         _, ports = start_server_multi_model

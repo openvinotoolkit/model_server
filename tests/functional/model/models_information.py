@@ -18,7 +18,7 @@
 import os
 import numpy as np
 
-import config
+import tests.functional.config as config
 
 MODEL_REPOSITORY_SERVER = "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin"
 BUILD_DIR = "1"

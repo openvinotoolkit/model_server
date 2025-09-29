@@ -19,9 +19,9 @@ import pytest
 import shutil
 from distutils.dir_util import copy_tree
 
-import config
-from model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.model.models_information import FaceDetection, PVBFaceDetectionV2, AgeGender
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")

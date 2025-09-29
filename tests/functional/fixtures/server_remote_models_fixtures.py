@@ -20,11 +20,11 @@ import boto3
 import pytest
 from botocore.client import Config
 
-import config
-from model.models_information import Resnet, ResnetS3, ResnetGS
-from object_model.minio_docker import MinioDocker
-from object_model.server import Server
-from utils.parametrization import get_tests_suffix
+import tests.functional.config as config
+from tests.functional.model.models_information import Resnet, ResnetS3, ResnetGS
+from tests.functional.object_model.minio_docker import MinioDocker
+from tests.functional.object_model.server import Server
+from tests.functional.utils.parametrization import get_tests_suffix
 
 
 @pytest.fixture(scope="session")

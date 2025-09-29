@@ -16,7 +16,7 @@
 import os
 import pytest
 
-import config
+import tests.functional.config as config
 
 
 def new_file_name(file):
@@ -35,7 +35,9 @@ def prepare_json(request):
     request.addfinalizer(finalizer)
 
     for file_to_prepare in files_to_prepare:
-        with open(path_to_config + file_to_prepare, "r") as template:
+        file_to_prepare_path = file_to_prepare if path_to_config.strip(os.path.sep) in os.getcwd() \
+            else os.path.join(path_to_config, file_to_prepare)
+        with open(file_to_prepare_path, "r") as template:
             new_file_path = os.path.join(config.path_to_mount, new_file_name(file_to_prepare))
             with open(new_file_path, "w+") as config_file:
                 for line in template:

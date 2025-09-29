@@ -19,9 +19,9 @@ import os
 import pytest
 import shutil
 
-import config
-from model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1, ResnetONNX
-from utils.model_management import download_missing_file
+import tests.functional.config as config
+from tests.functional.model.models_information import AgeGender, PVBDetection, PVBFaceDetectionV2, FaceDetection, PVBFaceDetectionV1, ResnetONNX
+from tests.functional.utils.model_management import download_missing_file
 import logging
 
 logger = logging.getLogger(__name__)

@@ -17,9 +17,9 @@
 import os
 import pytest
 
-import config
-from object_model.minio_docker import MinioDocker
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.object_model.minio_docker import MinioDocker
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")

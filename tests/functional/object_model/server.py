@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import config
-from object_model.ovms_binary import OvmsBinary
-from object_model.ovms_docker import OvmsDocker
+import tests.functional.config as config
+from tests.functional.object_model.ovms_binary import OvmsBinary
+from tests.functional.object_model.ovms_docker import OvmsDocker
 import logging
 
 logger = logging.getLogger(__name__)

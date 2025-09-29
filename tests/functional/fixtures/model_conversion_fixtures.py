@@ -18,11 +18,11 @@ import os
 import pytest
 import shutil
 
-import config
-from fixtures.model_download_fixtures import download_file
-from model.models_information import Resnet, ResnetBS4, ResnetBS8
+import tests.functional.config as config
+from tests.functional.fixtures.model_download_fixtures import download_file
+from tests.functional.model.models_information import Resnet, ResnetBS4, ResnetBS8
 import logging
-from utils.model_management import convert_model
+from tests.functional.utils.model_management import convert_model
 
 logger = logging.getLogger(__name__)
 

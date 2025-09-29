@@ -17,20 +17,21 @@
 import pytest
 import numpy as np
 
-from config import  skip_nginx_test
-from constants import MODEL_SERVICE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, \
-    NOT_TO_BE_REPORTED_IF_SKIPPED
-from conftest import devices_not_supported_for_test
-from model.models_information import PVBFaceDetectionV2, PVBFaceDetection
-from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
+from tests.functional.config import skip_nginx_test
+from tests.functional.constants.constants import MODEL_SERVICE, TARGET_DEVICE_GPU, TARGET_DEVICE_HDDL, \
+    TARGET_DEVICE_MYRIAD, TARGET_DEVICE_CUDA, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import PVBFaceDetectionV2, PVBFaceDetection
+from tests.functional.utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response, \
     get_model_status
 import logging
-from utils.models_utils import ModelVersionState, ErrorCode, \
+from tests.functional.utils.models_utils import ModelVersionState, ErrorCode, \
     ERROR_MESSAGE  # noqa
-from utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
+from tests.functional.utils.rest import get_predict_url, get_metadata_url, get_status_url, infer_rest, \
     get_model_metadata_response_rest, get_model_status_response_rest
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA])
@@ -38,6 +39,7 @@ class TestModelVersionHandling:
     model_name = "pvb_face_multi_version"
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_run_inference(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
@@ -57,6 +59,7 @@ class TestModelVersionHandling:
             '{} with version 1 has invalid output'.format(self.model_name)
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_get_model_metadata(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
@@ -83,6 +86,7 @@ class TestModelVersionHandling:
         assert expected_output_metadata == output_metadata
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_get_model_status(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
@@ -105,6 +109,7 @@ class TestModelVersionHandling:
             ModelVersionState.AVAILABLE][ErrorCode.OK]
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_run_inference_rest(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
@@ -122,6 +127,7 @@ class TestModelVersionHandling:
             '{} with version 1 has invalid output'.format(self.model_name)
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_get_model_metadata_rest(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model
@@ -143,6 +149,7 @@ class TestModelVersionHandling:
         assert expected_output_metadata == output_metadata
 
     @pytest.mark.parametrize("version", [1, 2, None], ids=("version 1", "version 2", "no version specified"))
+    @pytest.mark.api_enabling
     def test_get_model_status_rest(self, start_server_multi_model, version):
 
         _, ports = start_server_multi_model

@@ -16,9 +16,9 @@
 
 import pytest
 
-import config
-from model.models_information import FaceDetection
-from object_model.server import Server
+import tests.functional.config as config
+from tests.functional.model.models_information import FaceDetection
+from tests.functional.object_model.server import Server
 
 
 @pytest.fixture(scope="session")

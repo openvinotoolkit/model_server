@@ -25,32 +25,32 @@ import pytest
 from _pytest._code import ExceptionInfo, filter_traceback  # noqa
 from _pytest.outcomes import OutcomeException
 
-from constants import MODEL_SERVICE, PREDICTION_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
-from object_model.server import Server
-from utils.other import reorder_items_by_fixtures_used
-from utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
+from tests.functional.constants.constants import MODEL_SERVICE, PREDICTION_SERVICE, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.object_model.server import Server
+from tests.functional.utils.other import reorder_items_by_fixtures_used
+from tests.functional.utils.cleanup import clean_hanging_docker_resources, delete_test_directory, \
     get_containers_with_tests_suffix, get_docker_client
-from utils.logger import init_logger
+from tests.functional.utils.logger import init_logger
 from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
-from utils.files_operation import get_path_friendly_test_name
-from utils.parametrization import get_tests_suffix
-from config import test_dir, test_dir_cleanup, artifacts_dir, target_device, image
+from tests.functional.utils.files_operation import get_path_friendly_test_name
+from tests.functional.utils.parametrization import get_tests_suffix
+from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, target_device, image
 
 logger = logging.getLogger(__name__)
 
 
 pytest_plugins = [
-    'fixtures.model_download_fixtures',
-    'fixtures.model_conversion_fixtures',
-    'fixtures.server_detection_model_fixtures',
-    'fixtures.server_for_update_fixtures',
-    'fixtures.server_local_models_fixtures',
-    'fixtures.server_multi_model_fixtures',
-    'fixtures.server_remote_models_fixtures',
-    'fixtures.server_with_batching_fixtures',
-    'fixtures.server_with_version_policy_fixtures',
-    'fixtures.test_files_fixtures',
+    'tests.functional.fixtures.model_download_fixtures',
+    'tests.functional.fixtures.model_conversion_fixtures',
+    'tests.functional.fixtures.server_detection_model_fixtures',
+    'tests.functional.fixtures.server_for_update_fixtures',
+    'tests.functional.fixtures.server_local_models_fixtures',
+    'tests.functional.fixtures.server_multi_model_fixtures',
+    'tests.functional.fixtures.server_remote_models_fixtures',
+    'tests.functional.fixtures.server_with_batching_fixtures',
+    'tests.functional.fixtures.server_with_version_policy_fixtures',
+    'tests.functional.fixtures.test_files_fixtures',
     ]
 
 
@@ -248,9 +248,10 @@ def pytest_runtest_logfinish(nodeid, location):
 
 @pytest.fixture(scope='session', autouse=True)
 def extra_json_environment(request):
-    request.config._json_environment.append(('image', image))
-    request.config._json_environment.append(('system', get_docker_image_os_version_from_container()))
-    _ov_version, _ovms_version = get_ov_and_ovms_version_from_container()
-    request.config._json_environment.append(('ov_version', _ov_version))
-    request.config._json_environment.append(('ovms_version', _ovms_version))
+    if hasattr(request.config, "_json_environment"):
+        request.config._json_environment.append(('image', image))
+        request.config._json_environment.append(('system', get_docker_image_os_version_from_container()))
+        _ov_version, _ovms_version = get_ov_and_ovms_version_from_container()
+        request.config._json_environment.append(('ov_version', _ov_version))
+        request.config._json_environment.append(('ovms_version', _ovms_version))
     return

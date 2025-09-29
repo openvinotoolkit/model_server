@@ -30,8 +30,10 @@ logger = logging.getLogger(__name__)
 xfail = pytest.mark.xfail
 skip = pytest.mark.skip
 
+
 class TestSingleModelInference:
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_tool_definition(self):
         """
         <b>Description</b>
@@ -132,6 +134,7 @@ class TestSingleModelInference:
         assert completion.choices[0].message.tool_calls is None or completion.choices[0].message.tool_calls == []
 
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_dual_tools_definition(self):
         """
         <b>Description</b>
@@ -248,6 +251,7 @@ class TestSingleModelInference:
 
         
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_tool_definition_stream(self):
         """
         <b>Description</b>
@@ -307,6 +311,7 @@ class TestSingleModelInference:
         assert arguments == '{"location": "Paris, France"}'
 
     @skip(reason="not implemented yet")
+    @pytest.mark.api_enabling
     def test_chat_with_structured_output(self):
         """
         <b>Description</b>

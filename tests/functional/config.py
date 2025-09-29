@@ -16,9 +16,9 @@
 
 import os
 
-from constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
-from utils.helpers import get_int, get_bool
-from utils.parametrization import generate_test_object_name
+from tests.functional.constants.constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
+from tests.functional.utils.helpers import get_int, get_bool
+from tests.functional.utils.parametrization import generate_test_object_name
 
 try:
     # In user_config.py, user might export custom environment variables

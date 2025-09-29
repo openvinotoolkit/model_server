@@ -16,19 +16,23 @@
 
 import numpy as np
 import pytest
-from constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
-from config import skip_nginx_test
-from conftest import devices_not_supported_for_test
-from model.models_information import AgeGender
-from utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, model_metadata_response
+from tests.functional.constants.constants import ERROR_SHAPE, TARGET_DEVICE_MYRIAD, NOT_TO_BE_REPORTED_IF_SKIPPED
+from tests.functional.config import skip_nginx_test
+from tests.functional.conftest import devices_not_supported_for_test
+from tests.functional.model.models_information import AgeGender
+from tests.functional.utils.grpc import create_channel, infer, get_model_metadata_request, get_model_metadata, \
+    model_metadata_response
 import logging
-from utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
+from tests.functional.utils.rest import get_predict_url, get_metadata_url, infer_rest, get_model_metadata_response_rest
 
 logger = logging.getLogger(__name__)
+
 
 @pytest.mark.skipif(skip_nginx_test, reason=NOT_TO_BE_REPORTED_IF_SKIPPED)
 @devices_not_supported_for_test([TARGET_DEVICE_MYRIAD])
 class TestSingleModelMappingInference:
+
+    @pytest.mark.api_enabling
     def test_run_inference(self, start_server_with_mapping):
         """
         <b>Description</b>
@@ -62,6 +66,7 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
+    @pytest.mark.api_enabling
     def test_get_model_metadata(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
@@ -86,6 +91,7 @@ class TestSingleModelMappingInference:
     @pytest.mark.parametrize("request_format",
                              ['row_name', 'row_noname',
                               'column_name', 'column_noname'])
+    @pytest.mark.api_enabling
     def test_run_inference_rest(self, start_server_with_mapping, request_format):
         """
             <b>Description</b>
@@ -117,6 +123,7 @@ class TestSingleModelMappingInference:
             logger.info("Output shape: {}".format(output[output_name].shape))
             assert output[output_name].shape == shape, ERROR_SHAPE
 
+    @pytest.mark.api_enabling
     def test_get_model_metadata_rest(self, start_server_with_mapping):
 
         _, ports = start_server_with_mapping
