@@ -106,14 +106,13 @@ md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-if "%USE_OV_BINARY%"=="1" (
+IF "%USE_OV_BINARY%"=="1" (
     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
     if !errorlevel! neq 0 exit /b !errorlevel!
     copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
     if !errorlevel! neq 0 exit /b !errorlevel!
-)
-else (
-    copy openvino\LICENSE %license_dest%openvino.LICENSE.txt
+) ELSE (
+    copy C:\%output_user_root%\openvino\licenses %license_dest%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 

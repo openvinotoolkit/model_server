@@ -131,7 +131,7 @@ IF /I EXIST %bash_path% (
 
 :: Set default USE_OV_BINARY if not set
 if "%USE_OV_BINARY%"=="" (
-    set "USE_OV_BINARY=1"
+    set "USE_OV_BINARY=0"
 )
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
