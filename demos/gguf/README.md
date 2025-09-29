@@ -2,13 +2,14 @@
 
 This demo shows how to deploy  model with the OpenVINO Model Server.
 
-Currently supported models are DeepSeek-R1-Distill-Qwen (1.5B, 7B), Qwen2.5 Instruct (1.5B, 3B, 7B) & llama-3.2 Instruct (1B, 3B, 8B).
+Currently supported models are DeepSeek-R1-Distill-Qwen (1.5B, 7B), Qwen2.5 Instruct (1.5B, 3B, 7B), llama-3.2 Instruct (1B, 3B) & llama-3.1-8B.
+Check the [list of supported models](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models) for more details.
 
 If the model already exists locally, it will skip the downloading and immediately start the serving.
 
-> **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
+> **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter and remove `--rest_port`.
 
-Start with deploying the model:
+Deploy the model:
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
@@ -18,13 +19,13 @@ Start docker container:
 mkdir models
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest \
+  openvino/model_server:weekly \
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task text_generation \
     --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" \
     --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf \
-    --model_name LLM
+    --model_name Qwen/Qwen2.5-3B-Instruct
 ```
 :::
 
@@ -37,7 +38,7 @@ ovms --rest_port 8000 ^
   --task text_generation ^
   --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" ^
   --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf ^
-  --model_name LLM
+  --model_name Qwen/Qwen2.5-3B-Instruct
 ```
 :::
 ::::
@@ -46,7 +47,7 @@ Then send a request to the model:
 
 ```text
 curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" \
-                                               -d '{"model": "LLM", \
+                                               -d '{"model": "Qwen/Qwen2.5-3B-Instruct", \
                                                     "max_tokens":300, \
                                                     "stream":false, \
                                                     "messages": [{"role": "system","content": "You are a helpful assistant."}, \
@@ -73,7 +74,7 @@ Example response would be:
     }
   ],
   "created": 1756986130,
-  "model": "LLM",
+  "model": "Qwen/Qwen2.5-3B-Instruct",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 54,
