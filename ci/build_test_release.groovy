@@ -7,7 +7,6 @@ pipeline {
     }
     environment {
         BDBA_CREDS = credentials('BDBA_KEY')
-        OVMS_SIGN_CREDS = credentials('PRERELEASE_SIGN')
         NODE_NAME = 'Windows_SDL'
     }
     stages {
