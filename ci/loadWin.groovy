@@ -167,6 +167,7 @@ def sign(){
     }
     println "OVMS_USER=${env.OVMS_USER}"
     env.OVMS_SIGN_CREDS_PSW = env.OVMS_SIGN_CREDS_PSW.replaceAll(/\^/, '^^')
+    bat(script: "echo %OVMS_SIGN_CREDS_PSW% > win_sign_password.txt")
     def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + env.OVMS_SIGN_CREDS_PSW + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
