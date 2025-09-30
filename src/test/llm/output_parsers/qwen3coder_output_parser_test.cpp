@@ -325,7 +325,7 @@ TEST_F(Qwen3CoderOutputParserTest, JustToolParserBfclCalculateTriangle) {
     }
     EXPECT_EQ(calls.size(), 1) << input;
     EXPECT_EQ(calls[0].name, "calculate_triangle_area");
-    EXPECT_EQ(calls[0].arguments, "{\"base\":10, \"height\":5}");
+    EXPECT_EQ(calls[0].arguments, "{\"base\": 10, \"height\": 5}");
     EXPECT_EQ(parser.currentState, ovms::Parser::State::End) << input;
     EXPECT_EQ(parser.currentPosition, std::string::npos) << input;
     EXPECT_EQ(content, "<|im_end|>") << input;
