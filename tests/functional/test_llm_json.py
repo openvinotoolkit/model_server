@@ -249,7 +249,6 @@ class TestSingleModelInference:
             assert "pm10" in content or "PM10" in content
             assert "28 µg/m" in content or "28µg/m" in content
 
-        
     @skip(reason="not implemented yet")
     @pytest.mark.api_enabling
     def test_chat_with_tool_definition_stream(self):
@@ -357,9 +356,3 @@ class TestSingleModelInference:
         assert event.event_name.lower() == "science fair".lower()
         assert event.date == "Friday"
         assert event.participants == ["Alice", "Bob"]
-
-
-
-
-
-    

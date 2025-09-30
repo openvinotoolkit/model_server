@@ -151,6 +151,7 @@ class ResnetGS:
     rest_request_format = 'row_name'
     model_path = "gs://ovms-public-eu/resnet50-binary"
 
+
 class ResnetONNX:
     name = "resnet_onnx"
     dtype = np.float32

@@ -35,23 +35,25 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc, \
     model_service_pb2_grpc  # noqa
 from tests.functional.utils.files_operation import get_path_friendly_test_name
 from tests.functional.utils.parametrization import get_tests_suffix
-from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, target_device, image
+from tests.functional.config import test_dir, test_dir_cleanup, artifacts_dir, target_device, image, \
+    enable_pytest_plugins
 
 logger = logging.getLogger(__name__)
 
 
-pytest_plugins = [
-    'tests.functional.fixtures.model_download_fixtures',
-    'tests.functional.fixtures.model_conversion_fixtures',
-    'tests.functional.fixtures.server_detection_model_fixtures',
-    'tests.functional.fixtures.server_for_update_fixtures',
-    'tests.functional.fixtures.server_local_models_fixtures',
-    'tests.functional.fixtures.server_multi_model_fixtures',
-    'tests.functional.fixtures.server_remote_models_fixtures',
-    'tests.functional.fixtures.server_with_batching_fixtures',
-    'tests.functional.fixtures.server_with_version_policy_fixtures',
-    'tests.functional.fixtures.test_files_fixtures',
-    ]
+if enable_pytest_plugins:
+    pytest_plugins = [
+        'tests.functional.fixtures.model_download_fixtures',
+        'tests.functional.fixtures.model_conversion_fixtures',
+        'tests.functional.fixtures.server_detection_model_fixtures',
+        'tests.functional.fixtures.server_for_update_fixtures',
+        'tests.functional.fixtures.server_local_models_fixtures',
+        'tests.functional.fixtures.server_multi_model_fixtures',
+        'tests.functional.fixtures.server_remote_models_fixtures',
+        'tests.functional.fixtures.server_with_batching_fixtures',
+        'tests.functional.fixtures.server_with_version_policy_fixtures',
+        'tests.functional.fixtures.test_files_fixtures',
+        ]
 
 
 def pytest_sessionstart():

@@ -16,7 +16,8 @@
 
 import os
 
-from tests.functional.constants.constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
+from tests.functional.constants.constants import TARGET_DEVICE_CPU, TARGET_DEVICE_GPU, TARGET_DEVICE_CUDA, \
+    TARGET_DEVICE_MYRIAD, TARGET_DEVICE_HDDL
 from tests.functional.utils.helpers import get_int, get_bool
 from tests.functional.utils.parametrization import generate_test_object_name
 
@@ -106,11 +107,11 @@ default_myriad_infer_timeout = get_int("TT_DEFAULT_MYRIAD_INFER_TIMEOUT", 5*defa
 
 """ INFER TIMEOUT """
 infer_timeouts = {
-    TARGET_DEVICE_CPU : default_infer_timeout,
-    TARGET_DEVICE_GPU : default_gpu_infer_timeout,
-    TARGET_DEVICE_CUDA : default_cuda_infer_timeout,
-    TARGET_DEVICE_HDDL : default_hddl_infer_timeout,
-    TARGET_DEVICE_MYRIAD : default_myriad_infer_timeout,
+    TARGET_DEVICE_CPU: default_infer_timeout,
+    TARGET_DEVICE_GPU: default_gpu_infer_timeout,
+    TARGET_DEVICE_CUDA: default_cuda_infer_timeout,
+    TARGET_DEVICE_HDDL: default_hddl_infer_timeout,
+    TARGET_DEVICE_MYRIAD: default_myriad_infer_timeout,
 }
 infer_timeout = infer_timeouts[target_device]
 
@@ -120,3 +121,6 @@ is_nginx_mtls = get_bool("TT_IS_NGINX_MTLS", "nginx-mtls" in image)
 """ TT_SKIP_TEST_IF_IS_NGINX_MTLS """
 skip_nginx_test = get_bool("TT_SKIP_TEST_IF_IS_NGINX_MTLS", "True")
 skip_nginx_test = skip_nginx_test and is_nginx_mtls
+
+""" TT_ENABLE_PYTEST_PLUGINS - enable pytest plugins """
+enable_pytest_plugins = get_bool("TT_ENABLE_PYTEST_PLUGINS", "True")
