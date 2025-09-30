@@ -134,9 +134,13 @@ if "%USE_OV_BINARY%"=="" (
     set "USE_OV_BINARY=0"
 )
 
-set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
 set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
+:: Replace path to GenAi in ovms WORKSPACE file
+if "!output_user_root!" neq "opt" (
+    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
 
 echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
 IF "%USE_OV_BINARY%"=="0" (
@@ -148,7 +152,7 @@ IF "%USE_OV_BINARY%"=="0" (
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: GENAI/OPENVINO - reinstalled per build trigger
+::::::::::::::::::::::: GENAI/OPENVINO install from ZIP - reinstalled per build trigger
 :: Set default GENAI_PACKAGE_URL if not set
 if "%GENAI_PACKAGE_URL%"=="" (
     set "GENAI_PACKAGE_URL=https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2025.4.0.0.dev20250923/openvino_genai_windows_2025.4.0.0.dev20250923_x86_64.zip"
@@ -161,8 +165,6 @@ for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
 for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
 
 set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
-set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
 echo [INFO] Installing GenAI: %genai_dir% ...
 :: Download GenAi
@@ -197,12 +199,6 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 )
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
-
-:: Replace path to GenAi in ovms WORKSPACE file
-if "!output_user_root!" neq "opt" (
-    powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
 
 echo [INFO] GenAI installed: %BAZEL_SHORT_PATH%\%genai_dir%
 goto :finished_openvino
