@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../http_rest_api_handler.hpp"
+#include "../servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
@@ -399,9 +400,39 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         "embeddings", "embeddings_ov"));
 
+static bool isMpReady(const std::string name) {
+    ovms::Server& server = ovms::Server::instance();
+    const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
+    if (!servableModule) {
+        return false;
+    }
+    ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName(name);
+    if (!mediapipeGraphDefinition) {
+        return false;
+    }
+    return mediapipeGraphDefinition->getStatus().isAvailable();
+}
+
+static bool waitMpReady(const std::string name) {
+    SPDLOG_TRACE("waitMpReady:{}", name);
+    auto start = std::chrono::high_resolution_clock::now();
+    while (!isMpReady(name) &&
+            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS/4)) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    }
+
+    return isMpReady(name);
+}
+
 class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
+    static std::unique_ptr<std::thread> t1;
+    static std::unique_ptr<std::thread> t2;
+    static std::unique_ptr<std::thread> t3;
+    static std::unique_ptr<std::thread> t4;
+    static std::unique_ptr<std::thread> t5;
 
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
@@ -436,6 +467,38 @@ public:
             EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
         }));
         EnsureServerStartedWithTimeout(server, 15);
+
+        t1.reset(new std::thread([]() {
+            const std::string embeddings{"embeddings"};
+            ASSERT_EQ(waitMpReady(embeddings), true);
+        }));
+        t2.reset(new std::thread([]() {
+            const std::string embeddings_no_norm{"embeddings_no_norm"};
+            ASSERT_EQ(waitMpReady(embeddings_no_norm), true);
+        }));
+        t3.reset(new std::thread([]() {
+            const std::string embeddings_ov{"embeddings_ov"};
+            ASSERT_EQ(waitMpReady(embeddings_ov), true);
+        }));
+        t4.reset(new std::thread([]() {
+            const std::string embeddings_ov_no_norm{"embeddings_ov_no_norm"};
+            ASSERT_EQ(waitMpReady(embeddings_ov_no_norm), true);
+        }));
+        t5.reset(new std::thread([]() {
+            const std::string embeddings_ov_relative{"embeddings_ov_relative"};
+            ASSERT_EQ(waitMpReady(embeddings_ov_relative), true);
+        }));
+
+        if(t1)
+            t1->join();
+        if(t2)
+            t2->join();
+        if(t3)
+            t3->join();
+        if(t4)
+            t4->join();
+        if(t5)
+            t5->join();
     }
 
     void SetUp() {
@@ -457,6 +520,16 @@ public:
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
+        if(t1)
+            t1->join();
+        if(t2)
+            t2->join();
+        if(t3)
+            t3->join();
+        if(t4)
+            t4->join();
+        if(t5)
+            t5->join();
     }
 
     void TearDown() {
@@ -467,6 +540,11 @@ public:
     }
 };
 std::unique_ptr<std::thread> EmbeddingsExtensionTest::t;
+std::unique_ptr<std::thread> EmbeddingsExtensionTest::t1;
+std::unique_ptr<std::thread> EmbeddingsExtensionTest::t2;
+std::unique_ptr<std::thread> EmbeddingsExtensionTest::t3;
+std::unique_ptr<std::thread> EmbeddingsExtensionTest::t4;
+std::unique_ptr<std::thread> EmbeddingsExtensionTest::t5;
 TEST_F(EmbeddingsExtensionTest, simplePositive) {
     std::string requestBody = R"(
         {
