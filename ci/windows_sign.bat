@@ -1,9 +1,8 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 set "OVMS_USER=%1"
-set "OVMS_PASS=%2"
-set "OVMS_FILES=..\..\%3"
-set "PYTHON=%4"
+set "OVMS_FILES=..\..\%2"
+set "PYTHON=%3"
 set PATH=%PATH%;C:\Jenkins\workspace\ovmsc\signfile;C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64
 
 cd repo_signing\windows_signing
