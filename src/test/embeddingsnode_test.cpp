@@ -418,7 +418,7 @@ static bool waitMpReady(const std::string name) {
     SPDLOG_TRACE("waitMpReady:{}", name);
     auto start = std::chrono::high_resolution_clock::now();
     while (!isMpReady(name) &&
-            (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS/4)) {
+           (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS / 4)) {
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
 
@@ -489,15 +489,15 @@ public:
             ASSERT_EQ(waitMpReady(embeddings_ov_relative), true);
         }));
 
-        if(t1)
+        if (t1)
             t1->join();
-        if(t2)
+        if (t2)
             t2->join();
-        if(t3)
+        if (t3)
             t3->join();
-        if(t4)
+        if (t4)
             t4->join();
-        if(t5)
+        if (t5)
             t5->join();
     }
 
@@ -520,15 +520,15 @@ public:
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
-        if(t1)
+        if (t1)
             t1->join();
-        if(t2)
+        if (t2)
             t2->join();
-        if(t3)
+        if (t3)
             t3->join();
-        if(t4)
+        if (t4)
             t4->join();
-        if(t5)
+        if (t5)
             t5->join();
     }
 
