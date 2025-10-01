@@ -166,8 +166,7 @@ def sign(){
         echo "check_signing.py downloaded successfully."
     }
     println "OVMS_USER=${env.OVMS_USER}"
-    def signPassword  = PRERELEASE_PASS.replaceAll(/^/, '^^')
-    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' \"' + password + '\" dist\\windows ' + env.OVMS_PYTHON_ENABLED)
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
     } else {

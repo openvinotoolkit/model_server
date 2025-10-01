@@ -48,7 +48,7 @@ pipeline {
                 withCredentials([usernamePassword(
                         credentialsId: 'PRERELEASE_SIGN',
                         usernameVariable: 'PRERELEASE_USER',
-                        passwordVariable: 'PRERELEASE_PASS')]) {
+                        passwordVariable: 'OVMS_PASS')]) {
                     script {
                         def windows = load 'ci/loadWin.groovy'
                         if (windows != null) {
