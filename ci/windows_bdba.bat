@@ -30,5 +30,5 @@ for /f "tokens=2 delims=: " %%a in ('tail -n 3 ..\win_bdba.log ^| findstr /c:"co
 )
 deactivate
 
-tar -a -c -f ..\ovms_windows_bdba_reports.zip -C %OVMS_PATH% ovms_windows*
+tar -a -c -f ..\ovms_windows_bdba_reports.zip ovms_windows*
 rm -rf %OVMS_PATH%\\%zipname%
