@@ -367,6 +367,46 @@ static std::string documentToString(const rapidjson::Document& doc) {
     return buffer.GetString();
 }
 
+std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::optional<ToolCalls>& toolCallsOpt) {
+    auto& toolCalls = toolCallsOpt.value();
+    if (toolCalls.size() != 1) {
+        SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
+    }
+    if (toolCalls.size() < 1) {
+        return std::nullopt;
+    }
+    auto& toolCall = toolCalls[0];
+    rapidjson::Document argsDelta;
+    argsDelta.Parse(toolCall.arguments.c_str());
+    this->returnedCompleteDeltas.insert(this->toolCallIndex);
+    rapidjson::Document argumentsWrapper;
+    argumentsWrapper.SetObject();
+    rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
+    // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
+    rapidjson::Value toolCallsString(rapidjson::kStringType);
+    toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
+    argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
+    auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
+    SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
+    return currentDelta;
+}
+
+std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNotSentAlready() {
+    if (this->returnedFirstDeltas.size() != this->returnedCompleteDeltas.size()) {
+        SPDLOG_TRACE("Skipping first delta, already sent for current function, fi:{} co:{}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
+        // we can skip sending first delta since we sent it for current function
+        return std::nullopt;
+    }
+    int toolCallId = ++this->toolCallIndex;
+    const std::string& toolCallName = this->streamParser.currentFunction.name;
+    SPDLOG_ERROR("Caught function name: {}, id: {}", toolCallName, toolCallId);
+    rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
+    this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
+    returnedFirstDeltas.insert(toolCallId);
+    SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
+    return doc;
+}
+
 std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
     // parse Chunk needs to use streamParser to process the chunk
     // streamParser will return optional toolCalls when a tool call is completed
@@ -379,50 +419,14 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::s
     }
     std::string chunk = newChunk;
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", chunk, static_cast<int>(finishReason));
-    auto toolCallsOpt = streamParser.streamStep(chunk);
+    auto toolCallsOpt = this->streamParser.streamStep(chunk);
     if (toolCallsOpt.has_value()) {
-        // TODO we assume we could only get one by one
-        SPDLOG_ERROR("Has value but not insideFunction");
-        auto& toolCalls = toolCallsOpt.value();
-        if (toolCalls.size() != 1) {
-            SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
-        }
-        if (toolCalls.size() < 1) {
-            return std::nullopt;
-        }
-        auto& toolCall = toolCalls[0];
-        // TODO wrap into send completeFunctionCallDelta
-        rapidjson::Document argsDelta;
-        argsDelta.Parse(toolCall.arguments.c_str());
-        this->returnedCompleteDeltas.insert(this->toolCallIndex);
-        rapidjson::Document argumentsWrapper;
-        argumentsWrapper.SetObject();
-        rapidjson::Document::AllocatorType& allocator = argumentsWrapper.GetAllocator();
-        // now we need to add string toolCall.arguments to argumentsWrapper under "arguments" key
-        rapidjson::Value toolCallsString(rapidjson::kStringType);
-        toolCallsString.SetString(toolCall.arguments.c_str(), allocator);
-        argumentsWrapper.AddMember("arguments", toolCallsString, allocator);
-        auto currentDelta = wrapDelta(argumentsWrapper, this->toolCallIndex);
-        SPDLOG_DEBUG("First delta doc: {}", documentToString(currentDelta));
-        return currentDelta;
+        return this->sendFullDelta(toolCallsOpt);
     }
     if (!this->streamParser.currentFunction.name.empty()) {
-        if (this->returnedFirstDeltas.size() != this->returnedCompleteDeltas.size()) {
-            SPDLOG_TRACE("Skipping first delta, already sent for current function, fi:{} co:{}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
-            // we can skip sending first delta since we sent it for current function
-            return std::nullopt;
-        }
-        // TODO wrap into returnFunctionNameDelta
-        int toolCallId = ++this->toolCallIndex;
-        const std::string& toolCallName = this->streamParser.currentFunction.name;
-        SPDLOG_ERROR("Caught function name: {}, id: {}", toolCallName, toolCallId);
-        rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
-        this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
-        returnedFirstDeltas.insert(toolCallId);
-        SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
-        return doc;
+        return this->sendFirstDeltaIfNotSentAlready();
     }
-    return std::nullopt;  // FIXME
+    return std::nullopt;
 }
 Parser::Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
     content(content),

@@ -122,8 +122,9 @@ public:
     const std::string& getParsingEndTag() const override {
         return toolsEndTag;  // FIXME CHECK
     }
-
 private:
+    std::optional<rapidjson::Document> sendFirstDeltaIfNotSentAlready();
+    std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls>& toolCallsOpt);
     void lazyFillInitToolParamatersTypsMap();
 };
 }  // namespace ovms
