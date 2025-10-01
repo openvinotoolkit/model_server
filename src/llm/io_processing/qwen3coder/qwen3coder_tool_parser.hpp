@@ -45,7 +45,7 @@ struct Functool {
         parameters.clear();
     }
 };
-struct Parser {
+struct Qwen3CoderToolParserImpl {
     enum class State {
         Content,              // (C) here we expect either tools start tag or end of content
         InsideToolCall,       // (ITC) here we expect function start tag
@@ -60,27 +60,40 @@ struct Parser {
                       \>>>>>>>/
 */
     };
-    std::string& content;
-    std::string streamContent;  // content accumulated from stream chunks
-    // string iterator to current position in content
-    size_t currentPosition{0};
-    size_t lastStreamProcessedPosition{0};
+    Qwen3CoderToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap);
+    /*
+     * Return all tool calls found in agreggated content so far
+     * that were not returned before
+     */
+    std::optional<ToolCalls> parseChunk(const std::string& chunk);
+    std::optional<std::string> getCurrentFunctionName() const;
+    Status removeToolCallsFromContentIfNeeded(std::string& outContent);
+    State getCurrentState() const {
+        return this->currentState;
+    }
+    size_t getLastProcessedPosition() const {
+        return this->lastProcessedPosition;
+    }
+
+private:
+    const ToolsParameterTypeMap_t& toolsParametersTypeMap;
+    const bool removeNewlineAroundParameters = true;
     State currentState = State::Content;
     Functool currentFunction;
     std::string currentParameterName;
+    std::string streamContent;  // content accumulated from stream chunks
+    // current position in content
+    size_t lastProcessedPosition{0};
+    // members required for unary for removing tool calls from content
     std::stack<size_t> toolsBeginStack;
     std::stack<size_t> toolsEndStack;
-    const ToolsParameterTypeMap_t& toolsParametersTypeMap;
-    bool removeNewlineAroundParameters = true;
-    Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     /*
-     * Returns true if step was successful, false if we reached the end or error occurred
+     * process streamcontent from lastProcessedPosition until change of state
+     * return true if state changed, false otherwise
+     * false means no more state changes possible with current content
      */
-    bool streamStepImpl(ToolCalls& toolCalls);
-    std::optional<ToolCalls> streamStep(const std::string& chunk);
-    Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap);
+    bool stepUntilStateChange(ToolCalls& toolCalls);
 };
-static std::string NULL_STRING_CONTENT = "";
 
 class Qwen3CoderToolParser : public BaseOutputParser {
 public:
@@ -97,7 +110,7 @@ private:
     ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
     bool filledParametersTypesMap{false};
     // streaming
-    Parser streamParser;
+    Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls currentToolCalls;
     rapidjson::Document currentJson;
@@ -122,24 +135,25 @@ public:
     const std::string& getParsingEndTag() const override {
         return toolsEndTag;  // FIXME CHECK
     }
+
 private:
-    std::optional<rapidjson::Document> sendFirstDeltaIfNotSentAlready();
+    std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls>& toolCallsOpt);
     void lazyFillInitToolParamatersTypsMap();
 };
 }  // namespace ovms
 template <>
-struct fmt::formatter<ovms::Parser::State> : fmt::formatter<std::string> {
-    auto format(const ovms::Parser::State& state, fmt::format_context& ctx) const {
+struct fmt::formatter<ovms::Qwen3CoderToolParserImpl::State> : fmt::formatter<std::string> {
+    auto format(const ovms::Qwen3CoderToolParserImpl::State& state, fmt::format_context& ctx) const {
         // use unordered_map
-        std::unordered_map<ovms::Parser::State, std::string> stateMap = {
-            {ovms::Parser::State::Content, "Content"},
-            {ovms::Parser::State::InsideToolCall, "InsideToolCall"},
-            {ovms::Parser::State::InsideFunctionName, "InsideFunctionName"},
-            {ovms::Parser::State::InsideFunction, "InsideFunction"},
-            {ovms::Parser::State::InsideParameterName, "InsideParameterName"},
-            {ovms::Parser::State::InsideParameter, "InsideParameter"},
-            {ovms::Parser::State::AfterFunction, "AfterFunction"}};
+        std::unordered_map<ovms::Qwen3CoderToolParserImpl::State, std::string> stateMap = {
+            {ovms::Qwen3CoderToolParserImpl::State::Content, "Content"},
+            {ovms::Qwen3CoderToolParserImpl::State::InsideToolCall, "InsideToolCall"},
+            {ovms::Qwen3CoderToolParserImpl::State::InsideFunctionName, "InsideFunctionName"},
+            {ovms::Qwen3CoderToolParserImpl::State::InsideFunction, "InsideFunction"},
+            {ovms::Qwen3CoderToolParserImpl::State::InsideParameterName, "InsideParameterName"},
+            {ovms::Qwen3CoderToolParserImpl::State::InsideParameter, "InsideParameter"},
+            {ovms::Qwen3CoderToolParserImpl::State::AfterFunction, "AfterFunction"}};
         auto it = stateMap.find(state);
         if (it != stateMap.end()) {
             return fmt::formatter<std::string>::format(it->second, ctx);
