@@ -3,7 +3,7 @@ def cleanup_directories() {
     println "Cleaning pr-xxxx directories from node: NODE_NAME = ${env.NODE_NAME}"
     // First delete directories older than 14 days
     deleteOldDirectories()
-    def command = 'ls c:\\Jenkins\\workspace | grep -oE ".*(PR-[0-9]*)$" | sed -n -E "s/(ovms_oncommit_|ovms_ovms-windows_)//p'
+    def command = 'ls c:\\Jenkins\\workspace | grep -oE "(PR-[0-9]*)$"'
     def status = bat(returnStatus: true, script: command)
     if ( status != 0) {
         error "Error: trying to list jenkins workspaces."
