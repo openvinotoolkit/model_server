@@ -34,16 +34,15 @@
 
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/logging.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 struct Functool {
     std::string name;
     std::vector<std::pair<std::string, std::string>> parameters;
-    //    std::unordered_set<std::string> usedParameterNames;
     void clear() {
         name.clear();
         parameters.clear();
-        //    usedParameterNames.clear();
     }
 };
 struct Parser {
@@ -54,19 +53,18 @@ struct Parser {
         InsideFunction,       // (IF) here we expect parameter start tag
         InsideParameterName,  // (IPN) here we expect parameter end tag
         InsideParameter,      // (IP) here we expect parameter end tag
-        AfterParameter,       // (AP) here we expect either next parameter or function & tools end
-        AfterFunction,        // (AF) here we expect either next parameter or function & tools end FIXME TODO different for streaming?
-        ErrorEnd,             // (EE) we reached the end with error
-        End                   // (E) we reached the end successfully
-        // C->ITC->IFN->IF->IPN->IP->AP->(IPN|E)
-        // all states beside C could reach EE
+        AfterFunction         // (AF) here we expect either next parameter or function & tools end
+                              /*
+                      /<<<<<<<\
+        C->ITC->IFN->IF->IPN->IP->AF->C
+                      \>>>>>>>/
+*/
     };
     std::string& content;
     std::string streamContent;  // content accumulated from stream chunks
     // string iterator to current position in content
     size_t currentPosition{0};
     size_t lastStreamProcessedPosition{0};
-    int toolCallIndex{-1};
     State currentState = State::Content;
     Functool currentFunction;
     std::string currentParameterName;
@@ -74,11 +72,11 @@ struct Parser {
     std::stack<size_t> toolsEndStack;
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     bool removeNewlineAroundParameters = true;
-    void removeToolCallsFromContent();
+    Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     /*
      * Returns true if step was successful, false if we reached the end or error occurred
      */
-    bool step(ToolCalls& toolCalls);
+    bool streamStepImpl(ToolCalls& toolCalls);
     std::optional<ToolCalls> streamStep(const std::string& chunk);
     Parser(std::string& content, const ToolsParameterTypeMap_t& toolsParametersTypeMap);
 };
@@ -100,6 +98,7 @@ private:
     bool filledParametersTypesMap{false};
     // streaming
     Parser streamParser;
+    int toolCallIndex{-1};
     ToolCalls currentToolCalls;
     rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
@@ -139,10 +138,7 @@ struct fmt::formatter<ovms::Parser::State> : fmt::formatter<std::string> {
             {ovms::Parser::State::InsideFunction, "InsideFunction"},
             {ovms::Parser::State::InsideParameterName, "InsideParameterName"},
             {ovms::Parser::State::InsideParameter, "InsideParameter"},
-            {ovms::Parser::State::AfterParameter, "AfterParameter"},
-            {ovms::Parser::State::ErrorEnd, "ErrorEnd"},
-            {ovms::Parser::State::End, "End"},
-        };
+            {ovms::Parser::State::AfterFunction, "AfterFunction"}};
         auto it = stateMap.find(state);
         if (it != stateMap.end()) {
             return fmt::formatter<std::string>::format(it->second, ctx);

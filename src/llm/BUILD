@@ -121,6 +121,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
+        "//src:libovmsstatus",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
