@@ -28,7 +28,6 @@ python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OV
 for /f "tokens=2 delims=: " %%a in ('tail -n 3 ..\win_bdba.log ^| findstr /c:"code":') do (
     if not "%%a"=="200" exit /b 1
 )
-deactivate
 
 tar -a -c -f ..\ovms_windows_bdba_reports.zip ovms_windows*
 rm -rf %OVMS_PATH%\\%zipname%
