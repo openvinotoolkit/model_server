@@ -10,7 +10,7 @@
 
 ```bash
 mkdir models
-docker run HF_TOKEN=<hf_token> --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
@@ -47,7 +47,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make python_image
 mkdir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
+docker run -e HF_TOKEN=<hf_token> --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank
 
@@ -64,7 +64,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 pip3 install -q -r requirements.txt
 mkdir models
-ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
 ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
 
