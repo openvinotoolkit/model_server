@@ -165,8 +165,6 @@ def sign(){
     } else {
         echo "check_signing.py downloaded successfully."
     }
-    OVMS_SIGN_CREDS = credentials('PRERELEASE_SIGN')
-    writeFile file: 'temp.txt', text: OVMS_SIGN_CREDS.getPassword()
     println "OVMS_USER=${env.OVMS_USER}"
     def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' ' + OVMS_SIGN_CREDS_PSW + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {

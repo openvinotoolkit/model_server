@@ -1,5 +1,4 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
 set "OVMS_USER=%1"
 set "OVMS_PASS=%2"
 set "OVMS_FILES=..\..\%3"
