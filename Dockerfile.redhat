@@ -111,7 +111,7 @@ ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN dnf install -y https://rpmfind.net/linux/almalinux/8.10/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
+RUN dnf install -y https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
             dnf update -d6 -y && dnf install -d6 -y \
             gdb \
             java-11-openjdk-devel \
