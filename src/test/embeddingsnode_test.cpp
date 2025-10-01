@@ -489,15 +489,15 @@ public:
             ASSERT_EQ(waitMpReady(embeddings_ov_relative), true);
         }));
 
-        if (t1)
+        if (t1->joinable())
             t1->join();
-        if (t2)
+        if (t2->joinable())
             t2->join();
-        if (t3)
+        if (t3->joinable())
             t3->join();
-        if (t4)
+        if (t4->joinable())
             t4->join();
-        if (t5)
+        if (t5->joinable())
             t5->join();
     }
 
@@ -520,15 +520,15 @@ public:
         server.setShutdownRequest(1);
         t->join();
         server.setShutdownRequest(0);
-        if (t1)
+        if (t1->joinable())
             t1->join();
-        if (t2)
+        if (t2->joinable())
             t2->join();
-        if (t3)
+        if (t3->joinable())
             t3->join();
-        if (t4)
+        if (t4->joinable())
             t4->join();
-        if (t5)
+        if (t5->joinable())
             t5->join();
     }
 
