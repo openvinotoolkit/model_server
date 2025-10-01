@@ -53,7 +53,7 @@ pipeline {
                         def windows = load 'ci/loadWin.groovy'
                         if (windows != null) {
                             try {
-                                windows.sign()
+                                // windows.sign()
                                 windows.bdba()
                             } finally {
                                 windows.archive_bdba_reports()
