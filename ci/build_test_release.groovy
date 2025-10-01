@@ -54,7 +54,7 @@ pipeline {
                         if (windows != null) {
                             try {
                                 windows.sign()
-                                // windows.bdba()
+                                windows.bdba()
                             } finally {
                                 windows.archive_bdba_reports()
                                 windows.archive_sign_results()
