@@ -88,7 +88,7 @@ OV_TOKENIZERS_ORG ?= openvinotoolkit
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
-OV_USE_BINARY = 0
+OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
