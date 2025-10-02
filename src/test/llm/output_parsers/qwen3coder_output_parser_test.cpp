@@ -40,6 +40,7 @@ static ovms::ToolsSchemas_t toolsSchemas = {
     {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"}};
 static ToolsParameterTypeMap_t toolsParametersTypeMap = {
     {"string_tool", {{"arg1", ParameterType_t::STRING}}},
+    {"string_string_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::STRING}}},
     {"string_int_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
     {"string_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
     {"string_int_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}, {"arg3", ParameterType_t::NUMBER}}},
@@ -76,18 +77,7 @@ protected:
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
-// FIXME after streaming is done
-// test \n no \n
-// test argument for multiple lines
-// check nested tools tags etc
-// check nested function/arguments tags
-// check non-finished tools calls
-// check non-finished function
-// check non-finished arguments
-// mark parser as already used and do not allow to use it again for unary
-// parse chunk but no tools available
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
-    // std::string input = "<tool_call>{\"name\": \"string_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     std::string input = R"(
 "<tool_call>
 <function=string_tool>
@@ -100,11 +90,54 @@ value1
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
-    // Qwen3CoderToolParserImpl removes whitespaces, so we expect arguments value to be without spaces
+    // Qwen3CoderToolParserImpl removes newlines, so we expect arguments value to be without spaces
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
-    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);  // ID should be generated
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryToolCall) {
+TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCallNestedXmlNotFromSchema) {
+    std::string input = R"(
+"<tool_call>
+<function=string_tool>
+<parameter=arg1>
+<value=abc>value1</value>
+</parameter>
+</function>
+</tool_call>")";
+    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"<value=abc>value1</value>\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
+TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNoNewline) {
+    std::string input = R"(
+"<tool_call><function=string_tool><parameter=arg1>value1</parameter></function></tool_call>")";
+    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
+TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentMultilineValue) {
+    std::string input = R"(
+"<tool_call>
+<function=string_tool>
+<parameter=arg1>
+value1line1
+value1line2
+</parameter>
+</function>
+</tool_call>")";
+    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1line1\nvalue1line2\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCall) {
     const std::string input = R"(
 <tool_call>
 <function=string_tool>
@@ -127,7 +160,7 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
     EXPECT_EQ(content, "\n");
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithNoToolCall) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithNoToolCall) {
     std::string input = R"(Unexpected void found. Philosophical crisis imminent.)";
     const std::string expectedContent = input;
     auto content = input;
@@ -141,7 +174,7 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithNoToolCall) {
     EXPECT_EQ(expectedContent, content);
 }
 
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithContent) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithContent) {
     const std::string input = R"(
 Before
 <tool_call>
@@ -167,7 +200,7 @@ After)";
     EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\"}");
     EXPECT_EQ(expectedContent, content);
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithThreeParameters) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithThreeParameters) {
     const std::string input = R"(
 <tool_call>
 <function=string_int_float_tool>
@@ -196,7 +229,7 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size()) << input;
     EXPECT_EQ(content, "\n");
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithJsonObjectArgument) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithJsonObjectArgument) {
     const std::string input = R"(
 <tool_call>
 <function=object_tool>
@@ -220,7 +253,7 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithJsonObjectArgument) {
     EXPECT_EQ(content, "\n");
 }
 
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserUnaryWithTwoToolCalls) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithTwoToolCalls) {
     const std::string input = R"(
 <tool_call>
 <function=string_tool>
@@ -255,10 +288,68 @@ data
     EXPECT_EQ(parser.getLastProcessedPosition(), input.rfind("</tool_call>") + std::string("</tool_call>").size()) << input;
     EXPECT_EQ(content, "\n\n");
 }
-
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithMoreThan1StateChange) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCallNoMatchingToolParameterTypeMapEntry) {
+    const std::string input = R"(
+<tool_call>
+<function=SOME_UNRECOGNIZED_TOOL>
+<parameter=arg1>
+value1
+</parameter>
+<parameter=arg2>
+True
+</parameter>
+<parameter=arg3>
+25.12
+</parameter>
+</function>
+</tool_call>)";
+    // in this case since we don't have tool in parameter type map we
+    // keep values as is - it won't for non-nested bool, string
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "SOME_UNRECOGNIZED_TOOL");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\": value1, \"arg2\": True, \"arg3\": 25.12}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCallWithRepeatedArgument) {
+    const std::string input = R"(
+<tool_call>
+<function=string_string_tool>
+<parameter=arg1>
+value1
+</parameter>
+<parameter=arg1>
+value2
+</parameter>
+</function>
+</tool_call>)";
+    // in this case since we don't have tool in parameter type map we
+    // keep values as is - it won't for non-nested bool, string
+    auto content = input;
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
+    auto callsOpt = parser.parseChunk(content);
+    ASSERT_TRUE(callsOpt.has_value());
+    ToolCalls& calls = callsOpt.value();
+    auto status = parser.removeToolCallsFromContentIfNeeded(content);
+    EXPECT_TRUE(status.ok()) << status.string();
+    ASSERT_EQ(calls.size(), 1) << input;
+    EXPECT_EQ(calls[0].name, "string_string_tool");
+    EXPECT_EQ(calls[0].arguments, "{\"arg1\": \"value1\"}");
+    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
+    EXPECT_EQ(content, "\n");
+}
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithMoreThan1StateChange) {
     ToolCalls calls;
-    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);  // FIXME content
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
 <function=string_tool>
@@ -278,9 +369,9 @@ value1
     EXPECT_EQ(content, input);
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithNoStateChange) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithNoStateChange) {
     ToolCalls calls;
-    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);  // FIXME content
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"("Some content without tool calls")";
     auto content = input;
     auto stepResult = parser.parseChunk(content);
@@ -288,9 +379,9 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithNoStateChange) {
     ASSERT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content);
     EXPECT_EQ(parser.getLastProcessedPosition(), 0);
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithPartialToolCall) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithPartialToolCall) {
     ToolCalls calls;
-    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);  // FIXME content
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
 <function=string_tool>
@@ -305,9 +396,9 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find(Qwen3CoderToolParser::parameterPrefixTag) + std::string("<parameter=arg1>").size());
     EXPECT_EQ(parser.getCurrentFunctionName().value(), "string_tool");
 }
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithTwoToolCalls) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithTwoToolCalls) {
     ToolCalls calls;
-    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);  // FIXME content
+    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
 <function=string_tool>
@@ -341,7 +432,7 @@ data
     EXPECT_EQ(parser.getLastProcessedPosition(), input.rfind("</tool_call>") + std::string("</tool_call>").size());
 }
 
-TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithToolCallNoArgs) {
+TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithToolCallNoArgs) {
     const std::string input = R"(
 <tool_call>
 <function=noarg_tool>
@@ -360,13 +451,10 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserStreamStepWithToolCallNoArgs) {
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
 }
 
-// write parametrized test code where I would just insert PARAM VALUE and EXPECTED ARGUMENTS
-// to test various argument types
-// int, float, string, json object, array of int, array of string, array of json object
 class Qwen3CoderOutputParserParametrizedTest : public Qwen3CoderOutputParserTest, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string>> {
 };
 
-TEST_P(Qwen3CoderOutputParserParametrizedTest, TestJustParserWithVariousArgumentTypes) {
+TEST_P(Qwen3CoderOutputParserParametrizedTest, TestJustParserImplWithVariousArgumentTypes) {
     const std::string& toolName = std::get<0>(GetParam());
     const std::string& argName = std::get<1>(GetParam());
     const std::string& paramValue = std::get<2>(GetParam());
@@ -407,7 +495,6 @@ const std::vector<std::tuple<std::string, std::string, std::string, std::string>
     {"list_tool", "arg1", "[1, 2, 3]", "{\"arg1\": [1, 2, 3]}"},
     {"list_tool", "arg1", "[\"a\", \"b\", \"c\"]", "{\"arg1\": [\"a\", \"b\", \"c\"]}"},
     {"object_tool", "arg1", "[{\"a\": 1}, {\"b\": 2}]", "{\"arg1\": [{\"a\": 1}, {\"b\": 2}]}"}};
-// write printer for test name with first argument as a name
 
 INSTANTIATE_TEST_SUITE_P(
     Qwen3CoderOutputParserParametrizedTestInstance,
@@ -424,49 +511,31 @@ INSTANTIATE_TEST_SUITE_P(
         return name;
     });
 
-TEST_F(Qwen3CoderOutputParserTest, JustToolParserBfclCalculateTriangle) {
-    std::string input = R"(<tool_call>
-<function=calculate_triangle_area>
-<parameter=base>
-10
-</parameter>
-<parameter=height>
-5
-</parameter>
-</function>
-</tool_call><|im_end|>)";
-    auto content = input;
-    ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
-    auto stepResult = parser.parseChunk(content);
-    ASSERT_TRUE(stepResult.has_value());
-    ASSERT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content);
-    auto& calls = stepResult.value();
-    auto status = parser.removeToolCallsFromContentIfNeeded(content);
-    EXPECT_TRUE(status.ok()) << status.string();
-    EXPECT_EQ(calls.size(), 1) << input;
-    EXPECT_EQ(calls[0].name, "calculate_triangle_area");
-    EXPECT_EQ(calls[0].arguments, "{\"base\": 10, \"height\": 5}");
-    EXPECT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::Content) << input;
-    EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size()) << input;
-    EXPECT_EQ(content, "<|im_end|>") << input;
-}
-
 TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
+    // since unary reuses streaming we don't need to test for partial tool calls
+    // if we don't get closing tag we don't emit tool call
     int i = -1;
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<function=string_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" <too", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"l_cal", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"l>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<fun", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ctio", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"n=st", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ring_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {">", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"string_tool"}}]}})"},
         {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<parameter=arg1", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<paramete", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"r=a", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"rg1", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {">", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"STRING_VALUE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"STRI", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"NG_VALUE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</pa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"rameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"}  //,
-                                                                                                                                                                        //        {"I finished", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \"Paris\"}"}}]}})"});
-    };
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
@@ -494,7 +563,6 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
                 std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
                 EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
                 EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                // Compare everything except the id value
                 std::string docStrNoId = docStr;
                 std::string expectedNoId = expected;
                 docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));

@@ -55,14 +55,14 @@ static void trimNewline(std::string& str) {
     }
 }
 
-static std::string toJson(const std::vector<std::pair<std::string, std::string>>& items) {
+static std::string toJson(const ParametersValues_t& items) {
     std::ostringstream oss;
     oss << "{";
-    for (size_t i = 0; i < items.size(); ++i) {
-        const auto& [key, value] = items[i];
+    size_t i = 0;
+    for (const auto& [key, value] : items) {
         oss << "\"" << key << "\": ";
         oss << value;
-        if (i + 1 < items.size()) {
+        if (i++ + 1 < items.size()) {
             oss << ", ";
         }
     }
@@ -73,8 +73,7 @@ static std::string toJson(const std::vector<std::pair<std::string, std::string>>
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
     if (toolsBeginStack.size() != toolsEndStack.size()) {
         SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolsBeginStack.size(), toolsEndStack.size());
-        throw std::runtime_error("Mismatched tool tags");  // FIXME replace with status
-        return StatusCode::INTERNAL_ERROR;
+        return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
     }
     while (!toolsBeginStack.empty() && !toolsEndStack.empty()) {
         auto posBegin = toolsBeginStack.top();
@@ -225,7 +224,9 @@ bool Qwen3CoderToolParserImpl::stepUntilStateChange(ToolCalls& toolCalls) {
         } else {
             parameterValue = setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second);
         }
-        this->currentFunction.parameters.emplace_back(this->currentParameterName, parameterValue);
+        auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
+        if (!res.second)
+            SPDLOG_DEBUG("Parameter: {} already exists", this->currentParameterName);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::parameterEndTag.length();
         this->currentState = State::InsideFunction;
         break;
@@ -387,10 +388,9 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(
 }
 
 std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, ov::genai::GenerationFinishReason finishReason) {
-    // parse Chunk needs to use streamParser to process the chunk
     // streamParser will return optional toolCalls when a tool call is completed
     // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
-    // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name
+    // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
     // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
     this->lazyFillInitToolParamatersTypsMap();

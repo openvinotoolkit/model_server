@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include <openvino/genai/tokenizer.hpp>
+#include <map>
 #include <optional>
 #include <set>
 #include <stack>
@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include <openvino/genai/tokenizer.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -37,9 +38,10 @@
 #include "src/status.hpp"
 
 namespace ovms {
+using ParametersValues_t = std::map<std::string, std::string>;
 struct Functool {
     std::string name;
-    std::vector<std::pair<std::string, std::string>> parameters;
+    ParametersValues_t parameters;
     void clear() {
         name.clear();
         parameters.clear();
@@ -106,10 +108,10 @@ public:
     static const std::string tagEnd;
 
 private:
-    const ToolsSchemas_t& toolSchemas;             // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
-    ToolsParameterTypeMap_t toolsParametersTypes;  // FIXME do it once per request
+    const ToolsSchemas_t& toolSchemas;  // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
+    ToolsParameterTypeMap_t toolsParametersTypes;
     bool filledParametersTypesMap{false};
-    // streaming
+    // for streaming parsing we need to keep parser as a member
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
     ToolCalls currentToolCalls;
@@ -125,15 +127,15 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        return toolsStartTag;  // FIXME CHECK
+        return toolsStartTag;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag};  // FIXME CHECK
+        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag};
         return specialParsingStartTags;
     }
     // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return toolsEndTag;  // FIXME CHECK
+        return toolsEndTag;
     }
 
 private:
@@ -145,7 +147,6 @@ private:
 template <>
 struct fmt::formatter<ovms::Qwen3CoderToolParserImpl::State> : fmt::formatter<std::string> {
     auto format(const ovms::Qwen3CoderToolParserImpl::State& state, fmt::format_context& ctx) const {
-        // use unordered_map
         std::unordered_map<ovms::Qwen3CoderToolParserImpl::State, std::string> stateMap = {
             {ovms::Qwen3CoderToolParserImpl::State::Content, "Content"},
             {ovms::Qwen3CoderToolParserImpl::State::InsideToolCall, "InsideToolCall"},
