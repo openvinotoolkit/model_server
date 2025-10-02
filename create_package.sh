@@ -21,7 +21,7 @@ mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
 mkdir -vp /ovms_release/lib/custom_nodes
 
-# Do not link this tokenizer lib as it as old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
+# Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
