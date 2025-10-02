@@ -2,7 +2,7 @@
 
 ## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
 
-### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO)
+### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} With Docker
@@ -37,7 +37,7 @@ ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --mo
 :::
 ::::
 
-### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub.
+### 2. Download the preconfigured models using ovms --pull option for models outside [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) in HuggingFace Hub. (Advanced usage)
 ::::{tab-set}
 
 :::{tab-item} With Docker
