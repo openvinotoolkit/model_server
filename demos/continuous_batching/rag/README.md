@@ -1,3 +1,4 @@
+
 # RAG demo with OpenVINO Model Server {#ovms_demos_continuous_batching_rag}
 
 ## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
@@ -26,9 +27,9 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 ```bat
 mkdir models
 
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-ovms.exe --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+ovms --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+ovms --pull --model_repository_path models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
 ovms --add_to_config models --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
 ovms --add_to_config models --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
@@ -47,7 +48,7 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make python_image
 mkdir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank
 
@@ -64,7 +65,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 pip3 install -q -r requirements.txt
 mkdir models
-ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
 ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
 
@@ -107,4 +108,4 @@ ovms --rest_port 8000 --config_path models\config.json
 
 ## Using RAG
 
-When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/releases/2025/3/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
+When the model server is deployed and serving all 3 endpoints, run the [jupyter notebook](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/rag/rag_demo.ipynb) to use RAG chain with a fully remote execution.
