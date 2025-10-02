@@ -40,7 +40,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/OVMS_Validation/daily/windows_py", parameters: [[$class: 'StringParameterValue', name: 'BRANCH_NAME', value: ${env.BRANCH_NAME}]]
+              build job: "ovmsc/OVMS_Validation/daily/windows_py", parameters: [[$class: 'StringParameterValue', name: 'BRANCH_NAME', value: "${env.BRANCH_NAME}"]]
           }    
         }
     }
