@@ -18,6 +18,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <openvino/genai/cache_eviction.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -29,7 +31,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../generation_config_header.hpp"
 #include "../../../json_parser.hpp"
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"

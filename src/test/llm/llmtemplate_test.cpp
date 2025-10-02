@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -31,7 +32,6 @@
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
-#include "../../llm/generation_config_header.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
+#include <openvino/genai/generation_handle.hpp>
 #include <unordered_set>
 #include <string>
 #include <optional>
@@ -28,7 +29,6 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../generation_config_header.hpp"
 #include "partial_json_builder.hpp"
 
 namespace ovms {

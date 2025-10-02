@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include <openvino/genai/visual_language/pipeline.hpp>
+
 #include "../../language_model/continuous_batching/servable.hpp"
 
 namespace ovms {
