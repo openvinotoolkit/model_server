@@ -64,7 +64,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
 pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/rag/requirements.txt
 mkdir models
-set HF_HOME=/hf_home/cache
+set HF_HOME=C:\hf_home\cache # export HF_HOME=/hf_home/cache if using linux
 ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
 ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
