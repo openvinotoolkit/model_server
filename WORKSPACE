@@ -490,10 +490,6 @@ rules_pkg_dependencies()
 load("@ovms//third_party/aws-sdk-cpp:aws-sdk-cpp.bzl", "aws_sdk_cpp")
 aws_sdk_cpp()
 
-### OpenVINO GenAI
-### load("@ovms//third_party/llm_engine:llm_engine.bzl", "llm_engine")
-###llm_engine()
-
 ### Libgit2
 load("@ovms//third_party/libgit2:libgit2_engine.bzl", "libgit2_engine")
 libgit2_engine()

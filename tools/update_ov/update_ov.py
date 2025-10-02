@@ -265,10 +265,10 @@ def update_openvino_genai():
     # Update Makefile content with OpenVINO Tokenizers commit
     new_makefile_content = []
     for line in makefile_content:
-        if "OV_GENAI_BRANCH ?=" in line:
-            print("Updating OV_GENAI_BRANCH")
-            indentation = line[:line.index("OV_GENAI_BRANCH ?=")]
-            new_line = f'{indentation}OV_GENAI_BRANCH ?= {tokenizers_commit} # master {tokenizers_commit_date}\n'
+        if "OV_TOKENIZERS_BRANCH ?=" in line:
+            print("Updating OV_TOKENIZERS_BRANCH")
+            indentation = line[:line.index("OV_TOKENIZERS_BRANCH ?=")]
+            new_line = f'{indentation}OV_TOKENIZERS_BRANCH ?= {tokenizers_commit} # master {tokenizers_commit_date}\n'
             print(new_line.lstrip())
             new_makefile_content.append(new_line)
         else:

@@ -56,7 +56,6 @@ build --define=MEDIAPIPE_DISABLE_GPU=1
 build --define=MEDIAPIPE_DISABLE=0
 build --define=CLOUD_DISABLE=0
 build --define=PYTHON_DISABLE=0
-build --define=GENAI_USE_BINARY=1
 build --define=USE_DROGON=1  # 0=legacy net_http, available only on linux
 
 # Sets the default Apple platform to macOS.
