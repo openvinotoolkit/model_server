@@ -33,6 +33,11 @@ IF "%~2"=="--with_python" (
     set "with_python=false"
 )
 
+:: Set default USE_OV_BINARY if not set
+if "%USE_OV_BINARY%"=="" (
+    set "USE_OV_BINARY=1"
+)
+
 if exist dist\windows\ovms (
     rmdir /s /q dist\windows\ovms
     if !errorlevel! neq 0 exit /b !errorlevel!
