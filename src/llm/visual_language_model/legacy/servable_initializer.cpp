@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include <openvino/genai/visual_language/pipeline.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
 
@@ -33,7 +34,6 @@
 #include "../../../logging.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../../status.hpp"
-#include "../../generation_config_header.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
 

@@ -18,7 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "../../generation_config_header.hpp"
+#include <openvino/genai/visual_language/pipeline.hpp>
+
 #include "../../servable.hpp"
 #include "legacy_executor.hpp"
 #include "src/llm/llm_calculator.pb.h"

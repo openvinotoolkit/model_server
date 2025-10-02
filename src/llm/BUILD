@@ -18,14 +18,6 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "COPTS_PYTHON")
 
 ovms_cc_library(
-    name = "genai_proxy",
-    hdrs = ["generation_config_header.hpp"],
-    srcs = [],
-    deps = ["//third_party:genai"],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "llmcalculator",
     srcs = ["http_llm_calculator.cc"],
     deps = [
@@ -36,7 +28,7 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         ":genai_servables",
         "//src:httppayload",
-        ":genai_proxy",],
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON,
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
@@ -66,7 +58,7 @@ ovms_cc_library(
         "@stb//:image",
         ":openai_request",
         ":output_parsers",
-        ":genai_proxy",],
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -75,7 +67,7 @@ ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = [":genai_proxy",
+    deps = ["//third_party:genai",            
             "//src/port:rapidjson_document",
             ":apis_tool_schema_wrapper",],
     visibility = ["//visibility:public"],
@@ -160,7 +152,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
-        ":genai_proxy",
+        "//third_party:genai",
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
@@ -184,7 +176,7 @@ ovms_cc_library(
     deps = [
         ":openai_request",
         "//src:libovmslogging",
-        ":genai_proxy",],
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -231,7 +223,7 @@ ovms_cc_library(
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
-        ":genai_proxy",] + select({
+        "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
     }),

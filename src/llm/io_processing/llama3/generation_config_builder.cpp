@@ -16,9 +16,9 @@
 
 #include <string>
 #include <utility>
+#include <openvino/genai/generation_config.hpp>
 
 #include "generation_config_builder.hpp"
-#include "../../generation_config_header.hpp"
 
 namespace ovms {
 
