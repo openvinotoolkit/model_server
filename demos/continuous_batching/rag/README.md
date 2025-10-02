@@ -62,7 +62,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 
 ```bat
 pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
-pip3 install -q -r requirements.txt
+pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/rag/requirements.txt
 mkdir models
 export HF_TOKEN=<hf_token>
 ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
