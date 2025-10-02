@@ -48,7 +48,7 @@ def cleanup_directories() {
                 println "Deleting: " + pathToDelete
                 status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
                 if (status != 0) {
-                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
                 } else {
                     echo "Deleting directory ${pathToDelete} successful."
                 }
@@ -61,13 +61,13 @@ def cleanup_sdl(){
     println "Cleaning SDL files"
     def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_signing")
     if (status != 0) {
-        error "Error: Deleting directory repo_signing failed: ${status}. Check piepeline.log for details."
+        error "Error: Deleting directory repo_signing failed: ${status}. Check pipeline.log for details."
     } else {
         echo "Deleting directory repo_signing successful."
     }
     def status2 = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_ci_infra")
     if (status2 != 0) {
-        error "Error: Deleting directory repo_ci_infra failed: ${status2}. Check piepeline.log for details."
+        error "Error: Deleting directory repo_ci_infra failed: ${status2}. Check pipeline.log for details."
     } else {
         echo "Deleting directory repo_ci_infra successful."
     }
@@ -106,7 +106,7 @@ def deleteOldDirectories() {
             println "Deleting: " + pathToDelete
             status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
             if (status != 0) {
-                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
             } else {
                 echo "Deleting directory ${pathToDelete} successful."
             }
@@ -161,7 +161,7 @@ def sign(){
     println "Starting code signing"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/intel-innersource/frameworks.ai.openvino.model-server.bdba repo_signing')
     if (statusPull != 0) {
-        error "Error: Downloading check_signing.py failed ${statusPull}. Check piepeline.log for details."
+        error "Error: Downloading check_signing.py failed ${statusPull}. Check pipeline.log for details."
     } else {
         echo "check_signing.py downloaded successfully."
     }
@@ -181,6 +181,9 @@ def bdba(){
     }
     println "Starting BDBA scan"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/przepeck/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
+    if (statusPull != 0) {
+        error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+    }
     def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
@@ -225,7 +228,7 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check pipeline.log for details."
     } else {
         echo "Success: Windows run test finished with success."
     }
