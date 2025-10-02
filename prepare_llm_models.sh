@@ -33,8 +33,9 @@ LLAMA3_MODEL="meta-llama/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
+GPT_OSS="openai/gpt-oss-20b"
 
-MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
+MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$GPT_OSS/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -180,5 +181,16 @@ else
 fi
 if [ ! -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE does not exists."
+  exit 1
+fi
+
+if [ -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GPT_OSS/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p $1/$GPT_OSS
+  convert_tokenizer $GPT_OSS --with_detokenizer -o $1/$GPT_OSS
+fi
+if [ ! -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GPT_OSS/$TOKENIZER_FILE does not exists."
   exit 1
 fi
