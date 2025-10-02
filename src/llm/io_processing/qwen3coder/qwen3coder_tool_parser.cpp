@@ -32,13 +32,13 @@
 #include "qwen3coder_tool_parser.hpp"
 
 namespace ovms {
-const std::string Qwen3CoderToolParser::toolsStartTag = "<tool_call>";
-const std::string Qwen3CoderToolParser::toolPrefixTag = "<function=";
-const std::string Qwen3CoderToolParser::tagEnd = ">";
-const std::string Qwen3CoderToolParser::parameterPrefixTag = "<parameter=";
-const std::string Qwen3CoderToolParser::parameterEndTag = "</parameter>";
-const std::string Qwen3CoderToolParser::toolEndTag = "</function>";
-const std::string Qwen3CoderToolParser::toolsEndTag = "</tool_call>";
+const std::string Qwen3CoderToolParser::TOOL_START_TAG = "<tool_call>";
+const std::string Qwen3CoderToolParser::FUNCTION_NAME_TAG = "<function=";
+const std::string Qwen3CoderToolParser::XML_TAG_END = ">";
+const std::string Qwen3CoderToolParser::PARAMETER_NAME_TAG = "<parameter=";
+const std::string Qwen3CoderToolParser::PARAMETER_END_TAG = "</parameter>";
+const std::string Qwen3CoderToolParser::FUNCTION_END_TAG = "</function>";
+const std::string Qwen3CoderToolParser::TOOL_END_TAG = "</tool_call>";
 
 static void trimNewline(std::string& str) {
     if (str.empty()) {
@@ -55,14 +55,14 @@ static void trimNewline(std::string& str) {
     }
 }
 
-static std::string toJson(const ParametersValues_t& items) {
+std::string Functool::parametersToJson() {
     std::ostringstream oss;
     oss << "{";
     size_t i = 0;
-    for (const auto& [key, value] : items) {
+    for (const auto& [key, value] : this->parameters) {
         oss << "\"" << key << "\": ";
         oss << value;
-        if (i++ + 1 < items.size()) {
+        if (i++ + 1 < this->parameters.size()) {
             oss << ", ";
         }
     }
@@ -86,7 +86,7 @@ Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string&
     }
     return StatusCode::OK;
 }
-
+// Exemplary schemas
 // {"type":"object","properties":{"location":{"type":"string"},"provide_temperature":{"type":"boolean"}},"required":["location"]}
 // {"type":"object","required":["location"],"properties":{"location":{"type":"string","description":"The location for which to get the weather, in the format of 'City, State', such as 'San Francisco, CA' if State for the city exists. 'City, Country' if State for the city doesn't exist."},"unit":{"type":"string","description":"The unit of temperature for the weather report.","enum":["celsius","fahrenheit"],"default":"fahrenheit"}}}
 
@@ -118,17 +118,17 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
         }
         std::string paramName = it->name.GetString();
         std::string typeStr = it->value["type"].GetString();
-        ParameterType_t type = ParameterType_t::UNKNOWN;
+        ParameterType type = ParameterType::UNKNOWN;
         if (typeStr == "string") {
-            type = ParameterType_t::STRING;
+            type = ParameterType::STRING;
         } else if (typeStr == "number" || typeStr == "integer") {
-            type = ParameterType_t::NUMBER;
+            type = ParameterType::NUMBER;
         } else if (typeStr == "boolean") {
-            type = ParameterType_t::BOOLEAN;
+            type = ParameterType::BOOLEAN;
         } else if (typeStr == "array") {
-            type = ParameterType_t::ARRAY;
+            type = ParameterType::ARRAY;
         } else if (typeStr == "object") {
-            type = ParameterType_t::OBJECT;
+            type = ParameterType::OBJECT;
         } else {
             SPDLOG_DEBUG("Tool schema property: {} has unknown type: {} for tool: {}, schema: {}", paramName, typeStr, functionName, schema);
         }
@@ -144,11 +144,11 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
         SPDLOG_DEBUG("Parameter: {} schema not found , leaving as is", currentParameterName);
         return inputValue;
     }
-    if (paramIt->second == ParameterType_t::STRING) {
+    if (paramIt->second == ParameterType::STRING) {
         inputValue = "\"" + inputValue + "\"";
         return inputValue;
     }
-    if (paramIt->second == ParameterType_t::BOOLEAN) {
+    if (paramIt->second == ParameterType::BOOLEAN) {
         // in case of bool we need to convert to lower case
         std::transform(inputValue.begin(), inputValue.end(), inputValue.begin(), ::tolower);
         return inputValue;
@@ -156,64 +156,60 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
     return inputValue;
 }
 
-#define LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(STATE, TAG)                                          \
-    SPDLOG_TRACE("State: {}", #STATE);                                                                 \
-    /*SPDLOG_TRACE("Current content:{} current pos:{}", streamContent, this->lastProcessedPosition);*/ \
-    auto pos = this->streamContent.find(TAG, this->getLastProcessedPosition());                        \
-    if (pos == std::string::npos) {                                                                    \
-        SPDLOG_TRACE("Did not find:{}", TAG);                                                          \
-        break;                                                                                         \
+#define DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(TAG)                         \
+    auto pos = this->streamContent.find(TAG, this->getLastProcessedPosition()); \
+    if (pos == std::string::npos) {                                             \
+        SPDLOG_TRACE("Did not find: {}", TAG);                                  \
+        break;                                                                  \
     }
 
-bool Qwen3CoderToolParserImpl::stepUntilStateChange(ToolCalls& toolCalls) {
+bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls& toolCalls) {
+    SPDLOG_TRACE("State: {}", this->currentState);
     auto previousState = this->currentState;
     switch (this->currentState) {
     case State::Content: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(Content, Qwen3CoderToolParser::toolsStartTag);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::toolsStartTag.length();
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_START_TAG);
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_START_TAG.length();
         this->currentState = State::InsideToolCall;
         this->toolsBeginStack.push(pos);
         break;
     }
     case State::InsideToolCall: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(InsideToolCall, Qwen3CoderToolParser::toolPrefixTag);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::toolPrefixTag.length();
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::FUNCTION_NAME_TAG);
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::FUNCTION_NAME_TAG.length();
         this->currentState = State::InsideFunctionName;
         break;
     }
     case State::InsideFunctionName: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(InsideFunctionName, Qwen3CoderToolParser::tagEnd);
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentFunction.name = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::tagEnd.length();
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideFunction;
         break;
     }
     case State::InsideFunction: {
-        SPDLOG_TRACE("State: {}", this->currentState);
-        auto funcEnd = streamContent.find(Qwen3CoderToolParser::toolEndTag, this->lastProcessedPosition);
-        auto paramStart = streamContent.find(Qwen3CoderToolParser::parameterPrefixTag, this->lastProcessedPosition);
+        auto funcEnd = streamContent.find(Qwen3CoderToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
+        auto paramStart = streamContent.find(Qwen3CoderToolParser::PARAMETER_NAME_TAG, this->lastProcessedPosition);
         if (funcEnd == std::string::npos && paramStart == std::string::npos) {
-            SPDLOG_TRACE("Found neither no changing state");
             break;
-        } else if (paramStart < funcEnd) {
-            this->lastProcessedPosition = paramStart + Qwen3CoderToolParser::parameterPrefixTag.length();
+        } else if (paramStart < funcEnd) {  // next parameter
+            this->lastProcessedPosition = paramStart + Qwen3CoderToolParser::PARAMETER_NAME_TAG.length();
             this->currentState = State::InsideParameterName;
-        } else {
-            // no args functool
-            this->lastProcessedPosition = funcEnd + Qwen3CoderToolParser::toolEndTag.length();
+        } else {  // end of function
+            this->lastProcessedPosition = funcEnd + Qwen3CoderToolParser::FUNCTION_END_TAG.length();
             this->currentState = State::AfterFunction;
         }
         break;
     }
     case State::InsideParameterName: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(InsideParameterName, Qwen3CoderToolParser::tagEnd);
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentParameterName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::tagEnd.length();
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideParameter;
         break;
     }
     case State::InsideParameter: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(InsideParameter, Qwen3CoderToolParser::parameterEndTag);
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::PARAMETER_END_TAG);
         std::string parameterValue(streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition));
         if (this->removeNewlineAroundParameters)
             trimNewline(parameterValue);
@@ -227,15 +223,15 @@ bool Qwen3CoderToolParserImpl::stepUntilStateChange(ToolCalls& toolCalls) {
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
             SPDLOG_DEBUG("Parameter: {} already exists", this->currentParameterName);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::parameterEndTag.length();
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::PARAMETER_END_TAG.length();
         this->currentState = State::InsideFunction;
         break;
     }
     case State::AfterFunction: {
-        LOG_AND_DEFINE_POS_AND_BREAK_IF_NOT_FOUND(AfterFunction, Qwen3CoderToolParser::toolsEndTag);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::toolsEndTag.length();
+        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_END_TAG);
+        this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_END_TAG.length();
         this->currentState = State::Content;
-        ToolCall toolCall{generateRandomId(), this->currentFunction.name, toJson(this->currentFunction.parameters)};
+        ToolCall toolCall{generateRandomId(), this->currentFunction.name, this->currentFunction.parametersToJson()};
         SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
         toolCalls.emplace_back(std::move(toolCall));
         this->currentFunction.clear();
@@ -251,7 +247,7 @@ std::optional<ToolCalls> Qwen3CoderToolParserImpl::parseChunk(const std::string&
     }
     ToolCalls toolCalls;
     this->streamContent += chunk;
-    while (stepUntilStateChange(toolCalls)) {
+    while (parseUntilStateChange(toolCalls)) {
     }
     // ASSUMPTION
     // in streaming we will only have either one tool call or one function name at a time
@@ -273,7 +269,7 @@ static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_
     return toolsParametersTypes;
 }
 
-void Qwen3CoderToolParser::lazyFillInitToolParamatersTypsMap() {
+void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
     if (this->filledParametersTypesMap) {
         return;
     }
@@ -301,8 +297,8 @@ void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<i
     // PARAM_VALUE
     // </parameter>
     // </function>
-    // </tool_call>a
-    this->lazyFillInitToolParamatersTypsMap();
+    // </tool_call>
+    this->lazyFillInitToolParametersTypesMap();
     auto toolCallsOpt = this->streamParser.parseChunk(parsedOutput.content);
     if (toolCallsOpt.has_value()) {
         // TODO do we want to support not ending in content state?
@@ -323,21 +319,7 @@ std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() co
     }
     return this->currentFunction.name;
 }
-/*
-{"type":"response.output_item.added","response_id":"resp_1234xyz","output_index":0,"item":{"type":"function_call","id":"fc_1234xyz","call_id":"call_1234xyz","name":"get_weather","arguments":""}}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"{\""}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"location"}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"\":\""}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"Paris"}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":","}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":" France"}
-{"type":"response.function_call_arguments.delta","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"delta":"\"}"}
-{"type":"response.function_call_arguments.done","response_id":"resp_1234xyz","item_id":"fc_1234xyz","output_index":0,"arguments":"{\"location\":\"Paris, France\"}"}
-{"type":"response.output_item.done","response_id":"resp_1234xyz","output_index":0,"item":{"type":"function_call","id":"fc_1234xyz","call_id":"call_1234xyz","name":"get_weather","arguments":"{\"location\":\"Paris, France\"}"}}
-*/
-// example1 {"location":"San Francisco"}
-// example1 {"city":"San Francisco","state":"CA", "length":5, "is_day":true, "temperatures":[5,6,7], "details":{"humidity":80,"condition":"sunny"}}]}
-// index is toolCallId
+// Example from OpenAI API. Keep in mind that for Qwen3Coder we will send only function name, and then second message with all arguments
 
 // for Qwen3Coder we will send first response with function call name and id
 // then we will send only one delta with all arguments
@@ -374,15 +356,15 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::opti
 }
 
 std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
-    if (this->returnedFirstDeltas.size() != this->returnedCompleteDeltas.size()) {
-        SPDLOG_TRACE("Skipping first delta, already sent for current function, fi:{} co:{}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
+    if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
+        SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
         // we can skip sending first delta since we sent it for current function
         return std::nullopt;
     }
     int toolCallId = ++this->toolCallIndex;
     rapidjson::Document doc = wrapFirstDelta(toolCallName, toolCallId);
     this->currentJson.CopyFrom(doc, this->currentJson.GetAllocator());
-    returnedFirstDeltas.insert(toolCallId);
+    this->returnedFirstDeltas.insert(toolCallId);
     SPDLOG_DEBUG("First delta doc: {}", documentToString(doc));
     return doc;
 }
@@ -393,7 +375,7 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::parseChunk(const std::s
     // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
     // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    this->lazyFillInitToolParamatersTypsMap();
+    this->lazyFillInitToolParametersTypesMap();
     if (newChunk.empty()) {
         return std::nullopt;
     }

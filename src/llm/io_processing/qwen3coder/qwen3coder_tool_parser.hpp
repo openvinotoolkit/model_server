@@ -46,22 +46,41 @@ struct Functool {
         name.clear();
         parameters.clear();
     }
+    std::string parametersToJson();
 };
 struct Qwen3CoderToolParserImpl {
     enum class State {
         Content,              // (C) here we expect either tools start tag or end of content
         InsideToolCall,       // (ITC) here we expect function start tag
-        InsideFunctionName,   // (IFN) here we expect parameter start tag
-        InsideFunction,       // (IF) here we expect parameter start tag
-        InsideParameterName,  // (IPN) here we expect parameter end tag
+        InsideFunctionName,   // (IFN) here we expect xml end tag
+        InsideFunction,       // (IF) here we expect parameter start tag or function end tag
+        InsideParameterName,  // (IPN) here we expect xml end tag
         InsideParameter,      // (IP) here we expect parameter end tag
-        AfterFunction         // (AF) here we expect either next parameter or function & tools end
-                              /*
-                      /<<<<<<<\
-        C->ITC->IFN->IF->IPN->IP->AF->C
-                      \>>>>>>>/
-*/
+        AfterFunction         // (AF) here we expect tool end tag
     };
+    // Example request
+    // <tool_call>
+    // <function=GetWeather>
+    // <parameter=Location>Gdansk, Pomorskie</parameter>
+    // </function>
+    // </tool_call>
+
+    // STATE DEMARKATION
+    /*
+Content
+<tool_call>
+InsideToolCall
+<function=InsideFunctionName>
+InsideFunction
+(<parameter=InsideParameterName>InsideParameter</parameter>InsideFunction)*
+</function>AfterFunction
+</tool_call>Content
+
+State transitions
+              /<<<<<<<<<<\
+C->ITC->IFN->IF->IPN->IP->AF->C
+              \>>>>>>>>>>/
+*/
     Qwen3CoderToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap);
     /*
      * Return all tool calls found in agreggated content so far
@@ -90,22 +109,22 @@ private:
     std::stack<size_t> toolsBeginStack;
     std::stack<size_t> toolsEndStack;
     /*
-     * process streamcontent from lastProcessedPosition until change of state
+     * process streamContent from lastProcessedPosition until change of state
      * return true if state changed, false otherwise
      * false means no more state changes possible with current content
      */
-    bool stepUntilStateChange(ToolCalls& toolCalls);
+    bool parseUntilStateChange(ToolCalls& toolCalls);
 };
 
 class Qwen3CoderToolParser : public BaseOutputParser {
 public:
-    static const std::string toolsStartTag;
-    static const std::string toolsEndTag;
-    static const std::string toolPrefixTag;
-    static const std::string toolEndTag;
-    static const std::string parameterPrefixTag;
-    static const std::string parameterEndTag;
-    static const std::string tagEnd;
+    static const std::string TOOL_START_TAG;
+    static const std::string TOOL_END_TAG;
+    static const std::string FUNCTION_NAME_TAG;
+    static const std::string FUNCTION_END_TAG;
+    static const std::string PARAMETER_NAME_TAG;
+    static const std::string PARAMETER_END_TAG;
+    static const std::string XML_TAG_END;
 
 private:
     const ToolsSchemas_t& toolSchemas;  // we need to keep reference as this is not filled in OpenAIApiHandler during ToolParser creation, NOTE that its const here but it can change outside
@@ -118,7 +137,6 @@ private:
     rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
-    // streaming off
 
 public:
     Qwen3CoderToolParser() = delete;
@@ -127,21 +145,21 @@ public:
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
     const std::string& getParsingStartTag() const override {
-        return toolsStartTag;
+        return TOOL_START_TAG;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {toolsStartTag};
+        static const std::unordered_set<std::string> specialParsingStartTags = {};
         return specialParsingStartTags;
     }
-    // Tools calls are expected to be the last part of the content, so we do not specify an end tag.
     const std::string& getParsingEndTag() const override {
-        return toolsEndTag;
+        static const std::string EMPTY_STRING = "";
+        return EMPTY_STRING;
     }
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
     std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls>& toolCallsOpt);
-    void lazyFillInitToolParamatersTypsMap();
+    void lazyFillInitToolParametersTypesMap();
 };
 }  // namespace ovms
 template <>

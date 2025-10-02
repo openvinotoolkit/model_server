@@ -37,7 +37,7 @@ namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
-    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}" TODO rename to know in context that's JSON
+    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}"
 };
 
 using ToolsSchemas_t = std::map<std::string, std::string>;
@@ -52,7 +52,7 @@ struct ParsedOutput {
     std::string reasoning;
 };
 
-enum class ParameterType_t {
+enum class ParameterType {
     STRING,
     NUMBER,
     BOOLEAN,
@@ -60,7 +60,7 @@ enum class ParameterType_t {
     OBJECT,
     UNKNOWN
 };
-using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType_t>;          // param name -> param type
+using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType>;            // param name -> param type
 using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMap_t>;  // tool name -> (param name -> param type)
 
 class BaseOutputParser {

@@ -33,19 +33,19 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 #endif
 
-using ovms::ParameterType_t;
+using ovms::ParameterType;
 using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 static ovms::ToolsSchemas_t toolsSchemas = {
     {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"}};
 static ToolsParameterTypeMap_t toolsParametersTypeMap = {
-    {"string_tool", {{"arg1", ParameterType_t::STRING}}},
-    {"string_string_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::STRING}}},
-    {"string_int_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
-    {"string_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}}},
-    {"string_int_float_tool", {{"arg1", ParameterType_t::STRING}, {"arg2", ParameterType_t::NUMBER}, {"arg3", ParameterType_t::NUMBER}}},
-    {"object_tool", {{"param1", ParameterType_t::OBJECT}}},
-    {"calculate_triangle_area", {{"base", ParameterType_t::NUMBER}, {"height", ParameterType_t::NUMBER}}},
+    {"string_tool", {{"arg1", ParameterType::STRING}}},
+    {"string_string_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::STRING}}},
+    {"string_int_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::NUMBER}}},
+    {"string_float_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::NUMBER}}},
+    {"string_int_float_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::NUMBER}, {"arg3", ParameterType::NUMBER}}},
+    {"object_tool", {{"param1", ParameterType::OBJECT}}},
+    {"calculate_triangle_area", {{"base", ParameterType::NUMBER}, {"height", ParameterType::NUMBER}}},
 };
 
 class Qwen3CoderOutputParserTest : public ::testing::Test {
@@ -393,7 +393,7 @@ value1
     ASSERT_FALSE(stepResult.has_value());
     ASSERT_EQ(parser.getCurrentState(), ovms::Qwen3CoderToolParserImpl::State::InsideParameter);
     EXPECT_EQ(content, input);
-    EXPECT_EQ(parser.getLastProcessedPosition(), input.find(Qwen3CoderToolParser::parameterPrefixTag) + std::string("<parameter=arg1>").size());
+    EXPECT_EQ(parser.getLastProcessedPosition(), input.find(Qwen3CoderToolParser::PARAMETER_NAME_TAG) + std::string("<parameter=arg1>").size());
     EXPECT_EQ(parser.getCurrentFunctionName().value(), "string_tool");
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithTwoToolCalls) {
