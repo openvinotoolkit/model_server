@@ -23,10 +23,6 @@ COPTS_OV_TRACE = select({
     "//conditions:default": ["-DOV_TRACE=0"],
     "//:not_disable_ov_trace" : ["-DOV_TRACE=1"],
 })
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,

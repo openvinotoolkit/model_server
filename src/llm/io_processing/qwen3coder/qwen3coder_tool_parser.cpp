@@ -29,6 +29,7 @@
 
 #include "src/llm/io_processing/utils.hpp"
 #include "src/logging.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "qwen3coder_tool_parser.hpp"
 
 namespace ovms {
@@ -314,18 +315,6 @@ std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() co
     }
     return this->currentFunction.name;
 }
-// Example from OpenAI API. Keep in mind that for Qwen3Coder we will send only function name, and then second message with all arguments
-
-// for Qwen3Coder we will send first response with function call name and id
-// then we will send only one delta with all arguments
-
-static std::string documentToString(const rapidjson::Document& doc) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-    return buffer.GetString();
-}
-
 std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::optional<ToolCalls>& toolCallsOpt) {
     auto& toolCalls = toolCallsOpt.value();
     if (toolCalls.size() != 1) {

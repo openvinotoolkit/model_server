@@ -124,6 +124,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         "//src:libovmsstatus",
+        "//src/utils:rapidjson_utils",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
