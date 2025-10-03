@@ -560,7 +560,19 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"</pa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"rameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"}};
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"},
+        {" POTENTIALLY EXISINT CONTENT", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" <tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" <tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<function=string_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_tool"}}]}})"},
+        {"<parameter=arg1>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ANOTHER_STRING_VALUE\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\"}"}}]}})"}
+    };
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
