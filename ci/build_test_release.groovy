@@ -43,7 +43,8 @@ pipeline {
                 }
             }
         }
-        stage ("SDL actions"){
+        stage ("Signing files"){
+            when { expression { env.SIGN_FILES == true } }
             steps {
                 withCredentials([usernamePassword(
                         credentialsId: 'PRERELEASE_SIGN',
@@ -54,14 +55,29 @@ pipeline {
                         if (windows != null) {
                             try {
                                 windows.sign()
-                                windows.bdba()
                             } finally {
-                                windows.archive_bdba_reports()
                                 windows.archive_sign_results()
                             }
                         } else {
                             error "Cannot load ci/loadWin.groovy file."
                         }
+                    }
+                }
+            }
+        }
+        stage ("BDBA scans"){
+            when { expression { env.BDBA_SCAN == true } }
+            steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.bdba()
+                        } finally {
+                            windows.archive_bdba_reports()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
                     }
                 }
             }
