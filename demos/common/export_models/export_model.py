@@ -92,7 +92,57 @@ parser_image_generation.add_argument('--default_resolution', default="", help='D
 parser_image_generation.add_argument('--max_num_images_per_prompt', type=int, default=0, help='Max allowed number of images client is allowed to request for a given prompt', dest='max_num_images_per_prompt')
 parser_image_generation.add_argument('--default_num_inference_steps', type=int, default=0, help='Default number of inference steps when not specified by client', dest='default_num_inference_steps')
 parser_image_generation.add_argument('--max_num_inference_steps', type=int, default=0, help='Max allowed number of inference steps client is allowed to request for a given prompt', dest='max_num_inference_steps')
+
+parser_speech_generation = subparsers.add_parser('speech', help='export model for speech synthesis endpoint')
+add_common_arguments(parser_speech_generation)
+parser_speech_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
+parser_speech_generation.add_argument('--vocoder', type=str, help='The vocoder model to use for speech synthesis. For example microsoft/speecht5_hifigan', dest='vocoder')
+
+parser_transcription_generation = subparsers.add_parser('transcription', help='export model for speech transcription endpoint')
+add_common_arguments(parser_transcription_generation)
+parser_transcription_generation.add_argument('--num_streams', default=0, type=int, help='The number of parallel execution streams to use for the models in the pipeline.', dest='num_streams')
 args = vars(parser.parse_args())
+
+speech_graph_template = """
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "SpeechExecutor"
+  input_side_packet: "SPEECH_NODE_RESOURCES:speech_servable"
+  calculator: "SpeechCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.SpeechCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      mode: TEXT_TO_SPEECH,
+      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      device: "{{target_device|default("CPU", true)}}"
+    }
+  }
+}
+"""
+
+transcription_graph_template = """
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+  name: "SpeechExecutor"
+  input_side_packet: "SPEECH_NODE_RESOURCES:speech_servable"
+  calculator: "SpeechCalculator"
+  input_stream: "HTTP_REQUEST_PAYLOAD:input"
+  output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+  node_options: {
+    [type.googleapis.com / mediapipe.SpeechCalculatorOptions]: {
+      models_path: "{{model_path}}",
+      mode: SPEECH_TO_TEXT,
+      plugin_config: '{ "NUM_STREAMS": "{{num_streams|default(1, true)}}" }',
+      device: "{{target_device|default("CPU", true)}}"
+    }
+  }
+}
+"""
+
 
 embedding_graph_template = """input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
@@ -526,7 +576,7 @@ def export_embeddings_model(model_repository_path, source_model, model_name, pre
     print("Created subconfig {}".format(os.path.join(model_repository_path, model_name, 'subconfig.json')))
     add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
 
-def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, truncate=True):
+def export_embeddings_model_ov(model_repository_path, source_model, model_name, precision, task_parameters):
     set_max_context_length = ""
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
@@ -543,7 +593,32 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
         f.write(graph_content)
     print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
-    add_servable_to_config(config_file_path, model_name, os.path.relpath(os.path.join(model_repository_path, model_name), os.path.dirname(config_file_path)))
+
+def export_speech_model(model_repository_path, source_model, model_name, precision, task_parameters):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting speech model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code --model-kwargs \"{{\\\"vocoder\\\": \\\"{}\\\"}}\" {}".format(source_model, precision, task_parameters['vocoder'], destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export speech model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(speech_graph_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
+
+def export_transcription_model(model_repository_path, source_model, model_name, precision, task_parameters):
+    destination_path = os.path.join(model_repository_path, model_name)
+    print("Exporting transcription model to ",destination_path)
+    if not os.path.isdir(destination_path) or args['overwrite_models']:
+        optimum_command = "optimum-cli export openvino --model {} --weight-format {} --trust-remote-code {}".format(source_model, precision, destination_path)
+        if os.system(optimum_command):
+            raise ValueError("Failed to export transcription model", source_model)
+    gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(transcription_graph_template)
+    graph_content = gtemplate.render(model_path="./", **task_parameters)
+    with open(os.path.join(model_repository_path, model_name, 'graph.pbtxt'), 'w') as f:
+        f.write(graph_content)
+    print("Created graph {}".format(os.path.join(model_repository_path, model_name, 'graph.pbtxt')))
 
 def export_rerank_model_ov(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path, max_doc_length):
     destination_path = os.path.join(model_repository_path, model_name)
@@ -674,7 +749,7 @@ elif args['task'] == 'embeddings':
     export_embeddings_model(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['truncate'])
 
 elif args['task'] == 'embeddings_ov':
-    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters, args['config_file_path'], args['truncate'])
+    export_embeddings_model_ov(args['model_repository_path'], args['source_model'], args['model_name'],  args['precision'], template_parameters)
 
 elif args['task'] == 'rerank':
     export_rerank_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, str(args['version']), args['config_file_path'], args['max_doc_length'])
@@ -682,6 +757,11 @@ elif args['task'] == 'rerank':
 elif args['task'] == 'rerank_ov':
     export_rerank_model_ov(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters, args['config_file_path'], args['max_doc_length'])
 
+elif args['task'] == 'speech':
+    export_speech_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters)
+
+elif args['task'] == 'transcription':
+    export_transcription_model(args['model_repository_path'], args['source_model'], args['model_name'] ,args['precision'], template_parameters)
 elif args['task'] == 'image_generation':
     template_parameters = {k: v for k, v in args.items() if k in [
         'ov_cache_dir',
