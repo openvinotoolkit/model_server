@@ -313,7 +313,7 @@ public:
             try {
                 raw_speech = read_mp3(file.value());
             } catch(std::exception&){
-                return absl::InvalidArgumentError("Audio file pasing failed");
+                return absl::InvalidArgumentError("Audio file reading failed");
             }
             std::string result = "{\"text\": \"";
             std::unique_lock lock(pipe->whisperPipelineMutex);
