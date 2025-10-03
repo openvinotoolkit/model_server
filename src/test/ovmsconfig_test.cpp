@@ -1169,7 +1169,7 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
 }
 
 TEST(OvmsExportHfSettingsTest, allChanged) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string modelName = "Unknown/Phi-3-mini-FastDraft-50M-int8";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
@@ -1205,7 +1205,7 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
 }
 
 TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
-    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string modelName = "Unknown/Phi-3-mini-FastDraft-50M-int8";
     std::string downloadPath = "test/repository";
     char* n_argv[] = {
         (char*)"ovms",
