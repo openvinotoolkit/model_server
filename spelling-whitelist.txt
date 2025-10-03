@@ -1,5 +1,3 @@
-Dockerfile.redhat:228: thirdparty ==> third party, third-party
-Dockerfile.ubuntu:206: thirdparty ==> third party, third-party
 client/common/resnet_labels.txt
 demos/common/python/classes.py
 demos/image_classification/go/labels.go
@@ -19,7 +17,6 @@ src/test/modelconfig_test.cpp:497: OptionA
 src/test/modelconfig_test.cpp:503: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
-third_party/llm_engine/llm_engine.bzl
 WORKSPACE:98: thirdparty
 demos/classification_using_paddlepaddle_model/python/utils/imagenet_class_index.json
 release_files/thirdparty-licenses/icu.LICENSE.txt:146: TaBE ==> table, tab

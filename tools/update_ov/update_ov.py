@@ -27,7 +27,6 @@
 #     and updates the Makefile with the new package links and commit SHAs.
 #   - The script updates the requirements.txt file for the export models script with the new
 #     OpenVINO and OpenVINO Tokenizers versions.
-#   - The script updates the llm_engine.bzl file with the new OpenVINO GenAI commit SHA.
 #   - The script updates the windows_install_build_dependencies.bat file with the new OpenVINO GenAI package link.
 
 import requests
@@ -209,24 +208,6 @@ def update_openvino_genai():
     else:
         raise Exception("No commit link found.")
 
-    # Update OpenVINO GenAI commit in llm_engine.bzl
-    llm_engine_bzl_path = "third_party/llm_engine/llm_engine.bzl"
-    with open(llm_engine_bzl_path, 'r') as file:
-        llm_engine_bzl_content = file.readlines()
-    new_llm_engine_bzl_content = []
-    for line in llm_engine_bzl_content:
-        if "commit =" in line:
-            print("Updating GenAI commit in llm_engine.bzl")
-            indentation = line[:line.index("commit =")]
-            new_line = f'{indentation}commit = "{commit}", # master {date_formatted}\n'
-            print(new_line.lstrip())
-            new_llm_engine_bzl_content.append(new_line)
-        else:
-            new_llm_engine_bzl_content.append(line)
-    
-    with open(llm_engine_bzl_path, 'w') as file:
-        file.writelines(new_llm_engine_bzl_content)
-    
     # Fetch information about the tokenizers submodule
     tokenizers_commit = None
     tokenizers_commit_date = None

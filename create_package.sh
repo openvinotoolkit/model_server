@@ -15,7 +15,7 @@
 #
 
 # This script should be used inside the build image to create a binary package based on the compiled artifacts
-
+set -e
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
@@ -30,7 +30,7 @@ cd /ovms_release/lib/ ; rm -f libcurl.so*
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
 
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so.2540 ; fi
+if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so. libopenvino_genai.so.2025.4.0.0 ; fi
 if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so* ; fi
 
 # Remove GPU plugin for CPU images?
@@ -70,8 +70,7 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/pyt
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then echo $'#!/bin/bash\npython3 -m openvino_tokenizers.cli "$@"' > /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /ovms/bazel-out/k8-opt/bin/external/llm_engine/libopenvino_genai/python/* /ovms_release/lib/python/ ; \
-	mkdir -p /ovms_release/lib/python/openvino_genai-2025.4.dist-info ; \
+if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2025.4.dist-info ; \
 	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2025.4.0' > /ovms_release/lib/python/openvino_genai-2025.4.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
