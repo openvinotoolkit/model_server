@@ -366,7 +366,7 @@ public:
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             drwav_uninit(&wav);
             SPDLOG_ERROR("4");
-            //drwav_free(ppData, NULL);
+            // drwav_free(ppData, NULL);
         } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
