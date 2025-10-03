@@ -22,6 +22,7 @@
 #include <unordered_set>
 #include <string>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #pragma warning(push)
@@ -40,7 +41,7 @@ struct ToolCall {
     std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}"
 };
 
-using ToolsSchemas_t = std::map<std::string, std::string>;
+using ToolsSchemas_t = std::map<std::string, std::pair<rapidjson::Value*, std::string>>;
 using ToolCalls = std::vector<ToolCall>;
 
 struct ParsedOutput {

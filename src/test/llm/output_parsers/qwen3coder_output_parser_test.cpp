@@ -36,8 +36,29 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 using ovms::ParameterType;
 using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
-static ovms::ToolsSchemas_t toolsSchemas = {
+
+static std::map<std::string, std::string> toolSchemasInput = {
     {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"}};
+static rapidjson::Document testSchemasDoc;
+
+static ToolsSchemas_t convertStringToolSchemasStringToToolsSchemas(
+    const std::map<std::string, std::string>& input,
+    rapidjson::Document& doc) {
+    ToolsSchemas_t result;
+    auto& allocator = doc.GetAllocator();
+    for (const auto& [name, schemaStr] : input) {
+        rapidjson::Document schemaDoc;
+        if (schemaDoc.Parse(schemaStr.c_str()).HasParseError()) {
+            throw std::runtime_error("Failed to parse schema for tool: " + name);
+        }
+        rapidjson::Value schemaCopy(schemaDoc, allocator);
+        doc.CopyFrom(schemaCopy, allocator);
+        result[name] = {&doc, schemaStr};
+    }
+
+    return result;
+}
+static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput, testSchemasDoc);
 static ToolsParameterTypeMap_t toolsParametersTypeMap = {
     {"string_tool", {{"arg1", ParameterType::STRING}}},
     {"string_string_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::STRING}}},
@@ -78,7 +99,7 @@ protected:
     }
 };
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
-    std::string input = R"(
+    std::string input = R"(io_processing/hermes3/generation_config_builder.cpp
 "<tool_call>
 <function=string_tool>
 <parameter=arg1>
@@ -110,6 +131,7 @@ TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCallNestedXmlNotFromSchema) {
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"<value=abc>value1</value>\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
+// FIXME check if two tool calls is a vali for outputparser as well not only for parser imple
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNoNewline) {
     std::string input = R"(
 "<tool_call><function=string_tool><parameter=arg1>value1</parameter></function></tool_call>")";
@@ -515,6 +537,9 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
     // since unary reuses streaming we don't need to test for partial tool calls
     // if we don't get closing tag we don't emit tool call
     int i = -1;
+    // FIXME add content in between tool_calls and test what happens
+    // Add another tool call to test for special tags handling
+    // add content after second tool call
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {" <too", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"l_cal", ov::genai::GenerationFinishReason::NONE, std::nullopt},

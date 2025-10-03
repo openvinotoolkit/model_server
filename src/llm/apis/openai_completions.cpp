@@ -331,12 +331,17 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                         // If we keep the tool, add tool name and schema to the request
                         auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
                         if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // now we want to insert to a mapping of
+                            // tool name -> pair(parametersIt->value, parameters schema string)
+                            // get prametersIt->value
                             // Dump parameters object to string since this is the schema format expected by GenAI
+                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             parametersIt->value.Accept(writer);
                             std::string parametersStr = buffer.GetString();
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                            std::pair<rapidjson::Value*, std::string> schemaReprs = {&parametersIt->value, std::move(parametersStr)};
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
                         }
                     }
                 } else {

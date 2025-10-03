@@ -43,7 +43,8 @@ void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
     // Build the "anyOf" array for each tool
     std::string anyOfArray = "[";
     bool first = true;
-    for (const auto& [toolName, toolSchema] : request.toolNameSchemaMap) {
+    for (const auto& [toolName, toolSchemaPair] : request.toolNameSchemaMap) {
+        const auto& [_, toolSchema] = toolSchemaPair;
         if (!first) {
             anyOfArray += ",";
         }

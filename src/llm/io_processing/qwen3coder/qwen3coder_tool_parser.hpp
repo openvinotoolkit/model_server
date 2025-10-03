@@ -106,8 +106,11 @@ private:
     // current position in content
     size_t lastProcessedPosition{0};
     // members required for unary for removing tool calls from content
-    std::stack<size_t> toolsBeginStack;
-    std::stack<size_t> toolsEndStack;
+    struct ToolCallPositions {
+        std::stack<size_t> begin;
+        std::stack<size_t> end;
+    };
+    ToolCallPositions toolCallPositions;
     /*
      * process streamContent from lastProcessedPosition until change of state
      * return true if state changed, false otherwise

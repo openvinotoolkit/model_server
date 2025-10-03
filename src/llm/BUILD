@@ -81,7 +81,9 @@ ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = select({
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
     }),

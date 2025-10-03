@@ -71,49 +71,44 @@ std::string Functool::parametersToJson() {
 }
 
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
-    if (toolsBeginStack.size() != toolsEndStack.size()) {
-        SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolsBeginStack.size(), toolsEndStack.size());
+    if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
+        SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
         return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
     }
-    while (!toolsBeginStack.empty() && !toolsEndStack.empty()) {
-        auto posBegin = toolsBeginStack.top();
-        auto posEnd = toolsEndStack.top();
+    while (!toolCallPositions.begin.empty() && !toolCallPositions.end.empty()) {
+        auto posBegin = toolCallPositions.begin.top();
+        auto posEnd = toolCallPositions.end.top();
         SPDLOG_TRACE("Removing tool call from outContent begin:{}, end:{}, removing:{}", posBegin, posEnd, outContent.substr(posBegin, posEnd - posBegin));
 
         outContent.erase(posBegin, posEnd - posBegin);
-        toolsBeginStack.pop();
-        toolsEndStack.pop();
+        toolCallPositions.begin.pop();
+        toolCallPositions.end.pop();
     }
     return StatusCode::OK;
 }
 // Exemplary schemas
 // {"type":"object","properties":{"location":{"type":"string"},"provide_temperature":{"type":"boolean"}},"required":["location"]}
 // {"type":"object","required":["location"],"properties":{"location":{"type":"string","description":"The location for which to get the weather, in the format of 'City, State', such as 'San Francisco, CA' if State for the city exists. 'City, Country' if State for the city doesn't exist."},"unit":{"type":"string","description":"The unit of temperature for the weather report.","enum":["celsius","fahrenheit"],"default":"fahrenheit"}}}
-
-static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const std::string& schema) {
-    SPDLOG_TRACE("Parse tool schema for tool: {}, schema: {}", functionName, schema);
+static const ParametersTypeMap_t parseToolSchema(const std::string& functionName, const rapidjson::Value& schema) {
+    // we want to create mapping of parameter name to parameter type
+    SPDLOG_TRACE("Parse tool schema for tool: {}, schema: {}", functionName, schema.GetString());
     ParametersTypeMap_t result;
-    rapidjson::Document doc;
-    if (doc.Parse(schema.c_str()).HasParseError()) {
-        SPDLOG_DEBUG("Tool schema is not valid JSON for tool: {}, schema: {}", functionName, schema);
+    if (!schema.IsObject()) {
+        SPDLOG_DEBUG("Tool schema is not a JSON object for tool: {}, schema: {}", functionName, schema.GetString());
         return result;
     }
-    if (!doc.IsObject()) {
-        SPDLOG_DEBUG("Tool schema is not a JSON object for tool: {}, schema: {}", functionName, schema);
+    if (!schema.HasMember("properties") || !schema["properties"].IsObject()) {
+        SPDLOG_DEBUG("Tool schema does not have properties object for tool: {}, schema: {}", functionName, schema.GetString());
         return result;
     }
-    if (!doc.HasMember("properties") || !doc["properties"].IsObject()) {
-        SPDLOG_DEBUG("Tool schema does not have properties object for tool: {}, schema: {}", functionName, schema);
-        return result;
-    }
-    const rapidjson::Value& properties = doc["properties"];
+    const rapidjson::Value& properties = schema["properties"];
     for (auto it = properties.MemberBegin(); it != properties.MemberEnd(); ++it) {
         if (!it->value.IsObject()) {
-            SPDLOG_DEBUG("Tool schema property: {} is not an object for tool: {}, schema: {}", it->name.GetString(), functionName, schema);
+            SPDLOG_DEBUG("Tool schema property: {} is not an object for tool: {}, schema: {}", it->name.GetString(), functionName, schema.GetString());
             continue;
         }
         if (!it->value.HasMember("type") || !it->value["type"].IsString()) {
-            SPDLOG_DEBUG("Tool schema property: {} does not have type string for tool: {}, schema: {}", it->name.GetString(), functionName, schema);
+            SPDLOG_DEBUG("Tool schema property: {} does not have type string for tool: {}, schema: {}", it->name.GetString(), functionName, schema.GetString());
             continue;
         }
         std::string paramName = it->name.GetString();
@@ -130,7 +125,7 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
         } else if (typeStr == "object") {
             type = ParameterType::OBJECT;
         } else {
-            SPDLOG_DEBUG("Tool schema property: {} has unknown type: {} for tool: {}, schema: {}", paramName, typeStr, functionName, schema);
+            SPDLOG_DEBUG("Tool schema property: {} has unknown type: {} for tool: {}, schema: {}", paramName, typeStr, functionName, schema.GetString());
         }
         SPDLOG_TRACE("Tool:{} param:{} type:{}", functionName, paramName, typeStr);
         result.emplace(paramName, type);
@@ -171,7 +166,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls& toolCalls) {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_START_TAG);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_START_TAG.length();
         this->currentState = State::InsideToolCall;
-        this->toolsBeginStack.push(pos);
+        this->toolCallPositions.begin.push(pos);
         break;
     }
     case State::InsideToolCall: {
@@ -235,7 +230,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls& toolCalls) {
         SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
         toolCalls.emplace_back(std::move(toolCall));
         this->currentFunction.clear();
-        this->toolsEndStack.push(this->lastProcessedPosition);
+        this->toolCallPositions.end.push(this->lastProcessedPosition);
         break;
     }
     }
@@ -262,9 +257,9 @@ std::optional<ToolCalls> Qwen3CoderToolParserImpl::parseChunk(const std::string&
 static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
     SPDLOG_TRACE("Creating tools parameters types map");
     ToolsParameterTypeMap_t toolsParametersTypes;
-    for (const auto& [toolName, schema] : toolsSchemas) {
-        SPDLOG_TRACE("Creating tools parameters types for tool: {}, schema: {}", toolName, schema);
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, schema));
+    for (const auto& [toolName, schemaPair] : toolsSchemas) {
+        SPDLOG_TRACE("Creating tools parameters types for tool: {}, schema: {}", toolName, schemaPair.second);
+        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *schemaPair.first));
     }
     return toolsParametersTypes;
 }
