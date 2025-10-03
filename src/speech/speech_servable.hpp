@@ -32,9 +32,8 @@
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 #include "src/speech/speech_calculator.pb.h"
 
-
 namespace ovms {
-    
+
 struct SpeechServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::WhisperPipeline> whisperPipeline;
@@ -49,10 +48,9 @@ struct SpeechServable {
         } else {
             parsedModelsPath = fsModelsPath.string();
         }
-        if(mode == mediapipe::SpeechCalculatorOptions::TEXT_TO_SPEECH){
+        if (mode == mediapipe::SpeechCalculatorOptions::TEXT_TO_SPEECH) {
             text2SpeechPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), targetDevice);
-        }
-        else{
+        } else {
             whisperPipeline = std::make_shared<ov::genai::WhisperPipeline>(parsedModelsPath.string(), targetDevice);
         }
     }
