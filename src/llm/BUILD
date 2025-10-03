@@ -92,8 +92,51 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "partial_json_builder",
+    hdrs = ["io_processing/partial_json_builder.hpp"],
+    srcs = ["io_processing/partial_json_builder.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "utils",
+    hdrs = ["io_processing/utils.hpp"],
+    srcs = ["io_processing/utils.cpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "base_output_parser",
+    hdrs = ["io_processing/base_output_parser.hpp"],
+    srcs = ["io_processing/base_output_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        ":utils",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+)
+ovms_cc_library(
+    name = "qwen3coder_tool_parser",
+    hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
+    srcs = ["io_processing/qwen3coder/qwen3coder_tool_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+
+ovms_cc_library(
     name = "output_parsers",
-    hdrs = ["io_processing/base_output_parser.hpp",
+    hdrs = [
             "io_processing/hermes3/tool_parser.hpp",
             "io_processing/llama3/tool_parser.hpp",
             "io_processing/phi4/tool_parser.hpp",
@@ -104,9 +147,8 @@ ovms_cc_library(
             "io_processing/gptoss/harmony.hpp",
             "io_processing/qwen3coder/qwen3coder_tool_parser.hpp",
             "io_processing/output_parser.hpp",
-            "io_processing/partial_json_builder.hpp",
-            "io_processing/utils.hpp"],
-    srcs = ["io_processing/base_output_parser.cpp",
+    ],
+    srcs = [
             "io_processing/hermes3/tool_parser.cpp",
             "io_processing/llama3/tool_parser.cpp",
             "io_processing/phi4/tool_parser.cpp",
@@ -117,14 +159,16 @@ ovms_cc_library(
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
             "io_processing/output_parser.cpp",
-            "io_processing/partial_json_builder.cpp",
-            "io_processing/utils.cpp"],
+    ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         "//src:libovmsstatus",
         "//src/utils:rapidjson_utils",
+        ":partial_json_builder",
+        ":base_output_parser",
+        ":utils",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

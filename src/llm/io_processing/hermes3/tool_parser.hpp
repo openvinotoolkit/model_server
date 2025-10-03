@@ -28,7 +28,8 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "../base_output_parser.hpp"
+#include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/partial_json_builder.hpp"
 
 namespace ovms {
 class Hermes3ToolParser : public BaseOutputParser {

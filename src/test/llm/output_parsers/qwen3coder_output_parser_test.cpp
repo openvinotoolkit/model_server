@@ -571,8 +571,7 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"ANOTHER_STRING_VALUE\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\"}"}}]}})"}
-    };
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);

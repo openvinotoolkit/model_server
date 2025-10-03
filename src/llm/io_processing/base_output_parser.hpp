@@ -32,8 +32,6 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "partial_json_builder.hpp"
-
 namespace ovms {
 struct ToolCall {
     std::string id;
