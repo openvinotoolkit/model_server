@@ -44,7 +44,7 @@ ovms --rest_port 8000 ^
 :::
 ::::
 
-> **NOTE:** If you want to use model that is splitted into several `.gguf` files, you should specify the filename of the first part only, e.g. `--gguf_filename model-name-00001-of-00002.gguf`.
+> **NOTE:** If you want to use model that is split into several `.gguf` files, you should specify the filename of the first part only, e.g. `--gguf_filename model-name-00001-of-00002.gguf`.
 
 Then send a request to the model:
 
