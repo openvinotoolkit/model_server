@@ -640,3 +640,19 @@ cc_library(
 )
 """,
 )
+
+new_git_repository(
+    name = "dr_libs",
+    remote = "https://github.com/mackron/dr_libs",
+    commit = "24d738be2349fd4b6fe50eeaa81f5bd586267fd0",
+    build_file_content = """
+cc_library(
+    name = "dr",
+    hdrs = ["dr_flac.h", "dr_mp3.h", "dr_wav.h"],
+    visibility = ["//visibility:public"],
+    local_defines = [
+    ],
+)
+""",
+)
+
