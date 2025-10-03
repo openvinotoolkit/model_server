@@ -36,11 +36,11 @@
 #pragma warning(pop)
 
 #define DR_WAV_IMPLEMENTATION
-#include <dr_wav.h>
+#include "dr_wav.h"
 #define DR_MP3_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable : 6386 6262)
-#include <dr_mp3.h>
+#include "dr_mp3.h"
 #pragma warning(pop)
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
