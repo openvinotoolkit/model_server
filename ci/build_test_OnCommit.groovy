@@ -1,4 +1,6 @@
 def image_build_needed = "false"
+def perf_test_needed = "false"
+def docs_test_needed = "false"
 def win_image_build_needed = "false"
 def client_test_needed = "false"
 def shortCommit = ""
@@ -43,6 +45,8 @@ pipeline {
               if (win_matched){
                   win_image_build_needed = "true"
               }
+              perf_test_needed = (CHANGE_TITLE =~ /\[PERF_TEST\]/) ? "1" : "0"
+              docs_test_needed = (CHANGE_TITLE =~ /\[DOCS_TEST\]/) ? "1" : "0"
             }
           }
         }
@@ -166,7 +170,7 @@ pipeline {
                 label "${agent_name_linux}"
               }
               steps {
-                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                sh "make release_image RUN_TESTS=0 OV_USE_BINARY=1 GPU=${perf_test_needed} BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                 sh "make run_lib_files_test BASE_OS=redhat OVMS_CPP_IMAGE_TAG=${shortCommit}"
                 script {
                   dir ('internal_tests'){ 
@@ -176,6 +180,12 @@ pipeline {
                     url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                     sh 'pwd'
                     sh "make create-venv && TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_BASE_OS=redhat TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True make tests"
+                  }
+                }
+                script {
+                  if (perf_test_needed == "1") {
+                    sh "docker tag openvino/model_server:${shortCommit} registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"
+                    sh "docker push registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"
                   }
                 }
               }            
@@ -207,5 +217,46 @@ pipeline {
             }
           }
         }
+        stage("Additional tests on other hosts in parallel") {
+          when { expression { perf_test_needed == "1" || docs_test_needed == "1" } }
+          options {
+            timeout(time: 120, unit: 'MINUTES')
+          }
+          parallel {
+            stage("Run performance tests CPU") {
+              when { expression { perf_test_needed == "1" } }
+              steps {
+                sh 'echo Running performance tests...'
+                build job: "ovmsc/perf_test", parameters: [
+                  [$class: 'StringParameterValue', name: 'DOCKER_IMAGE_NAME', value: "registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"],
+                  [$class: 'StringParameterValue', name: 'TARGET_ENV', value: "ov-spr-19"]
+                ]
+              }
+            }
+            stage("Run performance tests GPU") {
+              when { expression { perf_test_needed == "1" } }
+              steps {
+                sh 'echo Running performance tests...'
+                build job: "ovmsc/perf_test", parameters: [
+                  [$class: 'StringParameterValue', name: 'DOCKER_IMAGE_NAME', value: "registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"],
+                  [$class: 'StringParameterValue', name: 'TARGET_ENV', value: "ov-spr-19"],
+                  [$class: 'StringParameterValue', name: 'DEVICE', value: "GPU"]
+                ]
+              }
+            }
+            stage("Run documentation tests") {
+              when { expression { docs_test_needed == "1" } }
+              steps {
+                sh 'echo Running documentation tests...'
+                build job: "ovmsc/job/testing_ci_changes/job/test-demos", parameters: [
+                  [$class: 'StringParameterValue', name: 'TT_OVMS_IMAGE_NAME', value: "registry.toolbox.iotg.sclab.intel.com/model_server:${shortCommit}"],
+                  [$class: 'StringParameterValue', name: 'CORE_BRANCH', value: "${BRANCH_NAME}"],
+                  [$class: 'StringParameterValue', name: 'PATTERN', value: "demos/continuous_batching/agentic_ai/README.md"]
+                ]
+              }
+            }
+          }
+        }
     }
 }
+
