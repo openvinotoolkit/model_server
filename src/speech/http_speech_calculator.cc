@@ -47,8 +47,8 @@
 #include "speech_servable.hpp"
 
 #ifdef _WIN32
-#    include <fcntl.h>
-#    include <io.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 
 using namespace ovms;
@@ -56,7 +56,6 @@ using namespace ovms;
 namespace mediapipe {
 
 // using SpeechPipelinesMap = std::unordered_map<std::string, std::shared_ptr<SpeechPipelines>>;
-
 
 const std::string SPEECH_SESSION_SIDE_PACKET_TAG = "SPEECH_NODE_RESOURCES";
 
@@ -80,41 +79,41 @@ bool is_wav_buffer(const std::string buf) {
 ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
     drwav wav;
 
-//     if (filename == "-") {
-//         {
-// #ifdef _WIN32
-//             _setmode(_fileno(stdin), _O_BINARY);
-// #endif
+    //     if (filename == "-") {
+    //         {
+    // #ifdef _WIN32
+    //             _setmode(_fileno(stdin), _O_BINARY);
+    // #endif
 
-//             uint8_t buf[1024];
-//             while (true) {
-//                 const size_t n = fread(buf, 1, sizeof(buf), stdin);
-//                 if (n == 0) {
-//                     break;
-//                 }
-//                 wav_data.insert(wav_data.end(), buf, buf + n);
-//             }
-//         }
+    //             uint8_t buf[1024];
+    //             while (true) {
+    //                 const size_t n = fread(buf, 1, sizeof(buf), stdin);
+    //                 if (n == 0) {
+    //                     break;
+    //                 }
+    //                 wav_data.insert(wav_data.end(), buf, buf + n);
+    //             }
+    //         }
 
-//         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
-//                         "Failed to open WAV file from stdin");
+    //         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
+    //                         "Failed to open WAV file from stdin");
 
-//         fprintf(stderr, "%s: read %zu bytes from stdin\n", __func__, wav_data.size());
-//     } else if (is_wav_buffer(filename)) {
-//         OPENVINO_ASSERT(drwav_init_memory(&wav, filename.c_str(), filename.size(), nullptr),
-//                         "Failed to open WAV file from fname buffer");
-//     } else if (!drwav_init_file(&wav, filename.c_str(), nullptr)) {
-// #if defined(WHISPER_FFMPEG)
-//         OPENVINO_ASSERT(ffmpeg_decode_audio(fname, wav_data) == 0, "Failed to ffmpeg decode")
+    //         fprintf(stderr, "%s: read %zu bytes from stdin\n", __func__, wav_data.size());
+    //     } else if (is_wav_buffer(filename)) {
+    //         OPENVINO_ASSERT(drwav_init_memory(&wav, filename.c_str(), filename.size(), nullptr),
+    //                         "Failed to open WAV file from fname buffer");
+    //     } else if (!drwav_init_file(&wav, filename.c_str(), nullptr)) {
+    // #if defined(WHISPER_FFMPEG)
+    //         OPENVINO_ASSERT(ffmpeg_decode_audio(fname, wav_data) == 0, "Failed to ffmpeg decode")
 
-//         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
-//                         "Failed to read wav data as wav")
-// #else
-//         throw std::runtime_error("failed to open as WAV file");
-// #endif
-//     }
-    auto result =  drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
-    if(result == false){
+    //         OPENVINO_ASSERT(drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr),
+    //                         "Failed to read wav data as wav")
+    // #else
+    //         throw std::runtime_error("failed to open as WAV file");
+    // #endif
+    //     }
+    auto result = drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
+    if (result == false) {
         SPDLOG_ERROR("FILE PARSING FAILED {}", result);
         throw std::runtime_error("FILE PARSING FAILED");
     }
@@ -153,10 +152,10 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
 }
 
 float* resample_audio(const float* input,
-                      size_t input_length,
-                      float input_rate,
-                      float target_rate,
-                      size_t* output_length) {
+    size_t input_length,
+    float input_rate,
+    float target_rate,
+    size_t* output_length) {
     if (input_rate == target_rate) {
         *output_length = input_length;
         float* output = (float*)malloc(input_length * sizeof(float));
@@ -194,8 +193,8 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     drmp3 mp3;
 
     SPDLOG_ERROR("1");
-    auto result =  drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
-    if(result == false){
+    auto result = drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
+    if (result == false) {
         SPDLOG_ERROR("FILE PARSING FAILED {}", result);
         throw std::runtime_error("FILE PARSING FAILED");
     }
@@ -211,7 +210,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     // }
     SPDLOG_ERROR("4");
     const uint64_t n = mp3.totalPCMFrameCount;
-    SPDLOG_ERROR("mp3.totalPCMFrameCount {} : n {}",  mp3.totalPCMFrameCount, n);
+    SPDLOG_ERROR("mp3.totalPCMFrameCount {} : n {}", mp3.totalPCMFrameCount, n);
     std::vector<float> pcmf32;
     pcmf32.resize(n * mp3.channels);
     drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
@@ -295,13 +294,12 @@ public:
 
             SET_OR_RETURN(std::optional<std::string_view>, file, getFileFromPayload(*payload.multipartParser, "file"));
             auto stream = getFileFromPayload(*payload.multipartParser, "stream");
-            if(!std::holds_alternative<absl::Status>(stream)){
+            if (!std::holds_alternative<absl::Status>(stream)) {
                 SPDLOG_ERROR("NO VALUE");
-            }
-            else{
+            } else {
                 SPDLOG_ERROR("{}", (std::get<std::optional<std::string_view>>(stream)).value());
             }
-            if(!file.has_value()){
+            if (!file.has_value()) {
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
             // ov::genai::WhisperGenerationConfig config = pipe->whisperPipeline->get_generation_config();
@@ -312,16 +310,16 @@ public:
             ov::genai::RawSpeechInput raw_speech;
             try {
                 raw_speech = read_mp3(file.value());
-            } catch(std::exception&){
+            } catch (std::exception&) {
                 return absl::InvalidArgumentError("Audio file reading failed");
             }
             std::string result = "{\"text\": \"";
             std::unique_lock lock(pipe->whisperPipelineMutex);
             result += pipe->whisperPipeline->generate(raw_speech);
             result.append("\"}");
-            SPDLOG_ERROR("{}",result);
+            SPDLOG_ERROR("{}", result);
             output = std::make_unique<std::string>(result);
-        } else if(absl::StartsWith(payload.uri, "/v3/audio/speech")){
+        } else if (absl::StartsWith(payload.uri, "/v3/audio/speech")) {
             if (payload.parsedJson->HasParseError())
                 return absl::InvalidArgumentError("Failed to parse JSON");
 
@@ -338,8 +336,7 @@ public:
             auto streamIt = payload.parsedJson->FindMember("stream_format");
             if (streamIt != payload.parsedJson->MemberEnd()) {
                 SPDLOG_ERROR("STREAM: {}", streamIt->value.GetString());
-            }
-            else{
+            } else {
                 SPDLOG_ERROR("NO STREAM");
             }
             SPDLOG_ERROR("INPUT: {}", inputIt->value.GetString());
@@ -361,16 +358,16 @@ public:
             size_t total_samples = waveform_size * format.channels;
             auto waveform_ptr = gen_speech.speeches[0].data<const float>();
             OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, &ppData, &pDataSize, &format, total_samples, nullptr),
-                            "Failed to initialize WAV writer");
+                "Failed to initialize WAV writer");
             SPDLOG_ERROR("2");
             drwav_uint64 frames_written = drwav_write_pcm_frames(&wav, total_samples, waveform_ptr);
             OPENVINO_ASSERT(frames_written == total_samples, "Failed to write not all frames");
-             SPDLOG_ERROR("3");
+            SPDLOG_ERROR("3");
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             drwav_uninit(&wav);
             SPDLOG_ERROR("4");
             //drwav_free(ppData, NULL);
-        }else {
+        } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
 
