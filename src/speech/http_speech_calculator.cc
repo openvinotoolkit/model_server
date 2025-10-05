@@ -36,11 +36,11 @@
 #pragma warning(pop)
 
 #define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
+#include "dr_wav.h"  // NOLINT
 #define DR_MP3_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable : 6386 6262)
-#include "dr_mp3.h"
+#include "dr_mp3.h"  // NOLINT
 #pragma warning(pop)
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
@@ -64,12 +64,14 @@ const std::string SPEECH_SESSION_SIDE_PACKET_TAG = "SPEECH_NODE_RESOURCES";
 bool is_wav_buffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
+    SPDLOG_DEBUG("is_wav_buffer: buf {}", buf.substr(0, 12));
     if (buf.size() < 12 || buf.substr(0, 4) != "RIFF" || buf.substr(8, 4) != "WAVE") {
         return false;
     }
 
     uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
-    if (chunk_size + 8 != buf.size()) {
+    SPDLOG_DEBUG("is_wav_buffer: chunk_size {}", chunk_size);
+    if (chunk_size + 16 != buf.size()) {
         return false;
     }
 
@@ -194,10 +196,11 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
 
     SPDLOG_ERROR("1");
     auto result = drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
-    if (result == false) {
-        SPDLOG_ERROR("FILE PARSING FAILED {}", result);
-        throw std::runtime_error("FILE PARSING FAILED");
-    }
+    SPDLOG_ERROR("drmp3_init_memory RESULT {} size:{}", result, mp3_data.size());
+    // if (result == 1) {
+    //     SPDLOG_ERROR("FILE PARSING FAILED {}", result);
+    //     throw std::runtime_error("FILE PARSING FAILED");
+    // }
     SPDLOG_ERROR("2");
     if (mp3.channels != 1 && mp3.channels != 2) {
         drmp3_uninit(&mp3);
@@ -309,7 +312,16 @@ public:
             // config.return_timestamps = true;
             ov::genai::RawSpeechInput raw_speech;
             try {
-                raw_speech = read_mp3(file.value());
+                SPDLOG_DEBUG(file.value().data());
+                if (is_wav_buffer(std::string(file.value()))) {
+                    SPDLOG_DEBUG("WAV FILE");
+                    raw_speech = read_wav(file.value());
+                    SPDLOG_DEBUG("WAV FILE SIZE: {}", raw_speech.size());
+                } else {
+                    SPDLOG_DEBUG("NOT WAV FILE");
+                    raw_speech = read_mp3(file.value());
+                    SPDLOG_DEBUG("MP3 FILE SIZE: {}", raw_speech.size());
+                }
             } catch (std::exception&) {
                 return absl::InvalidArgumentError("Audio file reading failed");
             }
