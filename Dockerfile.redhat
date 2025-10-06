@@ -284,6 +284,13 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
+RUN mkdir /patchelf 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+    
 WORKDIR /ovms
 
 ARG PROJECT_VERSION="2025.4.0"
@@ -323,13 +330,6 @@ COPY client /client
 RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep backend | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
-
-RUN mkdir /patchelf 
-WORKDIR /patchelf
-# hadolint ignore=DL3003
-RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
-    ./bootstrap.sh && ./configure && make && make install
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 

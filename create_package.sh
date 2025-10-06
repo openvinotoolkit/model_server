@@ -16,6 +16,8 @@
 
 # This script should be used inside the build image to create a binary package based on the compiled artifacts
 set -e
+# Set default value for variables
+: "${FUZZER_BUILD:=0}"
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
