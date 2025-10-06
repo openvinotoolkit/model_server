@@ -324,6 +324,13 @@ RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
+RUN mkdir /patchelf 
+WORKDIR /patchelf
+# hadolint ignore=DL3003
+RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
+    ./bootstrap.sh && ./configure && make && make install
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 FROM $BUILD_IMAGE as capi-build
@@ -348,12 +355,7 @@ RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_
 
 FROM $BUILD_IMAGE as pkg
 
-RUN mkdir /patchelf 
-WORKDIR /patchelf
-# hadolint ignore=DL3003
-RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
-    tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
-    ./bootstrap.sh && ./configure && make && make install
+COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
 
 WORKDIR /
 ARG BASE_OS=redhat

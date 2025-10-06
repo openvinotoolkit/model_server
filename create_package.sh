@@ -30,7 +30,6 @@ cd /ovms_release/lib/ ; rm -f libcurl.so*
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
 
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so. libopenvino_genai.so.2025.4.0.0 ; fi
 if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so* ; fi
 
 # Remove GPU plugin for CPU images?
@@ -96,7 +95,7 @@ if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" !=
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
-cp -v /ovms/release_files/metadata.json /ovms_release/
+#cp -v /ovms/release_files/metadata.json /ovms_release/
 cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
 if [ "$ov_use_binary" == "1" ] ; then cp -rf /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
