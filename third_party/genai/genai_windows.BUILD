@@ -21,7 +21,7 @@ package(
 cc_library(
     name = "genai_headers",
     hdrs = glob([
-        "include/openvino/genai/*.*"
+        "include/openvino/**/*.*"
     ]),
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
@@ -38,7 +38,7 @@ cc_import(
 cc_library(
     name = "genai",
     srcs = glob([
-#       "bin\\intel64\\Release\\openvino_genai.dll",
+        "bin\\intel64\\Release\\openvino_genai.dll",
         "bin\\intel64\\Release\\icudt70.dll",
         "bin\\intel64\\Release\\icuuc70.dll",
         "bin\\intel64\\Release\\openvino_tokenizers.dll",
@@ -46,7 +46,7 @@ cc_library(
     ]),
     visibility = ["//visibility:public"],
     deps = [
-#       ":genai_lib",
+        ":genai_lib",
         ":genai_headers",
     ],
 )
