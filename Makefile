@@ -88,7 +88,6 @@ OV_TOKENIZERS_ORG ?= openvinotoolkit
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
 
-OV_USE_BINARY ?= 1
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
 BAZEL_BUILD_TYPE ?= opt
@@ -138,8 +137,10 @@ endif
 
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
+  OV_USE_BINARY ?= 1
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
+  OV_USE_BINARY ?= 0
   ifeq ($(OV_USE_BINARY),1)
   	$(error OV_USE_BINARY = 1 not supported on RHEL OS)
   endif
