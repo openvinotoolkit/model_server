@@ -37,7 +37,7 @@
 
 #define DR_WAV_IMPLEMENTATION
 #pragma warning(push)
-#pragma warning(disable : 2220 4245)
+#pragma warning(disable : 4245 4220)
 #include "dr_wav.h"  // NOLINT
 #define DR_MP3_IMPLEMENTATION
 #pragma warning(push)
@@ -193,7 +193,7 @@ float* resample_audio(const float* input,
     return output;
 }
 
-ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
+/* ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     drmp3 mp3;
 
     SPDLOG_ERROR("1");
@@ -237,7 +237,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, 16000, &output_length);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
-}
+} */
 
 std::variant<absl::Status, std::optional<std::string_view>> getFileFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
     std::string_view value = parser.getFileContentByFieldName(keyName);
@@ -320,9 +320,9 @@ public:
                     raw_speech = read_wav(file.value());
                     SPDLOG_DEBUG("WAV FILE SIZE: {}", raw_speech.size());
                 } else {
-                    SPDLOG_DEBUG("NOT WAV FILE");
-                    raw_speech = read_mp3(file.value());
-                    SPDLOG_DEBUG("MP3 FILE SIZE: {}", raw_speech.size());
+                    SPDLOG_DEBUG("NOT WAV FILE. Only WAVE format is supported currently");
+                    // raw_speech = read_mp3(file.value());
+                    SPDLOG_DEBUG("FILE SIZE: {}", raw_speech.size());
                 }
             } catch (std::exception&) {
                 return absl::InvalidArgumentError("Audio file reading failed");
