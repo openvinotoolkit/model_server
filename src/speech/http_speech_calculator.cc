@@ -367,7 +367,6 @@ public:
             drwav wav;
             void* ppData;
             size_t pDataSize;
-
             auto waveform_size = gen_speech.speeches[0].get_size();
             size_t total_samples = waveform_size * format.channels;
             ov::Tensor cpu_tensor(gen_speech.speeches[0].get_element_type(), gen_speech.speeches[0].get_shape());
