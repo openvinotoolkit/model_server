@@ -3931,6 +3931,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "SerializationCalculator",
         "SetLandmarkVisibilityCalculator",
         "SidePacketToStreamCalculator",
+        "SpeechCalculator",
         "SplitAffineMatrixVectorCalculator",
         "SplitClassificationListVectorCalculator",
         "SplitDetectionVectorCalculator",
