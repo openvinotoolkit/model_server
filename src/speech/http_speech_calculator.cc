@@ -356,7 +356,7 @@ public:
             SPDLOG_ERROR("INPUT: {}", inputIt->value.GetString());
             std::unique_lock lock(pipe->text2SpeechPipelineMutex);
             auto gen_speech = pipe->text2SpeechPipeline->generate(inputIt->value.GetString());
-            
+
             drwav_data_format format;
             format.container = drwav_container_riff;
             format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
