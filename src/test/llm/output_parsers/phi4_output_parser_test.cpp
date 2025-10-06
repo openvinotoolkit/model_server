@@ -216,12 +216,15 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"arguments\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"get_humidity\"}}]}}"},
         {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\""}}]}})"},
-        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"location"}}]}})"},
-        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":"}}]}})"},
-        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" \""}}]}})"},
-        {"Paris", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris"}}]}})"},
-        {"\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"},
+        {"locations", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"locations"}}]}})"},
+        {"\": {\"real_cities\": ", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\": {\"real_cities\": "}}]}})"},
+        {" [\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":" [\""}}]}})"},
+        {"Paris\", \"New", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Paris\", \"New"}}]}})"},
+        {"York\"], \"fictional_cities\": [\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"York\"], \"fictional_cities\": [\""}}]}})"},
+        {"Cintra\", \"Oxenfurt\"]}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"Cintra\", \"Oxenfurt\"]}}"}}]}})"},
+        {"}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+
         {" {\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -230,12 +233,27 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
         {"_temperature", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // Simulate getting arguments key, value and close of tool call all in one chunk
+        {"arguments\": {}},", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_temperature"}}]}})"},
+        // Such chunk is broken into parts before and after colon, so along with the next chunk we also process ' {}},' part
+
+        // At this point we process ' {}}, {\"' part, but since it's both end and start of tool call, we split it again.
+        // So in that call we process ' {}}' part and push ', {\"' part to the next call.
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{}"}}]}})"},
+        // At this point we process ', {\"name' which can be processed as a whole, no more delay from that point
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"get", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_temperature", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"get_temperature"}}]}})"},
-        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\""}}]}})"},
-        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"location"}}]}})"},
-        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\":"}}]}})"},
-        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"get_temperature"}}]}})"},
+        {" {\"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\""}}]}})"},
+        {"location", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"location"}}]}})"},
+        {"\":", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"\":"}}]}})"},
+        {" \"", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":" \""}}]}})"},
         // Last chunk is added in the for loop below
     };
 
@@ -244,11 +262,11 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
         outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "");
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
-            chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"Paris\"}"}}]}})"});
+            chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Paris\"}"}}]}})"});
         } else if (lastFinishReason == ov::genai::GenerationFinishReason::STOP) {
-            chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"Paris\"}"}}]}})"});
+            chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Paris\"}"}}]}})"});
         } else {
-            chunkToDeltaVecCopy.push_back({"Par", ov::genai::GenerationFinishReason::LENGTH, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"Par"}}]}})"});
+            chunkToDeltaVecCopy.push_back({"Par", ov::genai::GenerationFinishReason::LENGTH, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Par"}}]}})"});
         }
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {

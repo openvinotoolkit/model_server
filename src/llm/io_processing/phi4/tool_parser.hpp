@@ -59,6 +59,8 @@ protected:
     // Starting with 1, since we count the tool call opening brace and expect it to be closed as arguments end
     size_t openBracesCount = 1;
 
+    void movePostColonContentToUnprocessedBuffer(std::string& chunk);
+
 public:
     Phi4ToolParser() = delete;
     explicit Phi4ToolParser(ov::genai::Tokenizer& tokenizer) :

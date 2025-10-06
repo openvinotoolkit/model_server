@@ -32,6 +32,16 @@
 
 namespace ovms {
 
+void Phi4ToolParser::movePostColonContentToUnprocessedBuffer(std::string& chunk) {
+    size_t colonPos = chunk.find(':');
+    if (colonPos != std::string::npos) {
+        // Store everything after the colon in unprocessedBuffer to process in the next call
+        unprocessedBuffer = chunk.substr(colonPos + 1) + unprocessedBuffer;
+        // Keep everything up to and including the colon
+        chunk = chunk.substr(0, colonPos + 1);
+    }
+}
+
 void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
@@ -87,6 +97,9 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
 
 std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
+    Phi4 with vLLM template produces tool calls in the format:
+    functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
+
     Due to the tool call format used by Phi4, we need to track the state of parsing more closely.
     We have four states:
     1) AWAITING_START_TAG - we are waiting for the "functools" tag to appear in the chunk
@@ -108,6 +121,12 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
     // We merge unprocessedBuffer from previous calls with the current chunk to avoid losing any content
     std::string modifiedChunk = unprocessedBuffer + chunk;
     unprocessedBuffer.clear();
+
+    // Before we have 'arguments' in the JSON, we do not want to process both key and value in the same call due to special handling of arguments value.
+    // We look for colon after 'arguments' key and move everything after it to unprocessedBuffer to be processed in the next call.
+    if (!lastJson.HasMember("arguments")) {
+        movePostColonContentToUnprocessedBuffer(modifiedChunk);
+    }
 
     // Phase 1: Control the internal state and apply changes to the chunk if needed
     if (internalState == AWAITING_START_TAG) {
@@ -188,6 +207,9 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                     openBracesCount++;
                 } else if (c == '}') {
                     openBracesCount--;
+                    if (openBracesCount == 0) {
+                        break;  // No need to count further if we balanced the braces
+                    }
                 }
             }
 
@@ -214,22 +236,15 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 // If we balanced the braces, we are at the end of the tool call object, so we add closing quote before the last closing brace
                 size_t lastClosingBrace = modifiedChunk.find_last_of('}');
                 if (lastClosingBrace != std::string::npos) {
+                    // Move anything after the last closing brace to unprocessedBuffer, since it's the start of the next tool call or end of the array
+                    if (lastClosingBrace + 1 < modifiedChunk.size()) {
+                        unprocessedBuffer = modifiedChunk.substr(lastClosingBrace + 1) + unprocessedBuffer;
+                        modifiedChunk.erase(lastClosingBrace + 1);
+                    }
                     modifiedChunk.insert(lastClosingBrace, "\"");
                 } else {
                     // If there is no closing brace, we just add closing quote at the end
                     modifiedChunk.append("\"");
-                }
-            }
-        } else {  // no arguments yet, we need to make sure they are added only as a key
-            // If 'arguments":' appears in the chunk and there is any non-whitespace content after it, which is not string,
-            // we add double quote after colon to force string type
-            size_t argumentsPos = modifiedChunk.find("arguments\":");
-            if (argumentsPos != std::string::npos) {
-                // Move everything after 'arguments":' to unprocessedBuffer, so we can add opening quote at the beginning of arguments in the next call
-                size_t afterArgumentsPos = argumentsPos + std::string("arguments\":").length();
-                if (afterArgumentsPos < modifiedChunk.length()) {
-                    unprocessedBuffer = modifiedChunk.substr(afterArgumentsPos);
-                    modifiedChunk.erase(afterArgumentsPos);
                 }
             }
         }
@@ -240,7 +255,6 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             // Otherwise just push the current chunk
             newJson = jsonBuilder.add(modifiedChunk);
         } catch (const std::exception& e) {
-            (void)e;  // Suppress unused variable warning on Windows
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call chunk partial parse failed: {}", e.what());
             // Throwing an error since at this point the JSON is broken and next chunks will not make it right.
             throw std::runtime_error("Generated tool call structure is not valid");
@@ -269,7 +283,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
 
             // Handle the case when tool call has finished - store unprocessed output and switch internal state
             if (jsonBuilder.isComplete()) {
-                unprocessedBuffer = jsonBuilder.getUnprocessedBuffer();
+                unprocessedBuffer = jsonBuilder.getUnprocessedBuffer() + unprocessedBuffer;
                 // Remove potential escape characters added in arguments processing logic from the unprocessedBuffer as we move to the next tool call
                 unprocessedBuffer.erase(
                     std::remove(unprocessedBuffer.begin(), unprocessedBuffer.end(), '\\'),
