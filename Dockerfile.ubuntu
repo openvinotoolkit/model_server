@@ -333,6 +333,7 @@ SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
+WORKDIR /ovms
 RUN bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C-API benchmark app

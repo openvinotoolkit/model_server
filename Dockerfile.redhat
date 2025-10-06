@@ -290,7 +290,7 @@ WORKDIR /patchelf
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
     tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
     ./bootstrap.sh && ./configure && make && make install
-    
+
 WORKDIR /ovms
 
 ARG PROJECT_VERSION="2025.4.0"
@@ -338,6 +338,7 @@ FROM $BUILD_IMAGE as capi-build
 ARG CAPI_FLAGS="--strip=always  --config=mp_off_py_off --//:distro=redhat"
 ARG JOBS=40
 ARG LTO_ENABLE=OFF
+WORKDIR /ovms
 RUN bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
 
 # C api app with bazel
