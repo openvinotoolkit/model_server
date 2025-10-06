@@ -38,27 +38,28 @@ using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 
 static std::map<std::string, std::string> toolSchemasInput = {
-    {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"}};
-static rapidjson::Document testSchemasDoc;
+    {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"},
+    {"string_int_tool", R"({"properties":{"arg1":{"type":"string","description":"A string argument."},"arg2":{"type":"integer","description":"An integer argument."}},"required":["arg1", "arg2"]})"},
+    {"some_tool", R"({"properties":{"source":{"type":"string","description":"The name of the file or directory to copy."},"destination":{"type":"string","description":"The destination name to copy the file or directory to. If the destination is a directory, the source will be copied into this directory. No file paths allowed. "}},"required":[]})"}};
+
+static std::vector<std::unique_ptr<rapidjson::Document>> schemaDocsStorage;
 
 static ToolsSchemas_t convertStringToolSchemasStringToToolsSchemas(
-    const std::map<std::string, std::string>& input,
-    rapidjson::Document& doc) {
+    const std::map<std::string, std::string>& input) {
     ToolsSchemas_t result;
-    auto& allocator = doc.GetAllocator();
+    schemaDocsStorage.clear();
     for (const auto& [name, schemaStr] : input) {
-        rapidjson::Document schemaDoc;
-        if (schemaDoc.Parse(schemaStr.c_str()).HasParseError()) {
+        auto schemaDoc = std::make_unique<rapidjson::Document>();
+        if (schemaDoc->Parse(schemaStr.c_str()).HasParseError()) {
             throw std::runtime_error("Failed to parse schema for tool: " + name);
         }
-        rapidjson::Value schemaCopy(schemaDoc, allocator);
-        doc.CopyFrom(schemaCopy, allocator);
-        result[name] = {&doc, schemaStr};
+        result[name] = {schemaDoc.get(), schemaStr};
+        schemaDocsStorage.push_back(std::move(schemaDoc));
     }
-
     return result;
 }
-static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput, testSchemasDoc);
+
+static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput);
 static ToolsParameterTypeMap_t toolsParametersTypeMap = {
     {"string_tool", {{"arg1", ParameterType::STRING}}},
     {"string_string_tool", {{"arg1", ParameterType::STRING}, {"arg2", ParameterType::STRING}}},
@@ -88,10 +89,9 @@ protected:
     }
 
     void SetUp() override {
-        // For Qwen3 model we use hermes3 tool parser (due to the same format of generated tool calls) and qwen3 reasoning parser
         outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "qwen3coder", "", toolsSchemas);
     }
-    std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> doTheWork(const std::string& input) {
+    std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> generateParsedOutput(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
         ParsedOutput parsedOutput = outputParser->parse(generatedTokens, true);
@@ -99,7 +99,7 @@ protected:
     }
 };
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
-    std::string input = R"(io_processing/hermes3/generation_config_builder.cpp
+    std::string input = R"(
 "<tool_call>
 <function=string_tool>
 <parameter=arg1>
@@ -107,7 +107,7 @@ value1
 </parameter>
 </function>
 </tool_call>")";
-    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
@@ -124,18 +124,31 @@ TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCallNestedXmlNotFromSchema) {
 </parameter>
 </function>
 </tool_call>")";
-    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"<value=abc>value1</value>\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
-// FIXME check if two tool calls is a vali for outputparser as well not only for parser imple
+TEST_F(Qwen3CoderOutputParserTest, ParseTwoToolCalls1Function1ArgumentTagsNoNewline) {
+    std::string input = R"(
+"<tool_call><function=string_tool><parameter=arg1>value1</parameter></function></tool_call>"
+"<tool_call><function=string_tool><parameter=arg1>value2</parameter></function></tool_call>")";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "string_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"arg1\": \"value2\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
+}
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNoNewline) {
     std::string input = R"(
 "<tool_call><function=string_tool><parameter=arg1>value1</parameter></function></tool_call>")";
-    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
@@ -152,7 +165,7 @@ value1line2
 </parameter>
 </function>
 </tool_call>")";
-    auto [generatedTensor, generatedTokens, parsedOutput] = doTheWork(input);
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
@@ -526,10 +539,6 @@ INSTANTIATE_TEST_SUITE_P(
         std::string name = std::get<0>(info.param) + "_" + std::get<2>(info.param);
         // Replace non-alphanumeric characters with underscore
         std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(c); }, '_');
-        // Limit length to 30 characters
-        if (name.length() > 30) {
-            name = name.substr(0, 30);
-        }
         return name;
     });
 
@@ -537,9 +546,6 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
     // since unary reuses streaming we don't need to test for partial tool calls
     // if we don't get closing tag we don't emit tool call
     int i = -1;
-    // FIXME add content in between tool_calls and test what happens
-    // Add another tool call to test for special tags handling
-    // add content after second tool call
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {" <too", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"l_cal", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -564,14 +570,20 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {" POTENTIALLY EXISINT CONTENT", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" <tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" <tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"<function=string_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_tool"}}]}})"},
+        {"<function=string_int_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_int_tool"}}]}})"},
         {"<parameter=arg1>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_STRING_VALUE\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<parameter=arg2>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"314", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"1522\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\"}"}}]}})"}};
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
+        {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);

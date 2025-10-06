@@ -1061,7 +1061,6 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingChunk(const std::str
     choice.AddMember("logprobs", Value(), allocator);
     if (endpoint == Endpoint::CHAT_COMPLETIONS) {
         if (outputParser != nullptr) {
-            // FIXME need tool maps for streaming
             std::optional<Document> delta = outputParser->parseChunk(chunkResponse, areToolsAvailable(), finishReason);
             if (!delta.has_value()) {
                 return "";

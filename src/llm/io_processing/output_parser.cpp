@@ -232,7 +232,7 @@ std::optional<rapidjson::Document> OutputParser::parseChunk(const std::string& c
     */
 
     bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingStartTag().empty() && !reasoningParser->getParsingEndTag().empty();
-    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTag().empty();  // FIXME why not check for parsingEntTag not empty?
+    bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingStartTag().empty();
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
     if (applyToolParser && toolParser->isImmediateParsingEnabled() && processingPhase == UNKNOWN) {

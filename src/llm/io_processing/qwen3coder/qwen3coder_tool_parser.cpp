@@ -319,9 +319,8 @@ std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::opti
     auto& toolCalls = toolCallsOpt.value();
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
-    }
-    if (toolCalls.size() < 1) {
-        return std::nullopt;
+        // TODO we should return status code but this require change of parsers API
+        throw std::runtime_error("For streaming we expected one tool call");
     }
     auto& toolCall = toolCalls[0];
     rapidjson::Document argsDelta;
