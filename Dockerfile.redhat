@@ -161,7 +161,6 @@ RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download
 ENV TF_SYSTEM_LIBS="curl"
 ENV TEST_LOG="/root/.cache/bazel/_bazel_root/bc57d4817a53cab8c785464da57d1983/execroot/ovms/bazel-out/test.log"
 ARG ov_source_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
-ARG ov_contrib_branch=master
 ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG ov_use_binary=0

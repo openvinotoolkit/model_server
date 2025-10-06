@@ -429,10 +429,6 @@ class EmbeddingsExtensionTest : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
     static std::unique_ptr<std::thread> t1;
-    static std::unique_ptr<std::thread> t2;
-    static std::unique_ptr<std::thread> t3;
-    static std::unique_ptr<std::thread> t4;
-    static std::unique_ptr<std::thread> t5;
 
 public:
     std::unique_ptr<ovms::HttpRestApiHandler> handler;
@@ -471,34 +467,18 @@ public:
         t1.reset(new std::thread([]() {
             const std::string embeddings{"embeddings"};
             ASSERT_EQ(waitMpReady(embeddings), true);
-        }));
-        t2.reset(new std::thread([]() {
             const std::string embeddings_no_norm{"embeddings_no_norm"};
             ASSERT_EQ(waitMpReady(embeddings_no_norm), true);
-        }));
-        t3.reset(new std::thread([]() {
             const std::string embeddings_ov{"embeddings_ov"};
             ASSERT_EQ(waitMpReady(embeddings_ov), true);
-        }));
-        t4.reset(new std::thread([]() {
             const std::string embeddings_ov_no_norm{"embeddings_ov_no_norm"};
             ASSERT_EQ(waitMpReady(embeddings_ov_no_norm), true);
-        }));
-        t5.reset(new std::thread([]() {
             const std::string embeddings_ov_relative{"embeddings_ov_relative"};
             ASSERT_EQ(waitMpReady(embeddings_ov_relative), true);
         }));
 
         if (t1->joinable())
             t1->join();
-        if (t2->joinable())
-            t2->join();
-        if (t3->joinable())
-            t3->join();
-        if (t4->joinable())
-            t4->join();
-        if (t5->joinable())
-            t5->join();
     }
 
     void SetUp() {
@@ -522,14 +502,6 @@ public:
         server.setShutdownRequest(0);
         if (t1->joinable())
             t1->join();
-        if (t2->joinable())
-            t2->join();
-        if (t3->joinable())
-            t3->join();
-        if (t4->joinable())
-            t4->join();
-        if (t5->joinable())
-            t5->join();
     }
 
     void TearDown() {
@@ -541,10 +513,6 @@ public:
 };
 std::unique_ptr<std::thread> EmbeddingsExtensionTest::t;
 std::unique_ptr<std::thread> EmbeddingsExtensionTest::t1;
-std::unique_ptr<std::thread> EmbeddingsExtensionTest::t2;
-std::unique_ptr<std::thread> EmbeddingsExtensionTest::t3;
-std::unique_ptr<std::thread> EmbeddingsExtensionTest::t4;
-std::unique_ptr<std::thread> EmbeddingsExtensionTest::t5;
 TEST_F(EmbeddingsExtensionTest, simplePositive) {
     std::string requestBody = R"(
         {

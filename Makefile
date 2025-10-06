@@ -76,7 +76,6 @@ FUZZER_BUILD ?= 0
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
 OV_SOURCE_BRANCH ?= 4a90bedcdd64dc4d6fee54cf03de6c5617b35a48 # master 2025/09/23
-OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
 OV_TOKENIZERS_BRANCH ?= bd47b33bcae913c59dcbe7e67ff52dbdf826ac32 # master 2025/09/18
 OV_GENAI_BRANCH ?= 845ba50e83e3f2f436d3794044a87f767f76bfd7 # master 2025/09/23
 
@@ -222,7 +221,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_genai_org=$(OV_GENAI_ORG)\
 	--build-arg ov_tokenizers_org=$(OV_TOKENIZERS_ORG)\
 	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
-	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\

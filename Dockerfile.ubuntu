@@ -137,7 +137,6 @@ ARG ov_source_org=openvinotoolkit
 ARG ov_contrib_org=openvinotoolkit
 ARG DLDT_PACKAGE_URL
 ARG ov_source_branch=master
-ARG ov_contrib_branch=master
 ARG CMAKE_BUILD_TYPE=Release
 
 ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/external/hddl
