@@ -284,7 +284,6 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     echo $'Metadata-Version: 1.0\nName: openvino\nVersion: 2025.4' > /opt/intel/openvino/python/openvino-4.dist-info/METADATA
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 
-RUN mkdir /patchelf 
 WORKDIR /patchelf
 # hadolint ignore=DL3003
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
