@@ -172,7 +172,7 @@ value1
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(calls.size(), 1) << input;
@@ -212,7 +212,7 @@ After)";
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 1) << input;
@@ -241,7 +241,7 @@ value1
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 1) << input;
@@ -264,7 +264,7 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryWithJsonObjectArgument
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 1) << input;
@@ -298,7 +298,7 @@ data
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 2) << input;
@@ -331,7 +331,7 @@ True
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(calls.size(), 1) << input;
@@ -359,7 +359,7 @@ value2
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     ASSERT_EQ(calls.size(), 1) << input;
@@ -370,7 +370,7 @@ value2
     EXPECT_EQ(content, "\n");
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithMoreThan1StateChange) {
-    ToolCalls calls;
+    ToolCalls_t calls;
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
@@ -392,7 +392,7 @@ value1
     EXPECT_EQ(parser.getLastProcessedPosition(), input.find("</tool_call>") + std::string("</tool_call>").size());
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithNoStateChange) {
-    ToolCalls calls;
+    ToolCalls_t calls;
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"("Some content without tool calls")";
     auto content = input;
@@ -402,7 +402,7 @@ TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithNoStateChange
     EXPECT_EQ(parser.getLastProcessedPosition(), 0);
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithPartialToolCall) {
-    ToolCalls calls;
+    ToolCalls_t calls;
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
@@ -419,7 +419,7 @@ value1
     EXPECT_EQ(parser.getCurrentFunctionName().value(), "string_tool");
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplStreamStepWithTwoToolCalls) {
-    ToolCalls calls;
+    ToolCalls_t calls;
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     const std::string input = R"(
 <tool_call>
@@ -494,7 +494,7 @@ TEST_P(Qwen3CoderOutputParserParametrizedTest, TestJustParserImplWithVariousArgu
     ovms::Qwen3CoderToolParserImpl parser(toolsParametersTypeMap);
     auto callsOpt = parser.parseChunk(content);
     ASSERT_TRUE(callsOpt.has_value());
-    ToolCalls& calls = callsOpt.value();
+    ToolCalls_t& calls = callsOpt.value();
     auto status = parser.removeToolCallsFromContentIfNeeded(content);
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(calls.size(), 1) << input;

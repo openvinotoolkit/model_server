@@ -40,13 +40,13 @@ struct ToolCall {
 };
 
 using ToolsSchemas_t = std::map<std::string, std::pair<rapidjson::Value*, std::string>>;
-using ToolCalls = std::vector<ToolCall>;
+using ToolCalls_t = std::vector<ToolCall>;
 
 struct ParsedOutput {
     // Content without tool calls and reasoning
     std::string content;
     // Tool calls extracted from the response
-    ToolCalls toolCalls;
+    ToolCalls_t toolCalls;
     // Decoded reasoning from the response
     std::string reasoning;
 };

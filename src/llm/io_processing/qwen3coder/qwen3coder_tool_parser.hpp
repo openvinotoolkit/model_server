@@ -86,7 +86,7 @@ C->ITC->IFN->IF->IPN->IP->AF->C
      * Return all tool calls found in agreggated content so far
      * that were not returned before
      */
-    std::optional<ToolCalls> parseChunk(const std::string& chunk);
+    std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     State getCurrentState() const {
@@ -116,7 +116,7 @@ private:
      * return true if state changed, false otherwise
      * false means no more state changes possible with current content
      */
-    bool parseUntilStateChange(ToolCalls& toolCalls);
+    bool parseUntilStateChange(ToolCalls_t& toolCalls);
 };
 
 class Qwen3CoderToolParser : public BaseOutputParser {
@@ -136,7 +136,7 @@ private:
     // for streaming parsing we need to keep parser as a member
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
-    ToolCalls currentToolCalls;
+    ToolCalls_t currentToolCalls;
     rapidjson::Document currentJson;
     std::set<int> returnedFirstDeltas;
     std::set<int> returnedCompleteDeltas;
@@ -161,7 +161,7 @@ public:
 
 private:
     std::optional<rapidjson::Document> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls>& toolCallsOpt);
+    std::optional<rapidjson::Document> sendFullDelta(std::optional<ToolCalls_t>& toolCallsOpt);
     void lazyFillInitToolParametersTypesMap();
 };
 }  // namespace ovms

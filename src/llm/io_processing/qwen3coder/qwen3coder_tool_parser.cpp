@@ -159,7 +159,7 @@ static std::string setCorrectValueType(std::string& inputValue, const std::strin
         break;                                                                  \
     }
 
-bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls& toolCalls) {
+bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     SPDLOG_TRACE("State: {}", this->currentState);
     auto previousState = this->currentState;
     switch (this->currentState) {
@@ -237,11 +237,11 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls& toolCalls) {
     }
     return previousState != this->currentState;
 }
-std::optional<ToolCalls> Qwen3CoderToolParserImpl::parseChunk(const std::string& chunk) {
+std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::string& chunk) {
     if (chunk.empty()) {
         return std::nullopt;
     }
-    ToolCalls toolCalls;
+    ToolCalls_t toolCalls;
     this->streamContent += chunk;
     while (parseUntilStateChange(toolCalls)) {
     }
@@ -315,7 +315,7 @@ std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() co
     }
     return this->currentFunction.name;
 }
-std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::optional<ToolCalls>& toolCallsOpt) {
+std::optional<rapidjson::Document> Qwen3CoderToolParser::sendFullDelta(std::optional<ToolCalls_t>& toolCallsOpt) {
     auto& toolCalls = toolCallsOpt.value();
     if (toolCalls.size() != 1) {
         SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
