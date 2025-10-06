@@ -36,6 +36,8 @@
 #pragma warning(pop)
 
 #define DR_WAV_IMPLEMENTATION
+#pragma warning(push)
+#pragma warning(disable : 2220 4245)
 #include "dr_wav.h"  // NOLINT
 #define DR_MP3_IMPLEMENTATION
 #pragma warning(push)
@@ -71,7 +73,7 @@ bool is_wav_buffer(const std::string buf) {
 
     uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
     SPDLOG_DEBUG("is_wav_buffer: chunk_size {}", chunk_size);
-    if (chunk_size + 16 != buf.size()) {
+    if (chunk_size + 8 != buf.size()) {
         return false;
     }
 
