@@ -44,7 +44,7 @@ pipeline {
             }
         }
         stage ("Signing files"){
-            when { expression { env.SIGN_FILES == true } }
+            when { expression { env.SIGN_FILES == "true" } }
             steps {
                 withCredentials([usernamePassword(
                         credentialsId: 'PRERELEASE_SIGN',
@@ -66,7 +66,7 @@ pipeline {
             }
         }
         stage ("BDBA scans"){
-            when { expression { env.BDBA_SCAN == true } }
+            when { expression { env.BDBA_SCAN == "true" } }
             steps {
                 script {
                     def windows = load 'ci/loadWin.groovy'
