@@ -15,10 +15,10 @@ curl http://localhost/v3/audio/speech -H "Content-Type: application/json" -d "{\
 
 ## Audio transcription
 
-python export_model.py transcription --source_model openai/whisper-large-v2  --weight-format fp16
+python export_model.py transcription --source_model openai/whisper-large-v2  --weight-format fp16 --target_device GPU
 
 
-docker run -p 8000:8000 -it -v $(pwd)/models/:/models openvino/model_server --model_name whisper --model_path /models/openai/whisper-large-v2 --rest_port 8000
+docker run -p 8000:8000 -it --device /dev/dri -u 0 -v $(pwd)/models/:/models openvino/model_server --model_name whisper --model_path /models/openai/whisper-large-v2 --rest_port 8000
 
 
 curl http://localhost/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@audio.wav" -F model="whisper"
