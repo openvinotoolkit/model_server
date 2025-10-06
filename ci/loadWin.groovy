@@ -159,7 +159,7 @@ def build(){
 
 def sign(){
     println "Starting code signing"
-    def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/intel-innersource/frameworks.ai.openvino.model-server.bdba repo_signing')
+    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' repo_signing')
     if (statusPull != 0) {
         error "Error: Downloading check_signing.py failed ${statusPull}. Check pipeline.log for details."
     } else {
@@ -176,7 +176,7 @@ def sign(){
 
 def bdba(){
     println "Starting BDBA scan"
-    def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/przepeck/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
+    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.BDBA_REPO + ' repo_ci_infra')
     if (statusPull != 0) {
         error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
     }
