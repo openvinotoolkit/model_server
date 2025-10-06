@@ -158,10 +158,6 @@ def build(){
 }
 
 def sign(){
-    if(env.OVMS_SIGN != "1"){
-        println "Skipping code signing"
-        return
-    }
     println "Starting code signing"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/intel-innersource/frameworks.ai.openvino.model-server.bdba repo_signing')
     if (statusPull != 0) {
@@ -179,10 +175,6 @@ def sign(){
 }
 
 def bdba(){
-    if(env.OVMS_BDBA_SCAN != "1"){
-        println "Skipping BDBA scan"
-        return
-    }
     println "Starting BDBA scan"
     def statusPull = bat(returnStatus: true, script: 'git clone https://github.com/przepeck/frameworks.ai.openvino.ci.infrastructure repo_ci_infra')
     if (statusPull != 0) {
