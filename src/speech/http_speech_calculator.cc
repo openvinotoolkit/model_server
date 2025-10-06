@@ -356,7 +356,7 @@ public:
             SPDLOG_ERROR("INPUT: {}", inputIt->value.GetString());
             std::unique_lock lock(pipe->text2SpeechPipelineMutex);
             auto gen_speech = pipe->text2SpeechPipeline->generate(inputIt->value.GetString());
-            lock.unlock();
+            
             drwav_data_format format;
             format.container = drwav_container_riff;
             format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
@@ -370,7 +370,12 @@ public:
 
             auto waveform_size = gen_speech.speeches[0].get_size();
             size_t total_samples = waveform_size * format.channels;
-            auto waveform_ptr = gen_speech.speeches[0].data<const float>();
+            ov::Tensor cpu_tensor(gen_speech.speeches[0].get_element_type(), gen_speech.speeches[0].get_shape());
+            // copy results to release inference request
+            gen_speech.speeches[0].copy_to(cpu_tensor);
+            lock.unlock();
+
+            auto waveform_ptr = cpu_tensor.data<const float>();
             OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, &ppData, &pDataSize, &format, total_samples, nullptr),
                 "Failed to initialize WAV writer");
             SPDLOG_ERROR("2");
