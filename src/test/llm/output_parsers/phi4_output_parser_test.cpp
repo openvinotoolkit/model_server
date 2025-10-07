@@ -31,6 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
 #endif
 
+static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for phi4
 static std::unique_ptr<ov::genai::Tokenizer> phi4Tokenizer;
 
 class Phi4OutputParserTest : public ::testing::Test {
@@ -53,8 +54,8 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };

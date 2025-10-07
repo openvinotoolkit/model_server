@@ -91,9 +91,9 @@ std::string Harmony::getReasoning() {
     Tool calls are extracted from messages in channel "commentary" that contain "to=functions.NAME" in the channel content; example:
     <|channel|>commentary to=functions.get_humidity <|message|>{"location":"Paris"}<|end|>
 */
-ToolCalls Harmony::getToolCalls() {
+ToolCalls_t Harmony::getToolCalls() {
     static const std::string tool_prefix = "to=functions.";
-    ToolCalls toolCalls;
+    ToolCalls_t toolCalls;
     for (const auto& msg : messages) {
         if (startsWith(msg.getChannel(), "commentary")) {
             size_t marker = msg.getChannel().find(tool_prefix);

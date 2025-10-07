@@ -32,6 +32,7 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Herme
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> hermes3Tokenizer;
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in hermes3
 
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
@@ -54,8 +55,8 @@ protected:
 
     void SetUp() override {
         // For Hermes3 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };

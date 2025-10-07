@@ -27,13 +27,16 @@
 #include <openvino/runtime/tensor.hpp>
 #include <openvino/genai/tokenizer.hpp>
 
+#include "src/port/rapidjson_document.hpp"
+
+#include "tool_schema_wrapper.hpp"
+
 namespace ovms {
 using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
 
 struct StreamOptions {
     bool includeUsage = false;
 };
-
 // Class that maps OpenAI request content.
 struct OpenAIChatCompletionsRequest {
     ov::genai::ChatHistory chatHistory;
@@ -74,7 +77,7 @@ struct OpenAIChatCompletionsRequest {
     // Schema for response_format handling
     std::optional<std::string> responseSchema{std::nullopt};
     // Map that holds tool names and schemas for their arguments
-    std::map<std::string, std::string> toolNameSchemaMap;
+    ToolsSchemas_t toolNameSchemaMap;
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
     std::string toolChoice;
 

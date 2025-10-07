@@ -331,12 +331,16 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                         // If we keep the tool, add tool name and schema to the request
                         auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
                         if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // now we want to insert to a mapping of
+                            // tool name -> tool schema representations struct
                             // Dump parameters object to string since this is the schema format expected by GenAI
+                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             parametersIt->value.Accept(writer);
                             std::string parametersStr = buffer.GetString();
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
                         }
                     }
                 } else {
@@ -739,10 +743,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
-
     if (status != absl::OkStatus())
         return status;
-
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
@@ -762,9 +764,9 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
-        parsedOutput.content = tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
+        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
     return parsedOutput;
 }

@@ -26,6 +26,7 @@
 #include "mistral/tool_parser.hpp"
 #include "gptoss/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
+#include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 
 namespace ovms {
@@ -142,8 +143,9 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
     tokenizer(tokenizer) {
+    SPDLOG_TRACE("OutputParser created with toolNameSchemaMap of size: {}", toolNameSchemaMap.size());
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
@@ -154,6 +156,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (toolParserName == "gptoss") {
         toolParser = std::make_unique<GptOssToolParser>(tokenizer);
+    } else if (toolParserName == "qwen3coder") {
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }
