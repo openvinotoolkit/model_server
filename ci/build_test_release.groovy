@@ -34,8 +34,8 @@ pipeline {
                           }
                           bat(returnStatus:true, script: "ECHO F | xcopy /Y /E ${env.WORKSPACE}\\dist\\windows\\ovms.zip \\\\${env.OV_SHARE_05_IP}\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-${python_presence}-${safeBranchName}-latest.zip")
                           } finally {
-                          windows.archive_build_artifacts()
-                          windows.archive_test_artifacts()
+                            windows.archive_build_artifacts()
+                            windows.archive_test_artifacts()
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
@@ -73,6 +73,12 @@ pipeline {
                     if (windows != null) {
                         try {
                             windows.bdba()
+                            // Check win_bdba.log for vulnerabilities
+                            def logFile = "${env.WORKSPACE}\\win_bdba.log"
+                            def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()
+                            if (!lastLine.contains("Found 0  vulnerabilities")) {
+                                unstable(message: lastLine)
+                            }
                         } finally {
                             windows.archive_bdba_reports()
                         }
