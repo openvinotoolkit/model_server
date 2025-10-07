@@ -681,11 +681,13 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
     Status firstErrorStatus = StatusCode::OK;
     try {
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
+            if(mediapipeGraphConfig && spdlog::default_logger_raw()->level() <= spdlog::level::debug){
+                mediapipeGraphConfig.logGraphConfigContent();
+            }
+
             auto status = processMediapipeConfig(mediapipeGraphConfig, mediapipesInConfigFileNames, mediapipeFactory);
             if (status != StatusCode::OK) {
                 IF_ERROR_NOT_OCCURRED_EARLIER_THEN_SET_FIRST_ERROR(status);
-            } else {
-                mediapipeGraphConfig.logGraphConfigContent();
             }
         }
         mediapipeFactory.retireOtherThan(std::move(mediapipesInConfigFileNames), *this);
