@@ -332,8 +332,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                         auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
                         if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
                             // now we want to insert to a mapping of
-                            // tool name -> pair(parametersIt->value, parameters schema string)
-                            // get prametersIt->value
+                            // tool name -> tool schema representations struct
                             // Dump parameters object to string since this is the schema format expected by GenAI
                             // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
                             rapidjson::StringBuffer buffer;
