@@ -73,7 +73,6 @@ pipeline {
                     if (windows != null) {
                         try {
                             windows.bdba()
-                            // Check win_bdba.log for vulnerabilities
                             def logFile = "${env.WORKSPACE}\\win_bdba.log"
                             def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()
                             if (!lastLine.contains("Found 0  vulnerabilities")) {
