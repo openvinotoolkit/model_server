@@ -165,7 +165,7 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
                 argumentsDelayWindow[0] = argumentsDelayWindow[1];
             }
 
-            // If we are closing the tool call, we need to add closing quote after the last closing brace that we assume is present in the chunk processed in the last call.
+            // If we are closing the tool call, we need to add closing quote after the last arguments closing brace that we assume is present in the chunk processed in the last call.
             if (modifiedChunk.find(toolCallEndTag) != std::string::npos) {
                 size_t lastClosingBrace = argumentsDelayWindow[0].find_last_of('}');
                 if (lastClosingBrace != std::string::npos) {
