@@ -23,6 +23,8 @@
 
 #include "base_output_parser.hpp"
 
+#include "src/llm/apis/tool_schema_wrapper.hpp"
+
 namespace ovms {
 
 class OutputParser {

@@ -340,7 +340,7 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             parametersIt->value.Accept(writer);
                             std::string parametersStr = buffer.GetString();
-                            std::pair<rapidjson::Value*, std::string> schemaReprs = {&parametersIt->value, std::move(parametersStr)};
+                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
                             request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
                         }
                     }

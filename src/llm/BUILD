@@ -82,7 +82,8 @@ ovms_cc_library(
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
+        ":apis_tool_schema_wrapper",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
@@ -91,6 +92,14 @@ ovms_cc_library(
     additional_copts = COPTS_PYTHON
 )
 
+ovms_cc_library(
+    name = "apis_tool_schema_wrapper",
+    hdrs = ["apis/tool_schema_wrapper.hpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+    ],
+    visibility = ["//visibility:public"],
+)
 ovms_cc_library(
     name = "partial_json_builder",
     hdrs = ["io_processing/partial_json_builder.hpp"],
@@ -125,12 +134,12 @@ ovms_cc_library(
     hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
     srcs = ["io_processing/qwen3coder/qwen3coder_tool_parser.cpp"],
     deps = [
-        "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src/utils:rapidjson_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],
@@ -169,6 +178,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_utils",
+        ":apis_tool_schema_wrapper",
     ] + select({
         "//conditions:default": ["//third_party:genai", ":llm_engine"],
         "//:not_genai_bin" : [":llm_engine"],

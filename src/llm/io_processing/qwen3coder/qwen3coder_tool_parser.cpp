@@ -20,13 +20,6 @@
 #include <stack>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
-
 #include "src/llm/io_processing/utils.hpp"
 #include "src/logging.hpp"
 #include "src/utils/rapidjson_utils.hpp"
@@ -258,9 +251,11 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
 static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
     SPDLOG_TRACE("Creating tools parameters types map");
     ToolsParameterTypeMap_t toolsParametersTypes;
-    for (const auto& [toolName, schemaPair] : toolsSchemas) {
-        SPDLOG_TRACE("Creating tools parameters types for tool: {}, schema: {}", toolName, schemaPair.second);
-        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *schemaPair.first));
+    for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
+        const auto& toolSchemaStringRepr = toolSchemaWrapper.stringRepr;
+        const auto& toolSchemaRapidjsonRepr = toolSchemaWrapper.rapidjsonRepr;
+        SPDLOG_TRACE("Creating tools parameters types for tool: {}, schema: {}", toolName, toolSchemaStringRepr);
+        toolsParametersTypes.emplace(toolName, parseToolSchema(toolName, *toolSchemaRapidjsonRepr));
     }
     return toolsParametersTypes;
 }

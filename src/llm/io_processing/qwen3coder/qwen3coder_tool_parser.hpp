@@ -26,14 +26,11 @@
 #include <vector>
 
 #include <openvino/genai/tokenizer.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+
+#include "src/port/rapidjson_document.hpp"
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/apis/tool_schema_wrapper.hpp"
 #include "src/logging.hpp"
 #include "src/status.hpp"
 

@@ -37,8 +37,8 @@ void Llama3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompl
     static const std::string beginOfToolsString = "<|python_tag|>";
     structuralTagsConfig.triggers.push_back(beginOfToolsString);
 
-    for (const auto& [toolName, toolSchemaPair] : request.toolNameSchemaMap) {
-        const auto& [_, toolSchema] = toolSchemaPair;
+    for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+        const auto& toolSchema = toolSchemaWrapper.stringRepr;
         ov::genai::StructuralTagItem tagItem;
         std::string toolCallTrigger = "{\"name\": \"" + toolName + "\", \"parameters\": ";
         structuralTagsConfig.triggers.push_back(toolCallTrigger);

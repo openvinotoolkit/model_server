@@ -37,8 +37,8 @@ void Hermes3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComp
     static const std::string toolCallTrigger = "<tool_call>";
     structuralTagsConfig.triggers.push_back(toolCallTrigger);
 
-    for (const auto& [toolName, toolSchemaPair] : request.toolNameSchemaMap) {
-        const auto& [_, toolSchema] = toolSchemaPair;
+    for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+        const auto& toolSchema = toolSchemaWrapper.stringRepr;
         ov::genai::StructuralTagItem tagItem;
         tagItem.begin = toolCallTrigger;
         tagItem.schema = R"({

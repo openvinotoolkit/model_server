@@ -27,10 +27,9 @@
 #include <openvino/runtime/tensor.hpp>
 #include <openvino/genai/tokenizer.hpp>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
+
+#include "tool_schema_wrapper.hpp"
 
 namespace ovms {
 using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
@@ -38,7 +37,6 @@ using ImageHistory = std::vector<std::pair<size_t, ov::Tensor>>;
 struct StreamOptions {
     bool includeUsage = false;
 };
-using ToolsSchemas_t = std::map<std::string, std::pair<rapidjson::Value*, std::string>>;
 // Class that maps OpenAI request content.
 struct OpenAIChatCompletionsRequest {
     ov::genai::ChatHistory chatHistory;

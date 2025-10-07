@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("//:common_settings.bzl", "ovms_cc_library")
+load("//:common_settings.bzl","ovms_cc_library")
 
 ovms_cc_library(
-    name = "rapidjson_utils",
-    hdrs = ["rapidjson_utils.hpp"],
-    srcs = ["rapidjson_utils.cpp"],
-    deps = [
-            "//src/port:rapidjson_document",
-    ],
+    name = "rapidjson_document",
+    hdrs = ["rapidjson_document.hpp"],
+    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
     visibility = ["//visibility:public",],
 )

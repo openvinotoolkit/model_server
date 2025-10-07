@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -14,10 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+// Type that holds vector of pairs where first element is chat turn index and second is image tensor
+// this way we store information about which image is associated with which chat turn
+#pragma once
+#include <map>
 #include <string>
 
 #include "src/port/rapidjson_document.hpp"
 
 namespace ovms {
-std::string documentToString(const rapidjson::Document& doc);
+struct ToolSchemaWrapper {
+    rapidjson::Value* rapidjsonRepr;
+    std::string stringRepr;
+};
+using ToolsSchemas_t = std::map<std::string, ToolSchemaWrapper>;
 }  // namespace ovms

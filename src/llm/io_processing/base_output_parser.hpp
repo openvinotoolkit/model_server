@@ -39,7 +39,6 @@ struct ToolCall {
     std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}"
 };
 
-using ToolsSchemas_t = std::map<std::string, std::pair<rapidjson::Value*, std::string>>;
 using ToolCalls_t = std::vector<ToolCall>;
 
 struct ParsedOutput {
