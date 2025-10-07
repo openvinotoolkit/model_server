@@ -127,7 +127,13 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(ov::genai::G
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
     }
-    auto result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    std::optional<rapidjson::Document> result;
+    try {
+        result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    } catch (...) {
+        streamOutputCache.clear();
+        throw;
+    }
     streamOutputCache.clear();
     processingPhase = newPhase;
     return result;
@@ -137,7 +143,13 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
     if (!reasoningParser) {
         throw std::runtime_error("Reasoning parser is not available, cannot parse reasoning chunk");
     }
-    auto result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    std::optional<rapidjson::Document> result;
+    try {
+        result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    } catch (...) {
+        streamOutputCache.clear();
+        throw;
+    }
     streamOutputCache.clear();
     processingPhase = newPhase;
     return result;
