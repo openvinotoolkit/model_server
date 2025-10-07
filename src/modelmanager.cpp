@@ -681,7 +681,7 @@ Status ModelManager::loadMediapipeGraphsConfig(std::vector<MediapipeGraphConfig>
     Status firstErrorStatus = StatusCode::OK;
     try {
         for (const auto& mediapipeGraphConfig : mediapipesInConfigFile) {
-            if(mediapipeGraphConfig && spdlog::default_logger_raw()->level() <= spdlog::level::debug){
+            if(mediapipeGraphConfig != nullptr && spdlog::default_logger_raw()->level() <= spdlog::level::debug){
                 mediapipeGraphConfig.logGraphConfigContent();
             }
 
