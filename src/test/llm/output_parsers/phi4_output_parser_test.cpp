@@ -259,7 +259,7 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Paris\"}"}}]}})"});

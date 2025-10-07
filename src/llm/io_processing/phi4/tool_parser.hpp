@@ -29,6 +29,7 @@
 #pragma warning(pop)
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/partial_json_builder.hpp"
 
 namespace ovms {
 class Phi4ToolParser : public BaseOutputParser {
