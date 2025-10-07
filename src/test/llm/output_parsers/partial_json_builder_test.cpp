@@ -399,7 +399,7 @@ TEST_F(PartialJsonBuilderTest, simpleJsonIncrementalParsing) {
     ASSERT_EQ(parsedJson["arguments"].GetString(), std::string("{\"location\": \"Tokyo\", \"date\": \"2025-01-01\"}"));
 }
 
-TEST_F(PartialJsonBuilderTest, NegativeCases) {
+TEST_F(PartialJsonBuilderTest, negativeCases) {
     std::vector<std::pair<std::string, std::string>> negativeCases = {
         {R"(a)", "Invalid JSON: Expected '{' or '[' at the beginning."},
         {R"({"name",)", "Invalid JSON: Expected ':' after key."},
@@ -430,6 +430,20 @@ TEST_F(PartialJsonBuilderTest, NegativeCases) {
             }
         }
     }
+}
+
+TEST_F(PartialJsonBuilderTest, postJsonEndAdditions) {
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    builder.add("{\"name\": \"get_weather\"");
+    ASSERT_FALSE(builder.isComplete());
+    parsedJson = builder.add("}, {");
+    ASSERT_TRUE(builder.isComplete());
+    ASSERT_EQ(builder.getUnprocessedBuffer(), ", {");
+    ASSERT_TRUE(parsedJson.IsObject());
+    ASSERT_TRUE(parsedJson.HasMember("name"));
+    ASSERT_TRUE(parsedJson["name"].IsString());
+    ASSERT_EQ(parsedJson["name"].GetString(), std::string("get_weather"));
 }
 
 TEST_F(PartialJsonBuilderTest, computeDeltaWithEmptyJson) {

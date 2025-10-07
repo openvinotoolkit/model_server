@@ -42,6 +42,77 @@ void Phi4ToolParser::movePostColonContentToUnprocessedBuffer(std::string& chunk)
     }
 }
 
+void Phi4ToolParser::movePostToolCallEndContentToUnprocessedBuffer() {
+    // Move content that appeared after the end of the tool call to unprocessedBuffer
+    unprocessedBuffer = jsonBuilder.getUnprocessedBuffer() + unprocessedBuffer;
+    // Remove potential escape characters added in arguments processing logic from the unprocessedBuffer as we move to the next tool call
+    unprocessedBuffer.erase(
+        std::remove(unprocessedBuffer.begin(), unprocessedBuffer.end(), '\\'),
+        unprocessedBuffer.end());
+}
+
+void Phi4ToolParser::updateOpenBracesCount(const std::string& chunk) {
+    // Note that this method can be fooled by unclosed braces in string values.
+    // If turns out insufficient, we will need full JSON parsing to track opened/closed braces for arguments.
+    for (char c : chunk) {
+        if (c == '{') {
+            openBracesCount++;
+        } else if (c == '}') {
+            openBracesCount--;
+            if (openBracesCount == 0) {
+                break;  // No need to count further if we balanced the braces
+            }
+        }
+    }
+}
+
+void Phi4ToolParser::handleEndOfToolCall(std::string& chunk) {
+    // We are at the end of the tool call object, so we add closing quote before the last closing brace
+    size_t lastClosingBrace = chunk.find_last_of('}');
+    if (lastClosingBrace != std::string::npos) {
+        // Move anything after the last closing brace to unprocessedBuffer, since it's the start of the next tool call or end of the array
+        if (lastClosingBrace + 1 < chunk.size()) {
+            unprocessedBuffer = chunk.substr(lastClosingBrace + 1) + unprocessedBuffer;
+            chunk.erase(lastClosingBrace + 1);
+        }
+        chunk.insert(lastClosingBrace, "\"");
+    } else {
+        // If there is no closing brace, we just add closing quote at the end
+        chunk.append("\"");
+    }
+}
+
+void Phi4ToolParser::handleGenerationFinish(std::string& chunk) const {
+    // We look for the closing brace to close the string properly
+    size_t lastClosingBrace = chunk.find_last_of('}');
+    if (lastClosingBrace != std::string::npos) {
+        chunk.insert(lastClosingBrace, "\"");
+    } else {
+        // If there is no closing brace, we just add closing quote at the end
+        chunk.append("\"");
+    }
+}
+
+void Phi4ToolParser::openArgumentsString(std::string& chunk) const {
+    // Add opening quote before the first non-whitespace character
+    size_t firstNonWhitespaceCharacter = chunk.find_first_not_of(" \t\n\r\f\v");
+    if (firstNonWhitespaceCharacter != std::string::npos) {
+        chunk.insert(firstNonWhitespaceCharacter, "\"");
+    } else {
+        // If the chunk is all whitespace, just insert quote at the end
+        chunk.append("\"");
+    }
+}
+
+void Phi4ToolParser::clearState() {
+    // Clear state for the next tool call
+    lastJson.Clear();
+    jsonBuilder.clear();
+    toolCallIndex++;
+    argumentsQuotesOpened = false;
+    openBracesCount = 1;  // Reset to 1 as we count the tool call opening brace
+}
+
 void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
     std::vector<std::string> tools;
 
@@ -122,9 +193,11 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
     std::string modifiedChunk = unprocessedBuffer + chunk;
     unprocessedBuffer.clear();
 
+    bool processingArguments = lastJson.HasMember("arguments");
+
     // Before we have 'arguments' in the JSON, we do not want to process both key and value in the same call due to special handling of arguments value.
     // We look for colon after 'arguments' key and move everything after it to unprocessedBuffer to be processed in the next call.
-    if (!lastJson.HasMember("arguments")) {
+    if (!processingArguments) {
         movePostColonContentToUnprocessedBuffer(modifiedChunk);
     }
 
@@ -170,12 +243,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
         size_t firstOpeningBrace = modifiedChunk.find_first_of('{');
         if (firstOpeningBrace != std::string::npos) {
             internalState = PROCESSING_TOOL_CALL;
-            // Clear state for the next tool call
-            lastJson.Clear();
-            jsonBuilder.clear();
-            toolCallIndex++;
-            argumentsQuotesOpened = false;
-            openBracesCount = 1;  // Reset to 1 as we count just found opening brace of the tool call
+            clearState();
 
             // Process the rest of the chunk after the opening brace (brace included) as part of tool call processing
             std::string remainingChunk = modifiedChunk.substr(firstOpeningBrace);
@@ -193,59 +261,26 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
         modifiedChunk.erase(std::remove(modifiedChunk.begin(), modifiedChunk.end(), '\n'), modifiedChunk.end());
 
         // JSON already contains 'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
-        if (lastJson.HasMember("arguments")) {
+        if (processingArguments) {
             // Escaping double quotes in the arguments string
             for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
                 modifiedChunk.insert(pos, "\\");
             }
 
             // Keep track of opened/closed braces to identify the end of the tool call object.
-            // Note that this method can be fooled by unclosed braces in string values.
-            // If turns out insufficient, we will need full JSON parsing to track opened/closed braces for arguments.
-            for (char c : modifiedChunk) {
-                if (c == '{') {
-                    openBracesCount++;
-                } else if (c == '}') {
-                    openBracesCount--;
-                    if (openBracesCount == 0) {
-                        break;  // No need to count further if we balanced the braces
-                    }
-                }
-            }
+            updateOpenBracesCount(modifiedChunk);
 
             // When we start collecting arguments, force string type by adding opening quote
             if (!argumentsQuotesOpened) {
-                // Add opening quote before the first non-whitespace character
-                size_t firstNonWhitespaceCharacter = modifiedChunk.find_first_not_of(" \t\n\r\f\v");
-                if (firstNonWhitespaceCharacter != std::string::npos) {
-                    modifiedChunk.insert(firstNonWhitespaceCharacter, "\"");
-                } else {
-                    // If the chunk is all whitespace, just insert quote at the end
-                    modifiedChunk.append("\"");
-                }
+                openArgumentsString(modifiedChunk);
                 argumentsQuotesOpened = true;
             }
 
             if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-                // If generation has stopped, we look for the closing brace to close the string properly
-                size_t lastClosingBrace = modifiedChunk.find_last_of('}');
-                if (lastClosingBrace != std::string::npos) {
-                    modifiedChunk.insert(lastClosingBrace, "\"");
-                }
+                handleGenerationFinish(modifiedChunk);
             } else if (openBracesCount == 0) {
-                // If we balanced the braces, we are at the end of the tool call object, so we add closing quote before the last closing brace
-                size_t lastClosingBrace = modifiedChunk.find_last_of('}');
-                if (lastClosingBrace != std::string::npos) {
-                    // Move anything after the last closing brace to unprocessedBuffer, since it's the start of the next tool call or end of the array
-                    if (lastClosingBrace + 1 < modifiedChunk.size()) {
-                        unprocessedBuffer = modifiedChunk.substr(lastClosingBrace + 1) + unprocessedBuffer;
-                        modifiedChunk.erase(lastClosingBrace + 1);
-                    }
-                    modifiedChunk.insert(lastClosingBrace, "\"");
-                } else {
-                    // If there is no closing brace, we just add closing quote at the end
-                    modifiedChunk.append("\"");
-                }
+                // If we balanced the braces, we are at the end of the tool call object
+                handleEndOfToolCall(modifiedChunk);
             }
         }
 
@@ -283,11 +318,7 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
 
             // Handle the case when tool call has finished - store unprocessed output and switch internal state
             if (jsonBuilder.isComplete()) {
-                unprocessedBuffer = jsonBuilder.getUnprocessedBuffer() + unprocessedBuffer;
-                // Remove potential escape characters added in arguments processing logic from the unprocessedBuffer as we move to the next tool call
-                unprocessedBuffer.erase(
-                    std::remove(unprocessedBuffer.begin(), unprocessedBuffer.end(), '\\'),
-                    unprocessedBuffer.end());
+                movePostToolCallEndContentToUnprocessedBuffer();
                 // Switch to the state where we are waiting for the opening brace of the next tool call object
                 internalState = AWAITING_TOOL_CALL_OPENING_BRACE;
             } else {

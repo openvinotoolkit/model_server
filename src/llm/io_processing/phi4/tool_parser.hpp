@@ -60,6 +60,12 @@ protected:
     size_t openBracesCount = 1;
 
     void movePostColonContentToUnprocessedBuffer(std::string& chunk);
+    void movePostToolCallEndContentToUnprocessedBuffer();
+    void updateOpenBracesCount(const std::string& chunk);
+    void handleGenerationFinish(std::string& chunk) const;
+    void handleEndOfToolCall(std::string& chunk);
+    void openArgumentsString(std::string& chunk) const;
+    void clearState();
 
 public:
     Phi4ToolParser() = delete;
