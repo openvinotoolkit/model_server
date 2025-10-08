@@ -1362,7 +1362,7 @@ TEST(OvmsGraphConfigTest, positiveTargetDeviceSpecificGPU) {
     config.parse(arg_count, n_argv);
     auto& hfSettings = config.getServerSettings().hfSettings;
     ovms::TextGenGraphSettingsImpl graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
-    ASSERT_EQ(graphSettings.targetDevice, "HETERO");
+    ASSERT_EQ(graphSettings.targetDevice, "GPU.1");
 }
 
 TEST(OvmsGraphConfigTest, negativePipelineType) {
