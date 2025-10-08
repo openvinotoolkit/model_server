@@ -40,10 +40,14 @@ API_KEY = "not_used"
 env_proxy = {}
 http_proxy = os.environ.get("http_proxy")
 https_proxy = os.environ.get("https_proxy")
+no_proxy = os.environ.get("no_proxy")
+
 if http_proxy:
     env_proxy["http_proxy"] = http_proxy
 if https_proxy:
     env_proxy["https_proxy"] = https_proxy
+if no_proxy:
+    env_proxy["no_proxy"] = no_proxy
 
 RunConfig.tracing_disabled = False  # Disable tracing for this example
 
@@ -85,7 +89,7 @@ if __name__ == "__main__":
     parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the OpenAI API")
     parser.add_argument("--mcp-server-url", type=str, default="http://localhost:8080/sse", help="URL for the MCP server (if using SSE)")
     parser.add_argument("--stream", action="store_true", help="Stream output from the agent")
-    parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
+    parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs", "cds"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
     parser.add_argument("--tool-choice", type=str, default="auto", choices=["auto", "required"], help="Tool choice for the agent")
     parser.add_argument("--enable-thinking", action="store_true", help="Enable agent thinking (default: False)")
     args = parser.parse_args()
@@ -112,6 +116,14 @@ if __name__ == "__main__":
             params={"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": env_proxy}
         )
         mcp_servers.append(fs_server)
+
+    if args.mcp_server in ["all", "cds"]:
+        cds_server = MCPServerStdio(
+            client_session_timeout_seconds=500,
+            name="CDS MCP Server",
+            params={"command": "uv", "args":  [ "--directory", "C:\\git\\model_server\\demos\\continuous_batching\\agentic_ai\\cds-mcp", "run", "cds.py"], "env": env_proxy}
+        )
+        mcp_servers.append(cds_server)
     client = AsyncOpenAI(base_url=args.base_url, api_key=API_KEY)
 
     class OVMSModelProvider(ModelProvider):
