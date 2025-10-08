@@ -127,6 +127,28 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
+// helper function to double escape \n,\r, \t in string
+static std::string escapeString(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    for (char c : input) {
+        switch (c) {
+        case '\n':
+            output += "\\n";
+            break;
+        case '\r':
+            output += "\\r";
+            break;
+        case '\t':
+            output += "\\t";
+            break;
+        default:
+            output += c;
+        }
+    }
+    return output;
+}
+
 static std::string setCorrectValueType(std::string& inputValue, const std::string& currentParameterName, const ParametersTypeMap_t& parametersType) {
     auto paramIt = parametersType.find(currentParameterName);
     if (paramIt == parametersType.end()) {
@@ -207,7 +229,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         if (paramIt == this->toolsParametersTypeMap.end()) {
             SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
         } else {
-            parameterValue = setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second);
+            parameterValue = escapeString(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)

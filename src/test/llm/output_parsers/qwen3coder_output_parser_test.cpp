@@ -169,7 +169,7 @@ value1line2
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1line1\nvalue1line2\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1line1\\nvalue1line2\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCall) {
@@ -582,7 +582,7 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"1522\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
         {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
