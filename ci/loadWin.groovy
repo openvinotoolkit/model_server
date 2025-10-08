@@ -160,7 +160,7 @@ def build(){
 def clone_sdl_repo()
 {
     println "Starting code signing"
-    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' repo_signing')
+    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' sdl_repo')
     if (statusPull != 0) {
         error "Error: Downloading check_signing.py failed ${statusPull}. Check pipeline.log for details."
     } else {
