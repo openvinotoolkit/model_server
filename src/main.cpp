@@ -13,11 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#ifdef __linux__
 #include "server.hpp"
 
 using ovms::Server;
-
 int main(int argc, char** argv) {
     Server& server = Server::instance();
     return server.start(argc, argv);
 }
+#elif _WIN32
+#include "main_windows.hpp"
+
+int main(int argc, char** argv) {
+    return main_windows(argc, argv);
+}
+#endif
+
+

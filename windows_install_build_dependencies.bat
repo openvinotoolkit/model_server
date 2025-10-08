@@ -190,7 +190,7 @@ if "!output_user_root!" neq "opt" (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Remove genai headers to be replaced by the ones from openvino_genai repository
-rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
+::rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
 echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

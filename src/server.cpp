@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <fstream>
+#include <chrono>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -411,7 +413,65 @@ static int statusToExitCode(const Status& status) {
 }
 
 // OVMS Start
+int Server::startService() {
+    int result = OVMS_EX_OK;
+
+    try {
+        Status ret = start(&this->serverSettings, &this->modelsSettings);
+        ModulesShutdownGuard shutdownGuard(*this);
+        if (!ret.ok()) {
+            return statusToExitCode(ret);
+        }
+        while (!shutdown_request &&
+               (this->serverSettings.serverMode == HF_PULL_AND_START_MODE || this->serverSettings.serverMode == SERVING_MODELS_MODE)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (shutdown_request == 2) {
+            SPDLOG_ERROR("Illegal operation. OVMS started on unsupported device");
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int Server::prepareService(int argc, char** argv) {
+    installSignalHandlers();
+    int result = OVMS_EX_OK;
+
+    try {
+        CLIParser parser;
+        parser.parse(argc, argv);
+        parser.prepare(&this->serverSettings, &this->modelsSettings);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Exception; {}", e.what());
+        result = OVMS_EX_FAILURE;
+        return result;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+std::string get_current_time_string() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::localtime(&time_t);
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S  ");
+    return oss.str();
+}
+
+std::ofstream logFile("C:\\test2\\ovms2.log");
+#define DEBUG_LOG(msg) { std::stringstream ss; ss << get_current_time_string() << msg << std::endl; logFile << ss.rdbuf(); logFile.flush(); }
+
+// OVMS Start
 int Server::start(int argc, char** argv) {
+    std::ofstream logFile2("C:\\test2\\ovms2.log", std::ios::out | std::ios::trunc);
+    logFile2.close();
+    DEBUG_LOG("installSignalHandlers");
     installSignalHandlers();
     int result = OVMS_EX_OK;
 
@@ -419,9 +479,16 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
+        for (int i = 0; i < argc; ++i) {
+            std::stringstream ss2; ss2 << "Server::start Argument " << i << ": " << argv[i];
+            DEBUG_LOG(ss2.rdbuf());
+        }
+        DEBUG_LOG("parse");
         parser.parse(argc, argv);
+        DEBUG_LOG("prepare");
         parser.prepare(&serverSettings, &modelsSettings);
 
+        DEBUG_LOG("start");
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {

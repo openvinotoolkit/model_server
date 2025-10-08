@@ -22,12 +22,11 @@
 
 #include "module.hpp"
 #include "module_names.hpp"
+#include "capi_frontend/server_settings.hpp"
 
 namespace ovms {
 class Config;
 class Status;
-struct ServerSettingsImpl;
-struct ModelsSettingsImpl;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
@@ -51,8 +50,12 @@ public:
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();
+    int prepareService(int argc, char** argv);
+    int startService();
 
 private:
+    ServerSettingsImpl serverSettings;
+    ModelsSettingsImpl modelsSettings;
     void ensureModuleShutdown(const std::string& name);
 };
 }  // namespace ovms
