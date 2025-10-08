@@ -323,6 +323,7 @@ public:
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
     const std::string& allowedHeaders() const;
+    const std::string& apiKey() const;
 
     /**
          * @brief Model cache directory

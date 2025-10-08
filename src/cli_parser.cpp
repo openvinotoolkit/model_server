@@ -160,7 +160,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("allowed_headers",
                 "Comma separated list of headers that are allowed to access the API. Default: *.",
                 cxxopts::value<std::string>()->default_value("*"),
-                "ALLOWED_HEADERS");
+                "ALLOWED_HEADERS")
+            ("api_key",
+                "API key for authentication for generative endpoints. If not set, authentication is disabled.",
+                cxxopts::value<std::string>()->default_value(""),
+                "API_KEY");
 
         options->add_options("multi model")
             ("config_path",
@@ -493,6 +497,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
     serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
     serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
+    serverSettings.apiKey = result->operator[]("api_key").as<std::string>();
 }
 
 void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {

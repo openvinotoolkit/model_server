@@ -302,6 +302,7 @@ Status Server::startModules(ovms::Config& config) {
     // that's why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
     Status status;
+    apiKey = config.apiKey();
     bool inserted = false;
     auto it = modules.end();
     if (config.getServerSettings().serverMode == UNKNOWN_MODE) {
@@ -370,6 +371,10 @@ void Server::ensureModuleShutdown(const std::string& name) {
     if (it != modules.end())
         it->second->shutdown();
 }
+
+std::string Server::getAPIKey() const {
+    return apiKey;
+    }
 
 class ModulesShutdownGuard {
     Server& server;

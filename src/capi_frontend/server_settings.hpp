@@ -178,6 +178,7 @@ struct ServerSettingsImpl {
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
     std::string allowedHeaders{"*"};
+    std::string apiKey;
 #ifdef MTR_ENABLED
     std::string tracePath;
 #endif

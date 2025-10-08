@@ -361,5 +361,6 @@ const std::string& Config::allowedOrigins() const { return this->serverSettings.
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
+const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
 
 }  // namespace ovms
