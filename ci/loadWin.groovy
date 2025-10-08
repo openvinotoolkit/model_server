@@ -157,7 +157,8 @@ def build(){
     }
 }
 
-def sign(){
+def clone_sdl_repo()
+{
     println "Starting code signing"
     def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' repo_signing')
     if (statusPull != 0) {
@@ -165,6 +166,9 @@ def sign(){
     } else {
         echo "check_signing.py downloaded successfully."
     }
+}
+
+def sign(){
     println "OVMS_USER=${env.OVMS_USER}"
     def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
@@ -180,7 +184,7 @@ def bdba(){
     if (statusPull != 0) {
         error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
     }
-    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows repo_signing\\ovms-package')
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
     } else {

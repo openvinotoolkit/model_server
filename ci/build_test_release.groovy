@@ -54,6 +54,7 @@ pipeline {
                         def windows = load 'ci/loadWin.groovy'
                         if (windows != null) {
                             try {
+                                windows.clone_sdl_repo()
                                 windows.sign()
                             } finally {
                                 windows.archive_sign_results()
@@ -72,6 +73,9 @@ pipeline {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
+                            if(!fileExists('sdl_repo')){
+                                windows.clone_sdl_repo()
+                            }
                             windows.bdba()
                             def logFile = "${env.WORKSPACE}\\win_bdba.log"
                             def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()

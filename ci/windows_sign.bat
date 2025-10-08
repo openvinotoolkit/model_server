@@ -4,7 +4,7 @@ set "OVMS_FILES=..\..\%2"
 set "PYTHON=%3"
 set PATH=%PATH%;C:\Jenkins\workspace\ovmsc\signfile;C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64
 
-cd repo_signing\windows_signing
+cd sdl_repo\windows_signing
 
 if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT=--python"
