@@ -180,7 +180,7 @@ def bdba(){
     if (statusPull != 0) {
         error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
     }
-    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows')
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows repo_signing\\ovms-package')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
     } else {

@@ -1,6 +1,7 @@
 @echo off
 set "BDBA_KEY=%1"
 set "OVMS_PATH=..\%2"
+set "CONFIG_PATH=..\%3"
 cd repo_ci_infra
 
 python -m venv venv
@@ -28,7 +29,7 @@ if errorlevel 1 (
 echo "BDBA_KEY=%BDBA_KEY%"
 echo "OVMS_PATH=%OVMS_PATH%"
 
-python binary_scans\ovms_bdba.py --key %BDBA_KEY% --type windows --build_dir %OVMS_PATH% --artifacts %zipname% --report_name %filename% 2>&1 | tee ..\win_bdba.log
+python binary_scans\ovms_bdba.py --key %BDBA_KEY% --config_dir=%CONFIG_PATH% --type windows --build_dir %OVMS_PATH% --artifacts %zipname% --report_name %filename% 2>&1 | tee ..\win_bdba.log
 if errorlevel 1 exit /b %errorlevel%
 
 tar -a -c -f ..\ovms_windows_bdba_reports.zip ovms_windows*
