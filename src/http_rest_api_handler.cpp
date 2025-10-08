@@ -141,7 +141,6 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     metricsRegex(metricsRegexExp),
     timeout_in_ms(timeout_in_ms),
     ovmsServer(ovmsServer),
-    
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     grpcGetModelMetadataImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getTFSModelMetadataImpl()),
@@ -680,8 +679,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     // convert headers to lowercase because http headers are case insensitive
     for (const auto& [key, value] : request_components.headers) {
         std::string lowercaseKey = key;
-        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(), 
-                        [](unsigned char c){ return std::tolower(c); });
+        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(),
+            [](unsigned char c) { return std::tolower(c); });
     }
     if (!api_key.empty()) {
         if (request_components.headers.count("authorization")) {
@@ -689,8 +688,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
                 SPDLOG_DEBUG("Unauthorized request - invalid API key {} instead of {}", request_components.headers.at("authorization"), api_key);
                 return StatusCode::UNAUTHORIZED;
             }
-        }
-        else {
+        } else {
             SPDLOG_DEBUG("Unauthorized request - missing API key");
             return StatusCode::UNAUTHORIZED;
         }

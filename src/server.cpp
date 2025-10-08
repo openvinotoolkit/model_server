@@ -374,7 +374,7 @@ void Server::ensureModuleShutdown(const std::string& name) {
 
 std::string Server::getAPIKey() const {
     return apiKey;
-    }
+}
 
 class ModulesShutdownGuard {
     Server& server;
