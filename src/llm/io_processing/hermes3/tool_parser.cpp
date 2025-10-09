@@ -201,6 +201,39 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     }
 }
 
+void escapeSpecialCharacters(std::string& chunk) {
+    // Escape all double quotes, backslashes, and control characters in the chunk
+    std::string escaped;
+    for (char c : chunk) {
+        switch (c) {
+        case '\"':
+            escaped += "\\\"";
+            break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '\b':
+            escaped += "\\b";
+            break;
+        case '\f':
+            escaped += "\\f";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped += c;
+        }
+    }
+    chunk = escaped;
+}
+
 std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {
     /* 
     We first collect data until we have full function name - that's when we return the first delta.
@@ -293,10 +326,8 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
     */
 
     if (lastJson.HasMember("arguments")) {
-        // Escaping double quotes in the arguments string
-        for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
-            modifiedChunk.insert(pos, "\\");
-        }
+        // Since inside a string, we need to escape characters like quotes, new lines, tabs, etc.
+        escapeSpecialCharacters(modifiedChunk);
 
         bool processingFirstArgumentsChunk = argumentsDelayWindow[0].empty();
         // Handle the case when we are starting to collect arguments.
