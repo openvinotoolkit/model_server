@@ -102,7 +102,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     auto beginIt = buffer.begin() + currentPosition;
     auto endIt = buffer.end();
 
-    for (auto it = beginIt; it != endIt; ++it, currentPosition++) {
+    for (auto it = beginIt; it != endIt && state != IteratorState::END; ++it, ++currentPosition) {
         finishedWithEscapeCharacter = false;
         char c = *it;
 
@@ -209,7 +209,12 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
 
     Document doc;
     if (state == IteratorState::END && openCloseStack.empty()) {
-        doc.Parse(buffer.c_str());
+        if (currentPosition == buffer.size()) {
+            doc.Parse(buffer.c_str());
+        } else {
+            doc.Parse(buffer.c_str(), currentPosition);
+        }
+
         if (doc.HasParseError()) {
             throw std::runtime_error("Invalid JSON. Content:\n" + buffer);
         }
@@ -262,6 +267,17 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         throw std::runtime_error("Invalid JSON. Content:\n" + closedInput);
     }
     return doc;
+}
+
+bool PartialJsonBuilder::isComplete() const {
+    return state == IteratorState::END;
+}
+
+std::string PartialJsonBuilder::getUnprocessedBuffer() const {
+    if (currentPosition < buffer.size()) {
+        return buffer.substr(currentPosition);
+    }
+    return "";
 }
 
 }  // namespace ovms

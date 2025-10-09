@@ -23,10 +23,6 @@ COPTS_OV_TRACE = select({
     "//conditions:default": ["-DOV_TRACE=0"],
     "//:not_disable_ov_trace" : ["-DOV_TRACE=1"],
 })
-COPTS_ADJUSTED = COMMON_STATIC_LIBS_COPTS + select({
-        "//conditions:default": [],
-        "//:fuzzer_build" : COMMON_FUZZER_COPTS,
-})
 LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
     "//conditions:default": [],
     "//:fuzzer_build" : COMMON_FUZZER_LINKOPTS,
@@ -2692,7 +2688,7 @@ cc_test(
             "//conditions:default": [
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
-                ":llm_output_parsers_tests",
+                ":test_llm_output_parser_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
                 "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
@@ -3113,7 +3109,7 @@ cc_library(
 )
 
 cc_library(
-    name = "llm_output_parsers_tests",
+    name = "test_llm_output_parser_tests",
     linkstatic = 1,
     alwayslink = True,
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),

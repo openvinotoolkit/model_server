@@ -42,6 +42,7 @@ ovms_demo_bert
 ovms_demo_universal-sentence-encoder
 ovms_demo_benchmark_client
 ovms_string_output_model_demo
+ovms_demos_gguf
 
 ```
 
@@ -61,6 +62,7 @@ OpenVINO Model Server demos have been created to showcase the usage of the model
 |[Long context LLMs](./continuous_batching/long_context/README.md)| Recommendations for handling very long context in LLM models|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension to Visual Studio Code with local OVMS serving|
 |[Image Generation](image_generation/README.md)|Generate images|
+|[GGUF models support](gguf/README.md)|Serve GGUF models with OVMS|
 
 
 Check out the list below to see complete step-by-step examples of using OpenVINO Model Server with real world use cases:

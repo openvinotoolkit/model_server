@@ -26,6 +26,7 @@
 #include "mistral/tool_parser.hpp"
 #include "gptoss/tool_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
+#include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 
 namespace ovms {
@@ -126,7 +127,13 @@ std::optional<rapidjson::Document> OutputParser::parseToolCallChunk(ov::genai::G
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
     }
-    auto result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    std::optional<rapidjson::Document> result;
+    try {
+        result = toolParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    } catch (...) {
+        streamOutputCache.clear();
+        throw;
+    }
     streamOutputCache.clear();
     processingPhase = newPhase;
     return result;
@@ -136,14 +143,21 @@ std::optional<rapidjson::Document> OutputParser::parseReasoningChunk(ov::genai::
     if (!reasoningParser) {
         throw std::runtime_error("Reasoning parser is not available, cannot parse reasoning chunk");
     }
-    auto result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    std::optional<rapidjson::Document> result;
+    try {
+        result = reasoningParser->parseChunk(streamOutputCache.getBuffer(), finishReason);
+    } catch (...) {
+        streamOutputCache.clear();
+        throw;
+    }
     streamOutputCache.clear();
     processingPhase = newPhase;
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
     tokenizer(tokenizer) {
+    SPDLOG_TRACE("OutputParser created with toolNameSchemaMap of size: {}", toolNameSchemaMap.size());
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
     } else if (toolParserName == "hermes3") {
@@ -154,6 +168,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         toolParser = std::make_unique<MistralToolParser>(tokenizer);
     } else if (toolParserName == "gptoss") {
         toolParser = std::make_unique<GptOssToolParser>(tokenizer);
+    } else if (toolParserName == "qwen3coder") {
+        toolParser = std::make_unique<Qwen3CoderToolParser>(tokenizer, toolNameSchemaMap);
     } else if (!toolParserName.empty()) {
         throw std::runtime_error("Unsupported tool parser: " + toolParserName);
     }

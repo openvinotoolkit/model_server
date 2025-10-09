@@ -34,6 +34,7 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/openai/gpt-oss-20b
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> gptOssTokenizer;
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in gptoss
 
 static std::vector<int64_t> getTokens(const std::string& text) {
     ov::Tensor t = gptOssTokenizer->encode(text).input_ids;
@@ -424,12 +425,12 @@ protected:
 
     void SetUp() override {
         GptOssOutputUnaryParserTest::SetUp();
-        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss", EMPTY_TOOLS_SCHEMA);
     }
 
     void test(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss");
+        outputParser = std::make_unique<OutputParser>(*gptOssTokenizer, "gptoss", "gptoss", EMPTY_TOOLS_SCHEMA);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         int64_t chunkIteration = -1;
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVecCopy) {

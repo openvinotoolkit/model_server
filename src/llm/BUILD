@@ -75,14 +75,70 @@ ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = [":genai_proxy",],
+    deps = [":genai_proxy",
+            "//src/port:rapidjson_document",
+            ":apis_tool_schema_wrapper",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(
+    name = "apis_tool_schema_wrapper",
+    hdrs = ["apis/tool_schema_wrapper.hpp"],
+    deps = [
+        "//src/port:rapidjson_document",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
+    name = "partial_json_builder",
+    hdrs = ["io_processing/partial_json_builder.hpp"],
+    srcs = ["io_processing/partial_json_builder.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_utils",
+    hdrs = ["io_processing/utils.hpp"],
+    srcs = ["io_processing/utils.cpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_base_output_parser",
+    hdrs = ["io_processing/base_output_parser.hpp"],
+    srcs = ["io_processing/base_output_parser.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        ":io_processing_utils",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+)
+ovms_cc_library(
+    name = "io_processing_qwen3coder_tool_parser",
+    hdrs = ["io_processing/qwen3coder/qwen3coder_tool_parser.hpp"],
+    srcs = ["io_processing/qwen3coder/qwen3coder_tool_parser.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src/utils:rapidjson_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":apis_tool_schema_wrapper",
+    ] + select({
+        "//conditions:default": ["//third_party:genai", ":llm_engine"],
+        "//:not_genai_bin" : [":llm_engine"],
+    }),
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
-    hdrs = ["io_processing/base_output_parser.hpp",
+    hdrs = [
             "io_processing/hermes3/tool_parser.hpp",
             "io_processing/llama3/tool_parser.hpp",
             "io_processing/phi4/tool_parser.hpp",
@@ -92,9 +148,8 @@ ovms_cc_library(
             "io_processing/gptoss/tool_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
             "io_processing/output_parser.hpp",
-            "io_processing/partial_json_builder.hpp",
-            "io_processing/utils.hpp"],
-    srcs = ["io_processing/base_output_parser.cpp",
+    ],
+    srcs = [
             "io_processing/hermes3/tool_parser.cpp",
             "io_processing/llama3/tool_parser.cpp",
             "io_processing/phi4/tool_parser.cpp",
@@ -104,15 +159,19 @@ ovms_cc_library(
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
             "io_processing/output_parser.cpp",
-            "io_processing/partial_json_builder.cpp",
-            "io_processing/utils.cpp"],
+    ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
-        ":genai_proxy",],
+        ":genai_proxy",
+        ":partial_json_builder",
+        ":io_processing_base_output_parser",
+        ":io_processing_qwen3coder_tool_parser",
+        ":io_processing_utils",
+        ":apis_tool_schema_wrapper",
+    ],
     visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
 )
 
 ovms_cc_library(

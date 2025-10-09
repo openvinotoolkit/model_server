@@ -33,6 +33,16 @@ pipeline {
               build job: "ovmsc/redhat/redhat-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }    
         }
+
+        stage("Run rebuild windows on main branch") {
+          steps {
+              sh """
+              env
+              """
+              echo shortCommit
+              build job: "ovmsc/OVMS_Validation/daily/windows_py", parameters: [[$class: 'StringParameterValue', name: 'BRANCH_NAME', value: "${env.BRANCH_NAME}"]]
+          }    
+        }
     }
 }
 
