@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+set -e
 if [ -z "$1" ]; then
   echo "Error: No directory specified."
   exit 1
@@ -75,7 +75,7 @@ else
   python3 demos/common/export_models/export_model.py text_generation --source_model "$CB_MODEL" --weight-format int8 --model_repository_path $1
 fi
 if [ ! -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -85,7 +85,7 @@ else
   python3 demos/common/export_models/export_model.py text_generation --source_model "$VLM_MODEL" --weight-format int4 --kv_cache_precision u8 --model_repository_path $1
 fi
 if [ ! -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Model file $1/$VLM_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -95,7 +95,7 @@ else
   python3 demos/common/export_models/export_model.py embeddings --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1
 fi
 if [ ! -f "$1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" ]; then
-  echo "Models file $1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE does not exists."
+  echo "[ERROR] Models file $1/$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE does not exist."
   exit 1
 fi
 
@@ -105,7 +105,7 @@ else
   python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
 fi
 if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" does not exists."
+  echo "[ERROR] Model file "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" does not exist."
   exit 1
 fi
 
@@ -115,7 +115,7 @@ else
   python3 demos/common/export_models/export_model.py rerank --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1
 fi
 if [ ! -f "$1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exists."
+  echo "[ERROR] Model file $1/$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE does not exist."
   exit 1
 fi
 
@@ -125,7 +125,7 @@ else
   python3 demos/common/export_models/export_model.py rerank_ov --source_model "$RERANK_MODEL" --weight-format int8 --model_repository_path $1 --model_name $RERANK_MODEL/ov
 fi
 if [ ! -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -136,7 +136,7 @@ else
   convert_tokenizer $QWEN3_MODEL --with_detokenizer -o $1/$QWEN3_MODEL
 fi
 if [ ! -f "$1/$QWEN3_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$QWEN3_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$QWEN3_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -147,7 +147,7 @@ else
   convert_tokenizer $LLAMA3_MODEL --with_detokenizer -o $1/$LLAMA3_MODEL
 fi
 if [ ! -f "$1/$LLAMA3_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$LLAMA3_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$LLAMA3_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -158,7 +158,7 @@ else
   convert_tokenizer $HERMES3_MODEL --with_detokenizer -o $1/$HERMES3_MODEL
 fi
 if [ ! -f "$1/$HERMES3_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$HERMES3_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -169,7 +169,7 @@ else
   convert_tokenizer $PHI4_MODEL --with_detokenizer -o $1/$PHI4_MODEL
 fi
 if [ ! -f "$1/$PHI4_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$PHI4_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$PHI4_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -180,7 +180,7 @@ else
   convert_tokenizer $MISTRAL_MODEL --with_detokenizer -o $1/$MISTRAL_MODEL
 fi
 if [ ! -f "$1/$MISTRAL_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$MISTRAL_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
@@ -191,6 +191,6 @@ else
   convert_tokenizer $GPT_OSS --with_detokenizer -o $1/$GPT_OSS
 fi
 if [ ! -f "$1/$GPT_OSS/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$GPT_OSS/$TOKENIZER_FILE does not exists."
+  echo "[ERROR] Models file $1/$GPT_OSS/$TOKENIZER_FILE does not exist."
   exit 1
 fi
