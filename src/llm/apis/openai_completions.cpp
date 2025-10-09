@@ -264,9 +264,15 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                 }
             }
         }
-        const auto& lastMessage = request.chatHistory.back();
+        auto& lastMessage = request.chatHistory.back();
         if (lastMessage.find("role") == lastMessage.end()) {
             return absl::InvalidArgumentError("Every message must have 'role' field");
+        }
+        if (lastMessage.find("content") == lastMessage.end()) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
+            lastMessage["content"] = "";
+            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
+            jsonChanged = true;
         }
     }
     if (jsonChanged) {
