@@ -42,7 +42,8 @@ TEST_F(PartialJsonBuilderTest, complexCompleteJsonWithDifferentValueTypes) {
                 "skills": ["C++", "Python", "AI"]
             }
         },
-        "numbers": [1, 2, 3]
+        "numbers": [1, 2, 3],
+        "complex_string": "This is a complex string with special characters: \n, \r, \t, \", \\ \""
     })";
     PartialJsonBuilder builder;
     auto parsedJson = builder.add(input);
@@ -69,6 +70,9 @@ TEST_F(PartialJsonBuilderTest, complexCompleteJsonWithDifferentValueTypes) {
     ASSERT_EQ(parsedJson["numbers"][0].GetInt(), 1);
     ASSERT_EQ(parsedJson["numbers"][1].GetInt(), 2);
     ASSERT_EQ(parsedJson["numbers"][2].GetInt(), 3);
+    ASSERT_TRUE(parsedJson.HasMember("complex_string"));
+    ASSERT_TRUE(parsedJson["complex_string"].IsString());
+    ASSERT_EQ(parsedJson["complex_string"].GetString(), std::string("This is a complex string with special characters: \n, \r, \t, \", \\ \""));
 }
 
 TEST_F(PartialJsonBuilderTest, simpleUncompleteJsonWithStringValue) {

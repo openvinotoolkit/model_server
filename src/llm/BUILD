@@ -105,6 +105,7 @@ ovms_cc_library(
     hdrs = ["io_processing/partial_json_builder.hpp"],
     srcs = ["io_processing/partial_json_builder.cpp"],
     deps = [
+        "//src:libovmslogging",
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
     visibility = ["//visibility:public"],

@@ -20,11 +20,12 @@
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+//#include <rapidjson/stringbuffer.h>
+//#include <rapidjson/writer.h>
 #pragma warning(pop)
 
 #include "partial_json_builder.hpp"
+#include "src/logging.hpp"
 
 using namespace rapidjson;
 namespace ovms {
@@ -90,6 +91,40 @@ void PartialJsonBuilder::clear() {
     state = IteratorState::BEGIN;
     lastSeparator = {0, IteratorState::BEGIN};
     openCloseStack.clear();
+}
+static void trimNewline(std::string& str) {
+    if (str.empty()) {
+        return;
+    }
+    if (str.back() == '\n') {
+        str.pop_back();
+    }
+    if (str.empty()) {
+        return;
+    }
+    if (str.front() == '\n') {
+        str.erase(str.begin());
+    }
+}
+static std::string escapeString(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    for (char c : input) {
+        switch (c) {
+        case '\n':
+            output += "\\n";
+            break;
+        case '\r':
+            output += "\\r";
+            break;
+        case '\t':
+            output += "\\t";
+            break;
+        default:
+            output += c;
+        }
+    }
+    return output;
 }
 
 Document PartialJsonBuilder::add(const std::string& chunk) {
@@ -210,12 +245,15 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     Document doc;
     if (state == IteratorState::END && openCloseStack.empty()) {
         if (currentPosition == buffer.size()) {
+    SPDLOG_ERROR("ER");
             doc.Parse(buffer.c_str());
         } else {
+    SPDLOG_ERROR("ER");
             doc.Parse(buffer.c_str(), currentPosition);
         }
 
         if (doc.HasParseError()) {
+    SPDLOG_ERROR("ER");
             throw std::runtime_error("Invalid JSON. Content:\n" + buffer);
         }
         return doc;
@@ -262,8 +300,13 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
         doc.SetObject();
         return doc;
     }
+    SPDLOG_ERROR("ER:{}", closedInput);
+    trimNewline(closedInput);
+    closedInput = escapeString(closedInput);
+    closedInput = escapeString(closedInput);
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
+    SPDLOG_ERROR("ER");
         throw std::runtime_error("Invalid JSON. Content:\n" + closedInput);
     }
     return doc;
