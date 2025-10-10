@@ -48,11 +48,31 @@ def cleanup_directories() {
                 println "Deleting: " + pathToDelete
                 status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
                 if (status != 0) {
-                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                    error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
                 } else {
                     echo "Deleting directory ${pathToDelete} successful."
                 }
             }
+        }
+    }
+}
+
+def cleanup_sdl(){
+    println "Cleaning SDL files"
+    if (env.SIGN_FILES == "true"){
+        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_signing")
+        if (status != 0) {
+            error "Error: Deleting directory repo_signing failed: ${status}. Check pipeline.log for details."
+        } else {
+            echo "Deleting directory repo_signing successful."
+        }
+    }
+    if (env.BDBA_SCAN == "true"){
+        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_ci_infra")
+        if (status != 0) {
+            error "Error: Deleting directory repo_ci_infra failed: ${status}. Check pipeline.log for details."
+        } else {
+            echo "Deleting directory repo_ci_infra successful."
         }
     }
 }
@@ -90,7 +110,7 @@ def deleteOldDirectories() {
             println "Deleting: " + pathToDelete
             status = bat(returnStatus: true, script: 'rmdir /s /q ' + pathToDelete)
             if (status != 0) {
-                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check piepeline.log for details."
+                error "Error: Deleting directory ${pathToDelete} failed: ${status}. Check pipeline.log for details."
             } else {
                 echo "Deleting directory ${pathToDelete} successful."
             }
@@ -128,6 +148,48 @@ def build(){
     } else {
         echo "Windows package created successfully."
     }
+    def unzipCmd = "tar -xf dist\\windows\\ovms.zip"
+    def status_unzip = bat(returnStatus: true, script: "${unzipCmd}")
+    if (status_unzip != 0) {
+        error "Error: Unzipping package failed: ${status_unzip}."
+    } else {
+        echo "Package unzipped successfully."
+    }
+}
+
+def clone_sdl_repo()
+{
+    println "Starting code signing"
+    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' sdl_repo')
+    if (statusPull != 0) {
+        error "Error: Downloading check_signing.py failed ${statusPull}. Check pipeline.log for details."
+    } else {
+        echo "check_signing.py downloaded successfully."
+    }
+}
+
+def sign(){
+    println "OVMS_USER=${env.OVMS_USER}"
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
+    if (status != 0) {
+        error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
+    } else {
+        echo "Code signing successful."
+    }
+}
+
+def bdba(){
+    println "Starting BDBA scan"
+    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.BDBA_REPO + ' repo_ci_infra')
+    if (statusPull != 0) {
+        error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+    }
+    def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
+    if (status != 0) {
+        error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."
+    } else {
+        echo "BDBA scan successful."
+    }   
 }
 
 def unit_test(){
@@ -166,7 +228,7 @@ def check_tests(){
 
     status = bat(returnStatus: true, script: 'grep "  PASSED  " win_full_test.log')
     if (status != 0) {
-            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check piepeline.log for details."
+            error "Error: Windows run test failed ${status}. Expecting   PASSED   at the end of log. Check pipeline.log for details."
     } else {
         echo "Success: Windows run test finished with success."
     }
@@ -186,6 +248,15 @@ def archive_test_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build_test.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
+}
+
+def archive_bdba_reports(){
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_bdba.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "ovms_windows_bdba_reports.zip"
+}
+
+def archive_sign_results(){
+    archiveArtifacts allowEmptyArchive: true, artifacts: "win_sign.log"
 }
 
 def setup_bazel_remote_cache(){
