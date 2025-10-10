@@ -274,6 +274,29 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
             jsonChanged = true;
         }
+        auto toolCallsIt = obj.FindMember("tool_calls");
+        if (toolCallsIt != obj.MemberEnd() && toolCallsIt->value.IsArray()) {
+            const auto& toolCallsArray = toolCallsIt->value.GetArray();
+            for (rapidjson::SizeType j = 0; j < toolCallsArray.Size(); ++j) {
+                auto& toolCall = toolCallsArray[j];
+                if (!toolCall.IsObject()) {
+                    return absl::InvalidArgumentError("Each tool_call must be an object");
+                }
+                auto functionIt = toolCall.FindMember("function");
+                if (functionIt == toolCall.MemberEnd() || !functionIt->value.IsObject()) {
+                    return absl::InvalidArgumentError("Each tool_call must have a 'function' object");
+                }
+                const auto& functionObj = functionIt->value.GetObject();
+                if (functionObj.FindMember("arguments") == functionObj.MemberEnd()) {
+                    // Add "arguments": "{}"
+                    rapidjson::Value argumentsKey("arguments", doc.GetAllocator());
+                    rapidjson::Value argumentsValue;
+                    argumentsValue.SetString("{}", doc.GetAllocator());
+                    functionIt->value.GetObject().AddMember(argumentsKey, argumentsValue, doc.GetAllocator());
+                    jsonChanged = true;
+                }
+            }
+        }
     }
     if (jsonChanged) {
         StringBuffer buffer;
