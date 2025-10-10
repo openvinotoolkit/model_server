@@ -75,12 +75,10 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= 4a90bedcdd64dc4d6fee54cf03de6c5617b35a48 # master 2025/09/23
-OV_CONTRIB_BRANCH ?= c39462ca8d7c550266dc70cdbfbe4fc8c5be0677  # master / 2024-10-31
-OV_TOKENIZERS_BRANCH ?= bd47b33bcae913c59dcbe7e67ff52dbdf826ac32 # master 2025/09/18
+OV_SOURCE_BRANCH ?= 80e587bccec151a9acb0bc73fb96d007daa56e82  # master 2025/10/07
+OV_TOKENIZERS_BRANCH ?= 760f9140ab1fd330d62ec171673ca0705abe6aa0  # master 2025/10/07
 
 OV_SOURCE_ORG ?= openvinotoolkit
-OV_CONTRIB_ORG ?= openvinotoolkit
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
@@ -162,11 +160,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "25.35.35096"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20052-4a90bedcdd6/openvino_toolkit_ubuntu24_2025.4.0.dev20250923_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu22_2025.4.0.dev20251007_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20052-4a90bedcdd6/openvino_toolkit_ubuntu22_2025.4.0.dev20250923_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu24_2025.4.0.dev20251007_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -175,7 +173,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
-  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20052-4a90bedcdd6/openvino_toolkit_rhel8_2025.4.0.dev20250923_x86_64.tgz
+  DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_rhel8_2025.4.0.dev20251007_x86_64.tgz
   INSTALL_DRIVER_VERSION ?= "24.52.32224"
 endif
 
@@ -212,7 +210,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
 	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
 	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
-	--build-arg ov_contrib_org=$(OV_CONTRIB_ORG)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
@@ -226,7 +223,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
 	--build-arg BASE_OS=$(BASE_OS)\
-	--build-arg ov_contrib_branch=$(OV_CONTRIB_BRANCH)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
