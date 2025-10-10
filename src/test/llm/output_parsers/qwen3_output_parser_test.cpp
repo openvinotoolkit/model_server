@@ -31,6 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
 #endif
 
+static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for Qwen3
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 
 class Qwen3OutputParserTest : public ::testing::Test {
@@ -53,7 +54,7 @@ protected:
 
     void SetUp() override {
         // For Qwen3 model we use hermes3 tool parser (due to the same format of generated tool calls) and qwen3 reasoning parser
-        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "hermes3", "qwen3");
+        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "hermes3", "qwen3", EMPTY_TOOLS_SCHEMA);
     }
 };
 

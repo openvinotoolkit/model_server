@@ -17,9 +17,12 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/generation_handle.hpp>
+#include <map>
+#include <unordered_map>
 #include <unordered_set>
 #include <string>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #pragma warning(push)
@@ -29,25 +32,34 @@
 #include <rapidjson/writer.h>
 #pragma warning(pop)
 
-#include "partial_json_builder.hpp"
-
 namespace ovms {
 struct ToolCall {
     std::string id;
     std::string name;
-    std::string arguments;
+    std::string arguments;  // JSON "{"a":1, "b":"SOME_STRING"}"
 };
 
-using ToolCalls = std::vector<ToolCall>;
+using ToolCalls_t = std::vector<ToolCall>;
 
 struct ParsedOutput {
     // Content without tool calls and reasoning
     std::string content;
     // Tool calls extracted from the response
-    ToolCalls toolCalls;
+    ToolCalls_t toolCalls;
     // Decoded reasoning from the response
     std::string reasoning;
 };
+
+enum class ParameterType {
+    STRING,
+    NUMBER,
+    BOOLEAN,
+    ARRAY,
+    OBJECT,
+    UNKNOWN
+};
+using ParametersTypeMap_t = std::unordered_map<std::string, ParameterType>;            // param name -> param type
+using ToolsParameterTypeMap_t = std::unordered_map<std::string, ParametersTypeMap_t>;  // tool name -> (param name -> param type)
 
 class BaseOutputParser {
 protected:

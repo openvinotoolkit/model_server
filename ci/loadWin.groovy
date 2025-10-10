@@ -134,7 +134,7 @@ def clean() {
 
 def build(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "1" ? "--with_python" : "--no_python"
+    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
     def status = bat(returnStatus: true, script: 'windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
     status = bat(returnStatus: true, script: 'grep "Build completed successfully" win_build.log"')
     if (status != 0) {
@@ -194,7 +194,7 @@ def bdba(){
 
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "1" ? "--with_python" : "--no_python"
+    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
     status = bat(returnStatus: true, script: 'windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
     if (status != 0) {
         error "Error: Windows build test failed ${status}. Check win_build_test.log for details."
