@@ -245,6 +245,17 @@ TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
     }
 }
 
+TEST_F(PartialJsonBuilderTest, escapedCharactersSanityCheck) {
+    std::string targetJson = R"(
+        {"name": "super-platform--create_object", "arguments": "{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n        BrokerIP : STRING := '127.0.0.1';\"})";
+    PartialJsonBuilder builder;
+    rapidjson::Document parsedJson;
+    for (size_t i = 0; i < targetJson.size(); ++i) {
+        std::string partialInput(1, targetJson[i]);
+        parsedJson = builder.add(partialInput);
+    }
+}
+
 TEST_F(PartialJsonBuilderTest, complexJsonIncrementalParsingSanityCheck) {
     std::string targetJson = R"(
     
@@ -406,12 +417,18 @@ TEST_F(PartialJsonBuilderTest, negativeCases) {
         {R"({"object": {"string":"1", "string",)", "Invalid JSON: Expected ':' after key."},
         {R"({"name": "get_weather",  1)", "Invalid JSON: Expected key to start with a quote or a proper object closure."},
         {R"({"name": a)", "Invalid JSON: Expected value to start with '{', '[', '\"', digit, 't', 'f', or 'n'."},
-        {R"({"numbers": []])", "Invalid JSON. Content:\n{\"numbers\": []]}"},                    // invalid closure
-        {R"({"numbers": [1, 2, 3})", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3}]}"},       // invalid closure
-        {R"({"numbers": [1, 2, 3b)", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3b]}"},       // invalid value
-        {R"({"numbers": [1, 2, 3")", "Invalid JSON. Content:\n{\"numbers\": [1, 2, 3\"\"]}"},    // invalid value
-        {R"({"string": "string\""1)", "Invalid JSON. Content:\n{\"string\": \"string\\\"\"1}"},  // invalid value
-        {R"({"bool": tak,)", "Invalid JSON. Content:\n{\"bool\": tak}"},                         // invalid special value
+        // invalid closure
+        {R"({"numbers": []])", "Invalid JSON. Content with closure attempt:\n{\"numbers\": []]}\nOriginal content:\n{\"numbers\": []]"},
+        // invalid closure
+        {R"({"numbers": [1, 2, 3})", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3}]}\nOriginal content:\n{\"numbers\": [1, 2, 3}"},
+        // invalid value
+        {R"({"numbers": [1, 2, 3b)", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3b]}\nOriginal content:\n{\"numbers\": [1, 2, 3b"},
+        // invalid value
+        {R"({"numbers": [1, 2, 3")", "Invalid JSON. Content with closure attempt:\n{\"numbers\": [1, 2, 3\"\"]}\nOriginal content:\n{\"numbers\": [1, 2, 3\""},
+        // invalid value
+        {R"({"string": "string\""1)", "Invalid JSON. Content with closure attempt:\n{\"string\": \"string\\\"\"1}\nOriginal content:\n{\"string\": \"string\\\"\"1"},
+        // invalid special value
+        {R"({"bool": tak,)", "Invalid JSON. Content with closure attempt:\n{\"bool\": tak}\nOriginal content:\n{\"bool\": tak,"},
     };
 
     for (const auto& [json, expectedError] : negativeCases) {
