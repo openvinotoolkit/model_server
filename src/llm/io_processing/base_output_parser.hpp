@@ -16,7 +16,6 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
-#include <openvino/genai/generation_handle.hpp>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -31,6 +30,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #pragma warning(pop)
+
+#include "../generation_config_header.hpp"
 
 namespace ovms {
 struct ToolCall {
