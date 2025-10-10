@@ -1310,3 +1310,25 @@ TEST_F(ConfigStatus, url_decode) {
     EXPECT_EQ("model%", ovms::urlDecode("model%"));
     EXPECT_EQ("model%2", ovms::urlDecode("model%2"));
 }
+
+TEST_F(ConfigStatus, headers2lowercase) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json"), &contents);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    std::unordered_map<std::string, std::string> headers = {{"X-Api-Key", "12345"},
+        {"Content-Type", "application/json"},
+        {"Authorization", "ABC"}};
+    std::unordered_map<std::string, std::string> expected = {{"x-api-key", "12345"},
+        {"content-type", "application/json"},
+        {"authorization", "ABC"}};
+    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+    headers = {};
+    expected = {};
+    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+    headers = {{"你ó Special Chars", "12345"}};
+    expected = {{"你ó special chars", "12345"}};
+    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+}

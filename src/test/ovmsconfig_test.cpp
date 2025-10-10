@@ -325,6 +325,12 @@ TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Use --list_models with --model_repository_path");
 }
 
+TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open API key file: /wrong/dir");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {
     char* n_argv[] = {
         "ovms",
@@ -1852,6 +1858,61 @@ TEST(OvmsGraphConfigTest, negativeEmbeddingsInvalidNormalize) {
     int arg_count = 10;
 
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "normalize: INVALID is not allowed. Supported values: true, false");
+}
+
+TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
+    // Create a temporary API key file
+    std::ofstream apiKeyFileTmp("api_key.txt");
+    apiKeyFileTmp << "1234";
+    apiKeyFileTmp.close();
+    std::string modelName = "test_name";
+    std::string modelPath = "model_path";
+    std::string apiKeyFile = "api_key.txt";
+    std::string rest_port = "8080";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--api_key_file",
+        (char*)apiKeyFile.c_str(),
+        (char*)"--rest_port",
+        (char*)rest_port.c_str(),
+    };
+
+    int arg_count = 9;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_EQ(config.getServerSettings().apiKey, "1234");
+    // Clean up the temporary file
+    std::remove("api_key.txt");
+}
+
+TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
+    setenv("API_KEY", "ABCD", 1);
+    std::string modelName = "test_name";
+    std::string modelPath = "model_path";
+    std::string apiKeyFile = "api_key.txt";
+    std::string rest_port = "8080";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--model_path",
+        (char*)modelPath.c_str(),
+        (char*)"--model_name",
+        (char*)modelName.c_str(),
+        (char*)"--rest_port",
+        (char*)rest_port.c_str(),
+    };
+
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    ASSERT_EQ(config.getServerSettings().apiKey, "ABCD");
+    // Clean up the environment variable
+    unsetenv("API_KEY");
 }
 
 class OvmsParamsTest : public ::testing::Test {

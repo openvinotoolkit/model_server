@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "http_rest_api_handler.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <memory>
@@ -669,6 +670,17 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     return StatusCode::OK;
 }
 
+std::unordered_map<std::string, std::string> HttpRestApiHandler::toLowerCaseHeaders(const std::unordered_map<std::string, std::string>& headers) {
+    std::unordered_map<std::string, std::string> lowercaseHeaders;
+    for (const auto& [key, value] : headers) {
+        std::string lowercaseKey = key;
+        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+        lowercaseHeaders[lowercaseKey] = value;
+    }
+    return lowercaseHeaders;
+}
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& api_key) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
@@ -677,15 +689,12 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     std::string modelName;
     bool streamFieldVal = false;
     // convert headers to lowercase because http headers are case insensitive
-    for (const auto& [key, value] : request_components.headers) {
-        std::string lowercaseKey = key;
-        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(),
-            [](unsigned char c) { return std::tolower(c); });
-    }
+    std::unordered_map<std::string, std::string> lowercaseHeaders;
+    lowercaseHeaders = toLowerCaseHeaders(request_components.headers);
     if (!api_key.empty()) {
-        if (request_components.headers.count("authorization")) {
-            if (request_components.headers.at("authorization") != "Bearer " + api_key) {
-                SPDLOG_DEBUG("Unauthorized request - invalid API key {} instead of {}", request_components.headers.at("authorization"), api_key);
+        if (lowercaseHeaders.count("authorization")) {
+            if (lowercaseHeaders.at("authorization") != "Bearer " + api_key) {
+                SPDLOG_DEBUG("Unauthorized request - invalid API key {} instead of {}", lowercaseHeaders.at("authorization"), api_key);
                 return StatusCode::UNAUTHORIZED;
             }
         } else {

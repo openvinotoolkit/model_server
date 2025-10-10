@@ -794,18 +794,48 @@ void SetUpServerForDownloadAndStartGGUF(std::unique_ptr<std::thread>& t, ovms::S
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
+// void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds) {
+//     server.setShutdownRequest(0);
+//     randomizeAndEnsureFree(port);
+//     char* argv[] = {(char*)"ovms",
+//         (char*)"--config_path",
+//         (char*)configPath,
+//         (char*)"--port",
+//         (char*)port.c_str(),};
+//     int argc = 5;
+//     t.reset(new std::thread([&argc, &argv, &server]() {
+//         EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+//     }));
+//     EnsureServerStartedWithTimeout(server, timeoutSeconds);
+// }
+
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds, std::string api_key) {
     server.setShutdownRequest(0);
     randomizeAndEnsureFree(port);
-    char* argv[] = {(char*)"ovms",
-        (char*)"--config_path",
-        (char*)configPath,
-        (char*)"--port",
-        (char*)port.c_str()};
-    int argc = 5;
-    t.reset(new std::thread([&argc, &argv, &server]() {
-        EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
-    }));
+    if (!api_key.empty()) {
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configPath,
+            (char*)"--port",
+            (char*)port.c_str(),
+            (char*)"--api_key_file",
+            (char*)api_key.c_str()};
+        int argc = 7;
+        std::cout << "Using args: ovms --config_path " << configPath << " --rest_port " << port << " --api_key " << api_key << std::endl;
+        t.reset(new std::thread([&argc, &argv, &server]() {
+            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        }));
+    } else {
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configPath,
+            (char*)"--port",
+            (char*)port.c_str()};
+        int argc = 5;
+        t.reset(new std::thread([&argc, &argv, &server]() {
+            EXPECT_EQ(EXIT_SUCCESS, server.start(argc, argv));
+        }));
+    }
     EnsureServerStartedWithTimeout(server, timeoutSeconds);
 }
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds) {
