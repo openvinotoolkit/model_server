@@ -24,6 +24,7 @@
 #include "spdlog/spdlog.h"
 
 #include "../capi_frontend/server_settings.hpp"
+#include "./env_guard.hpp"
 #include "../config.hpp"
 #include "../filesystem.hpp"
 #include "../ovms_exit_codes.hpp"
@@ -1891,7 +1892,7 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
 }
 
 TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
-    setenv("API_KEY", "ABCD", 1);
+    SetEnvironmentVar("API_KEY", "ABCD");
     std::string modelName = "test_name";
     std::string modelPath = "model_path";
     std::string apiKeyFile = "api_key.txt";
@@ -1912,7 +1913,7 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
 
     ASSERT_EQ(config.getServerSettings().apiKey, "ABCD");
     // Clean up the environment variable
-    unsetenv("API_KEY");
+    UnSetEnvironmentVar("API_KEY");
 }
 
 class OvmsParamsTest : public ::testing::Test {
