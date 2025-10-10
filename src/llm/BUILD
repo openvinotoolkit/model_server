@@ -114,10 +114,8 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         ":io_processing_utils",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        ":genai_proxy"
+    ],
 )
 ovms_cc_library(
     name = "io_processing_qwen3coder_tool_parser",
@@ -130,10 +128,8 @@ ovms_cc_library(
         ":io_processing_utils",
         ":io_processing_base_output_parser",
         ":apis_tool_schema_wrapper",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        ":genai_proxy",
+    ],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
