@@ -19,7 +19,7 @@ make python_image
 Example pull command with optimum model cache directory sharing and setting HF_TOKEN environment variable for model download authentication.
 
 ```bash
-docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v /opt/home/user/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct
+docker run -e HF_TOKEN=hf_YOURTOKEN -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v /opt/home/user/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
 ```
 
 ### Install optimum-cli
