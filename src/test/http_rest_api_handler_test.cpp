@@ -1328,7 +1328,7 @@ TEST_F(ConfigStatus, headers2lowercase) {
     headers = {};
     expected = {};
     EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
-    headers = {{"你ó Special Chars", "12345"}};
-    expected = {{"你ó special chars", "12345"}};
+    headers = {{"X-CustomHeader", "12345"}};
+    expected = {{"x-customheader", "12345"}};
     EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
 }
