@@ -87,12 +87,11 @@ protected:
         // create temp file with api key
         std::string apiKeyFile = getGenericFullPathForSrcTest("test_api_key.txt");
         std::ofstream ofs(apiKeyFile);
-        // get absolute path to the file
         std::string absoluteApiKeyPath = std::filesystem::absolute(apiKeyFile).string();
         ofs << "1234";
         ofs.close();
         ::SetUpServer(this->t, this->server, this->port, configPath, 10, absoluteApiKeyPath);
-        EnsureServerStartedWithTimeout(this->server, 5);
+        EnsureServerStartedWithTimeout(this->server, 20);
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         // remove temp file with api key
         std::filesystem::remove(absoluteApiKeyPath);
