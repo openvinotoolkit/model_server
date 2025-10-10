@@ -202,7 +202,12 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
                     }
                 }
             } else if (c == '\\') {
-                finishedWithEscapeCharacter = true;
+                // Check if the previous character was also a backslash (escaped backslash)
+                if (it != buffer.begin() && *(it - 1) == '\\') {
+                    // Already escaped, do not set finishedWithEscapeCharacter
+                } else {
+                    finishedWithEscapeCharacter = true;
+                }
             }
         }
     }
@@ -264,7 +269,7 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
     }
     doc.Parse(closedInput.c_str());
     if (doc.HasParseError()) {
-        throw std::runtime_error("Invalid JSON. Content:\n" + closedInput);
+        throw std::runtime_error("Invalid JSON. Content with closure attempt:\n" + closedInput + "\nOriginal content:\n" + buffer);
     }
     return doc;
 }
