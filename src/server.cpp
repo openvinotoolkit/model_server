@@ -123,6 +123,7 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("gRPC channel arguments: {}", config.grpcChannelArguments());
     SPDLOG_DEBUG("log level: {}", config.logLevel());
     SPDLOG_DEBUG("log path: {}", config.logPath());
+    SPDLOG_TRACE("API key: {}", config.getServerSettings().apiKey);
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
     SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
@@ -302,6 +303,7 @@ Status Server::startModules(ovms::Config& config) {
     // that's why we delay starting the servable until the very end while we need to create it before
     // GRPC & REST
     Status status;
+    apiKey = config.apiKey();
     bool inserted = false;
     auto it = modules.end();
     if (config.getServerSettings().serverMode == UNKNOWN_MODE) {
@@ -369,6 +371,10 @@ void Server::ensureModuleShutdown(const std::string& name) {
     auto it = modules.find(name);
     if (it != modules.end())
         it->second->shutdown();
+}
+
+std::string Server::getAPIKey() const {
+    return apiKey;
 }
 
 class ModulesShutdownGuard {

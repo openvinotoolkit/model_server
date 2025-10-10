@@ -51,8 +51,11 @@ public:
     virtual ~Server();
     Status startModules(ovms::Config& config);
     void shutdownModules();
+    std::string getAPIKey() const;
+    std::string setAPIKey(const std::string& newApiKey);
 
 private:
     void ensureModuleShutdown(const std::string& name);
+    std::string apiKey;
 };
 }  // namespace ovms
