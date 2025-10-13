@@ -223,6 +223,40 @@ def bdba(){
     }   
 }
 
+def download_package(){
+    println "Downloading package from URL: ${env.PACKAGE_URL}"
+    if(!fileExists('dist\\windows')){
+        def status = bat(returnStatus: true, script: 'mkdir dist\\windows')
+        if (status != 0) {
+            error "Error: Creating dist\\windows directory failed ${status}. Check pipeline.log for details."
+        } else {
+            echo "Directory dist\\windows created successfully."
+        }
+    }
+    dir('dist\\windows') {
+        if(fileExists('ovms.zip')){
+            def status_del = bat(returnStatus: true, script: 'del /f ovms.zip')
+            if (status_del != 0) {
+                error "Error: Deleting existing ovms.zip failed ${status_del}. Check pipeline.log for details."
+            } else {
+                echo "Existing ovms.zip deleted successfully."
+            }
+        }
+        def status = bat(returnStatus: true, script: 'curl -L -o ovms.zip ' + env.PACKAGE_URL)
+        if (status != 0) {
+            error "Error: Downloading package failed ${status}. Check pipeline.log for details."
+        } else {
+            echo "Package downloaded successfully."
+        }
+        def status_unzip = bat(returnStatus: true, script: 'tar -xf ovms.zip')
+        if (status_unzip != 0) {
+            error "Error: Unzipping package failed: ${status_unzip}."
+        } else {
+            echo "Package unzipped successfully."
+        }
+    }
+}
+
 def unit_test(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
     def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"

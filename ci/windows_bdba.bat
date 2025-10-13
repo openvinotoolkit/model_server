@@ -33,4 +33,4 @@ python binary_scans\ovms_bdba.py --key %BDBA_KEY% --config_dir=%CONFIG_PATH% --t
 if errorlevel 1 exit /b %errorlevel%
 
 tar -a -c -f ..\ovms_windows_bdba_reports.zip ovms_windows*
-del %OVMS_PATH%\%zipname%
+del "%OVMS_PATH%\%zipname%"

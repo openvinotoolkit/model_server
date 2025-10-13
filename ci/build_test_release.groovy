@@ -10,6 +10,7 @@ pipeline {
         NODE_NAME = 'Windows_SDL'
     }
     stages {
+        when { expression { env.PACKAGE_URL == "" } }
         stage ("Build and test windows") {
             steps {
                 script {
@@ -36,6 +37,24 @@ pipeline {
                           } finally {
                             windows.archive_build_artifacts()
                             windows.archive_test_artifacts()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
+        }
+        stage ("Pull files"){
+            when { expression { env.PACKAGE_URL != "" } }
+            steps{
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.clone_sdl_repo()
+                            windows.pull_files()
+                        } finally {
+                            echo "Pull files finished"
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
