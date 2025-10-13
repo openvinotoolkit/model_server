@@ -204,7 +204,7 @@ Status OptimumDownloader::downloadModel() {
         SPDLOG_DEBUG("Detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
         cmd = getConvertCmd();
         retCode = -1;
-        std::string output = exec_cmd(cmd, retCode);
+        output = exec_cmd(cmd, retCode);
         if (retCode != 0) {
             SPDLOG_DEBUG("Command output {}", output);
             SPDLOG_ERROR("convert_tokenizer command failed.");
