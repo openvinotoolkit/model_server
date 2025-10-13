@@ -242,7 +242,7 @@ def download_package(){
                 echo "Existing ovms.zip deleted successfully."
             }
         }
-        def status = bat(returnStatus: true, script: 'curl -L -o ovms.zip ' + env.PACKAGE_URL)
+        def status = bat(returnStatus: true, script: 'curl -L -k -o ovms.zip ' + env.PACKAGE_URL)
         if (status != 0) {
             error "Error: Downloading package failed ${status}. Check pipeline.log for details."
         } else {
