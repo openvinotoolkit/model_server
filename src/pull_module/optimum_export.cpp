@@ -51,7 +51,7 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
+    oss << "--task feature-extraction --library sentence_transformers";
     oss << " --model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
@@ -64,7 +64,7 @@ std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--disable-convert-tokenizer --model " << this->sourceModel;
+    oss << "--model " << this->sourceModel;
     oss << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " --task text-classification ";
@@ -114,12 +114,32 @@ std::string OptimumDownloader::getExportCmd() {
     return cmd;
 }
 
-OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd, const std::string& cliCheckCmd) :
+std::string OptimumDownloader::getConvertCmd() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
+    oss << this->sourceModel;
+    oss << " --with-detokenizer -o ";
+    oss << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
+bool OptimumDownloader::checkIfDetokenizerFileIsExported() {
+    return std::filesystem::exists(FileSystem::joinPath({this->downloadPath, "openvino_detokenizer.xml"}));
+}
+
+OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
+    const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd,
+    const std::string& cliCheckCmd, const std::string& convertExportCmd, const std::string& convertCheckCmd) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     exportSettings(inExportSettings),
     task(inTask),
     OPTIMUM_CLI_CHECK_COMMAND(cliCheckCmd),
-    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd) {}
+    OPTIMUM_CLI_EXPORT_COMMAND(cliExportCmd),
+    CONVERT_TOKENIZER_CHECK_COMMAND(convertCheckCmd),
+    CONVERT_TOKENIZER_EXPORT_COMMAND(convertExportCmd) {}
 
 Status OptimumDownloader::checkRequiredToolsArePresent() {
     int retCode = -1;
@@ -131,6 +151,15 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     }
 
     SPDLOG_DEBUG("Optimum-cli executable is present");
+
+    output = exec_cmd(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
+    if (retCode != 0) {
+        SPDLOG_DEBUG("Command output {}", output);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. Use the ovms package with convert_tokenizer.", this->sourceModel);
+        return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
+    }
+
+    SPDLOG_DEBUG("Convert_tokenizer executable is present");
     return StatusCode::OK;
 }
 
@@ -169,6 +198,20 @@ Status OptimumDownloader::downloadModel() {
         SPDLOG_DEBUG("Command output {}", output);
         SPDLOG_ERROR("optimum-cli command failed.");
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;
+    }
+
+    if (!this->checkIfDetokenizerFileIsExported()) {
+        SPDLOG_DEBUG("Detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
+        cmd = getConvertCmd();
+        retCode = -1;
+        std::string output = exec_cmd(cmd, retCode);
+        if (retCode != 0) {
+            SPDLOG_DEBUG("Command output {}", output);
+            SPDLOG_ERROR("convert_tokenizer command failed.");
+            return StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED;
+        }
+    } else {
+        SPDLOG_DEBUG("Detokenizer is found in the exported model directory. Convert_tokenizer command not required.");
     }
 
     return StatusCode::OK;

@@ -24,7 +24,11 @@ class Status;
 
 class OptimumDownloader : public IModelDownloader {
 public:
-    OptimumDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ", const std::string& cliCheckCmd = "optimum-cli -h");
+    OptimumDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel,
+        const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ",
+        const std::string& cliCheckCmd = "optimum-cli -h",
+        const std::string& convertExportCmd = "convert_tokenizer ",
+        const std::string& convertCheckCmd = "convert_tokenizer -h");
     Status downloadModel() override;
 
 protected:
@@ -32,9 +36,13 @@ protected:
     const GraphExportType task;
     std::string OPTIMUM_CLI_CHECK_COMMAND;
     std::string OPTIMUM_CLI_EXPORT_COMMAND;
+    std::string CONVERT_TOKENIZER_CHECK_COMMAND;
+    std::string CONVERT_TOKENIZER_EXPORT_COMMAND;
 
     Status checkRequiredToolsArePresent();
+    bool checkIfDetokenizerFileIsExported();
     std::string getExportCmd();
+    std::string getConvertCmd();
     std::string getExportCmdText();
     std::string getExportCmdEmbeddings();
     std::string getExportCmdRerank();
