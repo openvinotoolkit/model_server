@@ -64,6 +64,7 @@ pipeline {
         stage ("Signing files"){
             when { expression { env.SIGN_FILES == "true" } }
             steps {
+                echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'PRERELEASE_SIGN',
