@@ -159,18 +159,53 @@ def build(){
 
 def clone_sdl_repo()
 {
-    println "Starting code signing"
-    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' sdl_repo')
-    if (statusPull != 0) {
-        error "Error: Downloading check_signing.py failed ${statusPull}. Check pipeline.log for details."
-    } else {
-        echo "check_signing.py downloaded successfully."
+    if(!fileExists('sdl_repo')){
+        println "Starting code signing"
+        def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' sdl_repo')
+        if (statusPull != 0) {
+            error "Error: Downloading sdl_repo failed ${statusPull}. Check pipeline.log for details."
+        } else {
+            echo "sdl_repo downloaded successfully."
+        }
+    }else{
+        println "Pulling latest changes in sdl_repo"
+        dir('sdl_repo') {
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/main')
+            if (statusPull != 0) {
+                error "Error: Pulling latest changes in sdl_repo failed ${statusPull}. Check pipeline.log for details."
+            } else {
+                echo "sdl_repo updated successfully."
+            }
+        }
+    }
+}
+
+def clone_bdba_repo()
+{
+    if(!fileExists('repo_ci_infra')){
+        println "Starting BDBA infrastructure download"
+        def statusPull = bat(returnStatus: true, script: 'git clone ' + env.BDBA_REPO + ' repo_ci_infra')
+        if (statusPull != 0) {
+            error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+        } else {
+            echo "BDBA infrastructure downloaded successfully."
+        }
+    }else{
+        println "Pulling latest changes in BDBA infrastructure"
+        dir('repo_ci_infra') {
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/main')
+            if (statusPull != 0) {
+                error "Error: Pulling latest changes in BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
+            } else {
+                echo "BDBA infrastructure updated successfully."
+            }
+        }
     }
 }
 
 def sign(){
-    println "OVMS_USER=${env.OVMS_USER}"
-    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.OVMS_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
+    println "SIGNING_USER=${env.SIGNING_USER}"
+    def status = bat(returnStatus: true, script: 'ci\\windows_sign.bat ' + env.SIGNING_USER + ' dist\\windows ' + env.OVMS_PYTHON_ENABLED)
     if (status != 0) {
         error "Error: Windows code signing failed ${status}. Check win_sign.log for details."
     } else {
@@ -180,10 +215,6 @@ def sign(){
 
 def bdba(){
     println "Starting BDBA scan"
-    def statusPull = bat(returnStatus: true, script: 'git clone ' + env.BDBA_REPO + ' repo_ci_infra')
-    if (statusPull != 0) {
-        error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
-    }
     def status = bat(returnStatus: true, script: 'ci\\windows_bdba.bat ' + env.BDBA_CREDS_PSW + ' dist\\windows sdl_repo\\ovms-package')
     if (status != 0) {
         error "Error: Windows BDBA scan failed ${status}. Check win_bdba.log for details."

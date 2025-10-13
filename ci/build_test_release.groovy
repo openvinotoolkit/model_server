@@ -46,11 +46,26 @@ pipeline {
         stage ("Signing files"){
             when { expression { env.SIGN_FILES == "true" } }
             steps {
-                withCredentials([usernamePassword(
+                withCredentials([
+                    usernamePassword(
                         credentialsId: 'PRERELEASE_SIGN',
                         usernameVariable: 'PRERELEASE_USER',
-                        passwordVariable: 'OVMS_PASS')]) {
+                        passwordVariable: 'PRERELEASE_PASS'), 
+                    usernamePassword(
+                        credentialsId: 'RELEASE_SIGN',
+                        usernameVariable: 'RELEASE_USER',
+                        passwordVariable: 'RELEASE_PASS'),
+                    ]) {
                     script {
+                        if (env.RELEASE_TYPE == "RELEASE") {
+                            env.SIGNING_USER = env.RELEASE_USER
+                            env.OVMS_PASS = env.RELEASE_PASS
+                        } else if (env.RELEASE_TYPE == "PRE-RELEASE") {
+                            env.SIGNING_USER = env.PRERELEASE_USER
+                            env.OVMS_PASS = env.PRERELEASE_PASS
+                        } else {
+                            error "Unknown RELEASE_TYPE: ${env.RELEASE_TYPE}"
+                        }
                         def windows = load 'ci/loadWin.groovy'
                         if (windows != null) {
                             try {
@@ -76,6 +91,7 @@ pipeline {
                             if(!fileExists('sdl_repo')){
                                 windows.clone_sdl_repo()
                             }
+                            windows.clone_bdba_repo()
                             windows.bdba()
                             def logFile = "${env.WORKSPACE}\\win_bdba.log"
                             def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()
