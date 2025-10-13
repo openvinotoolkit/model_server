@@ -287,7 +287,9 @@ def archive_bdba_reports(){
 }
 
 def archive_sign_results(){
+    def python_suffix = env.OVMS_PYTHON_ENABLED == "0" ? "off" : "on"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_sign.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms_windows_python_${python_suffix}.zip"
 }
 
 def setup_bazel_remote_cache(){

@@ -12,7 +12,7 @@ if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT="
 )
 
-python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee ..\..\win_sign.log
+python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --zip --verbose --print_all 2>&1 | tee ..\..\win_sign.log
 for /f "tokens=* delims=" %%a in ('type ..\..\win_sign.log ^| tail -n 1') do (
     echo %%a | findstr /C:"[ OK ]" >nul
     if not errorlevel 1 (
