@@ -59,15 +59,15 @@ def cleanup_directories() {
 
 def cleanup_sdl(){
     println "Cleaning SDL files"
-    if (env.SIGN_FILES == "true"){
-        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_signing")
+    if (fileExists('sdl_repo')){
+        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\sdl_repo")
         if (status != 0) {
-            error "Error: Deleting directory repo_signing failed: ${status}. Check pipeline.log for details."
+            error "Error: Deleting directory sdl_repo failed: ${status}. Check pipeline.log for details."
         } else {
-            echo "Deleting directory repo_signing successful."
+            echo "Deleting directory sdl_repo successful."
         }
     }
-    if (env.BDBA_SCAN == "true"){
+    if (fileExists('repo_ci_infra')){
         def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_ci_infra")
         if (status != 0) {
             error "Error: Deleting directory repo_ci_infra failed: ${status}. Check pipeline.log for details."
