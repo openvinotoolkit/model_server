@@ -455,6 +455,7 @@ TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     cliMockPath += " -h";
     optimumDownloader->setExportCliCheckCommand(cliMockPath);
+    optimumDownloader->setConvertCliCheckCommand("echo ");
     ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::OK);
 }
 
