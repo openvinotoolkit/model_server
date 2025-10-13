@@ -10,8 +10,8 @@ pipeline {
         NODE_NAME = 'Windows_SDL'
     }
     stages {
-        when { expression { env.PACKAGE_URL == "" } }
         stage ("Build and test windows") {
+            when { expression { env.PACKAGE_URL == "" } }
             steps {
                 script {
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
