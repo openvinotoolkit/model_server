@@ -136,12 +136,6 @@ static std::string escapeString(const std::string& input) {
         case '\n':
             output += "\\n";
             break;
-        case '\r':
-            output += "\\r";
-            break;
-        case '\t':
-            output += "\\t";
-            break;
         default:
             output += c;
         }
@@ -179,10 +173,24 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     auto previousState = this->currentState;
     switch (this->currentState) {
     case State::Content: {
-        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_START_TAG);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_START_TAG.length();
-        this->currentState = State::InsideToolCall;
-        this->toolCallPositions.begin.push(pos);
+        // normally we expect <tool_call> tag but we observerd that sometimes model generates <function=...> directly
+        // so we will check for both tags and handle accordingly
+        auto posTool = this->streamContent.find(Qwen3CoderToolParser::TOOL_START_TAG, this->getLastProcessedPosition());
+        auto posFunc = this->streamContent.find(Qwen3CoderToolParser::FUNCTION_NAME_TAG, this->getLastProcessedPosition());
+        if (posFunc == std::string::npos && posTool == std::string::npos) {
+            SPDLOG_TRACE("Did not find: {} or {}", Qwen3CoderToolParser::TOOL_START_TAG, Qwen3CoderToolParser::FUNCTION_NAME_TAG);
+        } else if (posTool < posFunc) {
+            // found <tool_call> first
+            this->lastProcessedPosition = posTool + Qwen3CoderToolParser::TOOL_START_TAG.length();
+            this->currentState = State::InsideToolCall;
+            this->toolCallPositions.begin.push(posTool);
+        } else {
+            // found <function=...> first, we will assume <tool_call> is missing and we will add it
+            SPDLOG_DEBUG("Did not find: {}, assuming it should exist", Qwen3CoderToolParser::TOOL_START_TAG);
+            this->lastProcessedPosition = posFunc + Qwen3CoderToolParser::FUNCTION_NAME_TAG.length();
+            this->currentState = State::InsideFunctionName;
+            this->toolCallPositions.begin.push(posFunc);
+        }
         break;
     }
     case State::InsideToolCall: {
@@ -202,7 +210,6 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         auto funcEnd = streamContent.find(Qwen3CoderToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
         auto paramStart = streamContent.find(Qwen3CoderToolParser::PARAMETER_NAME_TAG, this->lastProcessedPosition);
         if (funcEnd == std::string::npos && paramStart == std::string::npos) {
-            break;
         } else if (paramStart < funcEnd) {  // next parameter
             this->lastProcessedPosition = paramStart + Qwen3CoderToolParser::PARAMETER_NAME_TAG.length();
             this->currentState = State::InsideParameterName;

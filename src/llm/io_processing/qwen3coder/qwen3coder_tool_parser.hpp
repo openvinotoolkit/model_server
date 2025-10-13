@@ -148,7 +148,7 @@ public:
         return TOOL_START_TAG;
     }
     const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {};
+        static const std::unordered_set<std::string> specialParsingStartTags = {FUNCTION_NAME_TAG};
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {
