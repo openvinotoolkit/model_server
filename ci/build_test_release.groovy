@@ -51,8 +51,7 @@ pipeline {
                     def windows = load 'ci/loadWin.groovy'
                     if (windows != null) {
                         try {
-                            windows.clone_sdl_repo()
-                            windows.pull_files()
+                            windows.download_package()
                         } finally {
                             echo "Pull files finished"
                         }
