@@ -12,7 +12,9 @@ if /I "%PYTHON%"=="1" (
     set "PYTHON_OPT="
 )
 
-python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --zip --verbose --print_all 2>&1 | tee ..\..\win_sign.log
+python check_signing.py --user=%OVMS_USER% --path=%OVMS_FILES% %PYTHON_OPT% --auto --verbose --print_all 2>&1 | tee ..\..\win_sign.log
+python check_signing.py --zip --path=%OVMS_FILES% %PYTHON_OPT% --auto
+
 for %%f in (ovms_windows_python_*) do (
     copy "%%f" "%OVMS_FILES%"
 )
