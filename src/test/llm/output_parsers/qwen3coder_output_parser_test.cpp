@@ -563,7 +563,7 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
     // if we don't get closing tag we don't emit tool call
     int i = -1;
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
-        // now we test functool improperly begininign with <function=... and then being finished by </tool_call>
+        // now we test functool improperly beginning with <function=... and then being finished by </tool_call>
         // its important that this is before any <tool_call> tag
         {"<function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"string_tool"}}]}})"},
         {"value_before_tool_call</parameter></function></tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"value_before_tool_call\"}"}}]}})"},
