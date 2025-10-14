@@ -605,7 +605,7 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"arg1\": \"\\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
         {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        // now we test functool improperly begininign with <function=... and then being finished by </tool_call>
+        // now we test functool improperly beginning with <function=... and then being finished by </tool_call>
         {"<function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":3,"function":{"name":"string_tool"}}]}})"},
         {"value1</parameter></function></tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":3,"function":{"arguments":"{\"arg1\": \"value1\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
