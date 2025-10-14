@@ -209,8 +209,8 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
                     --backslashIt;
                     ++backslashCount;
                 }
-                if (backslashCount % 2 == 0) {
-                    // Already escaped, do not set finishedWithEscapeCharacter
+                if (backslashCount % 2 != 0) {
+                    // Odd number of preceding backslashes: this backslash is escaping the next character
                     finishedWithEscapeCharacter = true;
                 }
             }
