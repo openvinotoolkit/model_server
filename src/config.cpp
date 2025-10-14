@@ -145,7 +145,20 @@ bool Config::validate() {
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
-            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
+            bool validDeviceSelected = false;
+            if (settings.targetDevice.rfind("GPU.", 0) == 0) {
+                // Accept GPU.x where x is a number to select specific GPU card
+                std::string indexPart = settings.targetDevice.substr(4);
+                validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
+            } else if (settings.targetDevice.rfind("HETERO", 0) == 0) {
+                // Accept HETERO:<device1>,<device2>,... to select specific devices in the list
+                validDeviceSelected = true;
+            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) != allowedTargetDevices.end()) {
+                // Accept CPU, GPU, NPU, AUTO as valid devices
+                validDeviceSelected = true;
+            }
+
+            if (!validDeviceSelected) {
                 std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }

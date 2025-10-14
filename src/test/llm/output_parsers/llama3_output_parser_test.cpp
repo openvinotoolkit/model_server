@@ -31,6 +31,7 @@ const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_t
 const std::string tokenizerPath = "/ovms/src/test/llm_testing/meta-llama/Llama-3.1-8B-Instruct";
 #endif
 
+static const ovms::ToolsSchemas_t EMPTY_TOOL_SCHEMA = {};  // not used for llama3
 static std::unique_ptr<ov::genai::Tokenizer> llama3Tokenizer;
 
 // Id of the <|python_tag|> which is a special token used to indicate the start of a tool calls
@@ -56,8 +57,8 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOL_SCHEMA);
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOL_SCHEMA);
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
@@ -222,7 +223,7 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOL_SCHEMA);
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"});

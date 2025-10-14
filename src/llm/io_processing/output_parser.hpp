@@ -23,6 +23,8 @@
 
 #include "base_output_parser.hpp"
 
+#include "src/llm/apis/tool_schema_wrapper.hpp"
+
 namespace ovms {
 
 class OutputParser {
@@ -72,7 +74,7 @@ private:
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName);
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
 
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;

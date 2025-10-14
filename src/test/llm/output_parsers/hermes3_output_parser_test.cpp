@@ -32,6 +32,7 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/NousResearch/Herme
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> hermes3Tokenizer;
+static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in hermes3
 
 class Hermes3OutputParserTest : public ::testing::Test {
 protected:
@@ -54,8 +55,8 @@ protected:
 
     void SetUp() override {
         // For Hermes3 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
-        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "");
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithImmediateToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
         outputParserWithImmediateToolParsing->enableImmediateToolParsing();
     }
 };
@@ -302,10 +303,9 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"}", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"}\"}}]}}"},  // returning last arguments part
-        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt
+        {"</tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},                                                          // closed main JSON, with the last chunk, now only return nullopt since there is no delta
         // Starting third tool. Collecting chunk until full name is received. Don't return until then.
-        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<tool_call>\n{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -324,8 +324,49 @@ TEST_F(Hermes3OutputParserTest, HolisticStreaming) {
         {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
         {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"arg1\"}}]}}"},
         {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
+        {"val{{{ue1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"val{{{ue1\"}}]}}"},
+        {"}}</tool_call>\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"}\"}}]}}"},
+        // Starting fourth tool (without arguments). Collecting chunk until full name is received. Don't return until then.
+        {"<tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_four", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // As we have 'arguments' key present, we can return first delta
+        {"\": {}}\n", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":3,\"function\":{\"name\":\"super_tool_number_four\"}}]}}"},
+        // Both arguments key first appearance and full arguments value is received in the previous chunk, but we cannot return function name and arguments in the same chunk
+        // so arguments value is returned in the next chunk
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":3,\"function\":{\"arguments\":\"{}\"}}]}}"},
+        // Starting fifth tool. Collecting chunk until full name is received. Don't return until then.
+        {"<tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"name", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\":", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"super", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_number", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"_five", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\",", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" \"", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"arguments", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // As we have 'arguments' key present, we can return first delta
+        {"\":", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"id\":\"XXXXXXXXX\",\"type\":\"function\",\"index\":4,\"function\":{\"name\":\"super_tool_number_five\"}}]}}"},
+        // Consecutive deltas without 'id' and 'type'. In order to find the end of arguments parser has one chunk delay to handle end of tool.
+        {" {", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"{\"}}]}}"},
+        {"arg1", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\"\"}}]}}"},
+        {"\": ", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"arg1\"}}]}}"},
+        {"\"", ov::genai::GenerationFinishReason::NONE, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\": \"}}]}}"},
         // Simulating hitting max tokens while during tool call generation. We should return the last two chunks as delta to flush the delay window
-        {"val,", ov::genai::GenerationFinishReason::LENGTH, "{\"delta\":{\"tool_calls\":[{\"index\":2,\"function\":{\"arguments\":\"\\\"val,\"}}]}}"},  // clo
+        {"val,", ov::genai::GenerationFinishReason::LENGTH, "{\"delta\":{\"tool_calls\":[{\"index\":4,\"function\":{\"arguments\":\"\\\"val,\"}}]}}"},
     };
 
     for (bool immediateParsing : {false, true}) {
