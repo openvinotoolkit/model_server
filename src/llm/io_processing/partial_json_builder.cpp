@@ -202,10 +202,15 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
                     }
                 }
             } else if (c == '\\') {
-                // Check if the previous character was also a backslash (escaped backslash)
-                if (it != buffer.begin() && *(it - 1) == '\\') {
+                // Count consecutive backslashes before current position
+                auto backslashIt = it;
+                int backslashCount = 0;
+                while (backslashIt != buffer.begin() && *(backslashIt - 1) == '\\') {
+                    --backslashIt;
+                    ++backslashCount;
+                }
+                if (backslashCount % 2 == 0) {
                     // Already escaped, do not set finishedWithEscapeCharacter
-                } else {
                     finishedWithEscapeCharacter = true;
                 }
             }

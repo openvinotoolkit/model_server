@@ -247,7 +247,7 @@ TEST_F(PartialJsonBuilderTest, complexJsonWithIncompleteKey) {
 
 TEST_F(PartialJsonBuilderTest, escapedCharactersSanityCheck) {
     std::string targetJson = R"(
-        {"name": "super-platform--create_object", "arguments": "{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n        BrokerIP : STRING := '127.0.0.1';\"})";
+        {"name": "super-platform--create_object", "arguments": "{\"impl\": \"TYPE MQTT_Config AS\\n    VAR\\n  \\\"txt\\\"      BrokerIP : STRING := '127.0.0.1';\"})";
     PartialJsonBuilder builder;
     rapidjson::Document parsedJson;
     for (size_t i = 0; i < targetJson.size(); ++i) {
