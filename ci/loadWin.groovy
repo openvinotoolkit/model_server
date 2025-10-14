@@ -130,6 +130,14 @@ def install_dependencies() {
 
 def clean() {
     def output1 = bat(returnStdout: true, script: 'windows_clean_build.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    if(fileExists('dist\\windows\\ovms')){
+        def status_del = bat(returnStatus: true, script: 'rmdir /s /q ovms')
+        if (status_del != 0) {
+            error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
+        } else {
+            echo "Existing ovms directory deleted successfully."
+        }
+    }
 }
 
 def build(){
@@ -240,6 +248,14 @@ def download_package(){
                 error "Error: Deleting existing ovms.zip failed ${status_del}. Check pipeline.log for details."
             } else {
                 echo "Existing ovms.zip deleted successfully."
+            }
+        }
+        if(fileExists('ovms')){
+            def status_del = bat(returnStatus: true, script: 'rmdir /s /q ovms')
+            if (status_del != 0) {
+                error "Error: Deleting existing ovms directory failed ${status_del}. Check pipeline.log for details."
+            } else {
+                echo "Existing ovms directory deleted successfully."
             }
         }
         def status = bat(returnStatus: true, script: 'curl -L -k -o ovms.zip ' + env.PACKAGE_URL)
