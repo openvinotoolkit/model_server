@@ -127,7 +127,7 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
-// helper function to double escape \n,\r, \t in string
+// helper function to escape \n
 static std::string escapeString(const std::string& input) {
     std::string output;
     output.reserve(input.size());
