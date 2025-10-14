@@ -106,11 +106,15 @@ WindowsServiceManager::WindowsServiceManager() {
 
 struct WinHandleDeleter
 {
-  typedef HANDLE pointer;
-  void operator()(HANDLE handle) {
-    DEBUG_LOG("WinHandleDeleter: Closing handle.");
-    if (handle != INVALID_HANDLE_VALUE)
-        CloseHandle(handle);}
+    typedef HANDLE pointer;
+    void operator()(HANDLE h)
+    {
+        DEBUG_LOG("WinHandleDeleter: closing handle");
+        if(h != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(h);
+        }
+    }
 };
 
 VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
@@ -136,7 +140,7 @@ VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         manager.ovmsParams.argc = argc;
         manager.ovmsParams.argv = argv;
     }
-    	
+
     std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, WindowsServiceManager::serviceWorkerThread, &manager.ovmsParams, 0, NULL));
     if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
         // Handle error
