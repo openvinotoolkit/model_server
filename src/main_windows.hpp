@@ -13,6 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#ifndef SRC_MAIN_WINDOWS_HPP_
+#define SRC_MAIN_WINDOWS_HPP_
+#endif  // SRC_MAIN_WINDOWS_HPP_
+
+#include <memory>
 #include <string>
 #include <utility>
 #include <Windows.h>
@@ -32,6 +37,7 @@ class OvmsService {
 private:
     ovms::Server& server = ovms::Server::instance();
     std::unique_ptr<std::thread> t;
+
 public:
     bool started;
     int error;
@@ -45,13 +51,13 @@ public:
     WindowsServiceManager();
     ConsoleParameters ovmsParams;
     static LPSTR serviceName;
-    VOID WINAPI serviceMain(DWORD argc, LPTSTR *argv);
+    VOID WINAPI serviceMain(DWORD argc, LPTSTR* argv);
 
 private:
-    static SERVICE_STATUS        serviceStatus;
+    static SERVICE_STATUS serviceStatus;
     static SERVICE_STATUS_HANDLE statusHandle;
-    static HANDLE                serviceStopEvent;
-    
+    static HANDLE serviceStopEvent;
+
     static VOID WINAPI serviceCtrlHandler(DWORD);
     static DWORD WINAPI serviceWorkerThread(LPVOID lpParam);
 

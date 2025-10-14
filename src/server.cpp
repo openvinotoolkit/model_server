@@ -465,7 +465,13 @@ std::string get_current_time_string() {
 }
 
 std::ofstream logFile("C:\\test2\\ovms2.log");
-#define DEBUG_LOG(msg) { std::stringstream ss; ss << get_current_time_string() << msg << std::endl; logFile << ss.rdbuf(); logFile.flush(); }
+#define DEBUG_LOG(msg)                                       \
+    {                                                        \
+        std::stringstream ss;                                \
+        ss << get_current_time_string() << msg << std::endl; \
+        logFile << ss.rdbuf();                               \
+        logFile.flush();                                     \
+    }
 
 // OVMS Start
 int Server::start(int argc, char** argv) {
@@ -480,7 +486,8 @@ int Server::start(int argc, char** argv) {
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
         for (int i = 0; i < argc; ++i) {
-            std::stringstream ss2; ss2 << "Server::start Argument " << i << ": " << argv[i];
+            std::stringstream ss2;
+            ss2 << "Server::start Argument " << i << ": " << argv[i];
             DEBUG_LOG(ss2.rdbuf());
         }
         DEBUG_LOG("parse");
