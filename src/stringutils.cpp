@@ -255,4 +255,37 @@ bool stringsOverlap(const std::string& lhs, const std::string& rhs) {
     return false;
 }
 
+void escapeSpecialCharacters(std::string& text) {
+    // Escape all double quotes, backslashes, and control characters in the text
+    std::string escaped;
+    for (char c : text) {
+        switch (c) {
+        case '\"':
+            escaped += "\\\"";
+            break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '\b':
+            escaped += "\\b";
+            break;
+        case '\f':
+            escaped += "\\f";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped += c;
+        }
+    }
+    text = escaped;
+}
+
 }  // namespace ovms

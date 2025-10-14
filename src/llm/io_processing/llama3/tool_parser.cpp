@@ -29,6 +29,7 @@
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
+#include "../../../stringutils.hpp"
 
 namespace ovms {
 void Llama3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
@@ -158,10 +159,8 @@ std::optional<rapidjson::Document> Llama3ToolParser::parseChunk(const std::strin
     // JSON already contains 'parameters'/'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
     if (jsonHasArgumentsOrParameters(lastJson)) {
         std::string modifiedChunk = chunk;
-        // Escaping all double quotes in the parameters/arguments string
-        for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
-            modifiedChunk.insert(pos, "\\");
-        }
+        // Since inside a string, we need to escape characters like quotes, new lines, tabs, etc.
+        escapeSpecialCharacters(modifiedChunk);
 
         // Handle the case when we are starting to collect parameters/arguments.
         // Force parameters/arguments string type and fill first element of the delay array.

@@ -28,6 +28,7 @@
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
+#include "../../../stringutils.hpp"
 
 namespace ovms {
 
@@ -199,39 +200,6 @@ void Hermes3ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     if (firstToolCallPos != std::string::npos) {
         parsedOutput.content.erase(firstToolCallPos);
     }
-}
-
-void escapeSpecialCharacters(std::string& chunk) {
-    // Escape all double quotes, backslashes, and control characters in the chunk
-    std::string escaped;
-    for (char c : chunk) {
-        switch (c) {
-        case '\"':
-            escaped += "\\\"";
-            break;
-        case '\\':
-            escaped += "\\\\";
-            break;
-        case '\b':
-            escaped += "\\b";
-            break;
-        case '\f':
-            escaped += "\\f";
-            break;
-        case '\n':
-            escaped += "\\n";
-            break;
-        case '\r':
-            escaped += "\\r";
-            break;
-        case '\t':
-            escaped += "\\t";
-            break;
-        default:
-            escaped += c;
-        }
-    }
-    chunk = escaped;
 }
 
 std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) {

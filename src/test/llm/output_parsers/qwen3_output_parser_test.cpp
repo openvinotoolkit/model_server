@@ -307,8 +307,7 @@ TEST_F(Qwen3OutputParserTest, HolisticStreaming) {
     }
 }
 
-// Major positive test for streaming tool calls with multiple chunks and phase switching
-// Attempt thinking, but without reasoning parser, deltas should not contain reasoning content
+// Positive test for streaming tool calls with complex arguments containing special characters
 TEST_F(Qwen3OutputParserTest, StreamingToolWithComplexArguments) {
     std::vector<std::tuple<std::string, std::optional<std::string>>> chunkToDeltaVec{
         // Starting first tool. Collecting chunk until full name is received. Don't return until then.

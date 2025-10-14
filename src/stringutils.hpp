@@ -111,4 +111,6 @@ std::string toLower(const std::string& input);
 
 bool stringsOverlap(const std::string& lhs, const std::string& rhs);
 
+void escapeSpecialCharacters(std::string& text);
+
 }  // namespace ovms
