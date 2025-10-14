@@ -61,6 +61,30 @@ pipeline {
                 }
             }
         }
+                stage ("BDBA scans"){
+            when { expression { env.BDBA_SCAN == "true" } }
+            steps {
+                script {
+                    def windows = load 'ci/loadWin.groovy'
+                    if (windows != null) {
+                        try {
+                            windows.clone_sdl_repo()
+                            windows.clone_bdba_repo()
+                            windows.bdba()
+                            def logFile = "${env.WORKSPACE}\\win_bdba.log"
+                            def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()
+                            if (!lastLine.contains("Found 0  vulnerabilities")) {
+                                unstable(message: lastLine)
+                            }
+                        } finally {
+                            windows.archive_bdba_reports()
+                        }
+                    } else {
+                        error "Cannot load ci/loadWin.groovy file."
+                    }
+                }
+            }
+        }
         stage ("Signing files"){
             when { expression { env.SIGN_FILES == "true" } }
             steps {
@@ -96,32 +120,6 @@ pipeline {
                         } else {
                             error "Cannot load ci/loadWin.groovy file."
                         }
-                    }
-                }
-            }
-        }
-        stage ("BDBA scans"){
-            when { expression { env.BDBA_SCAN == "true" } }
-            steps {
-                script {
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        try {
-                            if(!fileExists('sdl_repo')){
-                                windows.clone_sdl_repo()
-                            }
-                            windows.clone_bdba_repo()
-                            windows.bdba()
-                            def logFile = "${env.WORKSPACE}\\win_bdba.log"
-                            def lastLine = bat(script: "powershell -Command \"Get-Content -Path '${logFile}' | Select-Object -Last 1\"", returnStdout: true).trim()
-                            if (!lastLine.contains("Found 0  vulnerabilities")) {
-                                unstable(message: lastLine)
-                            }
-                        } finally {
-                            windows.archive_bdba_reports()
-                        }
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
                     }
                 }
             }
