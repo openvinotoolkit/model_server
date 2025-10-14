@@ -50,6 +50,7 @@ using ovms::Server;
 
 WindowsServiceManager manager;
 
+// Need this original function pointer type expected by the Windows Service API (LPSERVICE_MAIN_FUNCTIONA),
 VOID WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
     manager.serviceMain(argc, argv);
 }
@@ -57,7 +58,6 @@ VOID WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
 int main_windows(int argc, char** argv) {
     std::ofstream logFile2("C:\\test2\\ovms.log", std::ios::out | std::ios::trunc);
     logFile2.close();
-    // TODO: Write storing default arguments for restart
     DEBUG_LOG("Windows Main - Entry");
     manager.ovmsParams.argc = argc;
     manager.ovmsParams.argv = argv;
@@ -104,6 +104,15 @@ WindowsServiceManager::WindowsServiceManager() {
     ovmsParams = {};
 }
 
+struct WinHandleDeleter
+{
+  typedef HANDLE pointer;
+  void operator()(HANDLE handle) {
+    DEBUG_LOG("WinHandleDeleter: Closing handle.");
+    if (handle != INVALID_HANDLE_VALUE)
+        CloseHandle(handle);}
+};
+
 VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     DEBUG_LOG("ServiceMain: Entry");
 
@@ -127,10 +136,9 @@ VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
         manager.ovmsParams.argc = argc;
         manager.ovmsParams.argv = argv;
     }
-
-    HANDLE mainThread = CreateThread(NULL, 0, WindowsServiceManager::serviceWorkerThread, &manager.ovmsParams, 0, NULL);
-
-    if (mainThread == NULL || mainThread == INVALID_HANDLE_VALUE) {
+    	
+    std::unique_ptr<HANDLE, WinHandleDeleter> mainThread(CreateThread(NULL, 0, WindowsServiceManager::serviceWorkerThread, &manager.ovmsParams, 0, NULL));
+    if (mainThread.get() == NULL || mainThread.get() == INVALID_HANDLE_VALUE) {
         // Handle error
         DEBUG_LOG("ServiceMain: mainThread == NULL || mainThread == INVALID_HANDLE_VALUE");
         CloseHandle(statusHandle);
@@ -151,7 +159,7 @@ VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
 
     DEBUG_LOG("ServiceMain: Waiting for Worker Thread to complete");
 
-    WaitForSingleObject(mainThread, INFINITE);
+    WaitForSingleObject(mainThread.get(), INFINITE);
     DEBUG_LOG("ServiceMain: Worker Thread Stop Event signaled after we leave the WaitForSingle call");
 
     CloseHandle(serviceStopEvent);
@@ -166,17 +174,13 @@ VOID WINAPI WindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
 
     switch (CtrlCode) {
     case SERVICE_CONTROL_STOP:
-
         DEBUG_LOG("serviceCtrlHandler: SERVICE_CONTROL_STOP Request");
-
         if (serviceStatus.dwCurrentState != SERVICE_RUNNING)
             break;
 
         setServiceStopStatusPending();
-
         // Signal the worker thread to start shutting down
         SetEvent(serviceStopEvent);
-
         break;
 
     default:
