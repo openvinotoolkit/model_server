@@ -70,14 +70,14 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
-```
-    nomic-ai/nomic-embed-text-v1.5
-    Alibaba-NLP/gte-large-en-v1.5
-    BAAI/bge-large-en-v1.5
-    BAAI/bge-large-zh-v1.5
-    thenlper/gte-small
-    Qwen/Qwen3-Embedding-0.6B
-```
+|Model Name|Pooling|
+|---|---|
+|nomic-ai/nomic-embed-text-v1.5|CLS|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|BAAI/bge-large-en-v1.5|CLS|
+|BAAI/bge-large-zh-v1.5|CLS|
+|thenlper/gte-small|CLS|
+|Qwen/Qwen3-Embedding-0.6B|LAST|
 
 ## Server Deployment
 
