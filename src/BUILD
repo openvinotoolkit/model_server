@@ -660,6 +660,7 @@ ovms_cc_library(
             "kfs_backend_impl",
             "tfs_backend_impl",
             "anonymous_input_name",
+            "@cpp-mcp//:cpp-mcp",
          ] + select({
                 "//:not_disable_cloud": [
                     "libovmsazurefilesystem",
@@ -2401,6 +2402,19 @@ cc_binary(
         "//:disable_python": []
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
+)
+
+cc_binary(
+    name = "mcp_test_client",
+    srcs = [
+        "mcp_test_client.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [
+        "@cpp-mcp//:cpp-mcp",
+    ],
+    linkstatic = True,
 )
 
 cc_test(
