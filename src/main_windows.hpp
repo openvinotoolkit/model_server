@@ -49,16 +49,21 @@ class WindowsServiceManager {
 public:
     static std::string getCurrentTimeString();
     WindowsServiceManager();
+    ~WindowsServiceManager();
     ConsoleParameters ovmsParams;
     static LPSTR serviceName;
-    VOID WINAPI serviceMain(DWORD argc, LPTSTR* argv);
+    static LPSTR serviceDisplayName;
+    static LPSTR serviceDesc;
+    void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
+    static void serviceInstall();
+    static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
 
 private:
     static SERVICE_STATUS serviceStatus;
     static SERVICE_STATUS_HANDLE statusHandle;
     static HANDLE serviceStopEvent;
 
-    static VOID WINAPI serviceCtrlHandler(DWORD);
+    static void WINAPI serviceCtrlHandler(DWORD);
     static DWORD WINAPI serviceWorkerThread(LPVOID lpParam);
 
     static void setServiceStopStatusPending();

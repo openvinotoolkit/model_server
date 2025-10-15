@@ -20,7 +20,8 @@
 #include <chrono>
 #include <iomanip>
 #include <utility>
-#include <Windows.h>
+#include <strsafe.h>
+#include <windows.h>
 #include <tchar.h>
 
 #include "server.hpp"
@@ -51,20 +52,23 @@ using ovms::Server;
 WindowsServiceManager manager;
 
 // Need this original function pointer type expected by the Windows Service API (LPSERVICE_MAIN_FUNCTIONA),
-VOID WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
+void WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
     manager.serviceMain(argc, argv);
 }
 
 int main_windows(int argc, char** argv) {
-    std::ofstream logFile2("C:\\test2\\ovms.log", std::ios::out | std::ios::trunc);
-    logFile2.close();
+    //std::ofstream logFile2("C:\\test2\\ovms.log", std::ios::out | std::ios::trunc);
+    //logFile2.close();
     DEBUG_LOG("Windows Main - Entry");
     manager.ovmsParams.argc = argc;
     manager.ovmsParams.argv = argv;
-    for (int i = 0; i < manager.ovmsParams.argc; ++i) {
-        std::stringstream ss2;
-        ss2 << "OVMS Main Argument " << i << ": " << manager.ovmsParams.argv[i];
-        DEBUG_LOG(ss2.rdbuf());
+    WindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
+
+    // Install service with ovms.exe
+    if( CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL )
+    {
+        WindowsServiceManager::serviceInstall();
+        return 0;
     }
 
     SERVICE_TABLE_ENTRY ServiceTable[] =
@@ -99,9 +103,15 @@ int main_windows(int argc, char** argv) {
 SERVICE_STATUS WindowsServiceManager::serviceStatus = {0};
 SERVICE_STATUS_HANDLE WindowsServiceManager::statusHandle = NULL;
 HANDLE WindowsServiceManager::serviceStopEvent = INVALID_HANDLE_VALUE;
-LPSTR WindowsServiceManager::serviceName = _T("OpenVino Model Server");
+LPSTR WindowsServiceManager::serviceName = _T("ovms");
+LPSTR WindowsServiceManager::serviceDisplayName = _T("OpenVino Model Server");
+LPSTR WindowsServiceManager::serviceDesc = _T("Hosts models and makes them accessible to software components over standard network protocols.");
 WindowsServiceManager::WindowsServiceManager() {
+    DEBUG_LOG("WindowsServiceManager constructor");
     ovmsParams = {};
+}
+WindowsServiceManager::~WindowsServiceManager() {
+    DEBUG_LOG("WindowsServiceManager destructor");
 }
 
 struct WinHandleDeleter
@@ -117,7 +127,7 @@ struct WinHandleDeleter
     }
 };
 
-VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
+void WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     DEBUG_LOG("ServiceMain: Entry");
 
     statusHandle = RegisterServiceCtrlHandler(WindowsServiceManager::serviceName, WindowsServiceManager::serviceCtrlHandler);
@@ -129,11 +139,7 @@ VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     this->setServiceStartStatus();
 
     DEBUG_LOG("ServiceMain: Performing Service Start Operations");
-    for (DWORD i = 0; i < argc; ++i) {
-        std::stringstream ss2;
-        ss2 << "ServiceMain Argument " << i << ": " << argv[i];
-        DEBUG_LOG(ss2.rdbuf());
-    }
+    WindowsServiceManager::logParameters(argc, argv, "ServiceMain Argument");
 
     if (argv && argc > 1) {
         DEBUG_LOG("ServiceMain: Setting new parameters for service after service start.");
@@ -173,7 +179,89 @@ VOID WINAPI WindowsServiceManager::serviceMain(DWORD argc, LPTSTR* argv) {
     return;
 }
 
-VOID WINAPI WindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
+struct WinSCHandleDeleter
+{
+    typedef SC_HANDLE pointer;
+    void operator()(SC_HANDLE h)
+    {
+        DEBUG_LOG("WinSCHandleDeleter: closing handle");
+        if(h != INVALID_HANDLE_VALUE)
+        {
+            CloseServiceHandle(h);
+        }
+    }
+};
+
+void WindowsServiceManager::serviceInstall() {
+    TCHAR szUnquotedPath[MAX_PATH];
+    DEBUG_LOG("Installing ovms service");
+    if( !GetModuleFileName( NULL, szUnquotedPath, MAX_PATH )) {
+        DEBUG_LOG("serviceInstall, GetModuleFileName failed.");
+        DEBUG_LOG(GetLastError());
+        return;
+    }
+
+    // In case the path contains a space, it must be quoted so that
+    // it is correctly interpreted. For example,
+    // "d:\my share\myservice.exe" should be specified as
+    // ""d:\my share\myservice.exe"".
+    TCHAR szPath[MAX_PATH];
+    StringCbPrintf(szPath, MAX_PATH, TEXT("\"%s\""), szUnquotedPath);
+
+    // Get a handle to the SCM database. 
+    std::unique_ptr<SC_HANDLE, WinSCHandleDeleter> schSCManager(OpenSCManager(
+        NULL,                    // local computer
+        NULL,                    // ServicesActive database 
+        SC_MANAGER_ALL_ACCESS)); // full access rights 
+
+    if (schSCManager.get() == NULL || schSCManager.get() == INVALID_HANDLE_VALUE) {
+        DEBUG_LOG("OpenSCManager failed");
+        DEBUG_LOG(GetLastError());
+        return;
+    }
+
+    // Create the service
+    std::unique_ptr<SC_HANDLE, WinSCHandleDeleter> schService(CreateService( 
+        schSCManager.get(),                 // SCM database 
+        WindowsServiceManager::serviceName, // name of service 
+        WindowsServiceManager::serviceDisplayName, // service name to display 
+        SERVICE_ALL_ACCESS,                 // desired access 
+        SERVICE_WIN32_OWN_PROCESS,          // service type 
+        SERVICE_DEMAND_START,               // start type 
+        SERVICE_ERROR_NORMAL,               // error control type 
+        szPath,                             // path to service's binary 
+        NULL,                               // no load ordering group 
+        NULL,                               // no tag identifier 
+        NULL,                               // no dependencies 
+        NULL,                               // LocalSystem account 
+        NULL));                             // no password 
+ 
+    if (schService.get() == NULL || schService.get() == INVALID_HANDLE_VALUE) {
+        DEBUG_LOG("CreateService failed");
+        DEBUG_LOG(GetLastError()); 
+        return;
+    }
+
+    SERVICE_DESCRIPTION sd;
+    sd.lpDescription =  WindowsServiceManager::serviceDesc;
+    if (!ChangeServiceConfig2(schService.get(), SERVICE_CONFIG_DESCRIPTION, &sd)) {
+        DEBUG_LOG("ChangeServiceConfig2 failed");
+        DEBUG_LOG(GetLastError()); 
+        return;
+    }
+    DEBUG_LOG("Service installed successfully.");
+    return;
+}
+
+void WindowsServiceManager::logParameters(DWORD argc, LPTSTR* argv, const std::string& logText) {
+    for (int i = 0; i < (int)manager.ovmsParams.argc; ++i) {
+        std::stringstream ss2;
+        ss2 << logText << " " << i << ": " << manager.ovmsParams.argv[i];
+        DEBUG_LOG(ss2.rdbuf());
+    }
+}
+
+void WINAPI WindowsServiceManager::serviceCtrlHandler(DWORD CtrlCode) {
     DEBUG_LOG("serviceCtrlHandler: Entry");
 
     switch (CtrlCode) {
@@ -206,6 +294,7 @@ DWORD WINAPI WindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             ConsoleParameters* params = (ConsoleParameters*)lpParam;
             if (params && params->argc > 1) {
                 DEBUG_LOG("serviceWorkerThread: Starting ovms from start parameters.");
+                WindowsServiceManager::logParameters(params->argc, params->argv, "OVMS Main Argument");
                 ovmsService->SetUp(params->argc, params->argv);
             } else {
                 DEBUG_LOG("serviceWorkerThread: Error - No parameters passed to ovms service.");
