@@ -141,12 +141,7 @@ Status HfPullModelModule::clone() const {
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         std::unique_ptr<IModelDownloader> downloader2;
-        // Optimum model
-        if (isOptimumCliDownload(graphSettings.draftModelDirName.value(), std::nullopt)) {
-            downloader2 = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->hfSettings.overwriteModels);
-        } else {
-            downloader2 = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-        }
+        downloader2 = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
         status = downloader2->downloadModel();
         if (!status.ok()) {
             return status;

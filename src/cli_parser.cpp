@@ -591,8 +591,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (isOptimumCliDownload(serverSettings.hfSettings.sourceModel, hfSettings.ggufFilename)) {
+            if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
