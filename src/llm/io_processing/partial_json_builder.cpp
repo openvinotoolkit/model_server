@@ -204,13 +204,14 @@ Document PartialJsonBuilder::add(const std::string& chunk) {
             } else if (c == '\\') {
                 // Count consecutive backslashes before current position
                 auto backslashIt = it;
-                int backslashCount = 0;
+                // Start with 1 since we found one backslash already
+                int backslashCount = 1;
                 while (backslashIt != buffer.begin() && *(backslashIt - 1) == '\\') {
                     --backslashIt;
                     ++backslashCount;
                 }
                 if (backslashCount % 2 != 0) {
-                    // Odd number of preceding backslashes: this backslash is escaping the next character
+                    // Odd number of backslashes finishing the buffer: current backslash is escaping the next character
                     finishedWithEscapeCharacter = true;
                 }
             }
