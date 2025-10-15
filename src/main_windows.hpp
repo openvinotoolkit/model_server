@@ -43,29 +43,51 @@ public:
     int error;
     void TearDown();
     int SetUp(int argc, char** argv);
+    bool isReady();
+    bool isLive(const std::string& moduleName);
 };
 
-class WindowsServiceManager {
+struct WinServiceStatusWrapper {
+    SERVICE_STATUS_HANDLE handle;
+    WinServiceStatusWrapper();
+    ~WinServiceStatusWrapper();
+};
+
+struct WinServiceEventWrapper {
+    HANDLE handle;
+    WinServiceEventWrapper();
+    ~WinServiceEventWrapper();
+};
+
+class OvmsWindowsServiceManager {
 public:
-    static std::string getCurrentTimeString();
-    WindowsServiceManager();
-    ~WindowsServiceManager();
+    OvmsWindowsServiceManager();
+    ~OvmsWindowsServiceManager();
+
+    // Members
     ConsoleParameters ovmsParams;
     static LPSTR serviceName;
     static LPSTR serviceDisplayName;
     static LPSTR serviceDesc;
-    void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
+
+    // Methods
+    static std::string getCurrentTimeString();
     static void serviceInstall();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
+    static void serviceReportEvent(LPSTR szFunction);
+    void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
 
 private:
+    // Members
     static SERVICE_STATUS serviceStatus;
-    static SERVICE_STATUS_HANDLE statusHandle;
-    static HANDLE serviceStopEvent;
+    static std::unique_ptr<WinServiceStatusWrapper> statusHandle;
+    static std::unique_ptr<WinServiceEventWrapper> serviceStopEvent;
 
+    // Methods
     static void WINAPI serviceCtrlHandler(DWORD);
     static DWORD WINAPI serviceWorkerThread(LPVOID lpParam);
 
+    // Service status update
     static void setServiceStopStatusPending();
     void setServiceStartStatus();
     void setServiceStopStatusWithSuccess();
