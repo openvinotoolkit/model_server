@@ -160,11 +160,11 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "25.35.35096"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu22_2025.4.0.dev20251007_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu24_2025.4.0.dev20251007_x86_64.tgz
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"
-	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu24_2025.4.0.dev20251007_x86_64.tgz
+	DLDT_PACKAGE_URL ?= https://storage.openvinotoolkit.org/repositories/openvino/packages/nightly/2025.4.0-20120-80e587bccec/openvino_toolkit_ubuntu22_2025.4.0.dev20251007_x86_64.tgz
   endif
 endif
 ifeq ($(BASE_OS),redhat)
