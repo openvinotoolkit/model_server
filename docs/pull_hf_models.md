@@ -89,7 +89,7 @@ Example for pulling `Echo9Zulu/phi-4-int4_asym-awq-ov`:
 ovms --pull --source_model Echo9Zulu/phi-4-int4_asym-awq-ov --model_repository_path /models --model_name phi-4-int4_asym-awq-ov --target_device CPU --task text_generation 
 ```
 
-> **Note:** These models aren't tested properly and it's accuracy or performence may be low.
+> **Note:** These models aren't tested properly and it's accuracy or performance may be low.
 
 Check [parameters page](./parameters.md) for detailed descriptions of configuration options and parameter usage.
 
