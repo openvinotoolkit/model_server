@@ -28,7 +28,7 @@
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
-#include "../../../stringutils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 
