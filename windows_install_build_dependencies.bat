@@ -128,7 +128,19 @@ IF /I EXIST %bash_path% (
     :msys_install_finished
     echo [INFO] Msys installed in: %msys_path%
 )
+:: Set default USE_OV_BINARY if not set
+if "%USE_OV_BINARY%"=="" (
+    set "USE_OV_BINARY=0"
+)
 
+set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
+set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
+set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
+
+echo [INFO] USE_OV_BINARY=%USE_OV_BINARY%
+IF "%USE_OV_BINARY%"=="0" (
+    goto :install_openvino_from_src
+)
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\PR-XXXX\ section started - once per build, reinstalled only with expunge clean :::::::::::::::::::::::::::::::::: 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -145,10 +157,6 @@ for %%F in ("%GENAI_PACKAGE_URL%") do set "genai_ver=%%~nxF"
 
 :: Extract genai_dir from genai_ver (filename without extension)
 for %%F in ("%genai_ver%") do set "genai_dir=%%~nF"
-
-set "genai_zip=%BAZEL_SHORT_PATH%\%genai_ver%"
-set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
-set "genai_new_workspace=C:\\%output_user_root%\\openvino\\runtime"
 
 echo [INFO] Installing GenAI: %genai_dir% ...
 :: Download GenAi
@@ -184,14 +192,68 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
 mklink /d %BAZEL_SHORT_PATH%\openvino %BAZEL_SHORT_PATH%\%genai_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Replace path to GenAi in ovms WORKSPACE file
+:: Remove genai headers to be replaced by the ones from openvino_genai repository
+rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
+echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
+goto :finished_openvino
+
+:install_openvino_from_src
+if "%OV_SOURCE_BRANCH%"=="" (
+    set "OV_SOURCE_BRANCH=sdpa_micro_pa"
+)
+if "%OV_SOURCE_ORG%"=="" (
+    set "OV_SOURCE_ORG=e-ddykim"
+)
+if "%TOKENIZER_SOURCE_ORG%"=="" (
+    set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
+)
+if "%TOKENIZER_SOURCE_BRANCH%"=="" (
+    set "TOKENIZER_SOURCE_BRANCH=master"
+)
+
+IF /I NOT EXIST openvino (
+    git clone https://github.com/%OV_SOURCE_ORG%/openvino
+)
+cd openvino
+git fetch origin
+git checkout %OV_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+git submodule update --init --recursive
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake.exe -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+cmake.exe --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake.exe --install . --config Release --prefix C:\\%output_user_root%\\openvino
+cd ..\..
+call C:\\%output_user_root%\\openvino\\setupvars.bat
+set "OVMS_DIR=C:\\%output_user_root%\\openvino"
+IF /I NOT EXIST openvino_tokenizers (
+    git clone https://github.com/%TOKENIZER_SOURCE_ORG%/openvino_tokenizers.git
+)
+cd openvino_tokenizers
+git fetch origin
+git checkout %TOKENIZER_SOURCE_BRANCH%
+if !errorlevel! neq 0 exit /b !errorlevel!
+IF /I NOT EXIST build (
+    mkdir build
+)
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --config Release --verbose -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+cmake --install . --config Release --prefix C:\\%output_user_root%\\openvino
+cd ..\..
+echo [INFO] OpenVINO from source installed: C:\%output_user_root%\openvino
+
+:finished_openvino
+:: Replace path in ovms WORKSPACE file
 if "!output_user_root!" neq "opt" (
     powershell -Command "(gc -Path WORKSPACE) -replace '%genai_workspace%', '%genai_new_workspace%' | Set-Content -Path WORKSPACE"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
-:: Remove genai headers to be replaced by the ones from openvino_genai repository
-rmdir /S /Q %BAZEL_SHORT_PATH%\%genai_dir%\runtime\include\openvino\genai
-echo [INFO] GenAi installed: %BAZEL_SHORT_PATH%\%genai_dir%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers

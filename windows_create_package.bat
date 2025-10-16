@@ -13,7 +13,7 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-echo off
+@echo on
 setlocal EnableExtensions EnableDelayedExpansion
 set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PATH=%setPath%"
@@ -106,10 +106,17 @@ md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv_4.12.0\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
-copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
-if !errorlevel! neq 0 exit /b !errorlevel!
+if "%USE_OV_BINARY%"=="1" (
+    copy C:\%output_user_root%\openvino\docs\licensing\LICENSE %license_dest%openvino.LICENSE.txt
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    copy C:\%output_user_root%\openvino\docs\licensing\LICENSE-GENAI %license_dest%LICENSE-GENAI.txt
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+else (
+    copy openvino\LICENSE %license_dest%openvino.LICENSE.txt
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 
 copy %cd%\release_files\LICENSE %cd%\dist\windows\ovms\
 if !errorlevel! neq 0 exit /b !errorlevel!
