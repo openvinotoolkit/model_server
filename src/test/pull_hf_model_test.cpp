@@ -234,6 +234,26 @@ TEST_F(HfDownloaderPullHfModel, ModelOutOfOvOrg) {
     ASSERT_EQ(ftime1, ftime2);
 }
 
+TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
+    this->filesToPrintInCaseOfFailure.emplace_back("graph.pbtxt");
+    this->filesToPrintInCaseOfFailure.emplace_back("config.json");
+    std::string modelName = "AIFunOver/SmolLM2-360M-Instruct-openvino-4bit";
+    std::string downloadPath = ovms::FileSystem::joinPath({this->directoryPath, "repository"});
+    std::string task = "text_generation";
+    this->SetUpServerForDownloadAndStart(modelName, downloadPath, task);
+
+    std::string basePath = ovms::FileSystem::joinPath({this->directoryPath, "repository", "AIFunOver", "SmolLM2-360M-Instruct-openvino-4bit"});
+    std::string modelPath = ovms::FileSystem::appendSlash(basePath) + "openvino_model.bin";
+    std::string graphPath = ovms::FileSystem::appendSlash(basePath) + "graph.pbtxt";
+
+    ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
+    ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
+    ASSERT_EQ(std::filesystem::file_size(modelPath), 217157840);
+    std::string graphContents = GetFileContents(graphPath);
+
+    ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
+}
+
 TEST_F(HfDownloaderPullHfModel, DownloadDraftModel) {
     // EnvGuard guard;
     // guard.set("HF_ENDPOINT", "https://modelscope.cn");
