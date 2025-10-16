@@ -106,7 +106,7 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         ":io_processing_utils",
-        ":genai_proxy"
+        "//third_party:genai",
     ],
 )
 ovms_cc_library(
@@ -120,7 +120,7 @@ ovms_cc_library(
         ":io_processing_utils",
         ":io_processing_base_output_parser",
         ":apis_tool_schema_wrapper",
-        ":genai_proxy",
+        "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
 )
