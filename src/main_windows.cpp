@@ -27,6 +27,7 @@
 #include <tchar.h>
 #include <errors.h>
 
+#include "module_names.hpp"
 #include "server.hpp"
 #include "main_windows.hpp"
 
@@ -39,15 +40,17 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-// #define DEBUG_LOG(msg) { std::wstringstream ss; ss << msg; OutputDebugStringW(ss.str().c_str()); }
+#define DEBUG_LOG_ENABLE 1
 // TODO: Implement windows logging mechanism with events
 std::ofstream logFile("C:\\test2\\ovms.log");
-#define DEBUG_LOG(msg)                                                           \
-    {                                                                            \
-        std::stringstream ss;                                                    \
-        ss << OvmsWindowsServiceManager::getCurrentTimeString() << msg << std::endl; \
-        logFile << ss.rdbuf();                                                   \
-        logFile.flush();                                                         \
+#define DEBUG_LOG(msg)                                                                  \
+    {                                                                                   \
+        if (DEBUG_LOG_ENABLE) {                                                         \
+            std::stringstream ss;                                                       \
+            ss << OvmsWindowsServiceManager::getCurrentTimeString() << msg << std::endl;\
+            logFile << ss.rdbuf();                                                      \
+            logFile.flush();                                                            \
+        }                                                                               \
     }
 
 using ovms::Server;
@@ -60,8 +63,6 @@ void WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
 }
 
 int main_windows(int argc, char** argv) {
-    //std::ofstream logFile2("C:\\test2\\ovms.log", std::ios::out | std::ios::trunc);
-    //logFile2.close();
     DEBUG_LOG("Windows Main - Entry");
     manager.ovmsParams.argc = argc;
     manager.ovmsParams.argv = argv;
@@ -338,26 +339,70 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     std::unique_ptr<OvmsService> ovmsService = std::make_unique<OvmsService>();
     ovmsService->error = 0;
     ovmsService->started = false;
+
+    bool PROFILER_MODULE_LIVE = false;
+    bool GRPC_SERVER_MODULE_LIVE = false;
+    bool HTTP_SERVER_MODULE_LIVE = false;
+    bool SERVABLE_MANAGER_MODULE_LIVE = false;
+    bool HF_MODEL_PULL_MODULE_LIVE = false;
+    bool METRICS_MODULE_LIVE = false;
+    bool PYTHON_INTERPRETER_MODULE_LIVE = false;
+    bool CAPI_MODULE_LIVE = false;
+    bool SERVABLES_CONFIG_MANAGER_MODULE_LIVE = false;
     //  Start OVMS and check for stop
     while (WaitForSingleObject(serviceStopEvent->handle, 0) != WAIT_OBJECT_0) {
-        // TODO: Check ovms running with OVMS serverLive and Ready
         if (!ovmsService->started) {
             ConsoleParameters* params = (ConsoleParameters*)lpParam;
             if (params && params->argc > 1) {
                 DEBUG_LOG("serviceWorkerThread: Starting ovms from start parameters.");
                 OvmsWindowsServiceManager::logParameters(params->argc, params->argv, "OVMS Main Argument");
                 ovmsService->SetUp(params->argc, params->argv);
+                DEBUG_LOG("serviceWorkerThread: Ovms starting. Waiting for SERVABLE_MANAGER_MODULE to be live ...")
             } else {
                 DEBUG_LOG("serviceWorkerThread: Error - No parameters passed to ovms service.");
                 break;
             }
-        } else {
-            DEBUG_LOG("serviceWorkerThread: Ovms running ...")
         }
-
-        // Check for events
-        // TODO: Implement CreateWaitableTimer and SetWaitableTimerEx to save cpu
-        Sleep(3000);
+        if(!SERVABLE_MANAGER_MODULE_LIVE && ovmsService->isLive(ovms::SERVABLE_MANAGER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLE_MANAGER_MODULE is live.");
+            SERVABLE_MANAGER_MODULE_LIVE = true;
+        }
+        if(!SERVABLE_MANAGER_MODULE_LIVE && ovmsService->isReady()) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service is ready and running.");
+            SERVABLE_MANAGER_MODULE_LIVE = true;
+        }
+        if(!PROFILER_MODULE_LIVE && ovmsService->isLive(ovms::PROFILER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service PROFILER_MODULE is live.");
+            PROFILER_MODULE_LIVE = true;
+        }
+        if(!GRPC_SERVER_MODULE_LIVE && ovmsService->isLive(ovms::GRPC_SERVER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service GRPC_SERVER_MODULE is live.");
+            GRPC_SERVER_MODULE_LIVE = true;
+        }
+        if(!HTTP_SERVER_MODULE_LIVE && ovmsService->isLive(ovms::HTTP_SERVER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service HTTP_SERVER_MODULE is live.");
+            HTTP_SERVER_MODULE_LIVE = true;
+        }
+        if(!METRICS_MODULE_LIVE && ovmsService->isLive(ovms::METRICS_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service METRICS_MODULE is live.");
+            METRICS_MODULE_LIVE = true;
+        }
+        if(!PYTHON_INTERPRETER_MODULE_LIVE && ovmsService->isLive(ovms::PYTHON_INTERPRETER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service PYTHON_INTERPRETER_MODULE is live.");
+            PYTHON_INTERPRETER_MODULE_LIVE = true;
+        }
+        if(!CAPI_MODULE_LIVE && ovmsService->isLive(ovms::CAPI_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service CAPI_MODULE is live.");
+            CAPI_MODULE_LIVE = true;
+        }
+        if(!HF_MODEL_PULL_MODULE_LIVE && ovmsService->isLive(ovms::HF_MODEL_PULL_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service HF_MODEL_PULL_MODULE is live.");
+            HF_MODEL_PULL_MODULE_LIVE = true;
+        }
+        if(!SERVABLES_CONFIG_MANAGER_MODULE_LIVE && ovmsService->isLive(ovms::SERVABLES_CONFIG_MANAGER_MODULE_NAME)) {
+            DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLES_CONFIG_MANAGER_MODULE is live.");
+            SERVABLES_CONFIG_MANAGER_MODULE_LIVE = true;
+        }
     }
 
     if (ovmsService->started) {
@@ -449,7 +494,7 @@ void OvmsWindowsServiceManager::setServiceStopStatusWithSuccess() {
 void OvmsService::TearDown() {
     DEBUG_LOG("OvmsService::TearDown");
     server.setShutdownRequest(1);
-    if (t)
+    if (t && t->joinable())
         t->join();
     server.setShutdownRequest(0);
     this->started = false;
@@ -457,8 +502,8 @@ void OvmsService::TearDown() {
 
 int OvmsService::SetUp(int argc, char** argv) {
     DEBUG_LOG("OvmsService::SetUp");
+    this->started = true;
     t.reset(new std::thread([argc, argv, this]() {
-        this->started = true;
         this->error = server.start(argc, argv);
     }));
     return 0;

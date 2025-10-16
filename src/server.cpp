@@ -455,29 +455,8 @@ int Server::prepareService(int argc, char** argv) {
     return EXIT_SUCCESS;
 }
 
-std::string get_current_time_string() {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
-    std::tm tm = *std::localtime(&time_t);
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S  ");
-    return oss.str();
-}
-
-std::ofstream logFile("C:\\test2\\ovms2.log");
-#define DEBUG_LOG(msg)                                       \
-    {                                                        \
-        std::stringstream ss;                                \
-        ss << get_current_time_string() << msg << std::endl; \
-        logFile << ss.rdbuf();                               \
-        logFile.flush();                                     \
-    }
-
 // OVMS Start
 int Server::start(int argc, char** argv) {
-    std::ofstream logFile2("C:\\test2\\ovms2.log", std::ios::out | std::ios::trunc);
-    logFile2.close();
-    DEBUG_LOG("installSignalHandlers");
     installSignalHandlers();
     int result = OVMS_EX_OK;
 
@@ -485,17 +464,9 @@ int Server::start(int argc, char** argv) {
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
-        for (int i = 0; i < argc; ++i) {
-            std::stringstream ss2;
-            ss2 << "Server::start Argument " << i << ": " << argv[i];
-            DEBUG_LOG(ss2.rdbuf());
-        }
-        DEBUG_LOG("parse");
-        parser.parse(argc, argv);
-        DEBUG_LOG("prepare");
-        parser.prepare(&serverSettings, &modelsSettings);
 
-        DEBUG_LOG("start");
+        parser.parse(argc, argv);
+        parser.prepare(&serverSettings, &modelsSettings);
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {
