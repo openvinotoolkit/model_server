@@ -17,8 +17,16 @@ int main() {
         
         std::cout << "Created MCP SSE client for http://localhost:8000/sse" << std::endl;
         
+        // Set capabilites
+        mcp::json capabilities = {
+            {"roots", {{"listChanged", true}}}
+        };
+        client.set_capabilities(capabilities);
+        // Set timeout
+        client.set_timeout(10);
+
         // Try to initialize the client
-        bool initialized = client.initialize("ovms-test-client", "1.0.0");
+        bool initialized = client.initialize("ovms-test-client", mcp::MCP_VERSION);
         
         if (initialized) {
             std::cout << "Client initialized successfully" << std::endl;
