@@ -34,7 +34,6 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
     }
-    SPDLOG_TRACE("XYZ lookupTag: looking for tag: '{}' in buffer: '{}'", tag, buffer);
     if (tag.size() > buffer.size()) {
         /* 
         If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
