@@ -41,8 +41,5 @@ GraphExportType stringToEnum(const std::string& inString) {
     return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }
 
-bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename) {
-    return !startsWith(toLower(sourceModel), "openvino/") && (ggufFilename == std::nullopt);
-}
 
 }  // namespace ovms

@@ -1167,6 +1167,30 @@ TEST(OvmsExportHfSettingsTest, positiveDefault) {
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.has_value(), false);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
+TEST(OvmsExportHfSettingsTest, pullFromHfOutsideOvOrg) {
+    std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
+    std::string downloadPath = "test/repository";
+    char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+        (char*)"--task",
+        (char*)"text_generation",
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.downloadPath, downloadPath);
+    ASSERT_EQ(hfSettings.downloadType, ovms::GIT_CLONE_DOWNLOAD);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+}
 
 TEST(OvmsExportHfSettingsTest, allChanged) {
     std::string modelName = "NonOpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";

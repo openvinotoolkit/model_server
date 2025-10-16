@@ -591,7 +591,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
+            if ((result->count("weight-format") || result->count("extra_quantization_params")) && (hfSettings.ggufFilename == std::nullopt)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
