@@ -146,7 +146,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     std::string output = exec_cmd(this->OPTIMUM_CLI_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel.", this->sourceModel);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing optimum-intel. Use the ovms package with optimum-intel installed.", this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
@@ -155,7 +155,7 @@ Status OptimumDownloader::checkRequiredToolsArePresent() {
     output = exec_cmd(this->CONVERT_TOKENIZER_CHECK_COMMAND, retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. Use the ovms package with convert_tokenizer.", this->sourceModel);
+        SPDLOG_ERROR("Trying to pull {} from HuggingFace but missing convert_tokenizer. This is likely because you are using OVMS without Python support which is required for pulling with conversion.", this->sourceModel);
         return StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI;
     }
 
