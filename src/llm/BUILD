@@ -172,6 +172,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
     ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
         ":partial_json_builder",

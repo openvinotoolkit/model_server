@@ -19,12 +19,7 @@
 #include <vector>
 #include <regex>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
@@ -91,7 +86,7 @@ std::optional<rapidjson::Document> GptOssToolParser::parseChunk(const std::strin
     std::string chunk = newChunk;
     std::optional<rapidjson::Document> result;
 
-    if (chunk.find(getParsingStartTag()) != std::string::npos) {
+    if (chunk.find(getParsingStartTags()[0]) != std::string::npos) {
         toolCallIndex++;  // starting with -1, first call will be 0
         return std::nullopt;
     }

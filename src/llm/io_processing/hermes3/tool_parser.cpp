@@ -18,12 +18,7 @@
 #include <string>
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-#pragma warning(pop)
+#include "src/port/rapidjson_document.hpp"
 
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"

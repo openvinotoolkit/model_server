@@ -278,7 +278,7 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
 }
 
 static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
-    SPDLOG_TRACE("Creating tools parameters types map");
+    SPDLOG_TRACE("Creating tools parameters types map with schemas size: {}", toolsSchemas.size());
     ToolsParameterTypeMap_t toolsParametersTypes;
     for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
         const auto& toolSchemaStringRepr = toolSchemaWrapper.stringRepr;
@@ -296,13 +296,13 @@ void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
     SPDLOG_DEBUG("Filling tools parameters types map");
     this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
     this->filledParametersTypesMap = true;
+    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
 }
 
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
     BaseOutputParser(tokenizer),
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {
-    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", toolsParametersTypes.size());
 }
 
 void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {

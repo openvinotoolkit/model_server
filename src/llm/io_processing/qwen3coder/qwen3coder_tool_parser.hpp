@@ -144,11 +144,12 @@ public:
 
     void parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) override;
     std::optional<rapidjson::Document> parseChunk(const std::string& chunk, ov::genai::GenerationFinishReason finishReason) override;
-    const std::string& getParsingStartTag() const override {
-        return TOOL_START_TAG;
+    const std::vector<std::string>& getParsingStartTags() const override {
+        static const std::vector<std::string> startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
+        return startTags;
     }
-    const std::unordered_set<std::string>& getSpecialParsingStartTags() const override {
-        static const std::unordered_set<std::string> specialParsingStartTags = {FUNCTION_NAME_TAG};
+    const std::vector<std::string>& getSpecialParsingStartTags() const override {
+        static const std::vector<std::string> specialParsingStartTags = {};
         return specialParsingStartTags;
     }
     const std::string& getParsingEndTag() const override {

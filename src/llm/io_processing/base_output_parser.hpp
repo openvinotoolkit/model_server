@@ -97,15 +97,15 @@ public:
     // Otherwise we return a JSON object containing the delta that conforms to OpenAI API.
     virtual std::optional<rapidjson::Document> parseChunk(const std::string& chunkResponse, ov::genai::GenerationFinishReason finishReason) = 0;
 
-    // Get the tag that marks the beginning of the segment that should be processed by the parser.
+    // Get the tags that marks the beginning of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should start processing the content.
     // If empty string is returned, it means that the parser will never start processing the content.
-    virtual const std::string& getParsingStartTag() const = 0;
+    virtual const std::vector<std::string>& getParsingStartTags() const = 0;
 
     // Get a vector of additional tags that mark beginning of the segment that should be processed by the parser.
     // These tags are considered only if they are the first output produced by the model.
     // In streaming mode it means that they are considered only in UNKNOWN phase.
-    virtual const std::unordered_set<std::string>& getSpecialParsingStartTags() const = 0;
+    virtual const std::vector<std::string>& getSpecialParsingStartTags() const = 0;
 
     // Get the tag that marks the end of the segment that should be processed by the parser.
     // This method is used in streaming mode to determine if the parser should stop processing the content.

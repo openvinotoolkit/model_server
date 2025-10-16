@@ -19,7 +19,6 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
-#include <unordered_set>
 
 #include "base_output_parser.hpp"
 
@@ -41,7 +40,7 @@ public:
 
     public:
         TagLookupStatus lookupTag(const std::string& tag) const;
-        TagLookupStatus lookupTags(const std::unordered_set<std::string>& tags) const;
+        TagLookupStatus lookupTags(const std::vector<std::string>& tags) const;
         void add(const std::string& chunk);
         void clear();
         const std::string& getBuffer() const;
