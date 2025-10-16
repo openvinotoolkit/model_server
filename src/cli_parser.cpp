@@ -597,10 +597,10 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
 
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
+            throw std::logic_error("--weight-format parameter unsupported for OpenVINO models.");
         }
         if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+            throw std::logic_error("--extra_quantization_params parameter unsupported for OpenVINO models.");
         }
 
         if (result->count("weight-format"))
