@@ -168,7 +168,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             # Appears in some of mistral chat templates and gpt-oss chat templates
             def strftime_now(format):
                 import datetime as _dt
-                return _dt.datetime.now().strftime(fmt)
+                return _dt.datetime.now().strftime(format)
 
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
