@@ -62,7 +62,7 @@ if args.mcp_server in ["all", "fs"]:
 llm = OpenAILike(
     model=args.model,
     api_key=API_KEY,
-    api_base=args.base-url,
+    api_base=args.base_url,
     is_chat_model=True,
     is_function_calling_model=True,
     additional_kwargs={
