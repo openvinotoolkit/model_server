@@ -60,7 +60,7 @@ pipeline {
                 }
             }
         }
-                stage ("BDBA scans"){
+        stage ("BDBA scans"){
             when { expression { env.BDBA_SCAN == "true" } }
             steps {
                 script {

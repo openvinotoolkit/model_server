@@ -320,6 +320,7 @@ def archive_sign_results(){
     def python_suffix = env.OVMS_PYTHON_ENABLED == "0" ? "off" : "on"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_sign.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms_windows_python_${python_suffix}.zip"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms_windows_python_${python_suffix}.zip.sha256"
 }
 
 def setup_bazel_remote_cache(){
