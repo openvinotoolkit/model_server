@@ -242,6 +242,7 @@ public:
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
     std::unordered_map<std::string, std::string> toLowerCaseHeaders(const std::unordered_map<std::string, std::string>& headers);
+    Status checkIfAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& api_key);
     const std::string api_key;
 
 private:

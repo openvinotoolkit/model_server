@@ -681,6 +681,22 @@ std::unordered_map<std::string, std::string> HttpRestApiHandler::toLowerCaseHead
     return lowercaseHeaders;
 }
 
+Status HttpRestApiHandler::checkIfAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& api_key) {
+    if (!api_key.empty()) {
+        auto lowercaseHeaders = toLowerCaseHeaders(headers);
+        if (lowercaseHeaders.count("authorization")) {
+            if (lowercaseHeaders.at("authorization") != "Bearer " + api_key) {
+                SPDLOG_DEBUG("Unauthorized request - invalid API key provided.");
+                return StatusCode::UNAUTHORIZED;
+            }
+        } else {
+            SPDLOG_DEBUG("Unauthorized request - missing API key");
+            return StatusCode::UNAUTHORIZED;
+        }
+    }
+    return StatusCode::OK;
+}
+
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& api_key) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
@@ -690,17 +706,9 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     bool streamFieldVal = false;
     // convert headers to lowercase because http headers are case insensitive
     std::unordered_map<std::string, std::string> lowercaseHeaders;
-    lowercaseHeaders = toLowerCaseHeaders(request_components.headers);
-    if (!api_key.empty()) {
-        if (lowercaseHeaders.count("authorization")) {
-            if (lowercaseHeaders.at("authorization") != "Bearer " + api_key) {
-                SPDLOG_DEBUG("Unauthorized request - invalid API key {} instead of {}", lowercaseHeaders.at("authorization"), api_key);
-                return StatusCode::UNAUTHORIZED;
-            }
-        } else {
-            SPDLOG_DEBUG("Unauthorized request - missing API key");
-            return StatusCode::UNAUTHORIZED;
-        }
+    Status authStatus = checkIfAuthorized(request_components.headers, api_key);
+    if (!authStatus.ok()) {
+        return authStatus;
     }
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
     if (!status.ok()) {

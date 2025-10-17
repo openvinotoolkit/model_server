@@ -502,17 +502,17 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     std::filesystem::path api_key_file = result->operator[]("api_key_file").as<std::string>();
     serverSettings.apiKey = "";
     if (!api_key_file.empty()) {
-        try {
-            std::ifstream file(api_key_file);
-            if (file.is_open()) {
-                std::getline(file, serverSettings.apiKey);
-                serverSettings.apiKey.erase(serverSettings.apiKey.find_last_not_of(" \n\r\t") + 1);
-                file.close();
-            } else {
-                throw std::runtime_error("Unable to open API key file: " + api_key_file.string());
+        std::ifstream file(api_key_file);
+        if (file.is_open()) {
+            std::getline(file, serverSettings.apiKey);
+            // Use first line and trim whitespace characters from both ends
+            size_t endpos = serverSettings.apiKey.find_last_not_of(" \n\r\t");
+            if (endpos != std::string::npos) {
+                serverSettings.apiKey = serverSettings.apiKey.substr(0, endpos + 1);
             }
-        } catch (const std::exception& e) {
-            std::cerr << "Error reading API key file: " << e.what() << std::endl;
+            file.close();
+        } else {
+            std::cerr << "Error reading API key file: unable to open file." << std::endl;
             exit(OVMS_EX_USAGE);
         }
     } else {
