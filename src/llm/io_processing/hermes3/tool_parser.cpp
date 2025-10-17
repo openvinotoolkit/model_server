@@ -28,6 +28,7 @@
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 
@@ -293,10 +294,8 @@ std::optional<rapidjson::Document> Hermes3ToolParser::parseChunk(const std::stri
     */
 
     if (lastJson.HasMember("arguments")) {
-        // Escaping double quotes in the arguments string
-        for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
-            modifiedChunk.insert(pos, "\\");
-        }
+        // Since inside a string, we need to escape characters like quotes, new lines, tabs, etc.
+        escapeSpecialCharacters(modifiedChunk);
 
         bool processingFirstArgumentsChunk = argumentsDelayWindow[0].empty();
         // Handle the case when we are starting to collect arguments.
