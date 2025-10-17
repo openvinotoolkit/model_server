@@ -41,5 +41,4 @@ GraphExportType stringToEnum(const std::string& inString) {
     return (it != stringToType.end()) ? it->second : UNKNOWN_GRAPH;
 }
 
-
 }  // namespace ovms
