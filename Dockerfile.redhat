@@ -355,8 +355,6 @@ RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_
 FROM $BUILD_IMAGE as pkg
 
 COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
-# Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
-RUN if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
 WORKDIR /
 ARG BASE_OS=redhat
