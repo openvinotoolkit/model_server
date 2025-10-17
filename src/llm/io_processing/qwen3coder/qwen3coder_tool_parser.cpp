@@ -173,7 +173,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     auto previousState = this->currentState;
     switch (this->currentState) {
     case State::Content: {
-        // normally we expect <tool_call> tag but we observerd that sometimes model generates <function=...> directly
+        // normally we expect <tool_call> tag but we observed that sometimes model generates <function=...> directly
         // so we will check for both tags and handle accordingly
         auto posTool = this->streamContent.find(Qwen3CoderToolParser::TOOL_START_TAG, this->getLastProcessedPosition());
         auto posFunc = this->streamContent.find(Qwen3CoderToolParser::FUNCTION_NAME_TAG, this->getLastProcessedPosition());
@@ -185,7 +185,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
             this->currentState = State::InsideToolCall;
             this->toolCallPositions.begin.push(posTool);
         } else {
-            // found <function=...> first, we will assume <tool_call> is missing and we will add it
+            // found <function=...> first, we will assume <tool_call> is missing
             SPDLOG_DEBUG("Did not find: {}, assuming it should exist", Qwen3CoderToolParser::TOOL_START_TAG);
             this->lastProcessedPosition = posFunc + Qwen3CoderToolParser::FUNCTION_NAME_TAG.length();
             this->currentState = State::InsideFunctionName;
