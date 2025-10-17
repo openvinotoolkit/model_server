@@ -1,10 +1,7 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
---extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
---pre
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
-openvino-tokenizers==2025.3.0.0rc2
-openvino==2025.3.0rc2
+optimum-intel@git+https://github.com/huggingface/optimum-intel.git@3acf13f062f1e987268218232d474bdae0e9f2aa
+openvino-tokenizers==2025.3.0
+openvino==2025.3.0
 nncf>=2.11.0
 sentence_transformers
 sentencepiece==0.2.0
@@ -13,4 +10,5 @@ transformers<4.54
 einops
 torchvision
 timm==1.0.15
+torch<2.9
 diffusers==0.33.1  # for image generation
