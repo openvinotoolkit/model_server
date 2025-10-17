@@ -57,26 +57,6 @@ def cleanup_directories() {
     }
 }
 
-def cleanup_sdl(){
-    println "Cleaning SDL files"
-    if (fileExists('sdl_repo')){
-        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\sdl_repo")
-        if (status != 0) {
-            error "Error: Deleting directory sdl_repo failed: ${status}. Check pipeline.log for details."
-        } else {
-            echo "Deleting directory sdl_repo successful."
-        }
-    }
-    if (fileExists('repo_ci_infra')){
-        def status = bat(returnStatus: true, script: "rmdir /s /q C:\\Jenkins\\workspace\\ovmsc\\windows\\${env.NODE_NAME}\\repo_ci_infra")
-        if (status != 0) {
-            error "Error: Deleting directory repo_ci_infra failed: ${status}. Check pipeline.log for details."
-        } else {
-            echo "Deleting directory repo_ci_infra successful."
-        }
-    }
-}
-
 def get_short_bazel_path() {
     if (env.JOB_BASE_NAME.contains("release"))
         return "rel"

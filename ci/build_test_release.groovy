@@ -7,7 +7,6 @@ pipeline {
     }
     environment {
         BDBA_CREDS = credentials('BDBA_KEY')
-        NODE_NAME = 'Windows_SDL'
     }
     stages {
         stage ("Build and test windows") {
@@ -120,22 +119,6 @@ pipeline {
                         } else {
                             error "Cannot load ci/loadWin.groovy file."
                         }
-                    }
-                }
-            }
-        }
-        stage ("Cleanup"){
-            steps {
-                script {
-                    def windows = load 'ci/loadWin.groovy'
-                    if (windows != null) {
-                        try {
-                            windows.cleanup_sdl()
-                        } finally {
-                            echo "Cleanup finished"
-                        }
-                    } else {
-                        error "Cannot load ci/loadWin.groovy file."
                     }
                 }
             }
