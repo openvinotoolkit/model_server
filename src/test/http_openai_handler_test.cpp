@@ -90,6 +90,7 @@ protected:
         std::string absoluteApiKeyPath = std::filesystem::absolute(apiKeyFile).string();
         ofs << "1234";
         ofs.close();
+        randomizeAndEnsureFree(this->port);
         ::SetUpServer(this->t, this->server, this->port, configPath, 10, absoluteApiKeyPath);
         EnsureServerStartedWithTimeout(this->server, 20);
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);

@@ -507,7 +507,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
             if (file.is_open()) {
                 std::getline(file, serverSettings.apiKey);
                 serverSettings.apiKey.erase(serverSettings.apiKey.find_last_not_of(" \n\r\t") + 1);
-                file.close();
             } else {
                 throw std::runtime_error("Unable to open API key file: " + api_key_file.string());
             }

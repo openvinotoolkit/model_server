@@ -223,7 +223,7 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser), api_key);
+        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser), apiKey);
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
@@ -681,7 +681,7 @@ std::unordered_map<std::string, std::string> HttpRestApiHandler::toLowerCaseHead
     return lowercaseHeaders;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& api_key) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& apiKey) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
@@ -691,7 +691,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     // convert headers to lowercase because http headers are case insensitive
     std::unordered_map<std::string, std::string> lowercaseHeaders;
     lowercaseHeaders = toLowerCaseHeaders(request_components.headers);
-    if (!api_key.empty()) {
+    if (!apiKey.empty()) {
         if (lowercaseHeaders.count("authorization")) {
             if (lowercaseHeaders.at("authorization") != "Bearer " + api_key) {
                 SPDLOG_DEBUG("Unauthorized request - invalid API key {} instead of {}", lowercaseHeaders.at("authorization"), api_key);
