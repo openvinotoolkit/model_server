@@ -24,6 +24,7 @@
 #include "../../../logging.hpp"
 #include "tool_parser.hpp"
 #include "../utils.hpp"
+#include "src/stringutils.hpp"
 
 namespace ovms {
 
@@ -252,15 +253,10 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
             return std::nullopt;
         }
     } else {  // internalState == PROCESSING_TOOL_CALL
-        // Remove any newlines to avoid breaking JSON format
-        modifiedChunk.erase(std::remove(modifiedChunk.begin(), modifiedChunk.end(), '\n'), modifiedChunk.end());
-
         // JSON already contains 'arguments' (they cannot be null at this point). Apply modifications to the input chunk if needed to keep the format valid.
         if (processingArguments) {
-            // Escaping double quotes in the arguments string
-            for (size_t pos = 0; (pos = modifiedChunk.find("\"", pos)) != std::string::npos; pos += 2) {
-                modifiedChunk.insert(pos, "\\");
-            }
+            // Since inside a string, we need to escape characters like quotes, new lines, tabs, etc.
+            escapeSpecialCharacters(modifiedChunk);
 
             // Keep track of opened/closed braces to identify the end of the tool call object.
             updateOpenBracesCount(modifiedChunk);
@@ -277,6 +273,9 @@ std::optional<rapidjson::Document> Phi4ToolParser::parseChunk(const std::string&
                 // If we balanced the braces, we are at the end of the tool call object
                 handleEndOfToolCall(modifiedChunk);
             }
+        } else {
+            // Remove any newlines to avoid breaking JSON format
+            modifiedChunk.erase(std::remove(modifiedChunk.begin(), modifiedChunk.end(), '\n'), modifiedChunk.end());
         }
 
         // Phase 2: Parse the modified chunk with PartialJsonBuilder and return appropriate delta if possible
