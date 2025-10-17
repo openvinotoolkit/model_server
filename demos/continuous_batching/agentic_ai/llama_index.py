@@ -59,7 +59,20 @@ if args.mcp_server in ["all", "fs"]:
         fs_server = BasicMCPClient("npx", args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], env=env_proxy)
         tools.extend(McpToolSpec(client=fs_server).to_tool_list())
 
-llm = OpenAILike(model=args.model, api_key=API_KEY, api_base=args.base_url, is_chat_model=True, is_function_calling_model=True,  additional_kwargs={"extra_body": {"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}})
+llm = OpenAILike(
+    model=args.model,
+    api_key=API_KEY,
+    api_base=args.base-url,
+    is_chat_model=True,
+    is_function_calling_model=True,
+    additional_kwargs={
+        "extra_body": {
+            "chat_template_kwargs": {
+                "enable_thinking": args.enable_thinking
+            }
+        }
+    }
+)
 agent = FunctionAgent(llm=llm, tools=tools, system_prompt="You are a helpful assistant.", streaming=args.stream)
 
 import asyncio
