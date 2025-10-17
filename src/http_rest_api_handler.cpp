@@ -125,7 +125,7 @@ const std::string HttpRestApiHandler::v3_RegexExp =
 const std::string HttpRestApiHandler::metricsRegexExp = R"((.?)\/metrics(\?(.*))?)";
 
 HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms) :
-    api_key(ovmsServer.getAPIKey()),
+    apiKey(ovmsServer.getAPIKey()),
     predictionRegex(predictionRegexExp),
     modelstatusRegex(modelstatusRegexExp),
     configReloadRegex(configReloadRegexExp),
@@ -223,7 +223,7 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser), api_key);
+        return processV3(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser), apiKey);
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response, request_body);
@@ -681,11 +681,11 @@ std::unordered_map<std::string, std::string> HttpRestApiHandler::toLowerCaseHead
     return lowercaseHeaders;
 }
 
-Status HttpRestApiHandler::checkIfAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& api_key) {
-    if (!api_key.empty()) {
+Status HttpRestApiHandler::checkIfAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey) {
+    if (!apiKey.empty()) {
         auto lowercaseHeaders = toLowerCaseHeaders(headers);
         if (lowercaseHeaders.count("authorization")) {
-            if (lowercaseHeaders.at("authorization") != "Bearer " + api_key) {
+            if (lowercaseHeaders.at("authorization") != "Bearer " + apiKey) {
                 SPDLOG_DEBUG("Unauthorized request - invalid API key provided.");
                 return StatusCode::UNAUTHORIZED;
             }
@@ -697,7 +697,7 @@ Status HttpRestApiHandler::checkIfAuthorized(const std::unordered_map<std::strin
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& api_key) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& apiKey) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
@@ -706,7 +706,7 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     bool streamFieldVal = false;
     // convert headers to lowercase because http headers are case insensitive
     std::unordered_map<std::string, std::string> lowercaseHeaders;
-    Status authStatus = checkIfAuthorized(request_components.headers, api_key);
+    Status authStatus = checkIfAuthorized(request_components.headers, apiKey);
     if (!authStatus.ok()) {
         return authStatus;
     }

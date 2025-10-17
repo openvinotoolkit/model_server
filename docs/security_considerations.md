@@ -6,7 +6,7 @@ By default, the OpenVINO Model Server containers start with the security context
 For additional security hardening, you might also consider preventing write operations on the container root filesystem by adding a `--read-only` flag. This prevents undesired modification of the container files. In case the cloud storage used for the model repository (S3, Google Storage, or Azure storage) is restricting the root filesystem, it should be combined with `--tmpfs /tmp` flag.
 
 ```
-docker run --rm -d --user $(id -u):$(id -g) --read-only --tmpfs /tmp -v ${PWD}/models/:/models -p 9000:9000 openvino/model_server:latest \
+docker run --rm -d --user $(id -u):$(id -g) --read-only --tmpfs /tmp -p 9000:9000 openvino/model_server:latest \
 --model_path s3://bucket/model --model_name model --port 9000
 
 ```
