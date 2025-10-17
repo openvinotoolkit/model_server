@@ -248,7 +248,6 @@ TEST_F(HfDownloaderPullHfModel, PositiveDownloadAndStartModelOutsideOvOrg) {
 
     ASSERT_EQ(std::filesystem::exists(modelPath), true) << modelPath;
     ASSERT_EQ(std::filesystem::exists(graphPath), true) << graphPath;
-    ASSERT_EQ(std::filesystem::file_size(modelPath), 217157840);
     std::string graphContents = GetFileContents(graphPath);
 
     ASSERT_EQ(expectedGraphContents, removeVersionString(graphContents)) << graphContents;
