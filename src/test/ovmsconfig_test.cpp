@@ -329,7 +329,7 @@ TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
 TEST_F(OvmsConfigDeathTest, NegativeInvalidAPIKeyFile) {
     char* n_argv[] = {"ovms", "--config_path", "/path1", "--api_key_file", "/wrong/dir", "--port", "44"};
     int arg_count = 7;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open API key file: /wrong/dir");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Error reading API key file: Unable to open file \"/wrong/dir\"");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingDashes) {

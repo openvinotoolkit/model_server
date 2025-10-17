@@ -512,7 +512,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
             }
             file.close();
         } else {
-            std::cerr << "Error reading API key file: unable to open file." << std::endl;
+            std::cerr << "Error reading API key file: Unable to open file " << api_key_file << std::endl;
             exit(OVMS_EX_USAGE);
         }
     } else {
