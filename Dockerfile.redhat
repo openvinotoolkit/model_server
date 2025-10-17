@@ -220,7 +220,7 @@ ARG SDL_OPS="-fpic -O2 -U_FORTIFY_SOURCE -fstack-protector -fno-omit-frame-point
 # hadolint ignore=DL3003
 RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ ; \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ ; \
     # Install the openvino_tokenizers python bindings and copy to OpenVINO location
     if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
@@ -355,6 +355,8 @@ RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_
 FROM $BUILD_IMAGE as pkg
 
 COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
+# Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
+RUN if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
 WORKDIR /
 ARG BASE_OS=redhat

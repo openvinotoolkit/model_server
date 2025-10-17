@@ -199,7 +199,7 @@ ARG ov_tokenizers_org=openvinotoolkit
 # hadolint ignore=DL3003
 RUN git clone https://github.com/$ov_tokenizers_org/openvino_tokenizers.git /openvino_tokenizers && cd /openvino_tokenizers && git checkout $ov_tokenizers_branch && git submodule update --init --recursive
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS="${SDL_OPS}" -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ ; \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS="${SDL_OPS}" -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ ; \
     if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then \
     mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     cp -r python/* /opt/intel/openvino/python/ ; \
@@ -352,7 +352,7 @@ RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-FROM build as pkg
+FROM $BUILD_IMAGE as pkg
 
 COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
 
