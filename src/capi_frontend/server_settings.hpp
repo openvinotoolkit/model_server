@@ -76,6 +76,7 @@ const std::map<std::string, ConfigExportType> stringToConfigExportType = {
 
 std::string enumToString(ConfigExportType type);
 ConfigExportType stringToConfigExportEnum(const std::string& inString);
+bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,
