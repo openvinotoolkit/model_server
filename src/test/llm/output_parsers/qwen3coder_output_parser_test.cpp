@@ -39,6 +39,7 @@ static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 
 static std::map<std::string, std::string> toolSchemasInput = {
     {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"},
+    {"cd", R"({"properties": {"folder": {"type": "string", "description": "Path"}}, "required": ["folder"]})"},
     {"string_int_tool", R"({"properties":{"arg1":{"type":"string","description":"A string argument."},"arg2":{"type":"integer","description":"An integer argument."}},"required":["arg1", "arg2"]})"},
     {"some_tool", R"({"properties":{"source":{"type":"string","description":"The name of the file or directory to copy."},"destination":{"type":"string","description":"The destination name to copy the file or directory to. If the destination is a directory, the source will be copied into this directory. No file paths allowed. "}},"required":[]})"}};
 
@@ -115,6 +116,22 @@ value1
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
+TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentNoProperBeginTag) {
+    std::string input = R"(
+<function=string_tool>
+<parameter=arg1>
+value1
+</parameter>
+</function>
+</tool_call>")";
+    auto [generatedTensor, generatedTokens, parsedOutput] = generateParsedOutput(input);
+
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
+    // Qwen3CoderToolParserImpl removes newlines, so we expect arguments value to be without spaces
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCallNestedXmlNotFromSchema) {
     std::string input = R"(
 "<tool_call>
@@ -169,7 +186,7 @@ value1line2
 
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
-    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1line1\nvalue1line2\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\": \"value1line1\\nvalue1line2\"}");
     EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
 }
 TEST_F(Qwen3CoderOutputParserTest, TestJustParserImplUnaryToolCall) {
@@ -547,6 +564,12 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
     // if we don't get closing tag we don't emit tool call
     int i = -1;
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        // now we test functool improperly beginning with <function=... and then being finished by </tool_call>
+        // its important that this is before any <tool_call> tag
+        {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},
+        {"<function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"string_tool"}}]}})"},
+        {"value_before_tool_call</parameter></function></tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"value_before_tool_call\"}"}}]}})"},
+        // now we test normal tool call
         {" <too", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"l_cal", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"l>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -554,7 +577,7 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"ctio", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"n=st", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ring_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {">", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"string_tool"}}]}})"},
+        {">", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_tool"}}]}})"},
         {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<paramete", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"r=a", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -566,12 +589,12 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"</pa", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"rameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"},
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"STRING_VALUE\"}"}}]}})"},
         {" POTENTIALLY EXISINT CONTENT", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" <tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {" <tool_call>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<function=string_int_tool", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":1,"function":{"name":"string_int_tool"}}]}})"},
+        {">\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":2,"function":{"name":"string_int_tool"}}]}})"},
         {"<parameter=arg1>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"ANOTHER_STRING_VALUE\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -582,8 +605,14 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
         {"1522\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</parameter>\n", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"</function>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
-        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\"arg1\": \"\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
-        {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt}};
+        {"</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"{\"arg1\": \"\\nANOTHER_STRING_VALUE\", \"arg2\": 3141522}"}}]}})"},
+        {"CONTENT_AFTER_TOOL_CALL", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        // now we test functool improperly beginning with <function=... and then being finished by </tool_call>
+        {"<function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":3,"function":{"name":"string_tool"}}]}})"},
+        {"value1</parameter></function></tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":3,"function":{"arguments":"{\"arg1\": \"value1\"}"}}]}})"},
+        {"NOTHING IMPORTANT HERE", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"part of bfcl 'draft'.\n\n<function=cd>\n", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":4,"function":{"name":"cd"}}]}})"},
+        {"\n<parameter=folder>\nResearchDocs\n</parameter>\n</function>\n</tool_call>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":4,"function":{"arguments":"{\"folder\": \"ResearchDocs\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);
