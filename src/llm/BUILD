@@ -18,14 +18,6 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "COPTS_PYTHON")
 
 ovms_cc_library(
-    name = "llm_engine",
-    srcs = [],
-    deps =  ["@llm_engine//:llm_engine"],
-    visibility = ["//visibility:public"],
-    additional_copts = COPTS_PYTHON
-)
-
-ovms_cc_library(
     name = "llmcalculator",
     srcs = ["http_llm_calculator.cc"],
     deps = [
@@ -35,11 +27,8 @@ ovms_cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
-        "//src:httppayload"
-    ]+ select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//src:httppayload",
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON,
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
@@ -69,10 +58,7 @@ ovms_cc_library(
         "@stb//:image",
         ":openai_request",
         ":output_parsers",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -81,13 +67,9 @@ ovms_cc_library(
     name = "openai_request",
     hdrs = ["apis/openai_request.hpp"],
     srcs = [],
-    deps = [
-        "//src/port:rapidjson_document",
-        ":apis_tool_schema_wrapper",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+    deps = ["//third_party:genai",            
+            "//src/port:rapidjson_document",
+            ":apis_tool_schema_wrapper",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -124,10 +106,8 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         ":io_processing_utils",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",
+    ],
 )
 ovms_cc_library(
     name = "io_processing_qwen3coder_tool_parser",
@@ -140,10 +120,8 @@ ovms_cc_library(
         ":io_processing_utils",
         ":io_processing_base_output_parser",
         ":apis_tool_schema_wrapper",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",
+    ],
     visibility = ["//visibility:public"],
 )
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
@@ -172,17 +150,16 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
     ],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_document",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
+        "//third_party:genai",
         ":partial_json_builder",
         ":io_processing_base_output_parser",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -200,10 +177,7 @@ ovms_cc_library(
     deps = [
         ":openai_request",
         "//src:libovmslogging",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     additional_copts = COPTS_PYTHON
 )
@@ -250,10 +224,7 @@ ovms_cc_library(
         ":generation_config_builders",
         "//src:httppayload",
         "//src:libhttpclientconnection",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }) + select({
+        "//third_party:genai",] + select({
         "//:disable_python": [],
         "//:not_disable_python" : [":py_jinja_template_processor"],
     }),
