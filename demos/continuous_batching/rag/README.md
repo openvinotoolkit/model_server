@@ -47,13 +47,13 @@ git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
 make python_image
 mkdir models
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
-docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
+docker run --user $(id -u):$(id -g) -e HF_HOME=/hf_home/cache --rm -v $(pwd)/models:/models:rw -v /opt/home/user/.cache/huggingface/:/hf_home/cache openvino/model_server:py --pull --model_repository_path /models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
 
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct --weight-format int8
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5 --weight-format int8
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:py --add_to_config /models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large --weight-format int8
 ```
 :::
 
@@ -65,12 +65,12 @@ pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/r
 pip3 install -q -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/continuous_batching/rag/requirements.txt
 mkdir models
 set HF_HOME=C:\hf_home\cache # export HF_HOME=/hf_home/cache if using linux
-ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation
-ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings
-ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank
+ovms --pull --model_repository_path models --source_model meta-llama/Meta-Llama-3-8B-Instruct --task text_generation --weight-format int8
+ovms --pull --model_repository_path models --source_model Alibaba-NLP/gte-large-en-v1.5 --task embeddings --weight-format int8
+ovms --pull --model_repository_path models --source_model BAAI/bge-reranker-large --task rerank --weight-format int8
 
 ovms --add_to_config models --model_name meta-llama/Meta-Llama-3-8B-Instruct --model_path meta-llama/Meta-Llama-3-8B-Instruct
-ovms --add_to_config models --model_nameAlibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
+ovms --add_to_config models --model_name Alibaba-NLP/gte-large-en-v1.5 --model_path Alibaba-NLP/gte-large-en-v1.5
 ovms --add_to_config models --model_name BAAI/bge-reranker-large --model_path BAAI/bge-reranker-large
 ```
 :::
