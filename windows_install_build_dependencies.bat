@@ -131,7 +131,7 @@ IF /I EXIST %bash_path% (
 
 :: Set default USE_OV_BINARY if not set
 if "%USE_OV_BINARY%"=="" (
-    set "USE_OV_BINARY=1"
+    set "USE_OV_BINARY=0"
 )
 
 set "genai_workspace=C:\\\\opt\\\\openvino\\\\runtime"
@@ -208,7 +208,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=ee21854d6821876e73fe8ec8f8eebd5fa1351927"
+    set "OV_SOURCE_BRANCH=6b705ebc0e8966334b9a98613c599c80bd1ae864"
 )
 if "%OV_SOURCE_ORG%"=="" (
     set "OV_SOURCE_ORG=openvinotoolkit"
@@ -217,13 +217,13 @@ if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
 )
 if "%TOKENIZER_SOURCE_BRANCH%"=="" (
-    set "TOKENIZER_SOURCE_BRANCH=760f9140ab1fd330d62ec171673ca0705abe6aa0"
+    set "TOKENIZER_SOURCE_BRANCH=7bd0c7f7671444314e22fed7969926b774d397aa"
 )
 if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=005f4d9fff7cfce6614d6b9d4d144273971080b4"
+    set "GENAI_SOURCE_BRANCH=8da03875e482daafcba34381ebc84eb233204ef0"
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (

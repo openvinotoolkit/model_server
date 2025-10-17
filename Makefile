@@ -75,9 +75,9 @@ FUZZER_BUILD ?= 0
 #         - uncomment source build section, comment binary section
 #         - adjust binary version path - version variable is not passed to WORKSPACE file!
 
-OV_SOURCE_BRANCH ?= ee21854d6821876e73fe8ec8f8eebd5fa1351927 # master 2025/10/14
-OV_TOKENIZERS_BRANCH ?= 760f9140ab1fd330d62ec171673ca0705abe6aa0 # master 2025/09/23
-OV_GENAI_BRANCH ?= 005f4d9fff7cfce6614d6b9d4d144273971080b4 # master 2025/10/14
+OV_SOURCE_BRANCH ?= 6b705ebc0e8966334b9a98613c599c80bd1ae864 # master 2025/10/18
+OV_TOKENIZERS_BRANCH ?= 7bd0c7f7671444314e22fed7969926b774d397aa # master 2025/10/15
+OV_GENAI_BRANCH ?= 8da03875e482daafcba34381ebc84eb233204ef0 # master 2025/10/18
 
 OV_SOURCE_ORG ?= openvinotoolkit
 OV_GENAI_ORG ?= openvinotoolkit
@@ -135,7 +135,7 @@ endif
 
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
-  OV_USE_BINARY ?= 1
+  OV_USE_BINARY ?= 0
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
   OV_USE_BINARY ?= 0
