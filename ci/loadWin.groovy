@@ -149,7 +149,7 @@ def clone_sdl_repo()
 {
     if(!fileExists('sdl_repo')){
         println "Starting code signing"
-        def statusPull = bat(returnStatus: true, script: 'git clone ' + env.SIGN_REPO + ' sdl_repo')
+        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.SDL_REPO_BRANCH + ' ' + env.SIGN_REPO + ' sdl_repo')
         if (statusPull != 0) {
             error "Error: Downloading sdl_repo failed ${statusPull}. Check pipeline.log for details."
         } else {
@@ -158,7 +158,7 @@ def clone_sdl_repo()
     }else{
         println "Pulling latest changes in sdl_repo"
         dir('sdl_repo') {
-            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/main')
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.SDL_REPO_BRANCH)
             if (statusPull != 0) {
                 error "Error: Pulling latest changes in sdl_repo failed ${statusPull}. Check pipeline.log for details."
             } else {
@@ -172,7 +172,7 @@ def clone_bdba_repo()
 {
     if(!fileExists('repo_ci_infra')){
         println "Starting BDBA infrastructure download"
-        def statusPull = bat(returnStatus: true, script: 'git clone ' + env.BDBA_REPO + ' repo_ci_infra')
+        def statusPull = bat(returnStatus: true, script: 'git clone -b ' + env.BDBA_REPO_BRANCH + ' ' + env.BDBA_REPO + ' repo_ci_infra')
         if (statusPull != 0) {
             error "Error: Downloading BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
         } else {
@@ -181,7 +181,7 @@ def clone_bdba_repo()
     }else{
         println "Pulling latest changes in BDBA infrastructure"
         dir('repo_ci_infra') {
-            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/main')
+            def statusPull = bat(returnStatus: true, script: 'git fetch && git reset --hard origin/'+env.BDBA_REPO_BRANCH)
             if (statusPull != 0) {
                 error "Error: Pulling latest changes in BDBA infrastructure failed ${statusPull}. Check pipeline.log for details."
             } else {
