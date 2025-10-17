@@ -28,10 +28,10 @@ import argparse
 import platform
 
 parser = argparse.ArgumentParser(description="Run LlamaIndex agent with configurable parameters.")
-parser.add_argument("--base_url", type=str, default="http://localhost:8000/v3", required=True, help="Base URL for the LLM API (e.g., http://localhost:8000/v3)")
+parser.add_argument("--base-url", type=str, default="http://localhost:8000/v3", help="Base URL for the LLM API (e.g., http://localhost:8000/v3)")
 parser.add_argument("--model", type=str, required=True, help="Model name for the LLM (e.g., Phi-4-mini-instruct-int4-ov)")
 parser.add_argument("--query", type=str, required=True, help="Query to pass to the agent.")
-parser.add_argument("--mcp-server-url", type=str, default="http://127.0.0.1:8080/sse", required=True, help="MCP server endpoint URL (e.g., http://127.0.0.1:8080/sse)")
+parser.add_argument("--mcp-server-url", type=str, default="http://127.0.0.1:8080/sse", help="MCP server endpoint URL (e.g., http://127.0.0.1:8080/sse)")
 parser.add_argument("--stream", default=False, action="store_true", help="Enable streaming responses from the LLM.")
 parser.add_argument("--enable_thinking", action="store_true", help="Enable 'thinking' in the model.")
 parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
