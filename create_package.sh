@@ -32,7 +32,8 @@ cd /ovms_release/lib/ ; rm -f libcurl.so*
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
 
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so libopenvino_genai.so.2025.4.0.0 ; fi
+if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so libopenvino_genai.so.2025.4.0.0 ; fi
+if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so ; fi
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
 
 # Remove GPU plugin for CPU images?
