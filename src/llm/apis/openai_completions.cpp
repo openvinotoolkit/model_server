@@ -184,7 +184,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
                 // tools handing to be done later
-                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                request.chatHistory.last().insert({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -287,12 +287,12 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
-                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                        request.chatHistory.last().insert({member->name.GetString(), member->value.GetString()});
                     }
                 }
             }
         }
-        auto& lastMessage = request.chatHistory.back();
+        auto& lastMessage = request.chatHistory.last();
         if (lastMessage.find("role") == lastMessage.end()) {
             return absl::InvalidArgumentError("Every message must have 'role' field");
         }
