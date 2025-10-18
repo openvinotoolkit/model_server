@@ -223,7 +223,7 @@ if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=8da03875e482daafcba34381ebc84eb233204ef0"
+    set "GENAI_SOURCE_BRANCH=453630bb50d30c90d33c7353ca9928701c572fcd"
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
