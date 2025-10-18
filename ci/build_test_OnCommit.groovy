@@ -106,6 +106,9 @@ pipeline {
               agent {
                 label "${agent_name_linux}"
               }
+              environment {
+                OVMS_BAZEL_REMOTE_CACHE_URL = "${env.OVMS_BAZEL_REMOTE_CACHE_URL ?: 'http://mclx-23.sclab.intel.com:8666'}"
+              }
               when { expression { image_build_needed == "true" } }
                 steps {
                       sh "echo build --remote_cache=${env.OVMS_BAZEL_REMOTE_CACHE_URL} > .user.bazelrc"
@@ -123,6 +126,9 @@ pipeline {
                   script {
                       agent_name_windows = env.NODE_NAME
                       echo sh(script: 'env|sort', returnStdout: true)
+                      if (! env.OVMS_BAZEL_REMOTE_CACHE_URL) {
+                        env.OVMS_BAZEL_REMOTE_CACHE_URL = "http://mclx-23.sclab.intel.com:8666"
+                      }
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
                         try {
