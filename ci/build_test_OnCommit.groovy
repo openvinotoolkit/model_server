@@ -119,6 +119,7 @@ pipeline {
                       echo sh(script: 'env|sort', returnStdout: true)
                       if (! env.OVMS_BAZEL_REMOTE_CACHE_URL) {
                         env.OVMS_BAZEL_REMOTE_CACHE_URL = "http://mclx-23.sclab.intel.com:8666"
+                        env.USE_OV_BINARY = "0"
                       }
                       def windows = load 'ci/loadWin.groovy'
                       if (windows != null) {
