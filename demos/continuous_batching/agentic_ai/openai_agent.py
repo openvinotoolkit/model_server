@@ -56,7 +56,8 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
         await server.connect()
     print(f"\n\nRunning: {query}")
     if stream:
-        result = Runner.run_streamed(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
+        # i want to set temperature to zero on model
+        result = Runner.run_streamed(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True, model_settings=ModelSettings(temperature=0.0)))
         print("=== Stream run starting ===")
 
         async for event in result.stream_events():
