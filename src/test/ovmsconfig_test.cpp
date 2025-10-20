@@ -1038,9 +1038,15 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
         (char*)"--tool_parser",
         (char*)"toolParserName",
         (char*)"--enable_tool_guided_generation",
-        (char*)"true"};
+        (char*)"true",
+        (char*)"--model_distribution_policy",
+        (char*)"TENSOR_PARALLEL",
+        (char*)"--max_prompt_len",
+        (char*)"2048",
+        (char*)"--kv_cache_precision",
+        (char*)"u8"};
 
-    int arg_count = 30;
+    int arg_count = 36;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1054,6 +1060,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
     ASSERT_EQ(graphSettings.targetDevice, "GPU");
     ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.value(), "u8");
     ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
     ASSERT_EQ(graphSettings.cacheSize, 20);
     ASSERT_EQ(graphSettings.maxNumBatchedTokens.value(), 16);
@@ -1062,6 +1069,10 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.reasoningParser.value(), "reasoningParserName");
     ASSERT_EQ(graphSettings.toolParser.value(), "toolParserName");
     ASSERT_EQ(graphSettings.enableToolGuidedGeneration, "true");
+    ASSERT_EQ(graphSettings.pluginConfig.modelDistributionPolicy.has_value(), true);
+    ASSERT_EQ(graphSettings.pluginConfig.modelDistributionPolicy.value(), "TENSOR_PARALLEL");
+    ASSERT_EQ(graphSettings.pluginConfig.maxPromptLength.has_value(), true);
+    ASSERT_EQ(graphSettings.pluginConfig.maxPromptLength.value(), 2048);
 }
 
 TEST(OvmsGraphConfigTest, positiveSomeChanged) {

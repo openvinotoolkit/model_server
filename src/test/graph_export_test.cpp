@@ -85,7 +85,7 @@ const std::string expectedFullPluginGraphContents = R"(
             max_num_seqs:256,
             device: "CPU",
             models_path: "./",
-            plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":"123","MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
+            plugin_config: '{"KV_CACHE_PRECISION":"u8","MAX_PROMPT_LEN":123,"MODEL_DISTRIBUTION_POLICY":"PIPELINE_PARALLEL"}',
             enable_prefix_caching: true,
             cache_size: 10,
         }
