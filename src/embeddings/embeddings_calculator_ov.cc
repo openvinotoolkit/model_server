@@ -53,6 +53,94 @@ const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "EMBEDDINGS_NODE_RESOURCE
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
+static void dumpTensorToFile(const ov::Tensor& tensor, const std::string& tensor_name, const std::string& filename) {
+    // if log level is trace
+    if (!embeddings_calculator_logger->should_log(spdlog::level::trace)) {
+        return;
+    }
+
+    std::ofstream output_file(filename);
+    if (!output_file.is_open()) {
+        SPDLOG_LOGGER_ERROR(embeddings_calculator_logger, "Failed to open file {} for writing tensor data", filename);
+        return;
+    }
+
+    const auto& shape = tensor.get_shape();
+
+    // Write tensor name and shape information
+    output_file << "Tensor '" << tensor_name << "' shape: [";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        output_file << shape[i];
+        if (i < shape.size() - 1)
+            output_file << ", ";
+    }
+    output_file << "]\n";
+    output_file << "Tensor data:\n";
+
+    if (shape.size() == 2) {
+        // Handle 2D tensors
+        for (size_t i = 0; i < shape[0]; ++i) {
+            for (size_t j = 0; j < shape[1]; ++j) {
+                if (tensor.get_element_type() == ov::element::i32) {
+                    output_file << reinterpret_cast<const int32_t*>(tensor.data())[i * shape[1] + j] << "\t";
+                } else if (tensor.get_element_type() == ov::element::i64) {
+                    output_file << reinterpret_cast<const int64_t*>(tensor.data())[i * shape[1] + j] << "\t";
+                } else if (tensor.get_element_type() == ov::element::f32) {
+                    output_file << reinterpret_cast<const float*>(tensor.data())[i * shape[1] + j] << "\t";
+                } else {
+                    output_file << "unsupported_type\t";
+                }
+            }
+            output_file << "\n";
+        }
+    } else {
+        output_file << "Tensor shape not supported for dumping (dimensions: " << shape.size() << ")\n";
+    }
+}
+
+static void dumpTensorToTrace(const ov::Tensor& tensor, const std::string& tensor_name) {
+    // if log level is trace
+    if (!embeddings_calculator_logger->should_log(spdlog::level::trace)) {
+        return;
+    }
+
+    const auto& shape = tensor.get_shape();
+    std::ostringstream oss;
+
+    // Build shape string
+    oss << "Tensor '" << tensor_name << "' shape: [";
+    for (size_t i = 0; i < shape.size(); ++i) {
+        oss << shape[i];
+        if (i < shape.size() - 1)
+            oss << ", ";
+    }
+    oss << "]\nTensor data:\n";
+
+    if (shape.size() == 2) {
+        // Handle 2D tensors
+        for (size_t i = 0; i < shape[0]; ++i) {
+            for (size_t j = 0; j < shape[1]; ++j) {
+                if (tensor.get_element_type() == ov::element::i32) {
+                    oss << reinterpret_cast<const int32_t*>(tensor.data())[i * shape[1] + j];
+                } else if (tensor.get_element_type() == ov::element::i64) {
+                    oss << reinterpret_cast<const int64_t*>(tensor.data())[i * shape[1] + j];
+                } else if (tensor.get_element_type() == ov::element::f32) {
+                    oss << reinterpret_cast<const float*>(tensor.data())[i * shape[1] + j];
+                } else {
+                    oss << "unsupported_type";
+                }
+                if (j < shape[1] - 1)
+                    oss << " ";
+            }
+            oss << "\n";
+        }
+    } else {
+        oss << "Tensor shape not supported for tracing (dimensions: " << shape.size() << ")\n";
+    }
+
+    SPDLOG_LOGGER_TRACE(embeddings_calculator_logger, "{}", oss.str());
+}
+
 class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -127,6 +215,14 @@ public:
         try {
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                if (!embeddings_calculator_logger->should_log(spdlog::level::trace)) {
+                    std::ostringstream oss;
+                    oss << "Received " << strings->size() << " strings:\n";
+                    for (const auto& str : *strings) {
+                        oss << "[" << str << "]\n";
+                    }
+                    SPDLOG_INFO("{}", oss.str());
+                }
                 received_batch_size = strings->size();
                 ov::AnyMap params = {};
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate()) {
@@ -207,9 +303,17 @@ public:
             auto executingStreamIdGuard = std::make_unique<ExecutingStreamIdGuard>(embeddings_session->getInferRequestsQueue(), unused);
             ov::InferRequest& inferRequest = executingStreamIdGuard->getInferRequest();
             inferRequest.set_tensor(EMBEDDINGS_MODEL_INPUT_IDS_NAME, tokens.input_ids);
+            dumpTensorToTrace(tokens.input_ids, EMBEDDINGS_MODEL_INPUT_IDS_NAME);
+            dumpTensorToFile(tokens.input_ids, EMBEDDINGS_MODEL_INPUT_IDS_NAME, "input_ids_tensor.txt");
+
             inferRequest.set_tensor(EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, tokens.attention_mask);
+            dumpTensorToTrace(tokens.attention_mask, EMBEDDINGS_MODEL_ATTENTION_MASK_NAME);
+            dumpTensorToFile(tokens.attention_mask, EMBEDDINGS_MODEL_ATTENTION_MASK_NAME, "attention_mask_tensor.txt");
+
             if (embeddings_session->getNumberOfModelInputs() == 3) {
                 inferRequest.set_tensor(EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, typeIds);
+                dumpTensorToTrace(typeIds, EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME);
+                dumpTensorToFile(typeIds, EMBEDDINGS_MODEL_TOKEN_TYPE_IDS_NAME, "token_type_ids_tensor.txt");
             }
             inferRequest.start_async();
             inferRequest.wait();
