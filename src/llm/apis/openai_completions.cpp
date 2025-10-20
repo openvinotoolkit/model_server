@@ -184,7 +184,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
                 // tools handing to be done later
-                request.chatHistory.last().push_back({member->name.GetString(), member->value.GetString()});
+                request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -287,7 +287,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
-                        request.chatHistory.last().push_back({member->name.GetString(), member->value.GetString()});
+                        request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                     }
                 }
             }
@@ -314,6 +314,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         doc.Accept(writer);
         request.processedJson = buffer.GetString();
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
 }
 
