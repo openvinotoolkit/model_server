@@ -184,7 +184,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
                 // tools handing to be done later
-                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                request.chatHistory.last().push_back({member->name.GetString(), member->value.GetString()});
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -287,16 +287,16 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
-                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                        request.chatHistory.last().push_back({member->name.GetString(), member->value.GetString()});
                     }
                 }
             }
         }
-        auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("role") == lastMessage.end()) {
+        auto lastMessage = request.chatHistory.last();
+        if (!lastMessage.contains("role")) {
             return absl::InvalidArgumentError("Every message must have 'role' field");
         }
-        if (lastMessage.find("content") == lastMessage.end()) {
+        if (!lastMessage.contains("content")) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
             lastMessage["content"] = "";
             obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
