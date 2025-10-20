@@ -82,7 +82,7 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
 
-knowledge_files = ["system_prompt", "web_search_tool_call.txt", "testcase_template.txt", "st_syntax.txt", "prompt"]
+knowledge_files = ["system_prompt.txt", "web_search_tool_call.txt", "testcase_template.txt", "st_syntax.txt", "prompt.txt"]
 directory = "C:\codesys-MCP-IDE"
 def read_full_prompt(directory, files_list):
     full_prompt = ""
@@ -151,7 +151,8 @@ if __name__ == "__main__":
     agent = Agent(
         name="Assistant",
         mcp_servers=mcp_servers,
-        model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
+        #model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
+        model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
     query = ""
