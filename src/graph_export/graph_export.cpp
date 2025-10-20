@@ -416,16 +416,16 @@ std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& plug
     }
 
     if (pluginConfig.maxPromptLength.has_value()) {
-        rapidjson::Value name;
-        name.SetString(std::to_string(pluginConfig.maxPromptLength.value()).c_str(), d.GetAllocator());
-        d.AddMember("MAX_PROMPT_LEN", name, d.GetAllocator());
+        rapidjson::Value value;
+        value.SetUint(pluginConfig.maxPromptLength.value());
+        d.AddMember("MAX_PROMPT_LEN", value, d.GetAllocator());
         configNotEmpty = true;
     }
 
     if (pluginConfig.modelDistributionPolicy.has_value()) {
-        rapidjson::Value name;
-        name.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
-        d.AddMember("MODEL_DISTRIBUTION_POLICY", name, d.GetAllocator());
+        rapidjson::Value value;
+        value.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
+        d.AddMember("MODEL_DISTRIBUTION_POLICY", value, d.GetAllocator());
         configNotEmpty = true;
     }
 
