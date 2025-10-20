@@ -127,6 +127,22 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
+// helper function to escape \n
+static std::string escapeString(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+    for (char c : input) {
+        switch (c) {
+        case '\n':
+            output += "\\n";
+            break;
+        default:
+            output += c;
+        }
+    }
+    return output;
+}
+
 static std::string setCorrectValueType(std::string& inputValue, const std::string& currentParameterName, const ParametersTypeMap_t& parametersType) {
     auto paramIt = parametersType.find(currentParameterName);
     if (paramIt == parametersType.end()) {
@@ -157,10 +173,24 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     auto previousState = this->currentState;
     switch (this->currentState) {
     case State::Content: {
-        DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::TOOL_START_TAG);
-        this->lastProcessedPosition = pos + Qwen3CoderToolParser::TOOL_START_TAG.length();
-        this->currentState = State::InsideToolCall;
-        this->toolCallPositions.begin.push(pos);
+        // normally we expect <tool_call> tag but we observed that sometimes model generates <function=...> directly
+        // so we will check for both tags and handle accordingly
+        auto posTool = this->streamContent.find(Qwen3CoderToolParser::TOOL_START_TAG, this->getLastProcessedPosition());
+        auto posFunc = this->streamContent.find(Qwen3CoderToolParser::FUNCTION_NAME_TAG, this->getLastProcessedPosition());
+        if (posFunc == std::string::npos && posTool == std::string::npos) {
+            SPDLOG_TRACE("Did not find: {} or {}", Qwen3CoderToolParser::TOOL_START_TAG, Qwen3CoderToolParser::FUNCTION_NAME_TAG);
+        } else if (posTool < posFunc) {
+            // found <tool_call> first
+            this->lastProcessedPosition = posTool + Qwen3CoderToolParser::TOOL_START_TAG.length();
+            this->currentState = State::InsideToolCall;
+            this->toolCallPositions.begin.push(posTool);
+        } else {
+            // found <function=...> first, we will assume <tool_call> is missing
+            SPDLOG_DEBUG("Did not find: {}, assuming it should exist", Qwen3CoderToolParser::TOOL_START_TAG);
+            this->lastProcessedPosition = posFunc + Qwen3CoderToolParser::FUNCTION_NAME_TAG.length();
+            this->currentState = State::InsideFunctionName;
+            this->toolCallPositions.begin.push(posFunc);
+        }
         break;
     }
     case State::InsideToolCall: {
@@ -180,7 +210,6 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         auto funcEnd = streamContent.find(Qwen3CoderToolParser::FUNCTION_END_TAG, this->lastProcessedPosition);
         auto paramStart = streamContent.find(Qwen3CoderToolParser::PARAMETER_NAME_TAG, this->lastProcessedPosition);
         if (funcEnd == std::string::npos && paramStart == std::string::npos) {
-            break;
         } else if (paramStart < funcEnd) {  // next parameter
             this->lastProcessedPosition = paramStart + Qwen3CoderToolParser::PARAMETER_NAME_TAG.length();
             this->currentState = State::InsideParameterName;
@@ -207,7 +236,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         if (paramIt == this->toolsParametersTypeMap.end()) {
             SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
         } else {
-            parameterValue = setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second);
+            parameterValue = escapeString(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
@@ -249,7 +278,7 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
 }
 
 static ToolsParameterTypeMap_t createToolsParametersTypesMap(const ToolsSchemas_t& toolsSchemas) {
-    SPDLOG_TRACE("Creating tools parameters types map");
+    SPDLOG_TRACE("Creating tools parameters types map with schemas size: {}", toolsSchemas.size());
     ToolsParameterTypeMap_t toolsParametersTypes;
     for (const auto& [toolName, toolSchemaWrapper] : toolsSchemas) {
         const auto& toolSchemaStringRepr = toolSchemaWrapper.stringRepr;
@@ -267,13 +296,13 @@ void Qwen3CoderToolParser::lazyFillInitToolParametersTypesMap() {
     SPDLOG_DEBUG("Filling tools parameters types map");
     this->toolsParametersTypes = createToolsParametersTypesMap(this->toolSchemas);
     this->filledParametersTypesMap = true;
+    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", this->toolsParametersTypes.size());
 }
 
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
     BaseOutputParser(tokenizer),
     toolSchemas(toolSchemas),
     streamParser(this->toolsParametersTypes) {
-    SPDLOG_DEBUG("Qwen3CoderToolParser created with {} tools", toolsParametersTypes.size());
 }
 
 void Qwen3CoderToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t>& generatedTokens) {
