@@ -140,6 +140,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.EmbeddingsCalculatorOVOptions]: {
       models_path: "{{model_path}}",
+      plugin_config: '{"NUM_STREAMS": {{num_streams}}}',
       normalize_embeddings: {% if not normalize %}false{% else %}true{% endif%},
       {%- if pooling %}
       pooling: {{pooling}},{% endif %}
@@ -163,6 +164,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
       models_path: "{{model_path}}",
+      plugin_config: '{"NUM_STREAMS": {{num_streams}}}',
       target_device: "{{target_device|default("CPU", true)}}"
     }
   }
@@ -451,10 +453,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     
     # Additional plugin properties for HETERO
     if "HETERO" in task_parameters['target_device']:
-        if task_parameters['pipeline_type'] is None:
-            raise ValueError("pipeline_type should be specified for HETERO target device. It should be set to either LM or VLM")
-        if task_parameters['pipeline_type'] not in ["LM", "VLM"]:
-            raise ValueError("pipeline_type should be either LM or VLM for HETERO target device")
         plugin_config['MODEL_DISTRIBUTION_POLICY'] = 'PIPELINE_PARALLEL'
 
     plugin_config_str = json.dumps(plugin_config)
