@@ -499,10 +499,10 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
     serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
     serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
-    std::filesystem::path api_key_file = result->operator[]("api_key_file").as<std::string>();
+    std::filesystem::path apiKeyFile = result->operator[]("api_key_file").as<std::string>();
     serverSettings.apiKey = "";
-    if (!api_key_file.empty()) {
-        std::ifstream file(api_key_file);
+    if (!apiKeyFile.empty()) {
+        std::ifstream file(apiKeyFile);
         if (file.is_open()) {
             std::getline(file, serverSettings.apiKey);
             // Use first line and trim whitespace characters from both ends
@@ -512,7 +512,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
             }
             file.close();
         } else {
-            std::cerr << "Error reading API key file: Unable to open file " << api_key_file << std::endl;
+            std::cerr << "Error reading API key file: Unable to open file " << apiKeyFile << std::endl;
             exit(OVMS_EX_USAGE);
         }
     } else {

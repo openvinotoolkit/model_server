@@ -19,14 +19,14 @@ See also:
 
 ---
 Generative endpoints starting with `/v3`, might be restricted with authorization and API key. It can be set during the server initialization with a parameter `api_key_file` or environment variable `API_KEY`. 
-The `api_key_file` should contains a path to the file containing the value of API key. The content of the file first line is used. If parameter api_key_file and variable  API_KEY are not set, the server will not require any authorization. The client should send the API key inside the `Authorization` header as `Bearer <api_key>`.
+The `api_key_file` should contain a path to the file containing the value of API key. The content of the file first line is used. If parameter api_key_file and variable  API_KEY are not set, the server will not require any authorization. The client should send the API key inside the `Authorization` header as `Bearer <api_key>`.
 
 ---
 
 OpenVINO Model Server has a set of mechanisms preventing denial of service attacks from the client applications. They include the following:
 - setting the number of inference execution streams which can limit the number of parallel inference calls in progress for each model. It can be tuned with `NUM_STREAMS` or `PERFORMANCE_HINT` plugin config.
 - setting the maximum number of gRPC threads which is, by default, configured to the number 8 * number_of_cores. It can be changed with the parameter `--grpc_max_threads`.
-- setting the maximum number of REST workers which is, be default, configured to the number 4 * number_of_cores. It can be changed with the parameter `--grpc_rest_workers`.
+- setting the maximum number of REST workers which is, be default, configured to the number 4 * number_of_cores. It can be changed with the parameter `--rest_workers`.
 - maximum size of REST and GRPC message which is 1GB - bigger messages will be rejected
 - setting max_concurrent_streams which defines how many concurrent threads can be initiated from a single client - the remaining will be queued. The default is equal to the number of CPU cores. It can be changed with the `--grpc_channel_arguments grpc.max_concurrent_streams=8`.
 - setting the gRPC memory quota for the requests buffer - the default is 2GB. It can be changed with `--grpc_memory_quota=2147483648`. Value `0` invalidates the quota.

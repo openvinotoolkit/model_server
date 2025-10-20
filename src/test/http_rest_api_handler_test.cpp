@@ -1311,7 +1311,7 @@ TEST_F(ConfigStatus, url_decode) {
     EXPECT_EQ("model%2", ovms::urlDecode("model%2"));
 }
 
-TEST_F(ConfigStatus, headers2lowercase) {
+TEST_F(ConfigStatus, isAuthorized) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
@@ -1321,14 +1321,19 @@ TEST_F(ConfigStatus, headers2lowercase) {
     std::unordered_map<std::string, std::string> headers = {{"X-Api-Key", "12345"},
         {"Content-Type", "application/json"},
         {"Authorization", "ABC"}};
-    std::unordered_map<std::string, std::string> expected = {{"x-api-key", "12345"},
+    EXPECT_FALSE(handler.isAuthorized(headers, "wrong_key"));
+    headers = {{"X-Api-Key", "12345"},
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer ABC"}};
+    EXPECT_TRUE(handler.isAuthorized(headers, "ABC"));
+    
+    headers = {{"x-api-key", "12345"},
         {"content-type", "application/json"},
-        {"authorization", "ABC"}};
-    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+        {"authoriZation", "Bearer ABC123"}};
+    EXPECT_TRUE(handler.isAuthorized(headers, "ABC123"));
+
     headers = {};
-    expected = {};
-    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+    EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
     headers = {{"X-CustomHeader", "12345"}};
-    expected = {{"x-customheader", "12345"}};
-    EXPECT_EQ(handler.toLowerCaseHeaders(headers), expected);
+    EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
 }

@@ -670,31 +670,22 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     return StatusCode::OK;
 }
 
-std::unordered_map<std::string, std::string> HttpRestApiHandler::toLowerCaseHeaders(const std::unordered_map<std::string, std::string>& headers) {
+bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey) {
     std::unordered_map<std::string, std::string> lowercaseHeaders;
     for (const auto& [key, value] : headers) {
         std::string lowercaseKey = key;
-        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(),
-            [](unsigned char c) { return std::tolower(c); });
-        lowercaseHeaders[lowercaseKey] = value;
-    }
-    return lowercaseHeaders;
-}
-
-Status HttpRestApiHandler::checkIfAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey) {
-    if (!apiKey.empty()) {
-        auto lowercaseHeaders = toLowerCaseHeaders(headers);
-        if (lowercaseHeaders.count("authorization")) {
-            if (lowercaseHeaders.at("authorization") != "Bearer " + apiKey) {
+        std::transform(lowercaseKey.begin(), lowercaseKey.end(), lowercaseKey.begin(), ::tolower);
+        if (lowercaseKey == "authorization") {
+            if (value == "Bearer " + apiKey) {
+                return true;
+            } else {
                 SPDLOG_DEBUG("Unauthorized request - invalid API key provided.");
-                return StatusCode::UNAUTHORIZED;
+                return false;
             }
-        } else {
-            SPDLOG_DEBUG("Unauthorized request - missing API key");
-            return StatusCode::UNAUTHORIZED;
         }
     }
-    return StatusCode::OK;
+    SPDLOG_DEBUG("Unauthorized request - missing API key");
+    return false;
 }
 
 Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& apiKey) {
@@ -704,11 +695,8 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     HttpPayload request;
     std::string modelName;
     bool streamFieldVal = false;
-    // convert headers to lowercase because http headers are case insensitive
-    std::unordered_map<std::string, std::string> lowercaseHeaders;
-    Status authStatus = checkIfAuthorized(request_components.headers, apiKey);
-    if (!authStatus.ok()) {
-        return authStatus;
+    if (!isAuthorized(request_components.headers, apiKey)) {
+        return StatusCode::UNAUTHORIZED;
     }
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
     if (!status.ok()) {
