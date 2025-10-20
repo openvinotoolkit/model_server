@@ -81,6 +81,20 @@ async def run(query, agent, OVMS_MODEL_PROVIDER, stream: bool = False):
         result = await Runner.run(starting_agent=agent, input=query, run_config=RunConfig(model_provider=OVMS_MODEL_PROVIDER, tracing_disabled=True))
         print(result.final_output)
 
+knowledge_files = ["system_prompt", "web_search_tool_call.txt", "testcase_template.txt", "st_syntax.txt", "prompt"]
+directory = "C:\codesys-MCP-IDE"
+def read_full_prompt(directory, files_list):
+    full_prompt = ""
+    for file_name in files_list:
+        file_path = os.path.join(directory, file_name)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                full_prompt += f"{content}\n"
+        except Exception as e:
+            print(f"Error reading {file_name}: {e}")
+    return full_prompt
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run OpenAI Agent with optional query.")
@@ -121,7 +135,8 @@ if __name__ == "__main__":
         cds_server = MCPServerStdio(
             client_session_timeout_seconds=500,
             name="CDS MCP Server",
-            params={"command": "uv", "args":  [ "--directory", "C:\\git\\model_server\\demos\\continuous_batching\\agentic_ai\\cds-mcp", "run", "cds.py"], "env": env_proxy}
+            params={"command": "uv", "args":  [ "--directory", "C:\\codesys-MCP-IDE\\cds-mcp", "run", "cds.py"], "env": env_proxy}
+            #params={"command": "uv", "args":  [ "--directory", "C:\\git\\model_server\\demos\\continuous_batching\\agentic_ai\\cds-mcp", "run", "cds.py"], "env": env_proxy}
         )
         mcp_servers.append(cds_server)
     client = AsyncOpenAI(base_url=args.base_url, api_key=API_KEY)
@@ -138,4 +153,9 @@ if __name__ == "__main__":
         model_settings=ModelSettings(tool_choice=args.tool_choice, temperature=0.0, max_tokens=1000, extra_body={"chat_template_kwargs": {"enable_thinking": args.enable_thinking}}),
     )
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(run(args.query, agent, OVMS_MODEL_PROVIDER, args.stream))
+    query = ""
+    if args.query == "use_knowledge_files":
+        query = read_full_prompt(directory, knowledge_files)
+    else:
+        query = args.query
+    loop.run_until_complete(run(query, agent, OVMS_MODEL_PROVIDER, args.stream))
