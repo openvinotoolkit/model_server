@@ -140,9 +140,9 @@ Status HfPullModelModule::clone() const {
     // Text gen with draft source model case - downloads second model
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
-        std::unique_ptr<IModelDownloader> downloader2;
-        downloader2 = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
-        status = downloader2->downloadModel();
+        std::unique_ptr<IModelDownloader> draftModelDownloader;
+        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        status = draftModelDownloader->downloadModel();
         if (!status.ok()) {
             return status;
         }
