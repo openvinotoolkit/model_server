@@ -29,6 +29,18 @@ using namespace ov;
 
 namespace ovms {
 
+static std::shared_ptr<op::Op> get_cls_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node) {
+    auto start = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{0});
+    auto stop = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto step = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+
+    auto slice = std::make_shared<op::v8::Slice>(last_hidden_state_node, start, stop, step, axis);
+
+    auto squeeze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    return std::make_shared<op::v15::Squeeze>(slice, squeeze_axis);
+}
+
 static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> model,
                                                   const ov::Output<ov::Node>& last_hidden_state_node) {
     auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
@@ -51,7 +63,15 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::share
     processor.output().postprocess().custom([this, model](const ov::Output<ov::Node>& node) {
         SPDLOG_INFO("Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
         SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
-        return get_last_token_pooling_op(model, node);
+        switch (this->pooling) {
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {
+            return get_cls_pooling_op(node);
+        }
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST: {
+            return get_last_token_pooling_op(model, node);
+        }
+        }
+        OPENVINO_THROW("Pooling type is not supported");
     });
 
     // if normalize
