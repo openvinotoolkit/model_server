@@ -37,11 +37,7 @@ const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 // For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-#if (USE_DROGON == 0)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
-#else
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
-#endif
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
@@ -370,5 +366,6 @@ const std::string& Config::allowedOrigins() const { return this->serverSettings.
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
+const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
 
 }  // namespace ovms

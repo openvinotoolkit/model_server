@@ -56,6 +56,7 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
 | `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
+| `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 
 ## Config management mode options
 
