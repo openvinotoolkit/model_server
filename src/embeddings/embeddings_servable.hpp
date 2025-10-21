@@ -40,12 +40,18 @@ public:
         pooling(pooling),
         normalizeEmbeddings(normalizeEmbeddings) {}
 
+    int getTargetOutputIndex() const {
+        return target_output_idx;
+    }
+
 protected:
     std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) override;
 
 private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
     bool normalizeEmbeddings;
+
+    int target_output_idx = -1;
 };
 
 

@@ -216,18 +216,22 @@ public:
             inferRequest.wait();
             std::string outputTensorName;
             if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
-                RET_CHECK(false) << "too many outputs";
+                //RET_CHECK(false) << "too many outputs";
                 // Search by number of dimensions, should be 3
-                bool found = false;
-                for (const auto& output : inferRequest.get_compiled_model().outputs()) {
-                    if (output.get_partial_shape().size() == 3) {
-                        outputTensorName = output.get_any_name();
-                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
-                        found = true;
-                        break;
-                    }
-                }
-                RET_CHECK(found);
+                //bool found = false;
+                // for (const auto& output : inferRequest.get_compiled_model().outputs()) {
+                //     //if (output.get_partial_shape().size() == 3) {
+                //         outputTensorName = output.get_any_name();
+                //         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
+                //         found = true;
+                //         break;
+                //     //}
+                // }
+                int target_output_idx = embeddings_session->getTargetOutputIndex();
+                RET_CHECK(target_output_idx != -1) << "No output with 3 dimensions found";
+                outputTensorName = inferRequest.get_compiled_model().outputs()[target_output_idx].get_any_name();
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
+                //RET_CHECK(found);
             } else {  // BGE
                 RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
                 outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();

@@ -41,6 +41,39 @@ static std::shared_ptr<op::Op> get_cls_pooling_op(const ov::Output<ov::Node>& la
     return std::make_shared<op::v15::Squeeze>(slice, squeeze_axis);
 }
 
+static std::shared_ptr<op::Op> get_mean_pooling_op(std::shared_ptr<Model> model,
+                                            const ov::Output<ov::Node>& last_hidden_state_node) {
+    auto shape_of = std::make_shared<op::v3::ShapeOf>(last_hidden_state_node);
+
+    auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
+
+    auto unsqueze_axis = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{-1});
+
+    auto unsqueze = std::make_shared<op::v0::Unsqueeze>(attention_mask, unsqueze_axis);
+
+    auto input_mask_expanded = std::make_shared<op::v3::Broadcast>(unsqueze, shape_of);
+
+    auto input_mask_expanded_convert =
+        std::make_shared<op::v0::Convert>(input_mask_expanded, last_hidden_state_node.get_element_type());
+
+    auto last_hidden_node_with_applied_attention_mask =
+        std::make_shared<op::v1::Multiply>(last_hidden_state_node, input_mask_expanded_convert->outputs()[0]);
+
+    auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto sum_hidden_state = std::make_shared<op::v1::ReduceSum>(last_hidden_node_with_applied_attention_mask, axis_1);
+
+    // f32 overflow possible
+    // ReduceMean might help with overflow but its precision diverges from LlamaIndex
+    auto sum_expanded_mask = std::make_shared<op::v1::ReduceSum>(input_mask_expanded_convert, axis_1);
+
+    auto nearest_to_zero =
+        std::make_shared<op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{1e-12});
+    auto max_expanded_mask = std::make_shared<op::v1::Maximum>(sum_expanded_mask, nearest_to_zero);
+
+    // shape: [batch_size, hidden_state_size]
+    return std::make_shared<op::v1::Divide>(sum_hidden_state, max_expanded_mask);
+}
+
 static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> model,
                                                   const ov::Output<ov::Node>& last_hidden_state_node) {
     auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
@@ -60,7 +93,22 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::share
 
     ov::preprocess::PrePostProcessor processor(model);
 
-    processor.output().postprocess().custom([this, model](const ov::Output<ov::Node>& node) {
+    // Find the output with 3 dimensions (batch_size, sequence_length, hidden_size)
+    this->target_output_idx = -1;
+    for (size_t i = 0; i < model->outputs().size(); ++i) {
+        if (model->outputs()[i].get_partial_shape().rank() == 3) {
+            this->target_output_idx = static_cast<int>(i);
+            SPDLOG_INFO("Found 3D output at index {}", i);
+            SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Found 3D output at index {}", i);
+            break;
+        }
+    }
+
+    if (this->target_output_idx == -1) {
+        OPENVINO_THROW("No output with 3 dimensions found");
+    }
+
+    processor.output(this->target_output_idx).postprocess().custom([this, model](const ov::Output<ov::Node>& node) {
         SPDLOG_INFO("Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
         SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
         switch (this->pooling) {
@@ -70,13 +118,16 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::share
         case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_LAST: {
             return get_last_token_pooling_op(model, node);
         }
+        case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN: {
+            return get_mean_pooling_op(model, node);
+        }
         }
         OPENVINO_THROW("Pooling type is not supported");
     });
 
     // if normalize
     if (this->normalizeEmbeddings) {
-        processor.output().postprocess().custom([](const ov::Output<ov::Node>& node) {
+        processor.output(this->target_output_idx).postprocess().custom([](const ov::Output<ov::Node>& node) {
             SPDLOG_INFO("Applying L2 normalization to embeddings");
             SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying L2 normalization to embeddings");
             auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
