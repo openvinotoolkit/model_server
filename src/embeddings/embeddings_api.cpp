@@ -202,18 +202,18 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
         //    std::transform(dataPtr, dataPtrEnd, dataPtr,
         //        [denom](auto& element) { return element / denom; });
         //}
-        //if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
-        //    std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
-        //    std::string escaped;
-        //    absl::Base64Escape(sv2, &escaped);
-        //    writer.String(escaped.c_str());
-        //} else {
-            writer.StartArray();
+         if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
+             std::string_view sv2(reinterpret_cast<const char*>(batch_result.data()), batch_result.size() * sizeof(float));
+             std::string escaped;
+             absl::Base64Escape(sv2, &escaped);
+             writer.String(escaped.c_str());
+         } else {
+           writer.StartArray();
             for (size_t i = 0; i < batch_result.size(); ++i) {
                 writer.Double(batch_result[i]);
             }
             writer.EndArray();
-       // }
+        }
         writer.String("index");
         writer.Uint(batch);
         writer.EndObject();
