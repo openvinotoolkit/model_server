@@ -521,7 +521,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
             serverSettings.apiKey = envApiKey;
         }
         if (serverSettings.apiKey.empty()) {
-            std::cerr << "Warning: API key not provided via --api_key_file or API_KEY environment variable. Authentication will be disabled." << std::endl;
+            std::cout << "Info: API key not provided via --api_key_file or API_KEY environment variable. Authentication will be disabled." << std::endl;
         }
     }
 }

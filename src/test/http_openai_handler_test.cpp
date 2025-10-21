@@ -101,7 +101,7 @@ protected:
     void SetUp() {
         writer = std::make_shared<MockedServerRequestInterface>();
         multiPartParser = std::make_shared<MockedMultiPartParser>();
-        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/empty_subconfig.json").c_str());
+        SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_openai_chat_completions_mock.json").c_str());
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
     }
 
@@ -117,6 +117,26 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKey) {
     std::string requestBody = R"(
         {
             "model": "gpt",
+            "messages": []
+        }
+    )";
+    const std::string URI = "/v3/chat/completions";
+    comp.headers["authorization"] = "Bearer 1234";
+    std::cout << "URI" << URI << std::endl;
+    std::cout << "BODY" << requestBody << std::endl;
+    std::cout << "KEY" << comp.headers["authorization"] << std::endl;
+    std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
+    std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
+    auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
+    std::string response;
+    auto status = handler->processV3("/v3/completions", comp, response, requestBody, streamPtr, multiPartParser, "1234");
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKeyMissingModel) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt-missing",
             "messages": []
         }
     )";
