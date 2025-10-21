@@ -35,9 +35,6 @@ ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_rep
 
 Example for pulling `OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov`:
 
-```text
-ovms --pull --source_model "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov" --model_repository_path /models --model_name Phi-3-mini-FastDraft-50M-int8-ov --target_device CPU --task text_generation 
-```
 ::::{tab-set}
 :::{tab-item} With Docker
 :sync: docker
