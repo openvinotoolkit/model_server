@@ -58,11 +58,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     if (!parsedJson->IsObject())
         return "Received json is not an object";
 
-    auto it = parsedJson->FindMember("input");
-    auto it2 = parsedJson->FindMember("text");
-    if (it == parsedJson->MemberEnd()) {
-        it = it2;
-    }
+    auto it = useTokenizeEndpoint ? parsedJson->FindMember("text") : parsedJson->FindMember("input");
 
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
