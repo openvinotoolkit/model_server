@@ -695,8 +695,10 @@ Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpReque
     HttpPayload request;
     std::string modelName;
     bool streamFieldVal = false;
-    if (!isAuthorized(request_components.headers, this->apiKey)) {
-        return StatusCode::UNAUTHORIZED;
+    if (!this->apiKey.empty()) {
+        if (!isAuthorized(request_components.headers, this->apiKey)) {
+            return StatusCode::UNAUTHORIZED;
+        }
     }
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);
     if (!status.ok()) {
