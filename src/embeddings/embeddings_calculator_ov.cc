@@ -258,10 +258,12 @@ public:
         StringBuffer buffer;
         PoolingMode mode;
         if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
-            mode = PoolingMode::LAST;
+            mode = PoolingMode::LAST;  // todo remove since this is not really used
         } else {
             mode = PoolingMode::CLS;
         }
+
+        // remove normalize embeddings since it is not really used
         status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), mode, tokens.attention_mask);
         if (!status.ok()) {
             return status;
