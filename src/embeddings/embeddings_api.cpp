@@ -44,7 +44,7 @@ using namespace rapidjson;
 
 namespace ovms {
 
-std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
+std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson, const bool& useTokenizeEndpoint) {
     enum class InputType {
         NONE,
         STRING,
@@ -59,6 +59,11 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         return "Received json is not an object";
 
     auto it = parsedJson->FindMember("input");
+    auto it2 = parsedJson->FindMember("text");
+    if (it == parsedJson->MemberEnd()) {
+        it = it2;
+    }
+
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
@@ -121,6 +126,49 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         }
     }
 
+    if (useTokenizeEndpoint) {
+        it = parsedJson->FindMember("max_length");
+        if (it != parsedJson->MemberEnd()) {
+            if (it->value.IsInt()) {
+                size_t max_length = it->value.GetInt();
+                request.parameters["max_length"] = max_length;
+            } else {
+                return "max_length should be integer";
+            }
+        }
+        it = parsedJson->FindMember("pad_to_max_length");
+        if (it != parsedJson->MemberEnd()) {
+            if (it->value.IsBool()) {
+                bool pad_to_max_length = it->value.GetBool();
+                request.parameters["pad_to_max_length"] = pad_to_max_length;
+            } else {
+                return "pad_to_max_length should be boolean";
+            }
+        }
+        it = parsedJson->FindMember("add_special_tokens");
+        if (it != parsedJson->MemberEnd()) {
+            if (it->value.IsBool()) {
+                bool add_special_tokens = it->value.GetBool();
+                request.parameters["add_special_tokens"] = add_special_tokens;
+            } else {
+                return "add_special_tokens should be boolean";
+            }
+        }
+
+        it = parsedJson->FindMember("padding_side");
+        if (it != parsedJson->MemberEnd()) {
+            if (it->value.IsString()) {
+                std::string padding_side = it->value.GetString();
+                if (padding_side != "left" && padding_side != "right") {
+                    return "padding_side should be either left or right";
+                }
+                request.parameters["padding_side"] = padding_side;
+            } else {
+                return "padding_side should be string";
+            }
+        }
+    }
+
     // TODO: dimensions (optional)
     // TODO: user (optional)
     if (input_strings.size() > 0) {
@@ -133,14 +181,14 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     return request;
 }
 
-absl::Status EmbeddingsHandler::parseRequest() {
+absl::Status EmbeddingsHandler::parseRequest(const bool& useTokenizeEndpoint) {
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (this->doc.HasParseError()) {
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Non-json request received in embeddings calculator");
         return absl::InvalidArgumentError("Non-json request received in embeddings calculator");
     }
 
-    auto parsed = EmbeddingsRequest::fromJson(&(this->doc));
+    auto parsed = EmbeddingsRequest::fromJson(&(this->doc), useTokenizeEndpoint);
 
     if (auto error = std::get_if<std::string>(&parsed)) {
         return absl::InvalidArgumentError(*error);
@@ -154,6 +202,9 @@ std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& Embed
 }
 EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {
     return request.encoding_format;
+}
+ov::AnyMap& EmbeddingsHandler::getParameters() {
+    return request.parameters;
 }
 
 void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {

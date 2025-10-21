@@ -48,8 +48,9 @@ struct EmbeddingsRequest {
     };
     std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
     EncodingFormat encoding_format;
+    ov::AnyMap parameters = {};
 
-    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
+    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request, const bool& useTokenizeEndpoint);
 };
 
 class EmbeddingsHandler {
@@ -63,8 +64,9 @@ public:
 
     std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
+    ov::AnyMap& getParameters();
 
-    absl::Status parseRequest();
+    absl::Status parseRequest(const bool& useTokenizeEndpoint = false);
     absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode = PoolingMode::CLS, const std::optional<ov::Tensor>& attentionMask = std::nullopt);
     absl::Status parseResponseTokenize(rapidjson::StringBuffer& buffer, const ov::Tensor& inputIdsTensor);
     void setPromptTokensUsage(int promptTokens);
