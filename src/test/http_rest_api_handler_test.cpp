@@ -1326,7 +1326,7 @@ TEST_F(ConfigStatus, isAuthorized) {
         {"Content-Type", "application/json"},
         {"Authorization", "Bearer ABC"}};
     EXPECT_TRUE(handler.isAuthorized(headers, "ABC"));
-    
+
     headers = {{"x-api-key", "12345"},
         {"content-type", "application/json"},
         {"authoriZation", "Bearer ABC123"}};
