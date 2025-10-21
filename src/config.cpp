@@ -128,10 +128,6 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.downloadType == GIT_CLONE_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
-            std::cerr << "For now only OpenVINO models are supported in pulling mode with git clone. Please use optimum download or gguf models instead." << std::endl;
-            return false;
-        }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
