@@ -71,7 +71,7 @@ Check [parameters page](./parameters.md) for detailed descriptions of configurat
 
 When using pull mode you need both read and write access rights to local models repository.
 
-You need read permissions to the source model in Hugging Face Hub. Pass the access token via environment variable just like with hf_cli application.
+You may need read permissions to the source model in Hugging Face Hub. Pass the access token via environment variable just like with hf_cli application.
 
 You can mount the HuggingFace cache to avoid downloading the original model in case it was pulled earlier.
 
