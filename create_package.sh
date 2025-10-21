@@ -15,13 +15,16 @@
 #
 
 # This script should be used inside the build image to create a binary package based on the compiled artifacts
-
+set -e
+# Set default value for variables
+: "${FUZZER_BUILD:=0}"
 env
 mkdir -vp /ovms_release/bin
 mkdir -vp /ovms_release/lib
 mkdir -vp /ovms_release/lib/custom_nodes
 
-if [ -f /openvino_tokenizers/build/src/libopenvino_tokenizers.so ]; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
+# Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
+if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d ! -name "libgtest.so" ! -name "*params" ! -name "*.hana.*" ! -name "py_generate_pipeline.cpython*" !  -name "lib_node_*" ! -path "*test_python_binding*" ! -name "*libpython*" -exec cp -v {} /ovms_release/lib/ \;
 mv /ovms_release/lib/libcustom_node* /ovms_release/lib/custom_nodes/
@@ -29,8 +32,9 @@ cd /ovms_release/lib/ ; rm -f libcurl.so*
 cd /ovms_release/lib/ ; rm -f libazurestorage.so.* ; ln -s libazurestorage.so libazurestorage.so.7 ;ln -s libazurestorage.so libazurestorage.so.7.5
 cd /ovms_release/lib/ ; rm -f libcpprest.so.2.10 ; ln -s libcpprest.so libcpprest.so.2.10
 
-if [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so.2540 ; fi
-if [ -f /ovms_release/lib/libopenvino_genai_c.so ]; then cd /ovms_release/lib/ ; rm -f libopenvino_genai_c.so* ; fi
+if [[ "$BASE_OS" =~ "redhat" ]] && [ -f /ovms_release/lib/libopenvino_genai.so ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so.* ; ln -s libopenvino_genai.so libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so libopenvino_genai.so.2025.4.0.0 ; fi
+if [[ "$BASE_OS" =~ "ubuntu" ]] && [ -f /ovms_release/lib/libopenvino_genai.so.2025.4.0.0 ]; then cd /ovms_release/lib/ ; rm -rf libopenvino_genai.so ; rm -rf libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so.2540 ; ln -s libopenvino_genai.so.2025.4.0.0 libopenvino_genai.so ; fi
+if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
 
 # Remove GPU plugin for CPU images?
 # Remove OpenCL for CPU images?
@@ -69,8 +73,7 @@ if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/pyt
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then echo $'#!/bin/bash\npython3 -m openvino_tokenizers.cli "$@"' > /ovms_release/bin/convert_tokenizer ; \
    chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /ovms/bazel-out/k8-opt/bin/external/llm_engine/libopenvino_genai/python/* /ovms_release/lib/python/ ; \
-	mkdir -p /ovms_release/lib/python/openvino_genai-2025.4.dist-info ; \
+if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2025.4.dist-info ; \
 	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2025.4\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2025.4.0' > /ovms_release/lib/python/openvino_genai-2025.4.dist-info/METADATA; fi
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
@@ -92,7 +95,7 @@ find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ov
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
 patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/lib*plugin.so
-if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf  --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
+if [ -f  /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ] && [ "$BASE_OS" != "redhat" ]; then patchelf --replace-needed libcutensor.so.1 /usr/lib/x86_64-linux-gnu/libcutensor/11/libcutensor.so.1 /ovms_release/lib/libopenvino_nvidia_gpu_plugin.so ; fi
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
@@ -102,7 +105,6 @@ if [ "$ov_use_binary" == "1" ] ; then cp -rf /opt/intel/openvino/docs/licensing/
 if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
 ls -lahR /ovms_release/
-
 
 mkdir -p /ovms_pkg/${BASE_OS}
 cd /ovms_pkg/${BASE_OS}
