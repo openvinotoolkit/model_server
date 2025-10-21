@@ -54,10 +54,8 @@ Status HTTPServerModule::start(const ovms::Config& config) {
     return StatusCode::OK;
 }
 void HTTPServerModule::shutdown() {
-
     if (drogonServer == nullptr)
         return;
-
     SPDLOG_INFO("{} shutting down", HTTP_SERVER_MODULE_NAME);
     state = ModuleState::STARTED_SHUTDOWN;
     drogonServer->terminate();

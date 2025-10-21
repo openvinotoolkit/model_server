@@ -688,14 +688,14 @@ bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std:
     return false;
 }
 
-Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser, const std::string& apiKey) {
+Status HttpRestApiHandler::processV3(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
     HttpPayload request;
     std::string modelName;
     bool streamFieldVal = false;
-    if (!isAuthorized(request_components.headers, apiKey)) {
+    if (!isAuthorized(request_components.headers, this->apiKey)) {
         return StatusCode::UNAUTHORIZED;
     }
     auto status = createV3HttpPayload(uri, request_components, response, request_body, serverReaderWriter, std::move(multiPartParser), request, modelName, streamFieldVal);

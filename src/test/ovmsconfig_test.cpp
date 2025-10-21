@@ -1916,7 +1916,8 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyFile) {
 }
 
 TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
-    SetEnvironmentVar("API_KEY", "ABCD");
+    EnvGuard envGuard;
+    envGuard.set("API_KEY", "ABCD");
     std::string modelName = "test_name";
     std::string modelPath = "model_path";
     std::string apiKeyFile = "api_key.txt";
@@ -1936,8 +1937,6 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
     config.parse(arg_count, n_argv);
 
     ASSERT_EQ(config.getServerSettings().apiKey, "ABCD");
-    // Clean up the environment variable
-    UnSetEnvironmentVar("API_KEY");
 }
 
 class OvmsParamsTest : public ::testing::Test {
