@@ -1,0 +1,71 @@
+//*****************************************************************************
+// Copyright 2024 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "embeddings_servable.hpp"
+
+#include "../logging.hpp"
+
+#include "openvino/core/except.hpp"
+#include "openvino/genai/tokenizer.hpp"
+#include "openvino/opsets/opset.hpp"
+#include "openvino/opsets/opset1.hpp"
+#include "openvino/opsets/opset3.hpp"
+#include "openvino/opsets/opset8.hpp"
+
+using namespace ov::genai;
+using namespace ov;
+
+namespace ovms {
+
+static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> model,
+                                                  const ov::Output<ov::Node>& last_hidden_state_node) {
+    auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
+
+    auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto reduce_sum = std::make_shared<op::v1::ReduceSum>(attention_mask, axis_1);
+    auto subtract_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
+    auto subtract = std::make_shared<op::v1::Subtract>(reduce_sum, subtract_1);
+
+    return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
+}
+
+std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::shared_ptr<ov::Model> model) {
+    // Multiple logging approaches to debug
+    SPDLOG_INFO("EmbeddingsServable pre/post-processing - DEFAULT LOGGER");
+    SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying EmbeddingsServable pre/post-processing");
+
+    ov::preprocess::PrePostProcessor processor(model);
+
+    processor.output().postprocess().custom([this, model](const ov::Output<ov::Node>& node) {
+        SPDLOG_INFO("Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
+        SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying pooling mode: {}", mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
+        return get_last_token_pooling_op(model, node);
+    });
+
+    // if normalize
+    if (this->normalizeEmbeddings) {
+        processor.output().postprocess().custom([](const ov::Output<ov::Node>& node) {
+            SPDLOG_INFO("Applying L2 normalization to embeddings");
+            SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Applying L2 normalization to embeddings");
+            auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
+            return std::make_shared<op::v0::NormalizeL2>(node, axis_const, 1e-12, op::EpsMode::MAX);
+        });
+    }
+
+    model = processor.build();
+    return model;
+}
+
+}  // namespace ovms

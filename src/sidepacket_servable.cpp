@@ -17,16 +17,10 @@
 #include <numeric>
 
 #include "sidepacket_servable.hpp"
+#include "logging.hpp"
 #include <spdlog/spdlog.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
-
-#include "openvino/core/except.hpp"
-#include "openvino/genai/tokenizer.hpp"
-#include "openvino/opsets/opset.hpp"
-#include "openvino/opsets/opset1.hpp"
-#include "openvino/opsets/opset3.hpp"
-#include "openvino/opsets/opset8.hpp"
 
 #include <vector>
 #include <string>
@@ -60,19 +54,11 @@ namespace ovms {
         }                                                                                                                      \
     }
 
-static std::shared_ptr<op::Op> get_last_token_pooling_op(std::shared_ptr<Model> model,
-                                                  const ov::Output<ov::Node>& last_hidden_state_node) {
-    auto attention_mask = model->input("attention_mask").get_node()->outputs()[0];
-
-    auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
-    auto reduce_sum = std::make_shared<op::v1::ReduceSum>(attention_mask, axis_1);
-    auto subtract_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
-    auto subtract = std::make_shared<op::v1::Subtract>(reduce_sum, subtract_1);
-
-    return std::make_shared<op::v8::Gather>(last_hidden_state_node, subtract, axis_1, 1);
+SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
+    return;
 }
 
-SidepacketServable::SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
+void SidepacketServable::initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelDir);
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
@@ -146,24 +132,9 @@ SidepacketServable::SidepacketServable(const std::string& modelDir, const std::s
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
     
-    
-    // Which pooling ?
-    
-    ov::preprocess::PrePostProcessor processor(m_model);
-
-    processor.output().postprocess().custom([m_model](const ov::Output<ov::Node>& node) {
-        return get_last_token_pooling_op(m_model, node);
-    });
-
-    // if normalize
-    if (true) {
-        processor.output().postprocess().custom([](const ov::Output<ov::Node>& node) {
-            auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
-            return std::make_shared<op::v0::NormalizeL2>(node, axis_const, 1e-12, op::EpsMode::MAX);
-        });
-    }
-
-    m_model = processor.build();
+    SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Loading EmbeddingsServable model");
+    m_model = this->applyPrePostProcessing(m_model);
+    SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Loading EmbeddingsServable model END");
 
     //
     

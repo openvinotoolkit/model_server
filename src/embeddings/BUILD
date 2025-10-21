@@ -31,8 +31,14 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "embeddings_servable",
+    srcs = ["embeddings_servable.cpp"],
     hdrs = ["embeddings_servable.hpp"],
-    deps = ["//src:sidepacket_servable",],
+    deps = [
+        "//src:libovmslogging",
+        "//src:sidepacket_servable",
+        "//third_party:openvino",
+        "embeddings_calculator_ov_cc_proto",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

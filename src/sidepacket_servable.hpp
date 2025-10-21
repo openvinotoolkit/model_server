@@ -21,6 +21,8 @@
 #include "openvino/op/multiply.hpp"
 #include "ovinferrequestsqueue.hpp"
 
+#include "logging.hpp"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -51,6 +53,7 @@ struct SidepacketServable {
 
 public:
     SidepacketServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
+    void initialize(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath);
     OVInferRequestsQueue& getInferRequestsQueue() {
         return *inferRequestsQueue;
     }
@@ -75,5 +78,8 @@ public:
     const size_t getNumberOfModelInputs() {
         return compiledModel.inputs().size();
     }
+
+protected:
+    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) { return model; SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "No pre/post-processing applied in SidepacketServable"); }
 };
 }  // namespace ovms

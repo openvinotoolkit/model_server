@@ -16,7 +16,8 @@
 #pragma once
 
 #include "../sidepacket_servable.hpp"
-#include "embeddings_api.hpp"
+//#include "embeddings_api.hpp"
+#include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "../filesystem.hpp"
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/error/en.h>
@@ -26,11 +27,27 @@
 
 namespace ovms {
 
-struct EmbeddingsServable : SidepacketServable {
+struct EmbeddingsServable : public SidepacketServable {
 public:
-    EmbeddingsServable(const std::string& modelDir, const std::string& targetDevice, const std::string& pluginConfig, const std::string& graphPath) :
-        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath) {}
+    EmbeddingsServable(
+        const std::string& modelDir,
+        const std::string& targetDevice,
+        const std::string& pluginConfig,
+        const std::string& graphPath,
+        mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling,
+        bool normalizeEmbeddings) :
+        SidepacketServable(modelDir, targetDevice, pluginConfig, graphPath),
+        pooling(pooling),
+        normalizeEmbeddings(normalizeEmbeddings) {}
+
+protected:
+    std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) override;
+
+private:
+    mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
+    bool normalizeEmbeddings;
 };
+
 
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 }  // namespace ovms
