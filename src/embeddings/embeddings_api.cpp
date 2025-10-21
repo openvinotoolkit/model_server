@@ -250,5 +250,39 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.EndObject();
     return absl::OkStatus();
 }
+
+absl::Status EmbeddingsHandler::parseResponseTokenize(StringBuffer& buffer, const ov::Tensor& inputIdsTensor) {
+    Writer<StringBuffer> writer(buffer);
+    
+    writer.StartObject();
+    writer.String("object");
+    writer.String("list");
+    writer.String("data");
+    ov::Shape outputShape = inputIdsTensor.get_shape();
+    if (outputShape.size() != 2) {
+        return absl::InvalidArgumentError("Invalid input ids tensor shape");
+    }
+    writer.StartArray();
+    for (size_t batchIterator = 0; batchIterator < outputShape[0]; batchIterator++) {
+        writer.StartObject();
+        writer.String("object");
+        writer.String("token_ids");
+        writer.String("tokens");
+        size_t size = outputShape[1];
+        int64_t* dataPtr = reinterpret_cast<int64_t*>(inputIdsTensor.data()) + batchIterator * size;
+        writer.StartArray();
+        for (size_t i = 0; i < size; ++i) {
+            writer.Int64(dataPtr[i]);
+        }
+        writer.EndArray();
+        writer.String("index");
+        writer.Uint(batchIterator);
+        writer.EndObject();
+    }
+    writer.EndArray();
+    writer.EndObject();
+    return absl::OkStatus();
+
+}
 #pragma warning(pop)
 }  // namespace ovms

@@ -139,6 +139,17 @@ public:
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
+                
+                if (payload.uri.find("tokenize") != std::string::npos) {
+                    StringBuffer responseBuffer;
+                    auto status = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
+                    if (!status.ok()) {
+                        return status;
+                    }
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
+                    return absl::OkStatus();
+                }
+
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
                     std::fill_n(typeIds.data<int64_t>(), tokens.input_ids.get_size(), 0);
