@@ -81,7 +81,7 @@ ovms --pull --source_model "unsloth/Llama-3.2-1B-Instruct-GGUF" --model_reposito
 
 ## Pulling models outside OpenVINO organization
 
-It's possible to pull images outside OpenVINO organization. 
+It is possible to pull models outside of OpenVINO organization. 
 
 Example for pulling `Echo9Zulu/phi-4-int4_asym-awq-ov`:
 
