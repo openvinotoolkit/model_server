@@ -53,6 +53,7 @@ const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "EMBEDDINGS_NODE_RESOURCE
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
+
 class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -214,7 +215,8 @@ public:
             inferRequest.start_async();
             inferRequest.wait();
             std::string outputTensorName;
-            if (inferRequest.get_compiled_model().outputs().size() == 2) {  // GTE
+            if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
+                RET_CHECK(false) << "too many outputs";
                 // Search by number of dimensions, should be 3
                 bool found = false;
                 for (const auto& output : inferRequest.get_compiled_model().outputs()) {
@@ -232,6 +234,9 @@ public:
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
             }
             embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
+
+
+
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
@@ -241,9 +246,9 @@ public:
             RET_CHECK(false);
         }
 
-        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        //RET_CHECK(embeddingsTensor.get_shape().size() == 3);
         RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
-        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
+        //RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
