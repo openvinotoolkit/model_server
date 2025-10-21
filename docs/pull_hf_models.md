@@ -10,7 +10,7 @@ This document describes how to leverage OpenVINO Model Server (OVMS) pull featur
 
 ## Pulling pre-configured models
 
-There is a special OVMS mode to pull the model from Hugging Face before starting the service. It is triggered by `--source_models` parameter. In addition, `--pull` parameter is for pulling alone. The application quits after the model is downloaded. Without `--pull` option, the model will be deployed and server started.
+There is a special OVMS mode to pull the model from Hugging Face without starting the service. It is triggered by `--pull` parameter. The application quits after the model is downloaded. Without `--pull` option, the model will be deployed and server started.
 
 ::::{tab-set}
 :::{tab-item} With Docker
