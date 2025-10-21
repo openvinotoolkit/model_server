@@ -164,6 +164,12 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
 
             def raise_exception(message):
                 raise jinja2.exceptions.TemplateError(message)
+
+            # Appears in some of mistral chat templates and gpt-oss chat templates
+            def strftime_now(format):
+                import datetime as _dt
+                return _dt.datetime.now().strftime(format)
+
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
             class AssistantTracker(Extension):
@@ -228,6 +234,7 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
             jinja_env.globals["raise_exception"] = raise_exception
+            jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
             if jinja_file.is_file():
                 template = jinja_env.get_template("chat_template.jinja")
