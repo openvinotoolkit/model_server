@@ -115,7 +115,7 @@ public:
      *
      * @param timeout_in_ms
      */
-    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms);
+    HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey = "");
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
