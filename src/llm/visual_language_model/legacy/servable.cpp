@@ -222,7 +222,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
         // Validate chat history for restricted tags
         for (const auto& historyEntry : chatHistory) {
             for (const auto& [_, content] : historyEntry) {
-                if (content.find("<ov_genai_image_") != std::string::npos) {
+                if (content.as<std::string>().find("<ov_genai_image_") != std::string::npos) {
                     return absl::InvalidArgumentError("Message contains restricted <ov_genai_image> tag");
                 }
             }
@@ -238,7 +238,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<Ge
             vlmExecutionContext->inputImages.push_back(imageTensor);
         }
         for (const auto& [chatTurnIndex, imageTagString] : imageTags) {
-            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"];
+            chatHistory[chatTurnIndex]["content"] = imageTagString + chatHistory[chatTurnIndex]["content"].as<std::string>();
         }
         constexpr bool add_generation_prompt = true;  // confirm it should be hardcoded
         vlmExecutionContext->inputText = properties->tokenizer.apply_chat_template(chatHistory, add_generation_prompt);

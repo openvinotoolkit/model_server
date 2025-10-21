@@ -19,9 +19,10 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
-#include <unordered_set>
 
 #include "base_output_parser.hpp"
+
+#include "src/llm/apis/tool_schema_wrapper.hpp"
 
 namespace ovms {
 
@@ -39,7 +40,7 @@ public:
 
     public:
         TagLookupStatus lookupTag(const std::string& tag) const;
-        TagLookupStatus lookupTags(const std::unordered_set<std::string>& tags) const;
+        TagLookupStatus lookupTags(const std::vector<std::string>& tags) const;
         void add(const std::string& chunk);
         void clear();
         const std::string& getBuffer() const;
@@ -72,7 +73,7 @@ private:
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName);
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
 
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;

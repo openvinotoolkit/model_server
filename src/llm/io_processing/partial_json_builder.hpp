@@ -69,6 +69,11 @@ public:
     void clear();
     // Add new chunk to the buffer return current parsed JSON document (incremental parsing)
     Document add(const std::string& chunk);
+    // Check if the current state is END (i.e. we have a complete JSON)
+    bool isComplete() const;
+
+    // Get the unprocessed part of the buffer (from current position to the end)
+    std::string getUnprocessedBuffer() const;
 
     static Document computeDelta(const Document& previous, const Document& current);
 };

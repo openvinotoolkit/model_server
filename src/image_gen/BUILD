@@ -18,14 +18,6 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "llm_engine",  # in fact this is genai library, includes image gen, TODO: Change name?
-    srcs = [],
-    deps =  ["@llm_engine//:llm_engine"],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
-ovms_cc_library(
     name = "pipelines",
     hdrs = ["pipelines.hpp"],
     srcs = ["pipelines.cpp"],
@@ -33,10 +25,7 @@ ovms_cc_library(
         "imagegenpipelineargs",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -79,10 +68,7 @@ ovms_cc_library(
         "//src:image_conversion",
         "//src:libovmsstring_utils",
         "imagegenpipelineargs",
-    ] + select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
 
@@ -97,10 +83,7 @@ ovms_cc_library(
         ":pipelines",
         "//src:image_conversion",
         ":imagegenutils",
-    ]+ select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
