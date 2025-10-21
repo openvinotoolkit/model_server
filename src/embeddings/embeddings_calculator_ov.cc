@@ -256,15 +256,15 @@ public:
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        PoolingMode mode;
-        if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
-            mode = PoolingMode::LAST;  // todo remove since this is not really used
-        } else {
-            mode = PoolingMode::CLS;
-        }
+        // PoolingMode mode;
+        // if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
+        //     mode = PoolingMode::LAST;  // todo remove since this is not really used
+        // } else {
+        //     mode = PoolingMode::CLS;
+        // }
 
         // remove normalize embeddings since it is not really used
-        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), mode, tokens.attention_mask);
+        status = handler.parseResponseNew(buffer, embeddingsTensor);
         if (!status.ok()) {
             return status;
         }
