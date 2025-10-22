@@ -1310,3 +1310,30 @@ TEST_F(ConfigStatus, url_decode) {
     EXPECT_EQ("model%", ovms::urlDecode("model%"));
     EXPECT_EQ("model%2", ovms::urlDecode("model%2"));
 }
+
+TEST_F(ConfigStatus, isAuthorized) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json"), &contents);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    std::unordered_map<std::string, std::string> headers = {{"X-Api-Key", "12345"},
+        {"Content-Type", "application/json"},
+        {"Authorization", "ABC"}};
+    EXPECT_FALSE(handler.isAuthorized(headers, "wrong_key"));
+    headers = {{"X-Api-Key", "12345"},
+        {"Content-Type", "application/json"},
+        {"Authorization", "Bearer ABC"}};
+    EXPECT_TRUE(handler.isAuthorized(headers, "ABC"));
+
+    headers = {{"x-api-key", "12345"},
+        {"content-type", "application/json"},
+        {"authoriZation", "Bearer ABC123"}};
+    EXPECT_TRUE(handler.isAuthorized(headers, "ABC123"));
+
+    headers = {};
+    EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
+    headers = {{"X-CustomHeader", "12345"}};
+    EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
+}
