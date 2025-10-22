@@ -25,14 +25,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "llm_engine",  # in fact this is genai library
-    srcs = [],
-    deps =  ["@llm_engine//:llm_engine"],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
-ovms_cc_library(
     name = "tts_calculator",
     srcs = ["tts_calculator.cc"],
     deps = [
@@ -42,10 +34,8 @@ ovms_cc_library(
         "tts_calculator_cc_proto",
         "@dr_libs//:dr",
         ":tts_servable",
-    ]+ select({
-        "//conditions:default": ["//third_party:genai", ":llm_engine"],
-        "//:not_genai_bin" : [":llm_engine"],
-    }),
+        "//third_party:genai",
+    ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
