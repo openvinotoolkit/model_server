@@ -25,14 +25,146 @@ mkdir models
 Run `export_model.py` script to download and quantize the model:
 
 **CPU**
+::::{tab-set}
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
+:::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} BAAI/bge-large-en-v1.5
+:sync: bge-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} BAAI/bge-large-zh-v1.5
+:sync: bge-large-zh-v1.5
+```console
+python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} thenlper/gte-small
+:sync: gte-small
+```console
+python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} Qwen/Qwen3-Embedding-0.6B
+:sync: Qwen3-Embedding-0.6B
+```console
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-MiniLM-L12-v2
+:sync: all-MiniLM-L12-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-distilroberta-v1
+:sync: all-distilroberta-v1
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
+:sync: deepset-mxbai-embed-de-large-v1
+```console
+python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} intfloat/multilingual-e5-large-instruct
+:sync: multilingual-e5-large-instruc
+```console
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} intfloat/multilingual-e5-large
+:sync: multilingual-e5-large
+```console
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+```
+:::
+::::
+
 
 **GPU**
+::::{tab-set}
+:::{tab-item} nomic-ai/nomic-embed-text-v1.5
+:sync: nomic-embed-text-v1.5
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
+:::
+:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
+:sync: gte-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} BAAI/bge-large-en-v1.5
+:sync: bge-large-en-v1.5
+```console
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} BAAI/bge-large-zh-v1.5
+:sync: bge-large-zh-v1.5
+```console
+python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} thenlper/gte-small
+:sync: gte-small
+```console
+python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} Qwen/Qwen3-Embedding-0.6B
+:sync: Qwen3-Embedding-0.6B
+```console
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-MiniLM-L12-v2
+:sync: all-MiniLM-L12-v2
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} sentence-transformers/all-distilroberta-v1
+:sync: all-distilroberta-v1
+```console
+python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
+:sync: deepset-mxbai-embed-de-large-v1
+```console
+python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} intfloat/multilingual-e5-large-instruct
+:sync: multilingual-e5-large-instruc
+```console
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+:::{tab-item} intfloat/multilingual-e5-large
+:sync: multilingual-e5-large
+```console
+python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+```
+:::
+::::
+
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
