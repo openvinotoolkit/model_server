@@ -62,7 +62,7 @@ const std::string MediapipeGraphDefinition::PYTHON_NODE_CALCULATOR_NAME{"PythonE
 const std::string MediapipeGraphDefinition::LLM_NODE_CALCULATOR_NAME{"LLMCalculator"};
 const std::string MediapipeGraphDefinition::IMAGE_GEN_CALCULATOR_NAME{"ImageGenCalculator"};
 const std::string MediapipeGraphDefinition::STT_NODE_CALCULATOR_NAME{"SttCalculator"};
-const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"TTSCalculator"};
+const std::string MediapipeGraphDefinition::TTS_NODE_CALCULATOR_NAME{"TtsCalculator"};
 const std::string MediapipeGraphDefinition::EMBEDDINGS_NODE_CALCULATOR_NAME{"EmbeddingsCalculatorOV"};
 const std::string MediapipeGraphDefinition::RERANK_NODE_CALCULATOR_NAME{"RerankCalculatorOV"};
 
@@ -568,28 +568,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
             rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(servable)));
             rerankServablesCleaningGuard.disableCleaning();
         }
-        // if (endsWith(config.node(i).calculator(), SPEECH_NODE_CALCULATOR_NAME)) {
-        //     auto& speechServableMap = this->sidePacketMaps.speechServableMap;
-        //     ResourcesCleaningGuard<SpeechServableMap> speechServablesCleaningGuard(speechServableMap);
-        //     if (!config.node(i).node_options().size()) {
-        //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Speech node missing options in graph: {}. ", this->name);
-        //         return StatusCode::LLM_NODE_MISSING_OPTIONS;
-        //     }
-        //     if (config.node(i).name().empty()) {
-        //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Speech node name is missing in graph: {}. ", this->name);
-        //         return StatusCode::LLM_NODE_MISSING_NAME;
-        //     }
-        //     std::string nodeName = config.node(i).name();
-        //     if (speechServableMap.find(nodeName) != speechServableMap.end()) {
-        //         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Speech node name: {} already used in graph: {}. ", nodeName, this->name);
-        //         return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
-        //     }
-        //     mediapipe::SpeechCalculatorOptions nodeOptions;
-        //     config.node(i).node_options(0).UnpackTo(&nodeOptions);
-        //     std::shared_ptr<SpeechServable> servable = std::make_shared<SpeechServable>(nodeOptions.models_path(), nodeOptions.device(), mgconfig.getBasePath(), nodeOptions.mode());
-        //     speechServableMap.insert(std::pair<std::string, std::shared_ptr<SpeechServable>>(nodeName, std::move(servable)));
-        //     speechServablesCleaningGuard.disableCleaning();
-        // }
         if (endsWith(config.node(i).calculator(), STT_NODE_CALCULATOR_NAME)) {
             auto& sttServableMap = this->sidePacketMaps.sttServableMap;
             ResourcesCleaningGuard<SttServableMap> sttServablesCleaningGuard(sttServableMap);

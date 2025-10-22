@@ -508,8 +508,6 @@ static Status createV3HttpPayload(
         } else {
             SPDLOG_DEBUG("Model name from deduced from MultiPart field: {}", modelName);
         }
-        auto stream = multiPartParser->getFieldByName("stream");
-        SPDLOG_ERROR("{}", stream);
         ensureJsonParserInErrorState(parsedJson);
     } else if (isApplicationJson) {
         {
