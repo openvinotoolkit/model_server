@@ -51,7 +51,7 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--task feature-extraction --library sentence_transformers";
+    oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
     oss << " --model " << this->sourceModel << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " " << this->downloadPath;
@@ -64,7 +64,7 @@ std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->sourceModel;
+    oss << "--disable-convert-tokenizer --model " << this->sourceModel;
     oss << " --trust-remote-code ";
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " --task text-classification ";
@@ -249,7 +249,7 @@ Status OptimumDownloader::downloadModel() {
         retCode = -1;
         // Tokenizer, detokenizer not required for image generation
         if (cmd != "") {
-            SPDLOG_DEBUG("Detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
+            SPDLOG_DEBUG("Tokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
             output = exec_cmd(cmd, retCode);
             if (retCode != 0) {
                 SPDLOG_DEBUG("Command output {}", output);
@@ -258,7 +258,7 @@ Status OptimumDownloader::downloadModel() {
             }
         }
     } else {
-        SPDLOG_DEBUG("Detokenizer is found in the exported model directory. Convert_tokenizer command not required.");
+        SPDLOG_DEBUG("Tokenizer is found in the exported model directory. Convert_tokenizer command not required.");
     }
 
     return StatusCode::OK;
