@@ -4,6 +4,8 @@ set "OVMS_PATH=..\%2"
 set "CONFIG_PATH=..\%3"
 cd repo_ci_infra
 
+del ovms_windows*
+
 python -m venv venv
 
 call venv\Scripts\activate
@@ -33,5 +35,5 @@ python binary_scans\ovms_bdba.py --key %BDBA_KEY% --config_dir=%CONFIG_PATH% --t
 if errorlevel 1 exit /b %errorlevel%
 
 tar -a -c -f ..\ovms_windows_bdba_reports.zip ovms_windows*
-del ovms_windows*
+
 del "%OVMS_PATH%\%zipname%"
