@@ -50,6 +50,12 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --poo
 python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: bge-base-en-v1.5-int8-ov
+```console
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --task pooling CLS --task embeddings
+```
+:::
 :::{tab-item} thenlper/gte-small
 :sync: gte-small
 ```console
@@ -59,7 +65,7 @@ python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling
 :::{tab-item} Qwen/Qwen3-Embedding-0.6B
 :sync: Qwen3-Embedding-0.6B
 ```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format int8 --config_file_path models/config.json --model_repository_path models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --task embeddings
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
@@ -208,6 +214,7 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |Alibaba-NLP/gte-large-en-v1.5|CLS|
 |BAAI/bge-large-en-v1.5|CLS|
 |BAAI/bge-large-zh-v1.5|CLS|
+|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|
 |thenlper/gte-small|CLS|
 |Qwen/Qwen3-Embedding-0.6B|LAST|
 |sentence-transformers/all-MiniLM-L12-v2|MEAN|
@@ -410,7 +417,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
+pip install mteb==1.39.7 --extra-index-url "https://download.pytorch.org/whl/cpu"
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
