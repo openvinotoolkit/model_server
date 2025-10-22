@@ -558,7 +558,8 @@ ovms_cc_library(
             "//conditions:default": [],
             "//:not_disable_mediapipe" : [
                 "//src/image_gen:image_gen_calculator",
-                "//src/speech:speech_calculator",
+                "//src/audio/speech_to_text:stt_calculator",
+                "//src/audio/text_to_speech:tts_calculator",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator_ov",
