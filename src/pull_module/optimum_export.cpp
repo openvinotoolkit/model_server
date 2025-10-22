@@ -159,6 +159,7 @@ std::string OptimumDownloader::getConvertCmdOnlyTokenizer() {
     // clang-format off
     oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
     oss << this->sourceModel;
+    oss << " -o ";
     oss << this->downloadPath;
     // clang-format on
 
