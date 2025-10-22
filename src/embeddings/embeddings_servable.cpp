@@ -108,6 +108,9 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::share
     }
 
     processor.output(this->targetOutputIndex).postprocess().custom([this, model](const ov::Output<ov::Node>& node) {
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Applying {} pooling to embeddings output",
+            mediapipe::EmbeddingsCalculatorOVOptions_Pooling_Name(this->pooling));
+
         switch (this->pooling) {
         case mediapipe::EmbeddingsCalculatorOVOptions_Pooling_CLS: {
             return get_cls_pooling_op(node);
@@ -122,8 +125,8 @@ std::shared_ptr<ov::Model> EmbeddingsServable::applyPrePostProcessing(std::share
         OPENVINO_THROW("Pooling type is not supported");
     });
 
-    // if normalize
     if (this->normalizeEmbeddings) {
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Applying L2 normalization to embeddings output");
         processor.output(this->targetOutputIndex).postprocess().custom([](const ov::Output<ov::Node>& node) {
             auto axis_const = std::make_shared<op::v0::Constant>(ov::element::i32, ov::Shape{1}, std::vector{1});
             return std::make_shared<op::v0::NormalizeL2>(node, axis_const, 1e-12, op::EpsMode::MAX);

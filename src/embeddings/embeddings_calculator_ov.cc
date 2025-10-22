@@ -216,7 +216,7 @@ public:
             std::string outputTensorName;
             if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
                 int targetOutputIndex = embeddings_session->getTargetOutputIndex();
-                RET_CHECK(targetOutputIndex != -1) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
+                RET_CHECK(targetOutputIndex >= 0) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
                 outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
             } else {  // BGE

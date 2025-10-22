@@ -21,8 +21,6 @@
 #include "openvino/op/multiply.hpp"
 #include "ovinferrequestsqueue.hpp"
 
-#include "logging.hpp"
-
 #include <memory>
 #include <string>
 #include <unordered_map>

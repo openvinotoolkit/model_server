@@ -130,13 +130,7 @@ void SidepacketServable::initialize(const std::string& modelDir, const std::stri
 
     ov::Core core;
     std::shared_ptr<ov::Model> m_model = core.read_model(parsedModelsPath / std::filesystem::path("openvino_model.xml"), {}, properties);
-
-    SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Loading EmbeddingsServable model");
     m_model = this->applyPrePostProcessing(m_model);
-    SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "Loading EmbeddingsServable model END");
-
-    //
-
     compiledModel = core.compile_model(m_model, targetDevice, properties);
     auto& ovmsConfig = ovms::Config::instance();
     uint32_t numberOfParallelInferRequests = 1;
