@@ -66,7 +66,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
             if (it->value.GetArray().Size() == 0) {
-                return  field_name + " array should not be empty";
+                return field_name + " array should not be empty";
             }
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
@@ -301,7 +301,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
 
 absl::Status EmbeddingsHandler::parseResponseTokenize(StringBuffer& buffer, const ov::Tensor& inputIdsTensor) {
     Writer<StringBuffer> writer(buffer);
-    
+
     writer.StartObject();
     writer.String("tokens");
     ov::Shape outputShape = inputIdsTensor.get_shape();
@@ -319,7 +319,6 @@ absl::Status EmbeddingsHandler::parseResponseTokenize(StringBuffer& buffer, cons
     writer.EndArray();
     writer.EndObject();
     return absl::OkStatus();
-
 }
 #pragma warning(pop)
 }  // namespace ovms

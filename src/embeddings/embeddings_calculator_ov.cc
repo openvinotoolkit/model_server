@@ -144,7 +144,7 @@ public:
                     SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, params["max_length"].as<size_t>());
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", params["max_length"].as<size_t>()));
                 }
-                
+
                 if (useTokenizeEndpoint) {
                     StringBuffer responseBuffer;
                     auto status = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);

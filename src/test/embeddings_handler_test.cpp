@@ -279,7 +279,7 @@ TEST(EmbeddingsDeserialization, positiveTokenize) {
     auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
     ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);    
+    ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);
     ASSERT_EQ(strings->at(0), "one");
     ASSERT_EQ(strings->at(1), "two");
@@ -368,7 +368,7 @@ TEST(EmbeddingsDeserialization, positiveTokenizeParamsParse) {
     auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
     ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
     auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
-    ASSERT_NE(strings, nullptr);    
+    ASSERT_NE(strings, nullptr);
     ASSERT_EQ(strings->size(), 3);
     ASSERT_EQ(strings->at(0), "one");
     ASSERT_EQ(strings->at(1), "two");
