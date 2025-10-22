@@ -147,9 +147,9 @@ public:
 
                 if (useTokenizeEndpoint) {
                     StringBuffer responseBuffer;
-                    auto status = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
-                    if (!status.ok()) {
-                        return status;
+                    auto responseStatus = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
+                    if (!responseStatus.ok()) {
+                        return responseStatus;
                     }
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
                     return absl::OkStatus();
