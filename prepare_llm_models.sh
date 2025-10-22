@@ -20,7 +20,7 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-CB_MODEL="facebook/opt-125m"
+TEXT_GENERATION_MODEL="facebook/opt-125m"
 TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="thenlper/gte-small"
@@ -35,7 +35,7 @@ PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS="openai/gpt-oss-20b"
 
-MODELS=("$CB_MODEL/$TOKENIZER_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$GPT_OSS/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
+MODELS=("$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$GPT_OSS/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
 
 all_exist=true
 for model in "${MODELS[@]}"; do
@@ -69,13 +69,22 @@ else
 fi
 mkdir -p $1
 
-if [ -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
-  echo "Models file $1/$CB_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py text_generation --source_model "$CB_MODEL" --weight-format int8 --model_repository_path $1
+  python3 demos/common/export_models/export_model.py text_generation --source_model "$TEXT_GENERATION_MODEL" --weight-format int8 --model_repository_path $1
+  if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
+    dummy_chat_template="{% for message in messages %}\
+{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}\
+{% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}\
+{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}\
+{% endif %}\
+{% endfor %}"
+    echo "$dummy_chat_template" > "$1/$TEXT_GENERATION_MODEL/chat_template.jinja"
+  fi
 fi
-if [ ! -f "$1/$CB_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Models file $1/$CB_MODEL/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 

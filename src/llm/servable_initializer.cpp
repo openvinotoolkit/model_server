@@ -51,15 +51,17 @@
 namespace ovms {
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
-static const std::string DEFAULT_CHAT_TEMPLATE = R"({% for message in messages %}{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}{% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}{% endif %}{% endfor %})";
 
 void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
 #if (PYTHON_DISABLE == 0)
     ExtraGenerationInfo extraGenInfo = readExtraGenerationInfo(properties, chatTemplateDirectory);
     loadPyTemplateProcessor(properties, extraGenInfo);
 #else
-    loadDefaultTemplateProcessorIfNeeded(properties);
+    if (properties->tokenizer.get_chat_template().empty()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+    }
 #endif
+    // In non-python build, GenAI handles chat template loading
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -123,29 +125,34 @@ ExtraGenerationInfo GenAiServableInitializer::readExtraGenerationInfo(std::share
 }
 
 void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo) {
-    // GGUF models specific validation
-    if (extraGenInfo.isGgufModel) {
-        bool errorFound = false;
-        if (extraGenInfo.eosTokenFromTokenizer.empty()) {
-            SPDLOG_ERROR("Tokenizer eos token not found in tokenizer nor in vocabulary but required for GGUF models.");
-            errorFound = true;
-        }
-        if (extraGenInfo.bosTokenFromTokenizer.empty()) {
-            SPDLOG_ERROR("Tokenizer bos token not found in tokenizer nor in vocabulary but required for GGUF models.");
-            errorFound = true;
-        }
-        if (extraGenInfo.chatTemplateFromTokenizer.empty()) {
-            SPDLOG_ERROR("Tokenizer chat template not found in tokenizer but required for GGUF models.");
-            errorFound = true;
-        }
-        if (errorFound)
-            return;
+    // At this point tokenizer cannot be uninitialized as we need to access its methods for prepare for chat template processing
+    if (properties->tokenizer == ov::genai::Tokenizer()) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tokenizer is not initialized. Cannot load chat template processor.");
+        return;
     }
+    std::string chatTemplate = properties->tokenizer.get_original_chat_template();
+    std::string bosToken = properties->tokenizer.get_bos_token();
+    std::string eosToken = properties->tokenizer.get_eos_token();
+    if (bosToken.empty()) {
+        SPDLOG_ERROR("BOS token was not found in model files.");
+        return;
+    }
+    if (eosToken.empty()) {
+        SPDLOG_ERROR("EOS token was not found in model files.");
+        return;
+    }
+    if (chatTemplate.empty()) {
+        SPDLOG_ERROR("Chat template was not found in model files.");
+        return;
+    }
+
+    properties->templateProcessor.bosToken = bosToken;
+    properties->templateProcessor.eosToken = eosToken;
+
     py::gil_scoped_acquire acquire;
     try {
-        auto locals = py::dict("tokenizer_template"_a = extraGenInfo.chatTemplateFromTokenizer,
-            "templates_directory"_a = extraGenInfo.chatTemplateDirectory,
-            "is_gguf_model"_a = extraGenInfo.isGgufModel);
+        auto locals = py::dict("chat_template"_a = chatTemplate,
+            "templates_directory"_a = extraGenInfo.chatTemplateDirectory);
         py::exec(R"(
             # Following the logic from:
             # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
@@ -214,57 +221,37 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                         self._rendered_blocks = None
                         self._generation_indices = None
 
-
-            # Default chat template accepts only single message and outputs only it's 'content'
-            # effectively turning it into a regular prompt. 
-            default_chat_template = "{% for message in messages %}{% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}{% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}{% endif %}{% endfor %}"
-
-            bos_token = ""
-            eos_token = ""
-            chat_template = default_chat_template
+            
+            # Optional dedicated tool chat template (might not be present)
             tool_chat_template = None
 
+            # Variables needed to be set at the end of this script execution
             template = None
             tool_template = None
 
-            # Try to read template from template.jinja file
-            jinja_file = Path(templates_directory + "/chat_template.jinja")
-            jinja_file_legacy = Path(templates_directory + "/template.jinja")
+            # Load Jinja2 environment
             template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
             jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
             jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
             jinja_env.globals["raise_exception"] = raise_exception
             jinja_env.globals["strftime_now"] = strftime_now
             jinja_env.filters["from_json"] = json.loads
-            if jinja_file.is_file():
-                template = jinja_env.get_template("chat_template.jinja")
-            elif jinja_file_legacy.is_file():
-                template = jinja_env.get_template("template.jinja")
 
-            # Try to read data from tokenizer_config.json
+            # Try to read data from tokenizer_config.json to get additional tool chat template if present
             tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
             if tokenizer_config_file.is_file():
                 f = open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8")
                 data = json.load(f)
-                bos_token = data.get("bos_token", "")
-                bos_token = "" if bos_token is None else bos_token  # Null token conversion to empty string.
-                eos_token = data.get("eos_token", "")
-                eos_token = "" if eos_token is None else eos_token  # Null token conversion to empty string.
 
-                chat_template = data.get("chat_template", default_chat_template)
-                if isinstance(chat_template, list):
-                    for template_entry in chat_template:
+                chat_template_from_tokenizer_config = data.get("chat_template", None)
+                if isinstance(chat_template_from_tokenizer_config, list):
+                    for template_entry in chat_template_from_tokenizer_config:
                         if isinstance(template_entry, dict):
-                            if template_entry.get("name") == "default":
-                                chat_template = template_entry.get("template")
-                            elif template_entry.get("name") == "tool_use":
+                            if template_entry.get("name") == "tool_use":
                                 tool_chat_template = template_entry.get("template")
-            if template is None:
-                if is_gguf_model and (chat_template == default_chat_template):
-                    # GGUF model directory might not contain files with chat template and in that case we use template read from the tokenizer 
-                    template = jinja_env.from_string(tokenizer_template)
-                else:
-                    template = jinja_env.from_string(chat_template)
+            
+            # Load templates from strings
+            template = jinja_env.from_string(chat_template)
             if tool_chat_template is not None:
                 tool_template = jinja_env.from_string(tool_chat_template)
             else:
@@ -272,13 +259,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
         )",
             py::globals(), locals);
 
-        if (extraGenInfo.isGgufModel) {
-            properties->templateProcessor.bosToken = extraGenInfo.bosTokenFromTokenizer;
-            properties->templateProcessor.eosToken = extraGenInfo.eosTokenFromTokenizer;
-        } else {
-            properties->templateProcessor.bosToken = locals["bos_token"].cast<std::string>();
-            properties->templateProcessor.eosToken = locals["eos_token"].cast<std::string>();
-        }
         properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
         properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
     } catch (const pybind11::error_already_set& e) {
@@ -296,15 +276,6 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     } catch (...) {
         SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
         SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
-    }
-}
-
-#else
-void GenAiServableInitializer::loadDefaultTemplateProcessorIfNeeded(std::shared_ptr<GenAiServableProperties> properties) {
-    const std::string modelChatTemplate = properties->tokenizer.get_chat_template();
-    if (modelChatTemplate.empty()) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Could not load model chat template. Using default template.");
-        properties->tokenizer.set_chat_template(DEFAULT_CHAT_TEMPLATE);
     }
 }
 #endif
