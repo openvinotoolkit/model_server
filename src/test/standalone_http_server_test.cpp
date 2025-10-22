@@ -17,14 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#if (USE_DROGON == 1)
 #include <drogon/drogon.h>
-#endif
-
 #include <chrono>
 #include <thread>
-
-#if (USE_DROGON == 1)
 
 // Disabled due to drogon issue https://github.com/drogonframework/drogon/issues/2210
 TEST(Drogon, DISABLED_basic) {
@@ -40,15 +35,4 @@ TEST(Drogon, DISABLED_basic) {
             .run();
         k.join();
     }
-}
-
-#endif
-
-// Make sure we have drogon enabled as default in production
-TEST(Drogon, EnabledInProduction) {
-#if (USE_DROGON == 1)
-    ASSERT_EQ(1, 1);
-#else
-    ASSERT_EQ(1, 0);
-#endif
 }

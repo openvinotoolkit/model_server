@@ -160,11 +160,8 @@ TEST_F(StressCapiConfigChanges, KFSAddNewVersionDuringPredictLoad) {
         requiredLoadResults,
         allowedLoadResults);
 }
-#if (USE_DROGON == 0)
-TEST_F(StressCapiConfigChanges, GetMetricsDuringLoad) {
-#else
+
 TEST_F(StressCapiConfigChanges, DISABLED_GetMetricsDuringLoad) {
-#endif
     bool performWholeConfigReload = false;                        // we just need to have all model versions rechecked
     std::set<StatusCode> requiredLoadResults = {StatusCode::OK};  // we expect full continuity of operation
     std::set<StatusCode> allowedLoadResults = {};
