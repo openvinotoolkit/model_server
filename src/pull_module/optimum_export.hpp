@@ -41,8 +41,11 @@ protected:
 
     Status checkRequiredToolsArePresent();
     bool checkIfDetokenizerFileIsExported();
+    bool checkIfTokenizerFileIsExported();
     std::string getExportCmd();
     std::string getConvertCmd();
+    std::string getConvertCmdWithDetokenizer();
+    std::string getConvertCmdOnlyTokenizer();
     std::string getExportCmdText();
     std::string getExportCmdEmbeddings();
     std::string getExportCmdRerank();

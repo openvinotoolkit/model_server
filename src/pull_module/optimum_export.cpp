@@ -115,6 +115,34 @@ std::string OptimumDownloader::getExportCmd() {
 }
 
 std::string OptimumDownloader::getConvertCmd() {
+    std::string cmd = "";
+    switch (this->task) {
+    case TEXT_GENERATION_GRAPH: {
+        cmd = getConvertCmdWithDetokenizer();
+        break;
+    }
+    case EMBEDDINGS_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case RERANK_GRAPH: {
+        cmd = getConvertCmdOnlyTokenizer();
+        break;
+    }
+    case IMAGE_GENERATION_GRAPH: {
+        cmd = "";
+        break;
+    }
+    case UNKNOWN_GRAPH: {
+        SPDLOG_ERROR("Optimum cli task options not initialised.");
+        break;
+    }
+    }
+
+    return cmd;
+}
+
+std::string OptimumDownloader::getConvertCmdWithDetokenizer() {
     std::ostringstream oss;
     // clang-format off
     oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
@@ -126,8 +154,23 @@ std::string OptimumDownloader::getConvertCmd() {
     return oss.str();
 }
 
+std::string OptimumDownloader::getConvertCmdOnlyTokenizer() {
+    std::ostringstream oss;
+    // clang-format off
+    oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
+    oss << this->sourceModel;
+    oss << this->downloadPath;
+    // clang-format on
+
+    return oss.str();
+}
+
 bool OptimumDownloader::checkIfDetokenizerFileIsExported() {
     return std::filesystem::exists(FileSystem::joinPath({this->downloadPath, "openvino_detokenizer.xml"}));
+}
+
+bool OptimumDownloader::checkIfTokenizerFileIsExported() {
+    return std::filesystem::exists(FileSystem::joinPath({this->downloadPath, "openvino_tokenizer.xml"}));
 }
 
 OptimumDownloader::OptimumDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
@@ -200,15 +243,18 @@ Status OptimumDownloader::downloadModel() {
         return StatusCode::HF_RUN_OPTIMUM_CLI_EXPORT_FAILED;
     }
 
-    if (!this->checkIfDetokenizerFileIsExported()) {
-        SPDLOG_DEBUG("Detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
+    if (!this->checkIfTokenizerFileIsExported()) {
         cmd = getConvertCmd();
         retCode = -1;
-        output = exec_cmd(cmd, retCode);
-        if (retCode != 0) {
-            SPDLOG_DEBUG("Command output {}", output);
-            SPDLOG_ERROR("convert_tokenizer command failed.");
-            return StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED;
+        // Tokenizer, detokenizer not required for image generation
+        if (cmd != "") {
+            SPDLOG_DEBUG("Detokenizer not found in the exported model. Exporting tokenizer and detokenizer from HF model.");
+            output = exec_cmd(cmd, retCode);
+            if (retCode != 0) {
+                SPDLOG_DEBUG("Command output {}", output);
+                SPDLOG_ERROR("convert_tokenizer command failed.");
+                return StatusCode::HF_RUN_CONVERT_TOKENIZER_EXPORT_FAILED;
+            }
         }
     } else {
         SPDLOG_DEBUG("Detokenizer is found in the exported model directory. Convert_tokenizer command not required.");

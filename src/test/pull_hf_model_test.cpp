@@ -294,6 +294,7 @@ public:
     void setConvertCliExportCommand(const std::string& input) { this->CONVERT_TOKENIZER_EXPORT_COMMAND = input; }
     ovms::Status checkRequiredToolsArePresent() { return ovms::OptimumDownloader::checkRequiredToolsArePresent(); }
     bool checkIfDetokenizerFileIsExported() { return ovms::OptimumDownloader::checkIfDetokenizerFileIsExported(); }
+    bool checkIfTokenizerFileIsExported() { return ovms::OptimumDownloader::checkIfTokenizerFileIsExported(); }
 };
 
 class TestHfDownloader : public ovms::HfDownloader {
@@ -384,35 +385,44 @@ TEST_F(TestOptimumDownloaderSetup, RerankExportCmd) {
     inHfSettings.task = ovms::RERANK_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --model model/name --trust-remote-code  --weight-format fp64 --task text-classification  \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
 #endif
     ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
 TEST_F(TestOptimumDownloaderSetup, ImageGenExportCmd) {
     inHfSettings.task = ovms::IMAGE_GENERATION_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --model model/name --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
 #endif
     ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
 TEST_F(TestOptimumDownloaderSetup, EmbeddingsExportCmd) {
     inHfSettings.task = ovms::EMBEDDINGS_GRAPH;
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     std::string expectedCmd = "optimum-cli export openvino --task feature-extraction --library sentence_transformers --model model/name --trust-remote-code  --weight-format fp64 \\path\\to\\Download\\model\\name";
+    std::string expectedCmd2 = "convert_tokenizer model/name -o \\path\\to\\Download\\model\\name";
 #ifdef __linux__
     std::replace(expectedCmd.begin(), expectedCmd.end(), '\\', '/');
+    std::replace(expectedCmd2.begin(), expectedCmd2.end(), '\\', '/');
 #endif
     ASSERT_EQ(optimumDownloader->getExportCmd(), expectedCmd);
+    ASSERT_EQ(optimumDownloader->getConvertCmd(), expectedCmd2);
 }
 
 TEST_F(TestOptimumDownloaderSetup, DetokenizerCheckNegative) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     ASSERT_EQ(optimumDownloader->checkIfDetokenizerFileIsExported(), false);
+    ASSERT_EQ(optimumDownloader->checkIfTokenizerFileIsExported(), false);
 }
 
 TEST_F(TestOptimumDownloaderSetupWithFile, DetokenizerCheckPositive) {
@@ -425,6 +435,18 @@ TEST_F(TestOptimumDownloaderSetupWithFile, DetokenizerCheckPositive) {
     ofs.close();
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
     ASSERT_EQ(optimumDownloader->checkIfDetokenizerFileIsExported(), true);
+}
+
+TEST_F(TestOptimumDownloaderSetupWithFile, TokenizerCheckPositive) {
+    file_path = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/model/name/openvino_tokenizer.xml");
+    inHfSettings.sourceModel = "model/name";
+    inHfSettings.downloadPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/");
+    dir_path = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/model/");
+    std::filesystem::create_directories(getGenericFullPathForBazelOut("/ovms/bazel-bin/src/model/name"));
+    std::ofstream ofs(file_path);  // Creates an empty file
+    ofs.close();
+    std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
+    ASSERT_EQ(optimumDownloader->checkIfTokenizerFileIsExported(), true);
 }
 
 TEST_F(TestOptimumDownloaderSetup, UnknownExportCmd) {

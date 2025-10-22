@@ -16,5 +16,6 @@
 @echo off
 set "OVMS_DIR=%~dp0"
 set "PYTHONHOME=%OVMS_DIR%\python"
+set "PYTHONIOENCODING=utf-8"
 set "PATH=%OVMS_DIR%;%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
 echo "OpenVINO Model Server Environment Initialized"
