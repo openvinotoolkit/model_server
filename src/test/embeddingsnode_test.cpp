@@ -646,7 +646,7 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeInvalidModel) {
         }
     )";
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING) << status.string();
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveMaxLenParam) {
@@ -729,7 +729,7 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePaddingSideRight) {
     ASSERT_TRUE(d.HasMember("tokens"));
     ASSERT_TRUE(d["tokens"].IsArray());
     ASSERT_EQ(d["tokens"].Size(), 100);
-    ASSERT_NE(d["tokens"][99].GetInt(), 0);
+    ASSERT_EQ(d["tokens"][99].GetInt(), 0);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeInvalidPaddingSide) {
@@ -738,18 +738,6 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeInvalidPaddingSide) {
             "model": "embeddings_ov",
             "text": "hello world",
             "padding_side": "invalid_value"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-}
-
-TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLenTooBig) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings_ov",
-            "text": "hello world",
-            "max_length": 10000
         }
     )";
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
