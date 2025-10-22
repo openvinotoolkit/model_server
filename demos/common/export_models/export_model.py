@@ -52,7 +52,7 @@ parser_text.add_argument('--draft_model_name', required=False, default=None, hel
 parser_text.add_argument('--max_prompt_len', required=False, type=int, default=None, help='Sets NPU specific property for maximum number of tokens in the prompt. '
                          'Not effective if target device is not NPU', dest='max_prompt_len')
 parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='Set pipeline to use prompt lookup decoding', dest='prompt_lookup_decoding')
-parser_text.add_argument('--reasoning_parser', choices=["qwen3"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
+parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
 parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
 
@@ -390,6 +390,10 @@ def add_servable_to_config(config_path, model_name, base_path):
 
 def export_text_generation_model(model_repository_path, source_model, model_name, precision, task_parameters, config_file_path):
     model_path = "./"
+    # validation for tool parsing
+    if (task_parameters.get('tool_parser', None) == 'gptoss' or task_parameters.get('reasoning_parser', None) == 'gptoss'):
+        if (task_parameters.get('tool_parser', None) != task_parameters.get('reasoning_parser', None)):
+            raise ValueError("Both tool_parser and reasoning_parser need to be set to gptoss when one of them is set to gptoss")
     ### Export model
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')) or os.path.isfile(os.path.join(source_model, 'openvino_language_model.xml')):
         print("OV model is source folder. Skipping conversion.")
