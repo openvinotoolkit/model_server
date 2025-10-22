@@ -57,16 +57,6 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
-#define SET_OR_RETURN(TYPE, NAME, RHS) \
-    auto NAME##_OPT = RHS;             \
-    RETURN_IF_HOLDS_STATUS(NAME##_OPT) \
-    auto NAME = std::get<TYPE>(NAME##_OPT);
-
-#define RETURN_IF_HOLDS_STATUS(NAME)                  \
-    if (std::holds_alternative<absl::Status>(NAME)) { \
-        return std::get<absl::Status>(NAME);          \
-    }
-
 class TtsCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;

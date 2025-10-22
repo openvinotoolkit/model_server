@@ -165,7 +165,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
 
     if (mp3.channels != 1 && mp3.channels != 2) {
         drmp3_uninit(&mp3);
-        throw std::runtime_error("WAV file must be mono or stereo");
+        throw std::runtime_error("MP3 file must be mono or stereo");
     }
     const uint64_t n = mp3.totalPCMFrameCount;
     std::vector<float> pcmf32;
@@ -181,24 +181,6 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     std::vector<float> output(buffer, buffer + output_length);
     return output;
 }
-
-std::variant<absl::Status, std::optional<std::string_view>> getFileFromPayload(const ovms::MultiPartParser& parser, const std::string& keyName) {
-    std::string_view value = parser.getFileContentByFieldName(keyName);
-    if (value.empty()) {
-        return std::nullopt;
-    }
-    return value;
-}
-
-#define SET_OR_RETURN(TYPE, NAME, RHS) \
-    auto NAME##_OPT = RHS;             \
-    RETURN_IF_HOLDS_STATUS(NAME##_OPT) \
-    auto NAME = std::get<TYPE>(NAME##_OPT);
-
-#define RETURN_IF_HOLDS_STATUS(NAME)                  \
-    if (std::holds_alternative<absl::Status>(NAME)) { \
-        return std::get<absl::Status>(NAME);          \
-    }
 
 class SttCalculator : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
@@ -238,23 +220,23 @@ public:
         if (absl::StartsWith(payload.uri, "/v3/audio/transcriptions")) {
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
-
-            SET_OR_RETURN(std::optional<std::string_view>, file, getFileFromPayload(*payload.multipartParser, "file"));
-            auto stream = getFileFromPayload(*payload.multipartParser, "stream");
-            if (std::holds_alternative<absl::Status>(stream)) {
+            
+            std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
+            if (!stream.empty()) {
                 return absl::InvalidArgumentError("streaming is not supported");
             }
-            if (!file.has_value()) {
+            std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
+            if (file.empty()) {
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
 
             ov::genai::RawSpeechInput raw_speech;
             try {
-                if (is_wav_buffer(std::string(file.value()))) {
+                if (is_wav_buffer(std::string(file))) {
                     SPDLOG_DEBUG("Received file format: wav");
-                    raw_speech = read_wav(file.value());
+                    raw_speech = read_wav(file);
                 } else {
-                    raw_speech = read_mp3(file.value());
+                    raw_speech = read_mp3(file);
                     SPDLOG_DEBUG("Received file format: mp3");
                 }
             } catch (std::exception&) {
