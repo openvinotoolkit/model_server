@@ -133,7 +133,7 @@ public:
             OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, &ppData, &pDataSize, &format, total_samples, nullptr),
                 "Failed to initialize WAV writer");
             drwav_uint64 frames_written = drwav_write_pcm_frames(&wav, total_samples, waveform_ptr);
-            OPENVINO_ASSERT(frames_written == total_samples, "Failed to write not all frames");
+            OPENVINO_ASSERT(frames_written == total_samples, "Failed to write all frames");
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             drwav_uninit(&wav);
             // drwav_free(ppData, NULL); TODO: is needed?
