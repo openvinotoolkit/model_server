@@ -33,32 +33,7 @@ parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', hel
                     dest='model_name')
 parser.add_argument('--dataset', default='Banking77Classification', help='Dataset to benchmark. default: Banking77Classification',
                     dest='dataset')
-parser.add_argument('--list_datasets', action='store_true', help='List all available datasets and exit')
 args = vars(parser.parse_args())
-
-# List datasets if requested
-if args['list_datasets']:
-    print("Available MTEB datasets:")
-    print("=" * 50)
-    tasks = mteb.get_tasks()
-    
-    # Group tasks by type for better organization
-    task_groups = {}
-    for task in tasks:
-        task_type = task.metadata.type
-        if task_type not in task_groups:
-            task_groups[task_type] = []
-        task_groups[task_type].append(task.metadata.name)
-    
-    # Sort and display
-    for task_type in sorted(task_groups.keys()):
-        print(f"\n{task_type} ({len(task_groups[task_type])} tasks):")
-        print("-" * (len(task_type) + 20))
-        for task_name in sorted(task_groups[task_type]):
-            print(f"  - {task_name}")
-    
-    print(f"\nTotal: {len(tasks)} datasets available")
-    exit(0)
 
 
 class OVMSModel:
