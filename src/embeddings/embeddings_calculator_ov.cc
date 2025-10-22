@@ -145,7 +145,7 @@ public:
                     return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
                 }
                 
-                if (payload.uri.size() >= 8 && payload.uri.compare(payload.uri.size() - 8, 8, "tokenize") == 0) {
+                if (useTokenizeEndpoint) {
                     StringBuffer responseBuffer;
                     auto status = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
                     if (!status.ok()) {
