@@ -158,7 +158,6 @@ public:
         inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(this->sidePacketMaps.sttServableMap).At(STARTING_TIMESTAMP);
         inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(this->sidePacketMaps.ttsServableMap).At(STARTING_TIMESTAMP);
 
-
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
         ::mediapipe::Packet packet;
