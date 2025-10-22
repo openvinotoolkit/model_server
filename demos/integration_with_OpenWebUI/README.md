@@ -16,7 +16,7 @@ In this demo, OpenVINO Model Server is deployed on Linux with CPU using Docker a
 
 * [Docker Engine](https://docs.docker.com/engine/) installed
 * Host with x86_64 architecture
-* Linux, macOS, or Windows via [WSL](https://learn.microsoft.com/en-us/windows/wsl/)
+* Linux, macOS, or Windows
 * Python 3.11 with pip 
 * HuggingFace account to download models
 
@@ -24,30 +24,22 @@ There are other options to fulfill the prerequisites like [OpenVINO Model Server
 
 This demo was tested on CPU but most of the models could be also run on Intel accelerators like GPU and NPU.
 
-### Step 1: Preparation
-
-Download the export script, install its dependencies and create the directory for models:
-
-```bash
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/export_model.py -o export_model.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/export_models/requirements.txt
+## Step 1: Pull model and start the OVMS sever
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
 mkdir models
+ovms.exe --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path models --task text_generation
+ovms.exe --rest_port 8000 --config_path /models/config.json
 ```
-
-### Step 2: Export Model
-
-The text generation model used in this demo is [meta-llama/Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct). If the model is not downloaded before, access must be requested. Run the export script to download and quantize the model:
-
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
 ```bash
-python export_model.py text_generation --source_model meta-llama/Llama-3.2-1B-Instruct --weight-format int8 --kv_cache_precision u8 --config_file_path models/config.json
-```
-
-### Step 3: Server Deployment
-
-Deploy with docker:
-
-```bash
-docker run -d -p 8000:8000 -v $(pwd)/models:/workspace:ro openvino/model_server --rest_port 8000 --config_path /workspace/config.json
+mkdir models
+docker run -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models --model_name llama-3.2-3b-instruct-openvino-int4-model --config_path /models
+docker run -v $PWD/models:/models -p 8000:8000 openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
 
 Here is the basic call to check if it works:
@@ -56,7 +48,7 @@ Here is the basic call to check if it works:
 curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"meta-llama/Llama-3.2-1B-Instruct\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
 ```
 
-### Step 4: Start Open WebUI
+## Step 2: Install and start OpenWebUI
 
 Install Open WebUI:
 
@@ -88,7 +80,7 @@ Go to [http://localhost:8080](http://localhost:8080) and create admin account to
 1. Go to **Admin Panel** → **Settings** → **Connections** ([http://localhost:8080/admin/settings/connections](http://localhost:8080/admin/settings/connections))
 2. Click **+Add Connection** under **OpenAI API**
    * URL: `http://localhost:8000/v3`
-   * Model IDs: put `meta-llama/Llama-3.2-1B-Instruct` and click **+** to add the model, or leave empty to include all models
+   * Model IDs: put `Godreign/llama-3.2-3b-instruct-openvino-int4-model` and click **+** to add the model, or leave empty to include all models
 3. Click **Save**
 
 ![connection setting](./connection_setting.png)
@@ -107,16 +99,18 @@ Click **New Chat** and select the model to start chatting
 
 ### Step 1: Model Preparation
 
-In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and the the reranking model is [BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base). Run the export script to download and quantize the models:
-```bash
-python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L6-v2 --weight-format int8 --config_file_path models/config.json
-python export_model.py rerank_ov --source_model BAAI/bge-reranker-base --weight-format int8 --config_file_path models/config.json
+In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [OpenVINO/Qwen3-Embedding-0.6B-fp16-ov](https://huggingface.co/OpenVINO/Qwen3-Embedding-0.6B-fp16-ov) and the the reranking model is [OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov](https://huggingface.co/OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov). Run the export script to download and quantize the models:
+```console
+ovms --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
+ovms --add_to_config models --model_path OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+ovms --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
+ovms --add_to_config models --model_path OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
 
 Keep the model server running or restart it. Here are the basic calls to check if they work:
 ```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{\"model\":\"sentence-transformers/all-MiniLM-L6-v2\",\"input\":\"hello world\"}"
-curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"model\":\"BAAI/bge-reranker-base\",\"query\":\"welcome\",\"documents\":[\"good morning\",\"farewell\"]}"
+curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/Qwen3-Embedding-0.6B-fp16-ov\",\"input\":\"hello world\"}"
+curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov\",\"query\":\"welcome\",\"documents\":[\"good morning\",\"farewell\"]}"
 ```
 
 ### Step 2: Documents Setting
@@ -124,12 +118,12 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 1. Go to **Admin Panel** → **Settings** → **Documents** ([http://localhost:8080/admin/settings/documents](http://localhost:8080/admin/settings/documents))
 2. Select **OpenAI** for **Embedding Model Engine**
    * URL: `http://localhost:8000/v3`
-   * Embedding Model: `sentence-transformers/all-MiniLM-L6-v2`
+   * Embedding Model: `OpenVINO/Qwen3-Embedding-0.6B-fp16-ov`
    * Put anything in API key
 3. Enable **Hybrid Search**
 4. Select **External** for **Reranking Engine**
    * URL: `http://localhost:8000/v3/rerank`
-   * Reranking Model: `BAAI/bge-reranker-base`
+   * Reranking Model: `OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov`
 5. Click **Save**
 
 ![embedding and retrieval setting](./embedding_and_retrieval_setting.png)
@@ -185,16 +179,16 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 ### Step 1: Model Preparation
 
-The image generation model used in this demo is [dreamlike-art/dreamlike-anime-1.0](https://huggingface.co/dreamlike-art/dreamlike-anime-1.0). Run the export script to download and quantize the model:
+The image generation model used in this demo is [OpenVINO/FLUX.1-schnell-int4-ov](https://huggingface.co/OpenVINO/FLUX.1-schnell-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
 
 ```bash
-python export_model.py image_generation --source_model dreamlike-art/dreamlike-anime-1.0 --weight-format int8 --config_file_path models/config.json
+ovms.exe --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation
 ```
 
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```bash
-curl http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\":\"dreamlike-art/dreamlike-anime-1.0\",\"prompt\":\"anime\",\"num_inference_steps\":1,\"size\":\"256x256\",\"response_format\":\"b64_json\"}"
+curl http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/FLUX.1-schnell-int4-ov\",\"prompt\":\"anime\",\"num_inference_steps\":1,\"size\":\"256x256\",\"response_format\":\"b64_json\"}"
 ```
 
 ### Step 2: Image Generation Setting
@@ -204,7 +198,7 @@ curl http://localhost:8000/v3/images/generations -H "Content-Type: application/j
    * URL: `http://localhost:8000/v3`
    * Put anything in API key
 3. Enable **Image Generation (Experimental)**
-   * Set Default Model: `dreamlike-art/dreamlike-anime-1.0`
+   * Set Default Model: `OpenVINO/FLUX.1-schnell-int4-ov`
    * Set Image Size. Must be in WxH format, example: `256x256`
 4. Click **Save**
 
@@ -235,21 +229,21 @@ Method 2:
 
 ### Step 1: Model Preparation
 
-The vision language model used in this demo is [OpenGVLab/InternVL2-2B](https://huggingface.co/OpenGVLab/InternVL2-2B). Run the export script to download and quantize the model:
+The vision language model used in this demo is [OpenVINO/InternVL2-2B-int4-ov](https://huggingface.co/OpenVINO/InternVL2-2B-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
 
 ```bash
-python export_model.py text_generation --source_model OpenGVLab/InternVL2-2B --weight-format int4 --pipeline_type VLM --model_name OpenGVLab/InternVL2-2B --config_file_path models/config.json
+ovms.exe --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
 ```
 
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
 ```bash
-curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenGVLab/InternVL2-2B\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
+curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
 ### Step 2: Chat with VLM
 
-1. Start a **New Chat** with model set to `OpenGVLab/InternVL2-2B`
+1. Start a **New Chat** with model set to `OpenVINO/InternVL2-2B-int4-ov`
 2. Click **+More** to upload images, by capturing the screen or uploading files. The image used in this demo is [http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg](http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg).
 
 ![upload images](./upload_images.png)
