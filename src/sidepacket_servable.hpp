@@ -80,6 +80,9 @@ public:
     }
 
 protected:
-    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) { return model; SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "No pre/post-processing applied in SidepacketServable"); }
+    virtual std::shared_ptr<ov::Model> applyPrePostProcessing(std::shared_ptr<ov::Model> model) {
+        return model;
+        SPDLOG_LOGGER_INFO(ovms::embeddings_calculator_logger, "No pre/post-processing applied in SidepacketServable");
+    }
 };
 }  // namespace ovms

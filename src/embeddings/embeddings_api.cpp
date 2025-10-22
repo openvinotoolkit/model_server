@@ -261,43 +261,35 @@ absl::Status EmbeddingsHandler::parseResponseNew(StringBuffer& buffer, const ov:
     writer.String("data");
     writer.StartArray();
 
+    const float* last_hidden_state_data = embeddingsTensor.data<float>();
 
-        const float* last_hidden_state_data = embeddingsTensor.data<float>();
+    std::vector<std::vector<float>> result;
+    const auto shape = embeddingsTensor.get_shape();
 
-        std::vector<std::vector<float>> result;
-        const auto shape = embeddingsTensor.get_shape();
+    if (shape.size() != 2) {
+        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
+    }
 
-        if (shape.size() != 2) {
-            return absl::InvalidArgumentError("Invalid embeddings tensor shape");
-        }
+    const size_t batch_size = shape[0];
+    const size_t hidden_size = shape[1];
 
-        const size_t batch_size = shape[0];
-        const size_t hidden_size = shape[1];
-
-        for (size_t batch = 0; batch < batch_size; batch++) {
-            const auto batch_offset = batch * hidden_size;
-            const float* batch_data = last_hidden_state_data + batch_offset;
-            const std::vector<float> batch_result(batch_data, batch_data + hidden_size);
-            result.push_back(batch_result);
-
+    for (size_t batch = 0; batch < batch_size; batch++) {
+        const auto batch_offset = batch * hidden_size;
+        const float* batch_data = last_hidden_state_data + batch_offset;
+        const std::vector<float> batch_result(batch_data, batch_data + hidden_size);
+        result.push_back(batch_result);
 
         writer.StartObject();
         writer.String("object");
         writer.String("embedding");
         writer.String("embedding");
-        //if (normalizeEmbeddings) {
-        //    double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
-        //    double denom = std::max(std::sqrt(square_sum), double(1e-12));
-        //    std::transform(dataPtr, dataPtrEnd, dataPtr,
-        //        [denom](auto& element) { return element / denom; });
-        //}
-         if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
-             std::string_view sv2(reinterpret_cast<const char*>(batch_result.data()), batch_result.size() * sizeof(float));
-             std::string escaped;
-             absl::Base64Escape(sv2, &escaped);
-             writer.String(escaped.c_str());
-         } else {
-           writer.StartArray();
+        if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
+            std::string_view sv2(reinterpret_cast<const char*>(batch_result.data()), batch_result.size() * sizeof(float));
+            std::string escaped;
+            absl::Base64Escape(sv2, &escaped);
+            writer.String(escaped.c_str());
+        } else {
+            writer.StartArray();
             for (size_t i = 0; i < batch_result.size(); ++i) {
                 writer.Double(batch_result[i]);
             }
@@ -306,78 +298,7 @@ absl::Status EmbeddingsHandler::parseResponseNew(StringBuffer& buffer, const ov:
         writer.String("index");
         writer.Uint(batch);
         writer.EndObject();
-
-        }
-
-
-        //return result;
-
-
-
-    // ov::Shape outputShape = embeddingsTensor.get_shape();
-    // if (outputShape.size() != 3) {
-    //     return absl::InvalidArgumentError("Invalid embeddings tensor shape");
-    // }
-    // size_t batchSize = outputShape[0];
-    // for (size_t batchIterator = 0; batchIterator < batchSize; batchIterator++) {
-    //     size_t stride;
-    //     if (poolingMode == PoolingMode::LAST) {
-    //         size_t attendedTokens = 0;
-    //         if (!attentionMask.has_value()) {
-    //             return absl::InvalidArgumentError("Last token pooling mode requires attention mask");
-    //         }
-    //         auto maxNumberOfTokens = attentionMask->get_shape()[1];
-    //         if (attentionMask->get_element_type() == ov::element::Type_t::i64) {
-    //             for (int i = 0; i < maxNumberOfTokens; i++) {
-    //                 attendedTokens += reinterpret_cast<int64_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
-    //             }
-    //         } else if (attentionMask->get_element_type() == ov::element::Type_t::i32) {
-    //             for (int i = 0; i < maxNumberOfTokens; i++) {
-    //                 attendedTokens += reinterpret_cast<int32_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
-    //             }
-    //         } else if (attentionMask->get_element_type() == ov::element::Type_t::i8) {
-    //             for (int i = 0; i < maxNumberOfTokens; i++) {
-    //                 attendedTokens += reinterpret_cast<uint8_t*>(attentionMask->data())[i + batchIterator * maxNumberOfTokens];
-    //             }
-    //         } else {
-    //             return absl::InternalError("Attention mask element type invalid.");
-    //         }
-    //         if (!(attendedTokens <= outputShape[1])) {
-    //             return absl::InternalError("Embeddings output and attention mask shape mismatch");
-    //         }
-    //         stride = batchIterator * outputShape[1] * outputShape[2] + (attendedTokens - 1) * outputShape[2];
-    //     } else {
-    //         stride = batchIterator * outputShape[1] * outputShape[2];
-    //     }
-    //     size_t size = outputShape[2];
-    //     float* dataPtr = reinterpret_cast<float*>(embeddingsTensor.data()) + stride;
-    //     float* dataPtrEnd = dataPtr + size;
-    //     writer.StartObject();
-    //     writer.String("object");
-    //     writer.String("embedding");
-    //     writer.String("embedding");
-    //     if (normalizeEmbeddings) {
-    //         double square_sum = std::inner_product(dataPtr, dataPtrEnd, dataPtr, double(0.0));
-    //         double denom = std::max(std::sqrt(square_sum), double(1e-12));
-    //         std::transform(dataPtr, dataPtrEnd, dataPtr,
-    //             [denom](auto& element) { return element / denom; });
-    //     }
-    //     if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
-    //         std::string_view sv2(reinterpret_cast<char*>(dataPtr), outputShape[2] * sizeof(float));
-    //         std::string escaped;
-    //         absl::Base64Escape(sv2, &escaped);
-    //         writer.String(escaped.c_str());
-    //     } else {
-    //         writer.StartArray();
-    //         for (size_t i = 0; i < size; ++i) {
-    //             writer.Double(dataPtr[i]);
-    //         }
-    //         writer.EndArray();
-    //     }
-    //     writer.String("index");
-    //     writer.Uint(batchIterator);
-    //     writer.EndObject();
-    // }
+    }
 
     writer.EndArray();
 
@@ -390,7 +311,6 @@ absl::Status EmbeddingsHandler::parseResponseNew(StringBuffer& buffer, const ov:
     writer.EndObject();
 
     writer.EndObject();
-    SPDLOG_INFO("Done!");
     return absl::OkStatus();
 }
 #pragma warning(pop)

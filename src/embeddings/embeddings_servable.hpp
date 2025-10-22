@@ -16,7 +16,6 @@
 #pragma once
 
 #include "../sidepacket_servable.hpp"
-//#include "embeddings_api.hpp"
 #include "src/embeddings/embeddings_calculator_ov.pb.h"
 #include "../filesystem.hpp"
 #include <rapidjson/istreamwrapper.h>
@@ -41,7 +40,7 @@ public:
         normalizeEmbeddings(normalizeEmbeddings) {}
 
     int getTargetOutputIndex() const {
-        return target_output_idx;
+        return targetOutputIndex;
     }
 
 protected:
@@ -51,9 +50,8 @@ private:
     mediapipe::EmbeddingsCalculatorOVOptions_Pooling pooling;
     bool normalizeEmbeddings;
 
-    int target_output_idx = -1;
+    int targetOutputIndex = -1;
 };
-
 
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 }  // namespace ovms

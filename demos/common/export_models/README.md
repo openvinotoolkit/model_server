@@ -134,18 +134,29 @@ It will ensure, the generation stops after eos token.
 
 #### Embeddings with deployment on a single CPU host:
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json
 ```
 
 #### Embeddings with deployment on a dual CPU host:
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config_all.json --num_streams 2
 ```
 
 #### Embeddings with pooling parameter
+Supported poolings: `LAST`, `MEAN`, `CLS` (default).
 ```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --config_file_path models/config_all.json
+python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format fp16 --config_file_path models/config_all.json
 ```
+
+#### Embeddings with `sentence_transformers` library
+Some embedding models require special handling during export. For example:
+```console
+python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --extra_quantization_params "--library sentence_transformers" --weight-format fp16 --config_file_path models/config_all.json
+```
+Known models that require it:
+- Alibaba-NLP/gte-large-en-v1.5
+- nomic-ai/nomic-embed-text-v1.5
+
 
 
 #### With Input Truncation

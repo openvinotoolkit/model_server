@@ -53,7 +53,6 @@ const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "EMBEDDINGS_NODE_RESOURCE
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
 
-
 class EmbeddingsCalculatorOV : public CalculatorBase {
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -216,31 +215,16 @@ public:
             inferRequest.wait();
             std::string outputTensorName;
             if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
-                //RET_CHECK(false) << "too many outputs";
-                // Search by number of dimensions, should be 3
-                //bool found = false;
-                // for (const auto& output : inferRequest.get_compiled_model().outputs()) {
-                //     //if (output.get_partial_shape().size() == 3) {
-                //         outputTensorName = output.get_any_name();
-                //         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
-                //         found = true;
-                //         break;
-                //     //}
-                // }
-                int target_output_idx = embeddings_session->getTargetOutputIndex();
-                RET_CHECK(target_output_idx != -1) << "No output with 3 dimensions found";
-                outputTensorName = inferRequest.get_compiled_model().outputs()[target_output_idx].get_any_name();
+                int targetOutputIndex = embeddings_session->getTargetOutputIndex();
+                RET_CHECK(targetOutputIndex != -1) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
+                outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
-                //RET_CHECK(found);
             } else {  // BGE
                 RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
                 outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
                 SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Single embedding model output found with name {}", outputTensorName);
             }
             embeddingsTensor = inferRequest.get_tensor(outputTensorName.c_str());
-
-
-
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Caught exception from session infer(): {}", e.what());
             LOG(INFO) << e.what();
@@ -250,20 +234,12 @@ public:
             RET_CHECK(false);
         }
 
-        //RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor.get_shape().size() == 2);
         RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
-        //RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        // PoolingMode mode;
-        // if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
-        //     mode = PoolingMode::LAST;  // todo remove since this is not really used
-        // } else {
-        //     mode = PoolingMode::CLS;
-        // }
-
-        // remove normalize embeddings since it is not really used
         status = handler.parseResponseNew(buffer, embeddingsTensor);
         if (!status.ok()) {
             return status;
