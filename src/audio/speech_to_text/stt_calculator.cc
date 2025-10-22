@@ -220,7 +220,7 @@ public:
         if (absl::StartsWith(payload.uri, "/v3/audio/transcriptions")) {
             if (payload.multipartParser->hasParseError())
                 return absl::InvalidArgumentError("Failed to parse multipart data");
-            
+
             std::string_view stream = payload.multipartParser->getFileContentByFieldName("stream");
             if (!stream.empty()) {
                 return absl::InvalidArgumentError("streaming is not supported");

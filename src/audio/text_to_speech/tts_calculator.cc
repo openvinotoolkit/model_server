@@ -119,7 +119,6 @@ public:
             format.channels = 1;
             format.sampleRate = 16000;  // assume it is always 16 KHz
             format.bitsPerSample = gen_speech.speeches[0].get_element_type().bitwidth();
-            SPDLOG_ERROR("1");
             drwav wav;
             void* ppData;
             size_t pDataSize;
