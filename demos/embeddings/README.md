@@ -26,12 +26,12 @@ Run `export_model.py` script to download and quantize the model:
 
 **CPU**
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 
 **GPU**
 ```console
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
@@ -42,12 +42,12 @@ You should have a model folder like below:
 ```
 tree models
 models
-├── Alibaba-NLP
-│   └── gte-large-en-v1.5
+├── BAAI
+│   └── bge-large-en-v1.5
 │       ├── config.json
 │       ├── graph.pbtxt
 │       ├── openvino_model.bin
-│       |── openvino_model.xml
+│       ├── openvino_model.xml
 │       ├── openvino_tokenizer.bin
 │       ├── openvino_tokenizer.xml
 │       ├── special_tokens_map.json
@@ -55,13 +55,12 @@ models
 │       ├── tokenizer.json
 │       └── vocab.txt
 └── config.json
-
 ```
 
 The default configuration of the `EmbeddingsCalculatorOV` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. They can be set automatically via export parameters in the `export_model.py` script.
 
 For example:
-`python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
+`python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
 
 > **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS and LAST. For example:
 ```console
@@ -70,14 +69,21 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
-```
-    nomic-ai/nomic-embed-text-v1.5
-    Alibaba-NLP/gte-large-en-v1.5
-    BAAI/bge-large-en-v1.5
-    BAAI/bge-large-zh-v1.5
-    thenlper/gte-small
-    Qwen/Qwen3-Embedding-0.6B
-```
+
+|Model name|Pooling|Banking77Classification Accuracy Int8|
+|---|---|---|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|0.447013|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|0.038117|
+|BAAI/bge-large-en-v1.5|CLS|0.848636|
+|BAAI/bge-large-zh-v1.5|CLS|0.654351|
+|thenlper/gte-small|CLS|0.722695|
+|Qwen/Qwen3-Embedding-0.6B|LAST|0.806201|
+|sentence-transformers/all-MiniLM-L12-v2|MEAN|0.804091|
+|sentence-transformers/all-distilroberta-v1|MEAN|0.809481|
+|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|0.753377|
+|intfloat/multilingual-e5-large-instruct|MEAN|0.767792|
+|intfloat/multilingual-e5-large|MEAN|0.750552|
+
 
 ## Server Deployment
 
@@ -117,7 +123,7 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Wait for the model to load. You can check the status with a simple command below. Note that the slash `/` in the model name needs to be escaped with `%2F`:
 ```bash
-curl -i http://localhost:8000/v2/models/Alibaba-NLP%2Fgte-large-en-v1.5/ready
+curl -i http://localhost:8000/v2/models/BAAI%2Fbge-large-en-v1.5/ready
 HTTP/1.1 200 OK
 content-length: 0
 content-type: application/json; charset=utf-8
@@ -127,7 +133,7 @@ content-type: application/json; charset=utf-8
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"Alibaba-NLP/gte-large-en-v1.5\", \"input\": \"hello world\"}"
+curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"BAAI/bge-large-en-v1.5\", \"input\": \"hello world\"}"
 ```
 ```json
 {
@@ -168,7 +174,7 @@ client = OpenAI(
   base_url="http://localhost:8000/v3",
   api_key="unused"
 )
-model = "Alibaba-NLP/gte-large-en-v1.5"
+model = "BAAI/bge-large-en-v1.5"
 embedding_responses = client.embeddings.create(
     input=[
         "That is a happy person",
