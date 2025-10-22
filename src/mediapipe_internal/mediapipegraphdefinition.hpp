@@ -85,7 +85,6 @@ struct GraphSidePackets {
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
-
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&
