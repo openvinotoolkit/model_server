@@ -37,11 +37,7 @@ const uint32_t WIN_MAX_GRPC_WORKERS = 1;
 const uint32_t MAX_PORT_NUMBER = std::numeric_limits<uint16_t>::max();
 
 // For drogon, we need to minimize the number of default workers since this value is set for both: unary and streaming (making it always double)
-#if (USE_DROGON == 0)
-const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES * 4.0;
-#else
 const uint64_t DEFAULT_REST_WORKERS = AVAILABLE_CORES;
-#endif
 const uint32_t DEFAULT_GRPC_MAX_THREADS = AVAILABLE_CORES * 8.0;
 const size_t DEFAULT_GRPC_MEMORY_QUOTA = (size_t)2 * 1024 * 1024 * 1024;  // 2GB
 const uint64_t MAX_REST_WORKERS = 10'000;
@@ -128,10 +124,6 @@ bool Config::validate() {
             std::cerr << "Error: --task parameter not set." << std::endl;
             return false;
         }
-        if (serverSettings.hfSettings.downloadType == GIT_CLONE_DOWNLOAD && !startsWith(toLower(serverSettings.hfSettings.sourceModel), toLower("OpenVINO/"))) {
-            std::cerr << "For now only OpenVINO models are supported in pulling mode with git clone. Please use optimum download or gguf models instead." << std::endl;
-            return false;
-        }
         if (this->serverSettings.hfSettings.task == TEXT_GENERATION_GRAPH) {
             if (!std::holds_alternative<TextGenGraphSettingsImpl>(this->serverSettings.hfSettings.graphSettings)) {
                 std::cerr << "Graph options not initialized for text generation.";
@@ -145,7 +137,20 @@ bool Config::validate() {
             }
 
             std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
-            if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) == allowedTargetDevices.end() && settings.targetDevice.rfind("HETERO", 0) != 0) {
+            bool validDeviceSelected = false;
+            if (settings.targetDevice.rfind("GPU.", 0) == 0) {
+                // Accept GPU.x where x is a number to select specific GPU card
+                std::string indexPart = settings.targetDevice.substr(4);
+                validDeviceSelected = !indexPart.empty() && std::all_of(indexPart.begin(), indexPart.end(), ::isdigit);
+            } else if (settings.targetDevice.rfind("HETERO", 0) == 0) {
+                // Accept HETERO:<device1>,<device2>,... to select specific devices in the list
+                validDeviceSelected = true;
+            } else if (std::find(allowedTargetDevices.begin(), allowedTargetDevices.end(), settings.targetDevice) != allowedTargetDevices.end()) {
+                // Accept CPU, GPU, NPU, AUTO as valid devices
+                validDeviceSelected = true;
+            }
+
+            if (!validDeviceSelected) {
                 std::cerr << "target_device: " << settings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
                 return false;
             }
@@ -361,5 +366,6 @@ const std::string& Config::allowedOrigins() const { return this->serverSettings.
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }
 const std::string& Config::allowedHeaders() const { return this->serverSettings.allowedHeaders; }
 const std::string Config::cacheDir() const { return this->serverSettings.cacheDir; }
+const std::string& Config::apiKey() const { return this->serverSettings.apiKey; }
 
 }  // namespace ovms

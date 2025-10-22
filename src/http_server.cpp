@@ -37,26 +37,10 @@
 #include "logging.hpp"
 #include "status.hpp"
 
-#if (USE_DROGON == 0)
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
-#include "tensorflow_serving/util/net_http/server/public/httpserver.h"
-#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "tensorflow_serving/util/threadpool_executor.h"
-
-#include "net_http_async_writer_impl.hpp"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-#else
 #include <drogon/drogon.h>
 
 #include "drogon_http_async_writer_impl.hpp"
 #include "http_frontend/multi_part_parser_drogon_impl.hpp"  // At this point there is no going back to net_http
-#endif
 
 namespace ovms {
 
@@ -184,10 +168,9 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
     }
 }
 
-#if (USE_DROGON == 1)
-std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
+std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, const ovms::Config& config, int timeout_in_ms) {
     auto server = std::make_unique<DrogonHttpServer>(num_threads, num_threads, port, address);
-    auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
+    auto handler = std::make_shared<HttpRestApiHandler>(ovmsServer, timeout_in_ms, config.apiKey());
     auto& pool = server->getPool();
     server->registerRequestDispatcher([handler, &pool](const drogon::HttpRequestPtr& req, std::function<void(const drogon::HttpResponsePtr&)> drogonResponseInitializeCallback) {
         SPDLOG_DEBUG("REST request {}", req->getOriginalPath());
@@ -261,129 +244,5 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
     }
     return server;
 }
-
-#else
-
-class RequestExecutor final : public tensorflow::serving::net_http::EventExecutor {
-public:
-    explicit RequestExecutor(int num_threads) :
-        executor_(tensorflow::Env::Default(), "httprestserver", num_threads) {}
-
-    void Schedule(std::function<void()> fn) override { executor_.Schedule(std::move(fn)); }
-
-private:
-    tensorflow::serving::ThreadPoolExecutor executor_;
-};
-
-class RestApiRequestDispatcher {
-public:
-    RestApiRequestDispatcher(ovms::Server& ovmsServer, int timeout_in_ms) {
-        handler_ = std::make_unique<HttpRestApiHandler>(ovmsServer, timeout_in_ms);
-    }
-
-    tensorflow::serving::net_http::RequestHandler dispatch(tensorflow::serving::net_http::ServerRequestInterface* req) {
-        return [this](tensorflow::serving::net_http::ServerRequestInterface* req) {
-            try {
-                this->processRequest(req);
-            } catch (...) {
-                SPDLOG_DEBUG("Exception caught in REST request handler");
-                req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::ERROR);
-            }
-        };
-    }
-
-private:
-    void parseHeaders(const tensorflow::serving::net_http::ServerRequestInterface* req, std::vector<std::pair<std::string, std::string>>* headers) {
-        if (req->GetRequestHeader("Inference-Header-Content-Length").size() > 0) {
-            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", req->GetRequestHeader("Inference-Header-Content-Length")};
-            headers->emplace_back(header);
-        }
-    }
-    void processRequest(tensorflow::serving::net_http::ServerRequestInterface* req) {
-        SPDLOG_DEBUG("REST request {}", req->uri_path());
-        std::string body;
-        int64_t num_bytes = 0;
-        auto request_chunk = req->ReadRequestBytes(&num_bytes);
-        while (request_chunk != nullptr) {
-            body.append(std::string_view(request_chunk.get(), num_bytes));
-            request_chunk = req->ReadRequestBytes(&num_bytes);
-        }
-
-        std::vector<std::pair<std::string, std::string>> headers;
-        parseHeaders(req, &headers);
-        std::string output;
-        SPDLOG_DEBUG("Processing HTTP request: {} {} body: {} bytes",
-            req->http_method(),
-            req->uri_path(),
-            body.size());
-        HttpResponseComponents responseComponents;
-        std::shared_ptr<HttpAsyncWriter> writer = std::make_shared<NetHttpAsyncWriterImpl>(req);
-        const auto status = handler_->processRequest(req->http_method(), req->uri_path(), body, &headers, &output, responseComponents, writer);
-        if (status == StatusCode::PARTIAL_END) {
-            // No further messaging is required.
-            // Partial responses were delivered via "req" object.
-            return;
-        }
-        if (!status.ok() && output.empty()) {
-            rapidjson::StringBuffer buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            writer.StartObject();
-            writer.String("error");
-            writer.String(status.string().c_str());
-            writer.EndObject();
-            output = buffer.GetString();
-        }
-        const auto http_status = http(status);
-        if (responseComponents.inferenceHeaderContentLength.has_value()) {
-            std::pair<std::string, std::string> header{"Inference-Header-Content-Length", std::to_string(responseComponents.inferenceHeaderContentLength.value())};
-            headers.emplace_back(header);
-        }
-        for (const auto& kv : headers) {
-            req->OverwriteResponseHeader(kv.first, kv.second);
-        }
-        req->WriteResponseString(output);
-        if (int(http_status) != int(tensorflow::serving::net_http::HTTPStatusCode::OK) && int(http_status) != int(tensorflow::serving::net_http::HTTPStatusCode::CREATED)) {
-            SPDLOG_DEBUG("Processing HTTP/REST request failed: {} {}. Reason: {}",
-                req->http_method(),
-                req->uri_path(),
-                status.string());
-        }
-        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode(http_status));
-    }
-
-    std::unique_ptr<HttpRestApiHandler> handler_;
-};
-
-std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> createAndStartNetHttpServer(const std::string& address, int port, int num_threads, ovms::Server& ovmsServer, int timeout_in_ms) {
-    auto options = std::make_unique<tensorflow::serving::net_http::ServerOptions>();
-    options->AddPort(static_cast<uint32_t>(port));
-    options->SetAddress(address);
-    options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
-
-    auto server = tensorflow::serving::net_http::CreateEvHTTPServer(std::move(options));
-    if (server == nullptr) {
-        SPDLOG_ERROR("Failed to create http server");
-        return nullptr;
-    }
-
-    std::shared_ptr<RestApiRequestDispatcher> dispatcher =
-        std::make_shared<RestApiRequestDispatcher>(ovmsServer, timeout_in_ms);
-
-    tensorflow::serving::net_http::RequestHandlerOptions handler_options;
-    server->RegisterRequestDispatcher(
-        [dispatcher](tensorflow::serving::net_http::ServerRequestInterface* req) {
-            return dispatcher->dispatch(std::move(req));
-        },
-        handler_options);
-
-    if (server->StartAcceptingRequests()) {
-        SPDLOG_INFO("REST server listening on port {} with {} threads", port, num_threads);
-        return server;
-    }
-
-    return nullptr;
-}
-
-#endif
 
 }  // namespace ovms

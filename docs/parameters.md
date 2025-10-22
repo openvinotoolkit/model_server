@@ -56,6 +56,7 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_headers` | `string` (default: *) | Comma-separated list of allowed headers in CORS requests. |
 | `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
+| `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
 
 ## Config management mode options
 
@@ -85,6 +86,9 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"MULTI"/"HETERO"`   |
 | `--task`                    | `string`     | Task type the model will support (`text_generation`, `embeddings`, `rerank`, `image_generation`).              |
 | `--overwrite_models`        | `NA`         | If set, an existing model with the same name will be overwritten. If not set, the server will use existing model files if available. |
+| `--gguf_filename`           | `string`     | Filename of the wanted quantization type from Hugging Face GGUF repository.                                        |
+
+> **NOTE:** If you want to use model that is split into several `.gguf` files, you should specify the filename of the first part only, e.g. `--gguf_filename model-name-00001-of-00002.gguf`.
 
 ## Pull Mode Options for optimum-cli mode
 

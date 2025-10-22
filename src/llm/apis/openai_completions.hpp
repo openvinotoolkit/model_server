@@ -78,6 +78,7 @@ class OpenAIChatCompletionsHandler {
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
 
     ParsedOutput parseOutputIfNeeded(const std::vector<int64_t>& generatedIds);
+    absl::Status ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged);
 
 public:
     OpenAIChatCompletionsHandler(Document& doc, Endpoint endpoint, std::chrono::time_point<std::chrono::system_clock> creationTime,
@@ -86,8 +87,10 @@ public:
         endpoint(endpoint),
         created(creationTime),
         tokenizer(tokenizer) {
+        // TODO we should delay creating output parser until we have request with toolNameSchemaMap parsed
+        // now we pass it now but it has to be populated first before first use
         if (!toolParserName.empty() || !reasoningParserName.empty()) {
-            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName);
+            outputParser = std::make_unique<OutputParser>(tokenizer, toolParserName, reasoningParserName, this->request.toolNameSchemaMap);
         }
     }
 
