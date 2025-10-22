@@ -58,20 +58,21 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     if (!parsedJson->IsObject())
         return "Received json is not an object";
 
-    auto it = useTokenizeEndpoint ? parsedJson->FindMember("text") : parsedJson->FindMember("input");
+    const std::string field_name = useTokenizeEndpoint ? "text" : "input";
+    auto it = parsedJson->FindMember(field_name.c_str());
 
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
         } else if (it->value.IsArray()) {
             if (it->value.GetArray().Size() == 0) {
-                return "input array should not be empty";
+                return  field_name + " array should not be empty";
             }
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
                     if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
-                        return "input must be homogeneous";
+                        return field_name + " must be homogeneous";
                     input_type = InputType::INT_VEC;
                     std::vector<int64_t> ints;
                     ints.reserve(input.GetArray().Size());
@@ -79,31 +80,31 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
                         if (val.IsInt())
                             ints.push_back(val.GetInt());
                         else
-                            return "input must be homogeneous";
+                            return field_name + " must be homogeneous";
                     }
                     input_tokens.emplace_back(std::move(ints));
                 } else if (input.IsString()) {
                     if (input_type != InputType::NONE && input_type != InputType::STRING)
-                        return "input must be homogeneous";
+                        return field_name + " must be homogeneous";
                     input_type = InputType::STRING;
                     input_strings.push_back(input.GetString());
                 } else if (input.IsInt()) {
                     if (input_type != InputType::NONE && input_type != InputType::INT)
-                        return "input must be homogeneous";
+                        return field_name + " must be homogeneous";
                     input_type = InputType::INT;
                     if (input_tokens.size() == 0) {
                         input_tokens.push_back(std::vector<int64_t>());
                     }
                     input_tokens[0].push_back(input.GetInt());
                 } else {
-                    return "every element in input array should be either string or int";
+                    return "every element in " + field_name + " array should be either string or int";
                 }
             }
         } else {
-            return "input should be string, array of strings or array of integers";
+            return field_name + " should be string, array of strings or array of integers";
         }
     } else {
-        return "input field is required";
+        return field_name + " field is required";
     }
 
     it = parsedJson->FindMember("encoding_format");
@@ -160,7 +161,7 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
                 }
                 request.parameters["padding_side"] = padding_side;
             } else {
-                return "padding_side should be string";
+                return "padding_side should be string, either left or right";
             }
         }
     }

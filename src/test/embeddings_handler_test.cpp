@@ -252,7 +252,7 @@ TEST(EmbeddingsDeserialization, invalidEncoding) {
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": "dummy"
+            "encoding_format": "dummy"
         }
     )";
     rapidjson::Document d;
@@ -264,12 +264,213 @@ TEST(EmbeddingsDeserialization, invalidEncoding) {
     ASSERT_EQ(error, "encoding_format should either base64 or float");
 }
 
+TEST(EmbeddingsDeserialization, positiveTokenize) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
+    ASSERT_NE(strings, nullptr);    
+    ASSERT_EQ(strings->size(), 3);
+    ASSERT_EQ(strings->at(0), "one");
+    ASSERT_EQ(strings->at(1), "two");
+    ASSERT_EQ(strings->at(2), "three");
+}
+
+TEST(EmbeddingsDeserialization, invalidTextFieldMissing) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "text field is required");
+}
+
+TEST(EmbeddingsDeserialization, invalidTextFieldType) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": 42
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "text should be string, array of strings or array of integers");
+}
+
+TEST(EmbeddingsDeserialization, invalidTextFieldEmptyArray) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": []
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "text array should not be empty");
+}
+
+TEST(EmbeddingsDeserialization, invalidTextFieldMalformedArray) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", 2, "three"]
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "text must be homogeneous");
+}
+
+TEST(EmbeddingsDeserialization, positiveTokenizeParamsParse) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 100,
+            "pad_to_max_length": true,
+            "padding_side": "right",
+            "add_special_tokens": false
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
+    auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
+    ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
+    auto strings = std::get_if<std::vector<std::string>>(&embeddingsRequest.input);
+    ASSERT_NE(strings, nullptr);    
+    ASSERT_EQ(strings->size(), 3);
+    ASSERT_EQ(strings->at(0), "one");
+    ASSERT_EQ(strings->at(1), "two");
+    ASSERT_EQ(strings->at(2), "three");
+    auto params = embeddingsRequest.parameters;
+    ASSERT_EQ(params["max_length"].as<size_t>(), 100);
+    ASSERT_EQ(params["pad_to_max_length"].as<bool>(), true);
+    ASSERT_EQ(params["padding_side"].as<std::string>(), "right");
+    ASSERT_EQ(params["add_special_tokens"].as<bool>(), false);
+}
+
+TEST(EmbeddingsDeserialization, invalidTokenizeMaxLengthType) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": "string"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "max_length should be integer");
+}
+
+TEST(EmbeddingsDeserialization, invalidTokenizePadToMaxLengthType) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "pad_to_max_length": "string"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "pad_to_max_length should be boolean");
+}
+
+TEST(EmbeddingsDeserialization, invalidTokenizeAddSpecialTokensType) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "add_special_tokens": "string"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "add_special_tokens should be boolean");
+}
+
+TEST(EmbeddingsDeserialization, invalidTokenizePaddingSideType) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "padding_side": 42
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "padding_side should be string, either left or right");
+}
+
+TEST(EmbeddingsDeserialization, invalidTokenizePaddingSideValue) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "padding_side": "invalid_value"
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    ASSERT_NE(std::get_if<std::string>(&request), nullptr);
+    auto error = *std::get_if<std::string>(&request);
+    ASSERT_EQ(error, "padding_side should be either left or right");
+}
+
 TEST(EmbeddingsDeserialization, invalidEncodingType) {
     std::string requestBody = R"(
         {
             "model": "embeddings",
             "input": ["one", "three"],
-"encoding_format": 42
+            "encoding_format": 42
         }
     )";
     rapidjson::Document d;

@@ -50,7 +50,7 @@ struct EmbeddingsRequest {
     EncodingFormat encoding_format;
     ov::AnyMap parameters = {};
 
-    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request, const bool& useTokenizeEndpoint);
+    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request, const bool& useTokenizeEndpoint = false);
 };
 
 class EmbeddingsHandler {
