@@ -43,17 +43,17 @@ You should have a model folder like below:
 tree models
 models
 ├── BAAI
-│   └── bge-large-en-v1.5
-│       ├── config.json
-│       ├── graph.pbtxt
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── vocab.txt
+│   └── bge-large-en-v1.5
+│       ├── config.json
+│       ├── graph.pbtxt
+│       ├── openvino_model.bin
+│       ├── openvino_model.xml
+│       ├── openvino_tokenizer.bin
+│       ├── openvino_tokenizer.xml
+│       ├── special_tokens_map.json
+│       ├── tokenizer_config.json
+│       ├── tokenizer.json
+│       └── vocab.txt
 └── config.json
 ```
 
@@ -62,7 +62,7 @@ The default configuration of the `EmbeddingsCalculatorOV` should work in most ca
 For example:
 `python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
 
-> **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS and LAST. For example:
+> **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS, MEAN and LAST. For example:
 ```console
 python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --pooling LAST --config_file_path models/config.json
 ```
@@ -70,19 +70,19 @@ python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --
 ## Tested models
 All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. In serving validation are included Hugging Face models:
 
-|Model name|Pooling|Banking77Classification Accuracy Int8|
-|---|---|---|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|0.447013|
-|Alibaba-NLP/gte-large-en-v1.5|CLS|0.038117|
-|BAAI/bge-large-en-v1.5|CLS|0.848636|
-|BAAI/bge-large-zh-v1.5|CLS|0.654351|
-|thenlper/gte-small|CLS|0.722695|
-|Qwen/Qwen3-Embedding-0.6B|LAST|0.806201|
-|sentence-transformers/all-MiniLM-L12-v2|MEAN|0.804091|
-|sentence-transformers/all-distilroberta-v1|MEAN|0.809481|
-|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|0.753377|
-|intfloat/multilingual-e5-large-instruct|MEAN|0.767792|
-|intfloat/multilingual-e5-large|MEAN|0.750552|
+|Model name|Pooling|
+|---|---|
+|nomic-ai/nomic-embed-text-v1.5|MEAN|
+|Alibaba-NLP/gte-large-en-v1.5|CLS|
+|BAAI/bge-large-en-v1.5|CLS|
+|BAAI/bge-large-zh-v1.5|CLS|
+|thenlper/gte-small|CLS|
+|Qwen/Qwen3-Embedding-0.6B|LAST|
+|sentence-transformers/all-MiniLM-L12-v2|MEAN|
+|sentence-transformers/all-distilroberta-v1|MEAN|
+|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|
+|intfloat/multilingual-e5-large-instruct|MEAN|
+|intfloat/multilingual-e5-large|MEAN|
 
 
 ## Server Deployment
@@ -189,7 +189,7 @@ print("Similarity score as cos_sim", cos_sim)' >> openai_client.py
 
 python openai_client.py
 ```
-It will report results like `Similarity score as cos_sim 0.97654650115054`.
+It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 
 :::
 
@@ -201,36 +201,36 @@ git clone https://github.com/openvinotoolkit/model_server
 pushd .
 cd model_server/demos/benchmark/embeddings/
 pip install -r requirements.txt
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model Alibaba-NLP/gte-large-en-v1.5
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
-100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:45<00:00,  9.50it/s]
+100%|████████████████████████████████████████████████████████████████| 1000/1000 [01:44<00:00,  9.56it/s]
 Tokens: 5000
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 48.588129701166125
-Mean latency: 17 ms
-Median latency: 16 ms
+Throughput - Tokens per second: 47.8
+Mean latency: 14.40 ms
+Median latency: 13.97 ms
 Average document length: 5.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model Alibaba-NLP/gte-large-en-v1.5
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
-100%|████████████████████████████████████████████████████████████████| 50/50 [00:21<00:00,  2.32it/s]
+100%|████████████████████████████████████████████████████████████████| 32/32 [00:17<00:00,  1.82it/s]
 Tokens: 510000
 Success rate: 100.0%. (32/32)
-Throughput - Tokens per second: 27995.652060806977
-Mean latency: 10113 ms
-Median latency: 10166 ms
+Throughput - Tokens per second: 29,066.2
+Mean latency: 9768.28 ms
+Median latency: 9905.79 ms
 Average document length: 510.0 tokens
 
 
-python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings
+python benchmark_embeddings.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-22-12-simple-embeddings --model BAAI/bge-large-en-v1.5
 Number of documents: 1000
 100%|████████████████████████████████████████████████████████████████| 1000/1000 [00:15<00:00, 64.02it/s]
 Tokens: 83208
 Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 5433.913083411673
-Mean latency: 1424 ms
-Median latency: 1451 ms
+Throughput - Tokens per second: 4,120.6
+Mean latency: 1882.98 ms
+Median latency: 1608.47 ms
 Average document length: 83.208 tokens
 ```
 
@@ -248,104 +248,104 @@ The script [compare_results.py](./compare_results.py) can assist with such exper
 ```bash
 popd
 cd model_server/demos/embeddings
-python compare_results.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
+python compare_results.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
-HF Duration: 50.626 ms NewModel
-OVMS Duration: 20.219 ms
+HF Duration: 93.921 ms BertModel
+OVMS Duration: 160.806 ms
 Batch number: 0
 OVMS embeddings: shape: (1024,) emb[:20]:
- [-0.0349 -0.0256 -0.0102 -0.0139 -0.0175 -0.0015 -0.0297 -0.0002 -0.0424
- -0.0145 -0.0141  0.0101  0.0057  0.0001  0.0316 -0.03   -0.04   -0.0474
-  0.0084 -0.0097]
+ [ 0.0336  0.0321  0.0213 -0.0373 -0.0156 -0.0122  0.0246  0.0412  0.0492
+  0.0207  0.0056  0.0169 -0.0133  0.0009 -0.0421  0.0206 -0.0222 -0.0291
+ -0.0532  0.0382]
 HF AutoModel: shape: (1024,) emb[:20]:
- [-0.0345 -0.0252 -0.0106 -0.0124 -0.0167 -0.0018 -0.0301  0.0002 -0.0408
- -0.0139 -0.015   0.0104  0.0054 -0.0006  0.0326 -0.0296 -0.04   -0.0457
-  0.0087 -0.0102]
-Difference score with HF AutoModel: 0.02175156185021083
+ [ 0.0343  0.0332  0.0219 -0.0371 -0.0158 -0.0131  0.0247  0.0408  0.0489
+  0.0208  0.0053  0.0176 -0.0132  0.001  -0.0422  0.0208 -0.0213 -0.0278
+ -0.0538  0.0388]
+Difference score with HF AutoModel: 0.020708760995591734
 Batch number: 1
 OVMS embeddings: shape: (1024,) emb[:20]:
- [-0.0141 -0.0332 -0.0041 -0.0205 -0.0008  0.0189 -0.0278 -0.0083 -0.0511
-  0.0043  0.0262 -0.0079  0.016   0.0084  0.0123 -0.0414 -0.0314 -0.0332
-  0.0101 -0.0052]
+ [ 0.0161  0.0156  0.0235  0.0199  0.0005 -0.0559  0.0124  0.0122  0.0205
+ -0.027   0.0152  0.0153 -0.0429 -0.0537 -0.0514 -0.0059 -0.0294 -0.0451
+ -0.0371  0.0361]
 HF AutoModel: shape: (1024,) emb[:20]:
- [-0.0146 -0.0333 -0.005  -0.0194  0.0004  0.0197 -0.0281 -0.0069 -0.0511
-  0.005   0.0253 -0.0067  0.0167  0.0079  0.0128 -0.0407 -0.0317 -0.0329
-  0.0095 -0.0051]
-Difference score with HF AutoModel: 0.024787274668209857
+ [ 0.0175  0.0161  0.0234  0.0196  0.0012 -0.0565  0.0109  0.0111  0.0194
+ -0.0275  0.0148  0.0144 -0.0425 -0.0538 -0.0515 -0.0062 -0.0298 -0.0447
+ -0.0376  0.0359]
+Difference score with HF AutoModel: 0.020293646680283224
 
 ```
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
 pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
-python ovms_mteb.py --model Alibaba-NLP/gte-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
+python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
 ```json
 {
   "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
   "task_name": "Banking77Classification",
-  "mteb_version": "1.31.6",
+  "mteb_version": "1.39.7",
   "scores": {
     "test": [
       {
-        "accuracy": 0.849416,
-        "f1": 0.845058,
-        "f1_weighted": 0.845058,
+        "accuracy": 0.848636,
+        "f1": 0.842405,
+        "f1_weighted": 0.842405,
         "scores_per_experiment": [
           {
-            "accuracy": 0.854545,
-            "f1": 0.850033,
-            "f1_weighted": 0.850033
+            "accuracy": 0.842532,
+            "f1": 0.835091,
+            "f1_weighted": 0.835091
           },
           {
-            "accuracy": 0.86461,
-            "f1": 0.860671,
-            "f1_weighted": 0.860671
+            "accuracy": 0.851299,
+            "f1": 0.844622,
+            "f1_weighted": 0.844622
           },
           {
-            "accuracy": 0.847403,
-            "f1": 0.843897,
-            "f1_weighted": 0.843897
+            "accuracy": 0.849026,
+            "f1": 0.842238,
+            "f1_weighted": 0.842238
           },
           {
-            "accuracy": 0.856169,
-            "f1": 0.853613,
-            "f1_weighted": 0.853613
+            "accuracy": 0.853571,
+            "f1": 0.849815,
+            "f1_weighted": 0.849815
           },
           {
-            "accuracy": 0.843831,
-            "f1": 0.839043,
-            "f1_weighted": 0.839043
+            "accuracy": 0.846104,
+            "f1": 0.839,
+            "f1_weighted": 0.839
           },
           {
-            "accuracy": 0.847078,
-            "f1": 0.844124,
-            "f1_weighted": 0.844124
+            "accuracy": 0.849675,
+            "f1": 0.844259,
+            "f1_weighted": 0.844259
           },
           {
-            "accuracy": 0.842208,
-            "f1": 0.837938,
-            "f1_weighted": 0.837938
+            "accuracy": 0.846104,
+            "f1": 0.840343,
+            "f1_weighted": 0.840343
           },
           {
-            "accuracy": 0.843506,
-            "f1": 0.837239,
-            "f1_weighted": 0.837239
+            "accuracy": 0.846753,
+            "f1": 0.8397,
+            "f1_weighted": 0.8397
           },
           {
-            "accuracy": 0.85,
-            "f1": 0.844696,
-            "f1_weighted": 0.844696
+            "accuracy": 0.853571,
+            "f1": 0.848239,
+            "f1_weighted": 0.848239
           },
           {
-            "accuracy": 0.844805,
-            "f1": 0.839321,
-            "f1_weighted": 0.839321
+            "accuracy": 0.847727,
+            "f1": 0.84074,
+            "f1_weighted": 0.84074
           }
         ],
-        "main_score": 0.849416,
+        "main_score": 0.848636,
         "hf_subset": "default",
         "languages": [
           "eng-Latn"
@@ -353,7 +353,7 @@ Results will be stored in `results` folder:
       }
     ]
   },
-  "evaluation_time": 109.37459182739258,
+  "evaluation_time": 3841.1886789798737,
   "kg_co2_emissions": null
 }
 ```
