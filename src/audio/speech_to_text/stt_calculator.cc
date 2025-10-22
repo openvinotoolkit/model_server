@@ -197,17 +197,17 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SpeechToTextCalculator [Node: {} ] Close", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SpeechToTextCalculator  [Node: {}] Open start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Open start", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
 
         SttServableMap pipelinesMap = cc->InputSidePackets().Tag(STT_SESSION_SIDE_PACKET_TAG).Get<SttServableMap>();
         auto it = pipelinesMap.find(cc->NodeName());
@@ -252,7 +252,7 @@ public:
         }
 
         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(output.release(), cc->InputTimestamp());
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
+        SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process end", cc->NodeName());
 
         return absl::OkStatus();
     }
