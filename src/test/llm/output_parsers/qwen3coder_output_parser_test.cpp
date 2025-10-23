@@ -618,7 +618,8 @@ TEST_F(Qwen3CoderOutputParserTest, StreamingSimpleToolCall) {
 <tool_call>
 <function=string_tool>
 <parameter=arg1>
-)", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":5,"function":{"name":"string_tool"}}]}})"},
+)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":5,"function":{"name":"string_tool"}}]}})"},
         {R"(FUNCTION FC_CreateJsonPayload : STRING
 VAR_INPUT
     Value1 : REAL;
@@ -642,7 +643,8 @@ END_VAR
 
 END_FUNCTION</parameter>
 </function>
-</tool_call>)", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":5,"function":{"arguments":"{\"arg1\": \"FUNCTION FC_CreateJsonPayload : STRING\\nVAR_INPUT\\n    Value1 : REAL;\\n    Value2 : INT;\\n    Value3 : BOOL;\\n    Value4 : STRING(100);\\nEND_VAR\\nVAR_OUTPUT\\n    JsonPayload : STRING(1000);\\nEND_VAR\\nVAR\\n    TempStr : STRING(100);\\nEND_VAR\\n\\n    JsonPayload := '{';\\n    JsonPayload := JsonPayload + '\\\"value1\\\":' + REAL_TO_STRING(Value1, '', 2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value2\\\":' + INT_TO_STRING(Value2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value3\\\":' + BOOL_TO_STRING(Value3) + ',';\\n    JsonPayload := JsonPayload + '\\\"value4\\\":\\\"' + Value4 + '\\\"';\\n    JsonPayload := JsonPayload + '}';\\n\\nEND_FUNCTION\"}"}}]}})"},
+</tool_call>)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":5,"function":{"arguments":"{\"arg1\": \"FUNCTION FC_CreateJsonPayload : STRING\\nVAR_INPUT\\n    Value1 : REAL;\\n    Value2 : INT;\\n    Value3 : BOOL;\\n    Value4 : STRING(100);\\nEND_VAR\\nVAR_OUTPUT\\n    JsonPayload : STRING(1000);\\nEND_VAR\\nVAR\\n    TempStr : STRING(100);\\nEND_VAR\\n\\n    JsonPayload := '{';\\n    JsonPayload := JsonPayload + '\\\"value1\\\":' + REAL_TO_STRING(Value1, '', 2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value2\\\":' + INT_TO_STRING(Value2) + ',';\\n    JsonPayload := JsonPayload + '\\\"value3\\\":' + BOOL_TO_STRING(Value3) + ',';\\n    JsonPayload := JsonPayload + '\\\"value4\\\":\\\"' + Value4 + '\\\"';\\n    JsonPayload := JsonPayload + '}';\\n\\nEND_FUNCTION\"}"}}]}})"},
         {"<tool_call><function=string_tool><parameter=arg1>", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":6,"function":{"name":"string_tool"}}]}})"},
         {R"(
 if __name__ == "__main__":
@@ -651,8 +653,8 @@ if __name__ == "__main__":
     addresses["Arya"] = "Winterfell"
     for name, address in addresses.items():
         print(f'{name} lives at {address}')
-</parameter></function></tool_call>)", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":6,"function":{"arguments":"{\"arg1\": \"if __name__ == \\\"__main__\\\":\\n    addresses = {}\\n    addresses[\\\"Hodor\\\"] = \\\"\\\"\\\"The door\\\"\\\"\\\"\\n    addresses[\\\"Arya\\\"] = \\\"Winterfell\\\"\\n    for name, address in addresses.items():\\n        print(f'{name} lives at {address}')\"}"}}]}})"}
-    };
+</parameter></function></tool_call>)",
+            ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":6,"function":{"arguments":"{\"arg1\": \"if __name__ == \\\"__main__\\\":\\n    addresses = {}\\n    addresses[\\\"Hodor\\\"] = \\\"\\\"\\\"The door\\\"\\\"\\\"\\n    addresses[\\\"Arya\\\"] = \\\"Winterfell\\\"\\n    for name, address in addresses.items():\\n        print(f'{name} lives at {address}')\"}"}}]}})"}};
     for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
         i++;
         std::optional<rapidjson::Document> doc = outputParser->parseChunk(chunk, true, ov::genai::GenerationFinishReason::NONE);

@@ -241,7 +241,7 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         } else {
             // we don't want to escape entry/exit " for string parameters
             auto escaped = escapeString(parameterValue);
-            parameterValue =setCorrectValueType(escaped, this->currentParameterName, paramIt->second);
+            parameterValue = setCorrectValueType(escaped, this->currentParameterName, paramIt->second);
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
