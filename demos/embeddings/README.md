@@ -423,7 +423,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb==1.39.7 --extra-index-url "https://download.pytorch.org/whl/cpu"
+pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:

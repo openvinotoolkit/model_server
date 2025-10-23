@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 import mteb
-from mteb.model_meta import ModelMeta
 logger = logging.getLogger(__name__)
 import argparse
 
