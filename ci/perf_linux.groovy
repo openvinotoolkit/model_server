@@ -117,9 +117,12 @@ pipeline {
                     }
                 }
             }
-            finally {
-                sh "mv results/results.json results/latency_results.json"
-                archiveArtifacts allowEmptyArchive: true, artifacts: "results/latency_results.json"
+            }
+            post {
+                always {
+                    sh "mv results/results.json results/latency_results.json"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "results/latency_results.json"
+                }
             }
         }
         stage('Throughput') {
@@ -185,9 +188,11 @@ pipeline {
                     }
                 }
             }
-            finally {
-                sh "mv results/results.json results/throughput_results.json"
-                archiveArtifacts allowEmptyArchive: true, artifacts: "results/throughput_results.json"
+            post {
+                always {
+                    sh "mv results/results.json results/throughput_results.json"
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "results/throughput_results.json"
+                }
             }
         }
         stage('Agentic Latency') {
@@ -244,8 +249,10 @@ pipeline {
                     }
                 }
             }
-            finally {
-                archiveArtifacts allowEmptyArchive: true, artifacts: "results_agentic_latency.txt"
+            post {
+                always {
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "results_agentic_latency.txt"
+                }
             }            
         }
         stage('Agentic Accuracy') {
@@ -302,8 +309,10 @@ pipeline {
                     }
                 }
             }
-            finally {
-                archiveArtifacts allowEmptyArchive: true, artifacts: "gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json"
+            post {
+                always {
+                    archiveArtifacts allowEmptyArchive: true, artifacts: "gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json"
+                }
             }                 
         }
     }
