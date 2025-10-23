@@ -47,5 +47,5 @@ mkdir models
 
 for i in "${tested_models[@]}"; do
     echo "$i"
-    python export_model.py embeddings_ov --source_model $i --weight-format int8 ${model_params[$i]} --config_file_path models/config_all.json
+    eval "python export_model.py embeddings_ov --source_model \"$i\" --weight-format int8 ${model_params[$i]} --config_file_path models/config_all.json"
 done
