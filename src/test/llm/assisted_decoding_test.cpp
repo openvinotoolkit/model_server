@@ -215,6 +215,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonSpeculativeDecodin
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonSpeculativeDecoding) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;
@@ -345,6 +346,7 @@ TEST_F(AssistedDecodingPipelinesHttpTest, unaryCompletionsJsonPromptLookupDecodi
 }
 
 TEST_F(AssistedDecodingPipelinesHttpTest, unaryChatCompletionsJsonPromptLookupDecoding) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     // Generate reference from the base model (unassisted generation)
     config.max_new_tokens = 10;
     config.temperature = 0;

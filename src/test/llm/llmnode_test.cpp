@@ -741,6 +741,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNFail) {
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
+    GTEST_SKIP();  // TODO: Temporary skip to synchronize CI workers
     auto params = GetParam();
     config.max_new_tokens = 5;
     config.rng_seed = 1;
