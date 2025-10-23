@@ -108,8 +108,12 @@ public:
         }
     }
 
-    int generateExpectedText(std::string prompt, bool addSpecialTokens = true) {
+    int generateExpectedText(std::string prompt, bool addSpecialTokens = true, bool applyChatTemplate = false) {
         try {
+            if (applyChatTemplate) {
+                ov::genai::ChatHistory chatHistory({{{"role", "user"}, {"content", prompt}}});
+                prompt = cbPipe->get_tokenizer().apply_chat_template(chatHistory, true);
+            }
             ov::Tensor promptIds = cbPipe->get_tokenizer().encode(prompt, ov::genai::add_special_tokens(addSpecialTokens)).input_ids;
             std::cout << "Generated prompt ids: " << getPromptTokensString(promptIds) << std::endl;
             auto generationHandle = cbPipe->add_request(
@@ -744,7 +748,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonN) {
     config.num_return_sequences = 8;
     config.echo = false;
     if (params.generateExpectedOutput) {
-        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false), 0);
+        ASSERT_EQ(generateExpectedText("What is OpenVINO?", false, true), 0);
         ASSERT_EQ(config.num_return_sequences, expectedMessages.size());
     }
     std::string requestBody = R"(
@@ -2754,34 +2758,7 @@ TEST_P(LLMHttpParametersValidationTest, missingContentInMessage) {
     )";
 
     ovms::Status status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-#if (PYTHON_DISABLE == 0)
-    bool genAiTemplateParsing = false;  // With Python enabled, we use native Jinja2 template parsing
-#else
-    bool genAiTemplateParsing = true;  // With Python disabled, we use GenAI template parsing
-#endif
-
-    if (params.modelName.find("vlm") != std::string::npos) {
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);  // GenAI accepts such messages, so we expect a successful response
-        return;
-    }
-
-    if (genAiTemplateParsing) {
-        /*
-            This test checks if API handler validation allows messages without content.
-            The reason why we expect generic error here is that with GenAI template rendering missing content is unexpected.
-            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-        */
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-        ASSERT_NE(status.string().find("Response generation failed"), std::string::npos);
-    } else {
-        /*
-            This test checks if API handler validation allows messages without content.
-            The reason why we expect error here is that for the tested LLM model, lack of content means that pipeline input is empty.
-            On the API handler level this is a positive path as this test confirms that request reaches template processing phase.
-        */
-        ASSERT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-        ASSERT_NE(status.string().find("Final prompt after applying chat template is empty"), std::string::npos);
-    }
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::OK);
 }
 
 TEST_P(LLMHttpParametersValidationTest, roleNotAString) {
@@ -3267,19 +3244,13 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithOnlyRole) {
         {
             "model": ")" + params.modelName +
                               R"(",
-            "messages": [{"role": "abc"}]
+            "messages": [{"role": "user"}]
         }
     )";
 
-    if (params.modelName.find("vlm") != std::string::npos) {
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::OK);  // GenAI supports such messages
-    } else {
-        ASSERT_EQ(
-            handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-            ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
-    }
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);  // GenAI supports such messages
 }
 
 TEST_P(LLMHttpParametersValidationTest, SpeculativeDecodingNoSDSpecificParametersProvided) {
@@ -3345,7 +3316,7 @@ TEST_P(LLMHttpParametersValidationTest, MessagesWithMoreMessageFields) {
             "model": ")" + params.modelName +
                               R"(",
             "max_tokens": 1,
-            "messages": [{"role": "123", "content": "def", "unexpected": "123"}]
+            "messages": [{"role": "user", "content": "def", "unexpected": "123"}]
         }
     )";
 
