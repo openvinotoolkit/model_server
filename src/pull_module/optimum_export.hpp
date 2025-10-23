@@ -28,7 +28,11 @@ public:
         const std::string& inDownloadPath, bool inOverwrite, const std::string& cliExportCmd = "optimum-cli export openvino ",
         const std::string& cliCheckCmd = "optimum-cli -h",
         const std::string& convertExportCmd = "convert_tokenizer ",
-        const std::string& convertCheckCmd = "convert_tokenizer -h");
+#ifdef _WIN32
+        const std::string& convertCheckCmd = "where convert_tokenizer");
+#else
+        const std::string& convertCheckCmd = "which convert_tokenizer");
+#endif
     Status downloadModel() override;
 
 protected:

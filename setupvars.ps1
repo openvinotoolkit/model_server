@@ -17,7 +17,6 @@
 $env:OVMS_DIR=$PSScriptRoot
 if (Test-Path "$env:OVMS_DIR\python") {
     $env:PYTHONHOME="$env:OVMS_DIR\python"
-    $env:PYTHONIOENCODING="utf-8"
     $env:SCRIPTS="$env:OVMS_DIR\python\Scripts"
     $env:PATH="$env:OVMS_DIR;$env:PYTHONHOME;$env:SCRIPTS;$env:PATH"
 } else {
