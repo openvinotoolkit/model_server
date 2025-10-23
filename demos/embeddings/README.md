@@ -423,7 +423,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb --extra-index-url "https://download.pytorch.org/whl/cpu"
+pip install mteb einops --extra-index-url "https://download.pytorch.org/whl/cpu"
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:
@@ -502,4 +502,10 @@ Results will be stored in `results` folder:
   "kg_co2_emissions": null
 }
 ```
+
+Compare against local HuggingFace execution for reference:
+```console
+mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
+```
+
 
