@@ -606,6 +606,18 @@ public:
     static void TearDownTestSuite() {
         TearDownSuite(t);
     }
+
+    static void AssertTokenizationResult(const std::string& response, const std::vector<int>& expectedTokens) {
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(response.c_str());
+        ASSERT_EQ(ok.Code(), 0);
+        ASSERT_TRUE(d.HasMember("tokens"));
+        ASSERT_TRUE(d["tokens"].IsArray());
+        ASSERT_EQ(d["tokens"].Size(), expectedTokens.size());
+        for (size_t i = 0; i < expectedTokens.size(); ++i) {
+            ASSERT_EQ(d["tokens"][(rapidjson::SizeType)i].GetInt(), expectedTokens[i]);
+        }
+    }
 };
 
 std::unique_ptr<std::thread> EmbeddingsTokenizeHttpTest::t;
@@ -617,15 +629,11 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositive) {
             "text": "hello world"
         }
     )";
+    std::vector<int> expectedTokens = {101, 7592, 2088, 102};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 4);
+    AssertTokenizationResult(response, expectedTokens);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMissingText) {
@@ -657,15 +665,11 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveMaxLenParam) {
             "max_length": 3
         }
     )";
+    std::vector<int> expectedTokens = {101, 7592, 102};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 3);
+    AssertTokenizationResult(response, expectedTokens);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
@@ -677,15 +681,12 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePadToMaxLenParam) {
             "pad_to_max_length": true
         }
     )";
+    std::vector<int> expectedTokens(96, 0);
+    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 100);
+    AssertTokenizationResult(response, expectedTokens);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePaddingSideLeft) {
@@ -698,16 +699,12 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePaddingSideLeft) {
             "padding_side": "left"
         }
     )";
+    std::vector<int> expectedTokens(96, 0);
+    expectedTokens.insert(expectedTokens.end(), {101, 7592, 2088, 102});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 100);
-    ASSERT_EQ(d["tokens"][0].GetInt(), 0);
+    AssertTokenizationResult(response, expectedTokens);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePaddingSideRight) {
@@ -720,16 +717,12 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositivePaddingSideRight) {
             "padding_side": "right"
         }
     )";
+    std::vector<int> expectedTokens(96, 0);
+    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 100);
-    ASSERT_EQ(d["tokens"][99].GetInt(), 0);
+    AssertTokenizationResult(response, expectedTokens);
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeInvalidPaddingSide) {
@@ -752,13 +745,9 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
             "add_special_tokens": false
         }
     )";
+    std::vector<int> expectedTokens = {7592, 2088};
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
-    rapidjson::Document d;
-    rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 0);
-    ASSERT_TRUE(d.HasMember("tokens"));
-    ASSERT_TRUE(d["tokens"].IsArray());
-    ASSERT_EQ(d["tokens"].Size(), 2);
+    AssertTokenizationResult(response, expectedTokens);
 }
