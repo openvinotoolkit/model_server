@@ -62,8 +62,8 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} Qwen/Qwen3-Embedding-0.6B
-:sync: Qwen3-Embedding-0.6B
+:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+:sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --task embeddings
 ```
@@ -139,8 +139,8 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} Qwen/Qwen3-Embedding-0.6B
-:sync: Qwen3-Embedding-0.6B
+:::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
+:sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
 docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --target_device GPU --task embeddings
 ```
@@ -424,6 +424,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
 pip install mteb einops --extra-index-url "https://download.pytorch.org/whl/cpu"
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
 Results will be stored in `results` folder:

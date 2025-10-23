@@ -528,7 +528,6 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Creating EmbeddingsServable");
             std::shared_ptr<EmbeddingsServable> servable = std::make_shared<EmbeddingsServable>(
                 nodeOptions.models_path(),
                 nodeOptions.target_device(),
