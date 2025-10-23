@@ -139,11 +139,6 @@ public:
                 }
                 tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
-                size_t input_ids_size = tokens.input_ids.get_shape()[1];
-                if (params.find("max_length") != params.end() && input_ids_size > params["max_length"].as<size_t>()) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, params["max_length"].as<size_t>());
-                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", params["max_length"].as<size_t>()));
-                }
 
                 if (useTokenizeEndpoint) {
                     StringBuffer responseBuffer;
