@@ -134,6 +134,34 @@ static absl::Status downloadImage(const char* url, std::string& image, const int
     return absl::OkStatus();
 }
 
+absl::Status OpenAIChatCompletionsHandler::ensureArgumentsInToolCalls(Value& messageObj, bool& jsonChanged) {
+    auto& allocator = doc.GetAllocator();
+    auto toolCallsIt = messageObj.FindMember("tool_calls");
+    if (toolCallsIt != messageObj.MemberEnd() && toolCallsIt->value.IsArray()) {
+        const auto& toolCallsArray = toolCallsIt->value.GetArray();
+        for (rapidjson::SizeType j = 0; j < toolCallsArray.Size(); ++j) {
+            auto& toolCall = toolCallsArray[j];
+            if (!toolCall.IsObject()) {
+                return absl::InvalidArgumentError("Each tool_call must be an object");
+            }
+            auto functionIt = toolCall.FindMember("function");
+            if (functionIt == toolCall.MemberEnd() || !functionIt->value.IsObject()) {
+                return absl::InvalidArgumentError("Each tool_call must have a 'function' object");
+            }
+            const auto& functionObj = functionIt->value.GetObject();
+            if (functionObj.FindMember("arguments") == functionObj.MemberEnd()) {
+                // Add "arguments": "{}"
+                rapidjson::Value argumentsKey("arguments", allocator);
+                rapidjson::Value argumentsValue;
+                argumentsValue.SetString("{}", allocator);
+                functionIt->value.GetObject().AddMember(argumentsKey, argumentsValue, allocator);
+                jsonChanged = true;
+            }
+        }
+    }
+    return absl::OkStatus();
+}
+
 absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::string> allowedLocalMediaPath) {
     auto it = doc.FindMember("messages");
     if (it == doc.MemberEnd())
@@ -156,7 +184,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
             if (member->value.IsString() && (member->name.GetString() == std::string("role") || member->name.GetString() == std::string("content"))) {
                 // Add new field to the last message in history
                 // tools handing to be done later
-                request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                 continue;
             } else {
                 if (member->name.GetString() == std::string("content") && member->value.IsArray()) {
@@ -259,14 +287,25 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                     member->value = contentText;
                     // Add new field to the last message in history if content is text
                     if (member->value.IsString()) {
-                        request.chatHistory.back().insert({member->name.GetString(), member->value.GetString()});
+                        request.chatHistory.last()[member->name.GetString()] = member->value.GetString();
                     }
                 }
             }
         }
-        const auto& lastMessage = request.chatHistory.back();
-        if (lastMessage.find("role") == lastMessage.end()) {
+        auto lastMessage = request.chatHistory.last();
+        if (!lastMessage.contains("role")) {
             return absl::InvalidArgumentError("Every message must have 'role' field");
+        }
+        if (!lastMessage.contains("content")) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Message does not have content field which might be an issue for some chat templates. Adding empty content.");
+            lastMessage["content"] = "";
+            obj.AddMember("content", Value().SetString("", doc.GetAllocator()), doc.GetAllocator());
+            jsonChanged = true;
+        }
+        // If message has tool calls, make sure each tool call has "arguments" field
+        auto status = ensureArgumentsInToolCalls(obj, jsonChanged);
+        if (status != absl::OkStatus()) {
+            return status;
         }
     }
     if (jsonChanged) {
@@ -275,6 +314,7 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
         doc.Accept(writer);
         request.processedJson = buffer.GetString();
     }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Parsed messages successfully");
     return absl::OkStatus();
 }
 
@@ -331,12 +371,16 @@ absl::Status OpenAIChatCompletionsHandler::parseTools() {
                         // If we keep the tool, add tool name and schema to the request
                         auto parametersIt = functionIt->value.GetObject().FindMember("parameters");
                         if (parametersIt != functionIt->value.GetObject().MemberEnd() && parametersIt->value.IsObject()) {
+                            // now we want to insert to a mapping of
+                            // tool name -> tool schema representations struct
                             // Dump parameters object to string since this is the schema format expected by GenAI
+                            // Keep the rapidjson::Value object as well to avoid re-parsing in outputParsers
                             rapidjson::StringBuffer buffer;
                             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                             parametersIt->value.Accept(writer);
                             std::string parametersStr = buffer.GetString();
-                            request.toolNameSchemaMap[nameIt->value.GetString()] = parametersStr;
+                            ToolSchemaWrapper schemaReprs{&parametersIt->value, std::move(parametersStr)};
+                            request.toolNameSchemaMap[nameIt->value.GetString()] = std::move(schemaReprs);
                         }
                     }
                 } else {
@@ -739,10 +783,8 @@ void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
 
 absl::Status OpenAIChatCompletionsHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength, std::optional<std::string> allowedLocalMediaPath) {
     absl::Status status = parseCommonPart(maxTokensLimit, bestOfLimit, maxModelLength);
-
     if (status != absl::OkStatus())
         return status;
-
     if (endpoint == Endpoint::COMPLETIONS)
         status = parseCompletionsPart();
     else
@@ -762,9 +804,9 @@ ParsedOutput OpenAIChatCompletionsHandler::parseOutputIfNeeded(const std::vector
     OVMS_PROFILE_FUNCTION();
     ParsedOutput parsedOutput;
     if (endpoint != Endpoint::CHAT_COMPLETIONS || outputParser == nullptr) {
-        parsedOutput.content = tokenizer.decode(generatedIds);
+        parsedOutput.content = this->tokenizer.decode(generatedIds);
     } else {
-        parsedOutput = outputParser->parse(generatedIds, areToolsAvailable());
+        parsedOutput = outputParser->parse(generatedIds, this->areToolsAvailable());
     }
     return parsedOutput;
 }

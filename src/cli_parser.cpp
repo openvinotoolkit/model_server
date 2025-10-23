@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "cli_parser.hpp"
 
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -35,6 +36,7 @@
 namespace ovms {
 
 constexpr const char* CONFIG_MANAGEMENT_HELP_GROUP{"config management"};
+constexpr const char* API_KEY_ENV_VAR{"API_KEY"};
 
 std::string getConfigPath(const std::string& configPath) {
     bool isDir = false;
@@ -160,7 +162,11 @@ void CLIParser::parse(int argc, char** argv) {
             ("allowed_headers",
                 "Comma separated list of headers that are allowed to access the API. Default: *.",
                 cxxopts::value<std::string>()->default_value("*"),
-                "ALLOWED_HEADERS");
+                "ALLOWED_HEADERS")
+            ("api_key_file",
+                "path to the text file containing API key for authentication for generative endpoints. If not set, authentication is disabled.",
+                cxxopts::value<std::string>()->default_value(""),
+                "API_KEY");
 
         options->add_options("multi model")
             ("config_path",
@@ -493,6 +499,31 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
     serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
     serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
+    std::filesystem::path apiKeyFile = result->operator[]("api_key_file").as<std::string>();
+    serverSettings.apiKey = "";
+    if (!apiKeyFile.empty()) {
+        std::ifstream file(apiKeyFile);
+        if (file.is_open()) {
+            std::getline(file, serverSettings.apiKey);
+            // Use first line and trim whitespace characters from both ends
+            size_t endpos = serverSettings.apiKey.find_last_not_of(" \n\r\t");
+            if (endpos != std::string::npos) {
+                serverSettings.apiKey = serverSettings.apiKey.substr(0, endpos + 1);
+            }
+            file.close();
+        } else {
+            std::cerr << "Error reading API key file: Unable to open file " << apiKeyFile << std::endl;
+            exit(OVMS_EX_USAGE);
+        }
+    } else {
+        const char* envApiKey = std::getenv(API_KEY_ENV_VAR);
+        if (envApiKey != nullptr) {
+            serverSettings.apiKey = envApiKey;
+        }
+        if (serverSettings.apiKey.empty()) {
+            std::cout << "Info: API key not provided via --api_key_file or API_KEY environment variable. Authentication will be disabled." << std::endl;
+        }
+    }
 }
 
 void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl& hfSettings) {
@@ -591,17 +622,16 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         }
         if (result->count("source_model")) {
             hfSettings.sourceModel = result->operator[]("source_model").as<std::string>();
-            // TODO: Currently we use git clone only for OpenVINO, we will change this method of detection to parsing model files
-            if (isOptimumCliDownload(serverSettings.hfSettings.sourceModel, hfSettings.ggufFilename)) {
+            if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
                 hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
             }
         }
 
         if (result->count("weight-format") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--weight-format parameter unsupported for Openvino huggingface organization models.");
+            throw std::logic_error("--weight-format parameter unsupported for OpenVINO models.");
         }
         if (result->count("extra_quantization_params") && hfSettings.downloadType == GIT_CLONE_DOWNLOAD) {
-            throw std::logic_error("--extra_quantization_params parameter unsupported for Openvino huggingface organization models.");
+            throw std::logic_error("--extra_quantization_params parameter unsupported for OpenVINO models.");
         }
 
         if (result->count("weight-format"))

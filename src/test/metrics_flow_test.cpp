@@ -828,7 +828,7 @@ TEST_F(MetricFlowTest, ModelReady) {
 
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(MetricFlowTest, RestV3Unary) {
-    HttpRestApiHandler handler(server, 0);
+    HttpRestApiHandler handler(server, 0, "");
     std::shared_ptr<MockedServerRequestInterface> stream = std::make_shared<MockedServerRequestInterface>();
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
 
