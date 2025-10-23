@@ -117,7 +117,6 @@ pipeline {
                     }
                 }
             }
-            }
             post {
                 always {
                     sh "mv results/results.json results/latency_results.json"
