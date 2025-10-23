@@ -127,7 +127,7 @@ static const ParametersTypeMap_t parseToolSchema(const std::string& functionName
     return result;
 }
 
-// helper function to escape \n
+// helper function to escape \n, "
 static std::string escapeString(const std::string& input) {
     std::string output;
     output.reserve(input.size());
@@ -135,6 +135,9 @@ static std::string escapeString(const std::string& input) {
         switch (c) {
         case '\n':
             output += "\\n";
+            break;
+        case '"':
+            output += "\\\"";
             break;
         default:
             output += c;
@@ -236,7 +239,9 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         if (paramIt == this->toolsParametersTypeMap.end()) {
             SPDLOG_DEBUG("Tool schema not found for tool: {}, leaving parameter: {} as string", this->currentFunction.name, this->currentParameterName);
         } else {
-            parameterValue = escapeString(setCorrectValueType(parameterValue, this->currentParameterName, paramIt->second));
+            // we don't want to escape entry/exit " for string parameters
+            auto escaped = escapeString(parameterValue);
+            parameterValue =setCorrectValueType(escaped, this->currentParameterName, paramIt->second);
         }
         auto res = this->currentFunction.parameters.try_emplace(this->currentParameterName, parameterValue);
         if (!res.second)
