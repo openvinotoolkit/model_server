@@ -29,23 +29,23 @@ pipeline {
             description: "Device to use in tests"
         )
         booleanParam(
-            defaultValue: false, 
+            defaultValue: true, 
             description: 'Run latency test',
             name: 'LATENCY'
         )
         booleanParam(
-            defaultValue: false, 
+            defaultValue: true, 
             description: 'Run throughput test',
             name: 'THROUGHPUT'
         )
         booleanParam(
-            defaultValue: false, 
+            defaultValue: true, 
             description: 'Run agentic latency test', 
             name: 'AGENTIC_LATENCY'
         )
         booleanParam(
             name: "AGENTIC_ACCURACY",
-            defaultValue: false,
+            defaultValue: true,
             description: "Agentic accuracy"
         )
         string (
@@ -119,7 +119,7 @@ pipeline {
             }
             post {
                 always {
-                    sh "mv results/results.json results/latency_results.json"
+                    sh "cat results/results.json | jq . > results/latency_results.json"
                     archiveArtifacts allowEmptyArchive: true, artifacts: "results/latency_results.json"
                 }
             }
@@ -189,7 +189,7 @@ pipeline {
             }
             post {
                 always {
-                    sh "mv results/results.json results/throughput_results.json"
+                    sh "cat results/results.json | jq . > results/throughput_results.json"
                     archiveArtifacts allowEmptyArchive: true, artifacts: "results/throughput_results.json"
                 }
             }
