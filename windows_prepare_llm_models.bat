@@ -79,8 +79,14 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 ) else (
   echo Downloading text generation model to %~1\%TEXT_GENERATION_MODEL% directory.
   python demos\common\export_models\export_model.py text_generation --source_model "%TEXT_GENERATION_MODEL%" --weight-format int8 --model_repository_path %~1
+  if !errorlevel! neq 0 exit /b !errorlevel!
+)
+if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
+  echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
+  exit /b 1
+)
 
-  if not exist "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja" (
+if not exist "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja" (
     set "dummy_chat_template={%% for message in messages %%}^
 {%% if message['role'] == 'user' %%}{{ 'User: ' + message['content'] }}^
 {%% elif message['role'] == 'system' %%}{{ '<|system|>\n' + message['content'] + eos_token }}^
@@ -88,14 +94,8 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 {%% endif %%}^
 {%% endfor %%}"
     echo !dummy_chat_template! > "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja"
-  )
-
-  if !errorlevel! neq 0 exit /b !errorlevel!
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
-if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
-  echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
-  exit /b 1
-) 
 
 if exist "%~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE%" (
   echo Models file %~1\%EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% exists. Skipping downloading models.
