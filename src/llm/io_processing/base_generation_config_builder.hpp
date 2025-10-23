@@ -32,6 +32,7 @@ class BaseGenerationConfigBuilder {
 protected:
     ov::genai::GenerationConfig config;
     void setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig);
+    void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
 
 public:
     BaseGenerationConfigBuilder() = delete;

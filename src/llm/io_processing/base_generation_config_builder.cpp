@@ -30,6 +30,16 @@ void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::Struc
     }
 }
 
+void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag) {
+    if (config.structured_output_config) {
+        config.structured_output_config->structural_tags_config = structuralTag;
+    } else {
+        ov::genai::StructuredOutputConfig structuredOutputConfig;
+        structuredOutputConfig.structural_tags_config = structuralTag;
+        config.structured_output_config = structuredOutputConfig;
+    }
+}
+
 void BaseGenerationConfigBuilder::addStopString(const std::string& decodedStopString) {
     config.stop_strings.insert(decodedStopString);
 }
