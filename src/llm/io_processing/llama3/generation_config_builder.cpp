@@ -33,20 +33,19 @@ void Llama3GenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatCompl
     }
 
     // Set tool guided generation config specific to Llama-3 model
-    ov::genai::StructuralTagsConfig structuralTagsConfig;
-    static const std::string beginOfToolsString = "<|python_tag|>";
-    structuralTagsConfig.triggers.push_back(beginOfToolsString);
+    auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
+    triggeredTags->triggers.push_back("{\"name\":");
 
     for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
         const auto& toolSchema = toolSchemaWrapper.stringRepr;
-        ov::genai::StructuralTagItem tagItem;
-        std::string toolCallTrigger = "{\"name\": \"" + toolName + "\", \"parameters\": ";
-        structuralTagsConfig.triggers.push_back(toolCallTrigger);
-        tagItem.begin = toolCallTrigger;
-        tagItem.schema = toolSchema;
-        structuralTagsConfig.structural_tags.push_back(tagItem);
+        ov::genai::StructuredOutputConfig::Tag tagItem;
+        tagItem.begin = "{\"name\": \"" + toolName + "\", \"parameters\": ";
+        tagItem.end = "}";
+        tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchema);
+        triggeredTags->tags.push_back(tagItem);
     }
-    setStructuralTagsConfig(structuralTagsConfig);
+    ov::genai::StructuredOutputConfig::StructuralTag structuralTag = triggeredTags;
+    setStructuralTagsConfig(structuralTag);
 }
 
 }  // namespace ovms
