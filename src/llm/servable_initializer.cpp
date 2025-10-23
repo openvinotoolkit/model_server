@@ -149,6 +149,9 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
     properties->templateProcessor.bosToken = bosToken;
     properties->templateProcessor.eosToken = eosToken;
 
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loading Python Jinja template processor with chat template from tokenizer. Bos token: {}, Eos token: {}, chat template: \n{}",
+        bosToken, eosToken, chatTemplate);
+
     py::gil_scoped_acquire acquire;
     try {
         auto locals = py::dict("chat_template"_a = chatTemplate,
@@ -249,6 +252,13 @@ void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServ
                         if isinstance(template_entry, dict):
                             if template_entry.get("name") == "tool_use":
                                 tool_chat_template = template_entry.get("template")
+            
+            # Try read tool_use.jinja template file from additional_chat_templates directory if exists
+            additional_templates_dir = Path(templates_directory + "/additional_chat_templates")
+            tool_use_template_file = additional_templates_dir / "tool_use.jinja"
+            if tool_use_template_file.is_file():
+                with open(tool_use_template_file, "r", encoding="utf-8") as f:
+                    tool_chat_template = f.read()
             
             # Load templates from strings
             template = jinja_env.from_string(chat_template)

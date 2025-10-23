@@ -73,7 +73,14 @@ if [ -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
   echo "Models file $1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
   python3 demos/common/export_models/export_model.py text_generation --source_model "$TEXT_GENERATION_MODEL" --weight-format int8 --model_repository_path $1
-  if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
+fi
+
+if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
     dummy_chat_template="{% for message in messages %}\
 {% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}\
 {% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}\
@@ -81,11 +88,6 @@ else
 {% endif %}\
 {% endfor %}"
     echo "$dummy_chat_template" > "$1/$TEXT_GENERATION_MODEL/chat_template.jinja"
-  fi
-fi
-if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Models file $1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE does not exist."
-  exit 1
 fi
 
 if [ -f "$1/$VLM_MODEL/$TOKENIZER_FILE" ]; then
