@@ -75,9 +75,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
-                    sh '''mkdir -p ${modelsPath}'''
+                    sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
+                        sh "cp -R ${params.MODEL} ${modelsPath}"
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -140,9 +140,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
-                    sh '''mkdir -p ${modelsPath}'''
+                    sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
+                        sh "cp -R ${params.MODEL} ${modelsPath}"
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -217,9 +217,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
-                    sh '''mkdir -p ${modelsPath}'''
+                    sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
+                        sh "cp -R ${params.MODEL} ${modelsPath}"
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -284,9 +284,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
-                    sh '''mkdir -p ${modelsPath}'''
+                    sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
+                        sh "cp -R ${params.MODEL} ${modelsPath}"
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }               
