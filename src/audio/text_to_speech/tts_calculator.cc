@@ -137,7 +137,7 @@ public:
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             drwav_uninit(&wav);
             timer.stop(OUTPUT_PREPARATION);
-            auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION))/1000;
+            auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
             SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
             // drwav_free(ppData, NULL); TODO: is needed?
         } else {

@@ -141,7 +141,7 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
         }
     }
     timer.stop(TENSOR_PREPARATION);
-    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION))/1000;
+    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
@@ -151,7 +151,7 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
     timer.start(RESAMPLING);
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
     timer.stop(RESAMPLING);
-    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING))/1000;
+    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
@@ -176,7 +176,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
     drmp3_uninit(&mp3);
     timer.stop(TENSOR_PREPARATION);
-    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION))/1000;
+    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
@@ -185,7 +185,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     size_t output_length;
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
     timer.stop(RESAMPLING);
-    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING))/1000;
+    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
