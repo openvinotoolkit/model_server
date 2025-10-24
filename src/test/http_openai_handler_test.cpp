@@ -1200,14 +1200,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, responseFormatValid) {
   })";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
-    std::string expectedReponseFormatSchema = R"({"type":"json_schema","json_schema":{"schema":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}})";
+    std::string expectedResponseFormatSchema = R"({"type":"json_schema","json_schema":{"schema":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}})";
     uint32_t bestOfLimit = 0;
     uint32_t maxTokensLimit = 30;
     std::optional<uint32_t> maxModelLength;
     std::shared_ptr<ovms::OpenAIChatCompletionsHandler> apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
     EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
     EXPECT_TRUE(apiHandler->getResponseFormat().has_value());
-    EXPECT_EQ(apiHandler->getResponseFormat().value(), expectedReponseFormatSchema);
+    EXPECT_EQ(apiHandler->getResponseFormat().value(), expectedResponseFormatSchema);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, responseFormatMissingSchema) {
