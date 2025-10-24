@@ -134,7 +134,7 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
         }
     }
     auto endTime = std::chrono::high_resolution_clock::now();
-    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
@@ -144,7 +144,7 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
     startTime = std::chrono::high_resolution_clock::now();
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
     endTime = std::chrono::high_resolution_clock::now();
-    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
@@ -168,7 +168,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
     drmp3_uninit(&mp3);
     auto endTime = std::chrono::high_resolution_clock::now();
-    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
@@ -178,7 +178,7 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     startTime = std::chrono::high_resolution_clock::now();
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
     endTime = std::chrono::high_resolution_clock::now();
-    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
