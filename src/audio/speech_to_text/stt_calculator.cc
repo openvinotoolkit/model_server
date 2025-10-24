@@ -24,25 +24,21 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../http_payload.hpp"
-#include "../../logging.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
 #include <mutex>
 #include <thread>
+#include <chrono>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
+#define DR_WAV_IMPLEMENTATION
+#define DR_MP3_IMPLEMENTATION
+#include "src/port/dr_audio.hpp"
 
-#pragma warning(push)
-#pragma warning(disable : 4245 4220)
-#include "dr_wav.h"  // NOLINT
-#pragma warning(pop)
-#pragma warning(push)
-#pragma warning(disable : 6386 6262)
-#include "dr_mp3.h"  // NOLINT
-#pragma warning(pop)
 #include "stt_servable.hpp"
 
 #ifdef _WIN32
@@ -56,7 +52,7 @@ namespace mediapipe {
 
 const std::string STT_SESSION_SIDE_PACKET_TAG = "STT_NODE_RESOURCES";
 
-#define COMMON_SAMPLE_RATE 16000
+#define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
 bool is_wav_buffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
@@ -74,21 +70,13 @@ bool is_wav_buffer(const std::string buf) {
 
     return true;
 }
-
+// https://github.com/openvinotoolkit/openvino.genai/blob/8698683535fe32b5e3cb6953000c4e0175841bd3/samples/c/whisper_speech_recognition/whisper_utils.c#L105
 float* resample_audio(const float* input,
     size_t input_length,
     float input_rate,
     float target_rate,
     size_t* output_length) {
-    if (input_rate == target_rate) {
-        *output_length = input_length;
-        float* output = (float*)malloc(input_length * sizeof(float));
-        if (output) {
-            memcpy(output, input, input_length * sizeof(float));
-        }
-        return output;
-    }
-
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", input_rate, target_rate);
     float ratio = input_rate / target_rate;
     *output_length = (size_t)(input_length / ratio);
     float* output = (float*)malloc(*output_length * sizeof(float));
@@ -114,11 +102,11 @@ float* resample_audio(const float* input,
 }
 
 ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
+    auto startTime = std::chrono::high_resolution_clock::now();
     drwav wav;
     auto result = drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
     if (result == false) {
-        SPDLOG_ERROR("FILE PARSING FAILED {}", result);
-        throw std::runtime_error("FILE PARSING FAILED");
+        throw std::runtime_error("WAV file parsing failed");
     }
     if (wav.channels != 1 && wav.channels != 2) {
         drwav_uninit(&wav);
@@ -145,22 +133,29 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
             pcmf32[i] = float(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0f;
         }
     }
-    if (wav.sampleRate == COMMON_SAMPLE_RATE) {
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
+    if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
 
     size_t output_length;
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, 16000, &output_length);
+    startTime = std::chrono::high_resolution_clock::now();
+    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
+    endTime = std::chrono::high_resolution_clock::now();
+    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
 }
 
 ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
+    auto startTime = std::chrono::high_resolution_clock::now();
     drmp3 mp3;
     auto result = drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
     if (result == 0) {
-        SPDLOG_ERROR("FILE PARSING FAILED {}", result);
-        throw std::runtime_error("FILE PARSING FAILED");
+        throw std::runtime_error("MP3 file parsing failed");
     }
 
     if (mp3.channels != 1 && mp3.channels != 2) {
@@ -172,12 +167,19 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     pcmf32.resize(n * mp3.channels);
     drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
     drmp3_uninit(&mp3);
-    if (mp3.sampleRate == COMMON_SAMPLE_RATE) {
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
+    if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
 
     size_t output_length;
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, 16000, &output_length);
+    startTime = std::chrono::high_resolution_clock::now();
+    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
+    endTime = std::chrono::high_resolution_clock::now();
+    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count()/1000);
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
 }
