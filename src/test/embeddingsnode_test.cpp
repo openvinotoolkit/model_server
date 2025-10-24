@@ -752,7 +752,6 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
-
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLengthExceeded) {
     std::string requestBody = R"(
         {

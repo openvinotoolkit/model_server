@@ -136,7 +136,7 @@ public:
                 received_batch_size = strings->size();
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = max_context_length;
-                } 
+                }
 
                 tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
