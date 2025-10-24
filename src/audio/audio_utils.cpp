@@ -20,6 +20,8 @@
 #include "audio_utils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <string>
+#include <vector>
 #define PIPELINE_SUPPORTED_SAMPLE_RATE 16000
 
 using namespace ovms;
