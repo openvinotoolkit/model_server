@@ -47,6 +47,11 @@ pipeline {
             name: 'AGENTIC_LATENCY'
         )
         booleanParam(
+            defaultValue: true, 
+            description: 'Use tool guided generation in agentic accuracy test', 
+            name: 'USE_TOOL_GUIDED_GENERATION'
+        )
+        booleanParam(
             name: "AGENTIC_ACCURACY",
             defaultValue: true,
             description: "Agentic accuracy"
@@ -303,7 +308,7 @@ pipeline {
                         }
                     }               
                     sh "docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
+                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --enable_tool_guided_generation ${params.USE_TOOL_GUIDED_GENERATION} --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
                     while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"ovms-model\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
