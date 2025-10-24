@@ -1,5 +1,5 @@
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
-index 73731c0..0d966ed 100644
+index 73731c0..b6bbf48 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py
 @@ -2060,6 +2060,30 @@ third_party_inference_model_map = {
@@ -31,10 +31,10 @@ index 73731c0..0d966ed 100644
 +        underscore_to_dot=True,
 +    ),
  }
- 
- 
+
+
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
-index 8665234..9e85e59 100644
+index 8665234..9fc1fba 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py
 @@ -23,7 +23,7 @@ class OpenAICompletionsHandler(BaseHandler):
@@ -43,21 +43,21 @@ index 8665234..9e85e59 100644
          self.model_style = ModelStyle.OpenAI_Completions
 -        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 +        self.client = OpenAI(base_url=os.getenv("OPENAI_BASE_URL"), api_key=os.getenv("OPENAI_API_KEY", "not_used"),timeout=os.getenv("OPENAI_TIMEOUT", 1600))
- 
+
      def decode_ast(self, result, language="Python"):
          if "FC" in self.model_name or self.is_fc_model:
-@@ -61,6 +61,8 @@ class OpenAICompletionsHandler(BaseHandler):
+@@ -61,6 +61,9 @@ class OpenAICompletionsHandler(BaseHandler):
              "messages": message,
              "model": self.model_name.replace("-FC", ""),
              "temperature": self.temperature,
 +            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
 +            "extra_body": {"chat_template_kwargs": {"enable_thinking": os.getenv("ENABLE_THINKING", False)}},
-             "max_completion_tokens": 2048,
++            "max_completion_tokens": 4096,
              "store": False,
          }
- 
+
 diff --git a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
-index 9ce4e7d..076e706 100644
+index 9ce4e7d..d3aa379 100644
 --- a/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
 +++ b/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py
 @@ -21,8 +21,8 @@ class QwenAPIHandler(OpenAICompletionsHandler):
@@ -69,7 +69,7 @@ index 9ce4e7d..076e706 100644
 +            base_url=os.getenv("OPENAI_BASE_URL", "https://localhost:8000/v3"),
 +            api_key=os.getenv("QWEN_API_KEY", "not_used"),
          )
- 
+
      #### FC methods ####
 @@ -38,9 +38,10 @@ class QwenAPIHandler(OpenAICompletionsHandler):
              model=self.model_name.replace("-FC", ""),
@@ -85,3 +85,10 @@ index 9ce4e7d..076e706 100644
              stream=True,
              stream_options={
                  "include_usage": True
+@@ -338,4 +339,4 @@ class QwenAgentNoThinkHandler(QwenAgentThinkHandler):
+             'timeout': 1000,
+             'max_tokens': 16384
+         }
+-    })
+\ No newline at end of file
++    })
