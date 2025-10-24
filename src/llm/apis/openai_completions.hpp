@@ -103,7 +103,7 @@ public:
     // User input might be modified by the servable logic, so it is not const
     ov::genai::ChatHistory& getChatHistory();
     std::optional<int> getMaxTokens() const;
-    std::optional<std::string> getResponseSchema() const;
+    std::optional<std::string> getResponseFormat() const;
 
     bool isStream() const;
     std::string getModel() const;

@@ -104,9 +104,9 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIChatComplet
         config.max_ngram_size = request.maxNgramSize.value();
 
     // Response format handling
-    if (request.responseSchema.has_value()) {
+    if (request.responseFormat.has_value()) {
         ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.json_schema = request.responseSchema.value();
+        structuredOutputConfig.structural_tags_config = request.responseFormat.value();
         config.structured_output_config = structuredOutputConfig;
         config.stop_strings.insert("#");
     }
