@@ -4,6 +4,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 def model_need_copy = true
 def model_name = params.MODEL
+def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
 
 pipeline {
     options {
@@ -74,7 +75,6 @@ pipeline {
             }
             steps {
                 script {    
-                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
@@ -140,7 +140,6 @@ pipeline {
             steps {
                 
                 script {
-                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
@@ -217,7 +216,6 @@ pipeline {
             steps {
                 sh "echo Start docker container"
                 script {
-                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
@@ -283,7 +281,6 @@ pipeline {
             steps {
                 sh "echo Start docker container"
                 script {
-                    def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
