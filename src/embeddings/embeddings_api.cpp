@@ -250,5 +250,68 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.EndObject();
     return absl::OkStatus();
 }
+
+absl::Status EmbeddingsHandler::parseResponseNew(StringBuffer& buffer, const ov::Tensor& embeddingsTensor) {
+    Writer<StringBuffer> writer(buffer);
+    writer.StartObject();
+
+    writer.String("object");
+    writer.String("list");
+
+    writer.String("data");
+    writer.StartArray();
+
+    const float* last_hidden_state_data = embeddingsTensor.data<float>();
+
+    std::vector<std::vector<float>> result;
+    const auto shape = embeddingsTensor.get_shape();
+
+    if (shape.size() != 2) {
+        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
+    }
+
+    const size_t batch_size = shape[0];
+    const size_t hidden_size = shape[1];
+
+    for (size_t batch = 0; batch < batch_size; batch++) {
+        const auto batch_offset = batch * hidden_size;
+        const float* batch_data = last_hidden_state_data + batch_offset;
+        const std::vector<float> batch_result(batch_data, batch_data + hidden_size);
+        result.push_back(batch_result);
+
+        writer.StartObject();
+        writer.String("object");
+        writer.String("embedding");
+        writer.String("embedding");
+        if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
+            std::string_view sv2(reinterpret_cast<const char*>(batch_result.data()), batch_result.size() * sizeof(float));
+            std::string escaped;
+            absl::Base64Escape(sv2, &escaped);
+            writer.String(escaped.c_str());
+        } else {
+            writer.StartArray();
+            for (size_t i = 0; i < batch_result.size(); ++i) {
+                writer.Double(batch_result[i]);
+            }
+            writer.EndArray();
+        }
+        writer.String("index");
+        writer.Uint(batch);
+        writer.EndObject();
+    }
+
+    writer.EndArray();
+
+    writer.String("usage");
+    writer.StartObject();
+    writer.String("prompt_tokens");
+    writer.Uint(promptTokens);
+    writer.String("total_tokens");
+    writer.Uint(promptTokens);
+    writer.EndObject();
+
+    writer.EndObject();
+    return absl::OkStatus();
+}
 #pragma warning(pop)
 }  // namespace ovms

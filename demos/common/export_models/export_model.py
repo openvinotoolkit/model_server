@@ -66,7 +66,7 @@ parser_embeddings.add_argument('--version', default=1, type=int, help='version o
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
 parser_embeddings_ov.add_argument('--skip_normalize', default=True, action='store_false', help='Skip normalize the embeddings.', dest='normalize')
-parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST"], help='Embeddings pooling mode', dest='pooling')
+parser_embeddings_ov.add_argument('--pooling', default="CLS", choices=["CLS", "LAST", "MEAN"], help='Embeddings pooling mode', dest='pooling')
 parser_embeddings_ov.add_argument('--truncate', default=False, action='store_true', help='Truncate the prompts to fit to the embeddings model', dest='truncate')
 parser_embeddings_ov.add_argument('--num_streams', default=1,type=int, help='The number of parallel execution streams to use for the model. Use at least 2 on 2 socket CPU systems.', dest='num_streams')
 
@@ -535,11 +535,13 @@ def export_embeddings_model_ov(model_repository_path, source_model, model_name, 
     destination_path = os.path.join(model_repository_path, model_name)
     print("Exporting embeddings model to ",destination_path)
     if not os.path.isdir(destination_path) or args['overwrite_models']:
-        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code --library sentence_transformers {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        optimum_command = "optimum-cli export openvino --model {} --disable-convert-tokenizer --task feature-extraction --weight-format {} {} --trust-remote-code {}".format(source_model, precision, task_parameters['extra_quantization_params'], destination_path)
+        print('Running command:', optimum_command)  # for debug purposes
         if os.system(optimum_command):
             raise ValueError("Failed to export embeddings model", source_model)
         print("Exporting tokenizer to ", destination_path)
         convert_tokenizer_command = "convert_tokenizer -o {} {} {}".format(destination_path, source_model, set_max_context_length) 
+        print('Running command:', convert_tokenizer_command)  # for debug purposes
         if (os.system(convert_tokenizer_command)):
             raise ValueError("Failed to export tokenizer model", source_model)
     gtemplate = jinja2.Environment(loader=jinja2.BaseLoader).from_string(embedding_graph_ov_template)

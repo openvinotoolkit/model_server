@@ -65,7 +65,20 @@ public:
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
 
     absl::Status parseRequest();
-    absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode = PoolingMode::CLS, const std::optional<ov::Tensor>& attentionMask = std::nullopt);
+
+    // Legacy that handles pooling and normalization
+    absl::Status parseResponse(
+        rapidjson::StringBuffer& buffer,
+        const ov::Tensor& embeddingsTensor,
+        const bool normalizeEmbeddings,
+        const PoolingMode poolingMode = PoolingMode::CLS,
+        const std::optional<ov::Tensor>& attentionMask = std::nullopt);
+
+    // New parsing method that directly uses embeddings tensor as is
+    absl::Status parseResponseNew(
+        rapidjson::StringBuffer& buffer,
+        const ov::Tensor& embeddingsTensor);
+
     void setPromptTokensUsage(int promptTokens);
 };
 }  // namespace ovms

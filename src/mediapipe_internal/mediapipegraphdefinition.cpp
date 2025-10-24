@@ -528,7 +528,18 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             mediapipe::EmbeddingsCalculatorOVOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
-            std::shared_ptr<EmbeddingsServable> servable = std::make_shared<EmbeddingsServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            std::shared_ptr<EmbeddingsServable> servable = std::make_shared<EmbeddingsServable>(
+                nodeOptions.models_path(),
+                nodeOptions.target_device(),
+                nodeOptions.plugin_config(),
+                mgconfig.getBasePath(),
+                nodeOptions.pooling(),
+                nodeOptions.normalize_embeddings());
+            servable->initialize(
+                nodeOptions.models_path(),
+                nodeOptions.target_device(),
+                nodeOptions.plugin_config(),
+                mgconfig.getBasePath());
             embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(servable)));
             embeddingsServablesCleaningGuard.disableCleaning();
         }
@@ -551,6 +562,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
             mediapipe::RerankCalculatorOVOptions nodeOptions;
             config.node(i).node_options(0).UnpackTo(&nodeOptions);
             std::shared_ptr<RerankServable> servable = std::make_shared<RerankServable>(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
+            servable->initialize(nodeOptions.models_path(), nodeOptions.target_device(), nodeOptions.plugin_config(), mgconfig.getBasePath());
             rerankServableMap.insert(std::pair<std::string, std::shared_ptr<RerankServable>>(nodeName, std::move(servable)));
             rerankServablesCleaningGuard.disableCleaning();
         }
