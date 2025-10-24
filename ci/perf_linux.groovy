@@ -75,13 +75,13 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
+                    sh '''mkdir -p ${modelsPath}'''
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
+                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
                     sh "echo Start docker container && \
-                    mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE}  --cache_size 1 --log_level INFO && \
                     echo wait for model server to be ready && \
@@ -140,8 +140,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
+                    sh '''mkdir -p ${modelsPath}'''
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
+                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -216,8 +217,9 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
+                    sh '''mkdir -p ${modelsPath}'''
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
+                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -282,13 +284,13 @@ pipeline {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
+                    sh '''mkdir -p ${modelsPath}'''
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
+                        sh '''cp -R ${params.MODEL} ${modelsPath}'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
-                    }                    
+                    }               
                     sh "docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    mkdir -p ${modelsPath} && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
                     while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"ovms-model\" ] ; do echo waiting for LLM model; sleep 1; done"
