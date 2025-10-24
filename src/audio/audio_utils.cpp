@@ -16,10 +16,7 @@
 
 #define DR_WAV_IMPLEMENTATION
 #define DR_MP3_IMPLEMENTATION
-#pragma warning(push)
-#pragma warning(disable : 6262)
 #include "src/port/dr_audio.hpp"
-#pragma warning(pop)
 #include "audio_utils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
@@ -131,7 +128,8 @@ ov::genai::RawSpeechInput readWav(const std::string_view& wavData) {
     std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
-
+#pragma warning(push)
+#pragma warning(disable : 6262)
 ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
@@ -165,7 +163,7 @@ ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data) {
     std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
-
+#pragma warning(pop)
 void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpuTensor) {
     enum : unsigned int {
         OUTPUT_PREPARATION,
