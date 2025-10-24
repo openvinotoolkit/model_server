@@ -329,6 +329,7 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
     ovmsService->error = 0;
     ovmsService->started = false;
 
+    bool SERVER_READY = false;
     bool PROFILER_MODULE_LIVE = false;
     bool GRPC_SERVER_MODULE_LIVE = false;
     bool HTTP_SERVER_MODULE_LIVE = false;
@@ -356,9 +357,10 @@ DWORD WINAPI OvmsWindowsServiceManager::serviceWorkerThread(LPVOID lpParam) {
             DEBUG_LOG("serviceWorkerThread: Ovms service SERVABLE_MANAGER_MODULE is live.");
             SERVABLE_MANAGER_MODULE_LIVE = true;
         }
-        if (!SERVABLE_MANAGER_MODULE_LIVE && ovmsService->isReady()) {
+        // TODO: Add timeout for server ready ?
+        if (!SERVER_READY && ovmsService->isReady()) {
             DEBUG_LOG("serviceWorkerThread: Ovms service is ready and running.");
-            SERVABLE_MANAGER_MODULE_LIVE = true;
+            SERVER_READY = true;
         }
         if (!PROFILER_MODULE_LIVE && ovmsService->isLive(ovms::PROFILER_MODULE_NAME)) {
             DEBUG_LOG("serviceWorkerThread: Ovms service PROFILER_MODULE is live.");
