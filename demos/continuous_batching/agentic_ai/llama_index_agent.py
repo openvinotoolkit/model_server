@@ -33,7 +33,7 @@ parser.add_argument("--model", type=str, required=True, help="Model name for the
 parser.add_argument("--query", type=str, required=True, help="Query to pass to the agent.")
 parser.add_argument("--mcp-server-url", type=str, default="http://127.0.0.1:8080/sse", help="MCP server endpoint URL (e.g., http://127.0.0.1:8080/sse)")
 parser.add_argument("--stream", default=False, action="store_true", help="Enable streaming responses from the LLM.")
-parser.add_argument("--enable_thinking", action="store_true", help="Enable 'thinking' in the model.")
+parser.add_argument("--enable-thinking", action="store_true", help="Enable 'thinking' in the model.")
 parser.add_argument("--mcp-server", type=str, choices=["all", "weather", "fs"], default="all", help="Which MCP server(s) to use: all, weather, or fs")
 args = parser.parse_args()
 
