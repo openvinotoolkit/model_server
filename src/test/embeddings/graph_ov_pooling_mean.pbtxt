@@ -14,30 +14,17 @@
 #
 input_stream: "REQUEST_PAYLOAD:input"
 output_stream: "RESPONSE_PAYLOAD:output"
+
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:tokenizer"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "tokenizer"
-      servable_version: "1"
-    }
-  }
-}
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:embeddings"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "embeddings_model"
-      servable_version: "1"
-    }
-  }
-}
-node {
-    input_side_packet: "TOKENIZER_SESSION:tokenizer"
-    input_side_packet: "EMBEDDINGS_SESSION:embeddings"
-    calculator: "EmbeddingsCalculator"
+    name: "embeddingsNode1"
+    calculator: "EmbeddingsCalculatorOV"
     input_stream: "REQUEST_PAYLOAD:input"
     output_stream: "RESPONSE_PAYLOAD:output"
+    input_side_packet: "EMBEDDINGS_NODE_RESOURCES:embeddings_servable"
+      node_options: {
+      [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
+        models_path: "/ovms/src/test/llm_testing/thenlper/gte-small/ov"
+        pooling: MEAN
+      }
+    }
 }

@@ -1,28 +1,6 @@
 {
-    "model_config_list": [
-    { "config": 
-	    {
-                "name": "tokenizer",
-                "base_path": "/ovms/src/test/llm_testing/thenlper/gte-small/tokenizer"
-            }
-	},
-    { "config": 
-	    {
-                "name": "embeddings_model",
-                "base_path": "/ovms/src/test/llm_testing/thenlper/gte-small/embeddings"
-            }
-    }],
+    "model_config_list": [],
     "mediapipe_config_list": [
-    {
-        "name":"embeddings",
-        "base_path":"/ovms/src/test/embeddings/",
-        "graph_path":"/ovms/src/test/embeddings/graph.pbtxt"
-    },
-    {
-        "name":"embeddings_no_norm",
-        "base_path":"/ovms/src/test/embeddings/",
-        "graph_path":"/ovms/src/test/embeddings/graph_no_norm.pbtxt"
-    },
     {
         "name":"embeddings_ov",
         "base_path":"/ovms/src/test/embeddings/",
@@ -37,6 +15,16 @@
         "name":"embeddings_ov_relative",
         "base_path":"/ovms/src/test/embeddings/",
         "graph_path":"/ovms/src/test/embeddings/graph_ov_relative.pbtxt"
+    },
+    {
+        "name":"embeddings_ov_pooling_mean",
+        "base_path":"/ovms/src/test/embeddings/",
+        "graph_path":"/ovms/src/test/embeddings/graph_ov_pooling_mean.pbtxt"
+    },
+    {
+        "name":"embeddings_ov_pooling_last",
+        "base_path":"/ovms/src/test/embeddings/",
+        "graph_path":"/ovms/src/test/embeddings/graph_ov_pooling_last.pbtxt"
     }
     ]
 }

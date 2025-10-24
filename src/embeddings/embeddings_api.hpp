@@ -66,16 +66,7 @@ public:
 
     absl::Status parseRequest();
 
-    // Legacy that handles pooling and normalization
     absl::Status parseResponse(
-        rapidjson::StringBuffer& buffer,
-        const ov::Tensor& embeddingsTensor,
-        const bool normalizeEmbeddings,
-        const PoolingMode poolingMode = PoolingMode::CLS,
-        const std::optional<ov::Tensor>& attentionMask = std::nullopt);
-
-    // New parsing method that directly uses embeddings tensor as is
-    absl::Status parseResponseNew(
         rapidjson::StringBuffer& buffer,
         const ov::Tensor& embeddingsTensor);
 

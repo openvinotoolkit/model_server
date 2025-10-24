@@ -560,7 +560,6 @@ ovms_cc_library(
                 "//src/image_gen:image_gen_calculator",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
-                "//src/embeddings:embeddingscalculator",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator",
                 "//src/rerank:rerankcalculator_ov",

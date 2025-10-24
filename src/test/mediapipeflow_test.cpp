@@ -338,7 +338,7 @@ TEST_F(MediapipeEmbeddingsTest, startup) {
     const ovms::Module* servableModule = server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
     ASSERT_TRUE(servableModule != nullptr);
     ModelManager* manager = &dynamic_cast<const ServableManagerModule*>(servableModule)->getServableManager();
-    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings");
+    auto mediapipeGraphDefinition = manager->getMediapipeFactory().findDefinitionByName("embeddings_ov");
     ASSERT_TRUE(mediapipeGraphDefinition != nullptr);
     ASSERT_TRUE(mediapipeGraphDefinition->getStatus().isAvailable());
 }
@@ -349,7 +349,7 @@ TEST_F(MediapipeEmbeddingsTest, grpcInference) {
     KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
     ::KFSRequest request;
     ::KFSResponse response;
-    const std::string modelName = "embeddings";
+    const std::string modelName = "embeddings_ov";
     request.Clear();
     response.Clear();
     inputs_info_t inputsMeta{{"input", {DUMMY_MODEL_SHAPE, precision}}};
@@ -3796,7 +3796,6 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "DetectionSerializationCalculator",
         "DetectionsToRectsCalculator",
         "DetectionsToRenderDataCalculator",
-        "EmbeddingsCalculator",
         "EmbeddingsCalculatorOV",
         "RerankCalculator",
         "RerankCalculatorOV",

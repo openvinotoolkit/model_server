@@ -53,25 +53,6 @@ mediapipe_proto_library(
     ],
 )
 
-ovms_cc_library(
-    name = "embeddingscalculator",
-    hdrs = [],
-    srcs = ["embeddings_calculator.cc"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@com_github_tencent_rapidjson//:rapidjson",
-        "@model_api//:model_api",
-        "//src:httppayload",
-        "//src:libhttpclientconnection",
-        "//src:libovmslogging",
-        "//src:libovmsprofiler",
-        "embeddings_calculator_cc_proto",
-        ":embeddings_api",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
 mediapipe_proto_library(
     name = "embeddings_calculator_ov_proto", # embeddings_calculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["embeddings_calculator_ov.proto"],
