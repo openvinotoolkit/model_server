@@ -24,8 +24,8 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../../http_payload.hpp"
-#include "../../logging.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
 #include <mutex>
 #include <thread>
 
@@ -35,15 +35,8 @@
 #include "absl/strings/str_cat.h"
 #pragma warning(pop)
 
-#define DR_WAV_IMPLEMENTATION
-#pragma warning(push)
-#pragma warning(disable : 4245 4220)
-#include "dr_wav.h"  // NOLINT
-#define DR_MP3_IMPLEMENTATION
-#pragma warning(push)
-#pragma warning(disable : 6386 6262)
-#include "dr_mp3.h"  // NOLINT
-#pragma warning(pop)
+#include "src/port/dr_audio.hpp"
+
 #include "tts_servable.hpp"
 
 #ifdef _WIN32

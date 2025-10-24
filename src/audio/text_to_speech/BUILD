@@ -32,7 +32,7 @@ ovms_cc_library(
         "//src:httppayload",
         "//src:libovmslogging",
         "tts_calculator_cc_proto",
-        "@dr_libs//:dr",
+        "//src/port:dr_audio",
         ":tts_servable",
         "//third_party:genai",
     ],
