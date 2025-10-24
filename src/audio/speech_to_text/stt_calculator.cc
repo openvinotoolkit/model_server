@@ -97,13 +97,13 @@ public:
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
 
-            ov::genai::RawSpeechInput raw_speech;
+            ov::genai::RawSpeechInput rawSpeech;
             try {
-                if (is_wav_buffer(std::string(file))) {
+                if (isWavBuffer(std::string(file))) {
                     SPDLOG_DEBUG("Received file format: wav");
-                    raw_speech = read_wav(file);
+                    rawSpeech = readWav(file);
                 } else {
-                    raw_speech = read_mp3(file);
+                    rawSpeech = readMp3(file);
                     SPDLOG_DEBUG("Received file format: mp3");
                 }
             } catch (std::exception&) {
@@ -111,7 +111,7 @@ public:
             }
             std::string result = "{\"text\": \"";
             std::unique_lock lock(pipe->sttPipelineMutex);
-            result += pipe->sttPipeline->generate(raw_speech);
+            result += pipe->sttPipeline->generate(rawSpeech);
             result.append("\"}");
             output = std::make_unique<std::string>(result);
         } else {
