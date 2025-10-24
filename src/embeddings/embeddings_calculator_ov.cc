@@ -49,6 +49,7 @@ class EmbeddingsServable;
 namespace mediapipe {
 
 const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "EMBEDDINGS_NODE_RESOURCES";
+const std::string EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX = "tokenize";
 
 using InputDataType = ovms::HttpPayload;
 using OutputDataType = std::string;
@@ -104,9 +105,13 @@ public:
         InputDataType payload = cc->Inputs().Tag(INPUT_TAG_NAME).Get<InputDataType>();
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
+
+        const int endpoint_len = EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX.size();
+        bool useTokenizeEndpoint = payload.uri.size() >= endpoint_len && payload.uri.compare(payload.uri.size() - endpoint_len, endpoint_len, EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX) == 0;
         ovms::EmbeddingsHandler handler(*payload.parsedJson);
         auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
-        absl::Status status = handler.parseRequest();
+        absl::Status status = handler.parseRequest(useTokenizeEndpoint);
+
         if (!status.ok()) {
             return status;
         }
@@ -127,18 +132,24 @@ public:
         try {
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                ov::AnyMap& params = handler.getParameters();
                 received_batch_size = strings->size();
-                ov::AnyMap params = {};
-                if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate()) {
-                    params = {{"max_length", max_context_length}};
+                if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
+                    params["max_length"] = max_context_length;
                 }
                 tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
-                size_t input_ids_size = tokens.input_ids.get_shape()[1];
-                if (input_ids_size > max_context_length) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
-                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+
+                if (useTokenizeEndpoint) {
+                    StringBuffer responseBuffer;
+                    auto responseStatus = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
+                    if (!responseStatus.ok()) {
+                        return responseStatus;
+                    }
+                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
+                    return absl::OkStatus();
                 }
+
                 if (embeddings_session->getNumberOfModelInputs() == 3) {
                     typeIds = ov::Tensor{ov::element::i64, tokens.input_ids.get_shape()};
                     std::fill_n(typeIds.data<int64_t>(), tokens.input_ids.get_size(), 0);
