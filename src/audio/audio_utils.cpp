@@ -16,7 +16,10 @@
 
 #define DR_WAV_IMPLEMENTATION
 #define DR_MP3_IMPLEMENTATION
+#pragma warning(push)
+#pragma warning(disable : 6262)
 #include "src/port/dr_audio.hpp"
+#pragma warning(pop)
 #include "audio_utils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
