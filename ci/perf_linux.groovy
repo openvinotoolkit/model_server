@@ -76,7 +76,7 @@ pipeline {
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh "rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})"
+                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -141,7 +141,7 @@ pipeline {
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh "rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})"
+                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -217,7 +217,7 @@ pipeline {
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh "rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})"
+                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }
@@ -283,7 +283,7 @@ pipeline {
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     def model_name = params.MODEL
                     if (fileExists(params.MODEL) && model_need_copy) {
-                        sh "rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})"
+                        sh '''rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL})'''
                         model_name = sh(script: "basename ${params.MODEL}", returnStdout: true).trim()
                         model_need_copy = false
                     }                    
