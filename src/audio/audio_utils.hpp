@@ -21,8 +21,8 @@
 
 #include <string>
 
-bool is_wav_buffer(const std::string buf);
+bool isWavBuffer(const std::string buf);
 
-ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data);
-ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data);
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpu_tensor);
+ov::genai::RawSpeechInput readWav(const std::string_view& wavData);
+ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data);
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpuTensor);

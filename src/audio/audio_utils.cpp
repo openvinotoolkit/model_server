@@ -26,16 +26,16 @@
 
 using namespace ovms;
 
-bool is_wav_buffer(const std::string buf) {
+bool isWavBuffer(const std::string buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
-    SPDLOG_TRACE("is_wav_buffer: buf {}", buf.substr(0, 12));
+    SPDLOG_TRACE("isWavBuffer: buf {}", buf.substr(0, 12));
     if (buf.size() < 12 || buf.substr(0, 4) != "RIFF" || buf.substr(8, 4) != "WAVE") {
         return false;
     }
 
     uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
-    SPDLOG_TRACE("is_wav_buffer: chunk_size {}", chunk_size);
+    SPDLOG_TRACE("isWavBuffer: chunk_size {}", chunk_size);
     if (chunk_size + 8 != buf.size()) {
         return false;
     }
@@ -44,26 +44,26 @@ bool is_wav_buffer(const std::string buf) {
 }
 // https://github.com/openvinotoolkit/openvino.genai/blob/8698683535fe32b5e3cb6953000c4e0175841bd3/samples/c/whisper_speech_recognition/whisper_utils.c#L105
 float* resample_audio(const float* input,
-    size_t input_length,
-    float input_rate,
-    float target_rate,
-    size_t* output_length) {
-    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", input_rate, target_rate);
-    float ratio = input_rate / target_rate;
-    *output_length = (size_t)(input_length / ratio);
-    float* output = (float*)malloc(*output_length * sizeof(float));
+    size_t inputLength,
+    float inputRate,
+    float targetRate,
+    size_t* outputLength) {
+    SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", inputRate, targetRate);
+    float ratio = inputRate / targetRate;
+    *outputLength = (size_t)(inputLength / ratio);
+    float* output = (float*)malloc(*outputLength * sizeof(float));
 
     if (!output) {
         return NULL;
     }
 
-    for (size_t i = 0; i < *output_length; i++) {
+    for (size_t i = 0; i < *outputLength; i++) {
         float src_idx = i * ratio;
         size_t idx0 = (size_t)src_idx;
         size_t idx1 = idx0 + 1;
 
-        if (idx1 >= input_length) {
-            output[i] = input[input_length - 1];
+        if (idx1 >= inputLength) {
+            output[i] = input[inputLength - 1];
         } else {
             float frac = src_idx - idx0;
             output[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
@@ -79,11 +79,11 @@ enum : unsigned int {
     TIMER_END
 };
 
-ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
+ov::genai::RawSpeechInput readWav(const std::string_view& wavData) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drwav wav;
-    auto result = drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
+    auto result = drwav_init_memory(&wav, wavData.data(), wavData.size(), nullptr);
     if (result == false) {
         throw std::runtime_error("WAV file parsing failed");
     }
@@ -93,7 +93,7 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
     }
 
     const uint64_t n =
-        wav_data.empty() ? wav.totalPCMFrameCount : wav_data.size() / (wav.channels * wav.bitsPerSample / 8ul);
+        wavData.empty() ? wav.totalPCMFrameCount : wavData.size() / (wav.channels * wav.bitsPerSample / 8ul);
 
     std::vector<int16_t> pcm16;
     pcm16.resize(n * wav.channels);
@@ -119,21 +119,21 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
         return pcmf32;
     }
 
-    size_t output_length;
+    size_t outputLength;
     timer.start(RESAMPLING);
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
+    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &outputLength);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
-    std::vector<float> output(buffer, buffer + output_length);
+    std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
 
-ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
+ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drmp3 mp3;
-    auto result = drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
+    auto result = drmp3_init_memory(&mp3, mp3Data.data(), mp3Data.size(), nullptr);
     if (result == 0) {
         throw std::runtime_error("MP3 file parsing failed");
     }
@@ -154,16 +154,16 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
-    size_t output_length;
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
+    size_t outputLength;
+    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &outputLength);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
-    std::vector<float> output(buffer, buffer + output_length);
+    std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
 
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpu_tensor) {
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpuTensor) {
     enum : unsigned int {
         OUTPUT_PREPARATION,
         TIMER_END
@@ -177,14 +177,14 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     format.sampleRate = 16000;  // assume it is always 16 KHz
     format.bitsPerSample = bitsPerSample;
     drwav wav;
-    auto waveform_size = speechSize;
-    size_t total_samples = waveform_size * format.channels;
+    auto waveformSize = speechSize;
+    size_t totalSamples = waveformSize * format.channels;
 
-    auto waveform_ptr = cpu_tensor.data<const float>();
-    OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, total_samples, nullptr),
+    auto waveformPtr = cpuTensor.data<const float>();
+    OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr),
         "Failed to initialize WAV writer");
-    drwav_uint64 frames_written = drwav_write_pcm_frames(&wav, total_samples, waveform_ptr);
-    OPENVINO_ASSERT(frames_written == total_samples, "Failed to write all frames");
+    drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
+    OPENVINO_ASSERT(framesWritten == totalSamples, "Failed to write all frames");
     drwav_uninit(&wav);
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
