@@ -19,6 +19,8 @@
 #include "openvino/genai/whisper_pipeline.hpp"
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
 
+#include <string>
+
 bool is_wav_buffer(const std::string buf);
 
 ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data);
