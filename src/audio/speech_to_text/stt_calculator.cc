@@ -24,11 +24,11 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/timer.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include <mutex>
 #include <thread>
-#include <chrono>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -101,8 +101,15 @@ float* resample_audio(const float* input,
     return output;
 }
 
+enum : unsigned int {
+    TENSOR_PREPARATION,
+    RESAMPLING,
+    TIMER_END
+};
+
 ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
-    auto startTime = std::chrono::high_resolution_clock::now();
+    Timer<TIMER_END> timer;
+    timer.start(TENSOR_PREPARATION);
     drwav wav;
     auto result = drwav_init_memory(&wav, wav_data.data(), wav_data.size(), nullptr);
     if (result == false) {
@@ -133,25 +140,26 @@ ov::genai::RawSpeechInput read_wav(const std::string_view& wav_data) {
             pcmf32[i] = float(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0f;
         }
     }
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
+    timer.stop(TENSOR_PREPARATION);
+    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION))/1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (wav.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
 
     size_t output_length;
-    startTime = std::chrono::high_resolution_clock::now();
+    timer.start(RESAMPLING);
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
-    endTime = std::chrono::high_resolution_clock::now();
-    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
+    timer.stop(RESAMPLING);
+    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING))/1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;
 }
 
 ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
-    auto startTime = std::chrono::high_resolution_clock::now();
+    Timer<TIMER_END> timer;
+    timer.start(TENSOR_PREPARATION);
     drmp3 mp3;
     auto result = drmp3_init_memory(&mp3, mp3_data.data(), mp3_data.size(), nullptr);
     if (result == 0) {
@@ -167,18 +175,17 @@ ov::genai::RawSpeechInput read_mp3(const std::string_view& mp3_data) {
     pcmf32.resize(n * mp3.channels);
     drmp3_read_pcm_frames_f32(&mp3, n, pcmf32.data());
     drmp3_uninit(&mp3);
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto tensorPreparationTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
+    timer.stop(TENSOR_PREPARATION);
+    auto tensorPreparationTime = (timer.elapsed<std::chrono::microseconds>(TENSOR_PREPARATION))/1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Tensor preparation time: {} ms size: {}", tensorPreparationTime, pcmf32.size());
     if (mp3.sampleRate == PIPELINE_SUPPORTED_SAMPLE_RATE) {
         return pcmf32;
     }
-
+    timer.start(RESAMPLING);
     size_t output_length;
-    startTime = std::chrono::high_resolution_clock::now();
     auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &output_length);
-    endTime = std::chrono::high_resolution_clock::now();
-    auto resamplingTime = (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() / 1000);
+    timer.stop(RESAMPLING);
+    auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING))/1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
     std::vector<float> output(buffer, buffer + output_length);
     return output;

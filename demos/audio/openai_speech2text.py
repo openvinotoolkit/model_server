@@ -18,7 +18,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost/v3"
+url="http://localhost:8125/v3"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -26,7 +26,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
-  model="whisper",
+  model="openai/whisper-large-v2",
   file=audio_file
 )
 
