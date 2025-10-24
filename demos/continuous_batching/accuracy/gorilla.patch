@@ -51,7 +51,8 @@ index 8665234..9e85e59 100644
              "model": self.model_name.replace("-FC", ""),
              "temperature": self.temperature,
 +            "tool_choice": os.getenv("TOOL_CHOICE", "auto"),
-+            "max_completion_tokens": 2048,
++            "extra_body": {"chat_template_kwargs": {"enable_thinking": os.getenv("ENABLE_THINKING", False)}},
+             "max_completion_tokens": 2048,
              "store": False,
          }
  
@@ -78,7 +79,7 @@ index 9ce4e7d..076e706 100644
 -                "enable_thinking": True
 -            },
 +            extra_body={ "chat_template_kwargs": {
-+                "enable_thinking": False
++                "enable_thinking": os.getenv("ENABLE_THINKING", False)
 +            }},
 +            temperature=self.temperature,
              stream=True,

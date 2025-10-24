@@ -47,15 +47,20 @@ pipeline {
             name: 'AGENTIC_LATENCY'
         )
         booleanParam(
+            name: "AGENTIC_ACCURACY",
+            defaultValue: true,
+            description: "Agentic accuracy"
+        )
+        booleanParam(
             defaultValue: true, 
             description: 'Use tool guided generation in agentic accuracy test', 
             name: 'USE_TOOL_GUIDED_GENERATION'
         )
         booleanParam(
-            name: "AGENTIC_ACCURACY",
-            defaultValue: true,
-            description: "Agentic accuracy"
-        )
+            defaultValue: true, 
+            description: 'Use thinking in agentic accuracy test', 
+            name: 'USE_THINKING'
+        )                
         string (
             name: "MODELS_REPOSITORY_PATH",
             defaultValue: "",
@@ -314,11 +319,12 @@ pipeline {
                 }
                 sh "echo Install BFCL && \
                 test -d gorilla || git clone https://github.com/ShishirPatil/gorilla && \
-                cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
+                cd gorilla/berkeley-function-call-leaderboard && git checkout cd9429ccf3d4d04156affe883c495b3b047e6b64 -f && curl -s https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/perf-test/demos/continuous_batching/accuracy/gorilla.patch | git apply -v"
                 sh "test -d .venv || python3 -m venv .venv && \
                 . .venv/bin/activate && pip install -e ./gorilla/berkeley-function-call-leaderboard && \
                 echo Running agentic accuracy test && \
                 export OPENAI_BASE_URL=http://localhost:9000/v3 && \
+                export ENABLE_THINKING=${params.USE_THINKING} && \
                 bfcl generate --model ovms-model --test-category simple --temperature 0.0 --num-threads 100 -o --result-dir bfcl_results && bfcl evaluate --model ovms-model --result-dir bfcl_results --score-dir bfcl_scores && \
                 cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq ."
                 script {
