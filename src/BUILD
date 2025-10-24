@@ -560,6 +560,7 @@ ovms_cc_library(
                 "//src/image_gen:image_gen_calculator",
                 "//src/audio/speech_to_text:stt_calculator",
                 "//src/audio/text_to_speech:tts_calculator",
+                "//src/audio:audio_utils",
                 "//src/image_gen:imagegen_init",
                 "//src/llm:openai_completions_api_handler",
                 "//src/embeddings:embeddingscalculator_ov",

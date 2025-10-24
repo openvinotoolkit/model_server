@@ -24,7 +24,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "src/timer.hpp"
+#include "src/audio/audio_utils.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include <mutex>
@@ -105,40 +105,17 @@ public:
                 return absl::InvalidArgumentError("streaming is not supported");
             }
             std::unique_lock lock(pipe->ttsPipelineMutex);
-            auto gen_speech = pipe->ttsPipeline->generate(inputIt->value.GetString());
-
-            enum : unsigned int {
-                OUTPUT_PREPARATION,
-                TIMER_END
-            };
-            Timer<TIMER_END> timer;
-            timer.start(OUTPUT_PREPARATION);
-            drwav_data_format format;
-            format.container = drwav_container_riff;
-            format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
-            format.channels = 1;
-            format.sampleRate = 16000;  // assume it is always 16 KHz
-            format.bitsPerSample = gen_speech.speeches[0].get_element_type().bitwidth();
-            drwav wav;
+            auto generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
+            auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
+            auto speechSize = generatedSpeech.speeches[0].get_size();
+            ov::Tensor cpu_tensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
+            // copy results to release inference request
+            generatedSpeech.speeches[0].copy_to(cpu_tensor);
+            lock.unlock();
             void* ppData;
             size_t pDataSize;
-            auto waveform_size = gen_speech.speeches[0].get_size();
-            size_t total_samples = waveform_size * format.channels;
-            ov::Tensor cpu_tensor(gen_speech.speeches[0].get_element_type(), gen_speech.speeches[0].get_shape());
-            // copy results to release inference request
-            gen_speech.speeches[0].copy_to(cpu_tensor);
-            lock.unlock();
-
-            auto waveform_ptr = cpu_tensor.data<const float>();
-            OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, &ppData, &pDataSize, &format, total_samples, nullptr),
-                "Failed to initialize WAV writer");
-            drwav_uint64 frames_written = drwav_write_pcm_frames(&wav, total_samples, waveform_ptr);
-            OPENVINO_ASSERT(frames_written == total_samples, "Failed to write all frames");
+            prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpu_tensor);
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-            drwav_uninit(&wav);
-            timer.stop(OUTPUT_PREPARATION);
-            auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
-            SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
             // drwav_free(ppData, NULL); TODO: is needed?
         } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
