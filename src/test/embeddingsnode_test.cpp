@@ -751,3 +751,20 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
 }
+
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLengthExceeded) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": "hello world",
+            "max_length": 513,
+            "pad_to_max_length": true
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 1);
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+}

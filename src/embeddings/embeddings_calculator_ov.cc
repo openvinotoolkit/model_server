@@ -136,9 +136,16 @@ public:
                 received_batch_size = strings->size();
                 if (cc->Options<EmbeddingsCalculatorOVOptions>().truncate() && params.find("max_length") == params.end()) {
                     params["max_length"] = max_context_length;
-                }
+                } 
+
                 tokens = embeddings_session->getTokenizer().encode(*strings, params);
                 RET_CHECK(tokens.input_ids.get_shape().size() == 2);
+
+                size_t input_ids_size = tokens.input_ids.get_shape()[1];
+                if (input_ids_size > max_context_length) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
+                }
 
                 if (useTokenizeEndpoint) {
                     StringBuffer responseBuffer;
