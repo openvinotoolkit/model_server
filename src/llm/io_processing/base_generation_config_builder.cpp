@@ -20,16 +20,6 @@
 #include "base_generation_config_builder.hpp"
 
 namespace ovms {
-void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuralTagsConfig& structuralTagsConfig) {
-    if (config.structured_output_config) {
-        config.structured_output_config->structural_tags_config = structuralTagsConfig;
-    } else {
-        ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.structural_tags_config = structuralTagsConfig;
-        config.structured_output_config = structuredOutputConfig;
-    }
-}
-
 void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag) {
     if (config.structured_output_config) {
         config.structured_output_config->structural_tags_config = structuralTag;

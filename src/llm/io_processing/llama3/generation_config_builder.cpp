@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <openvino/genai/generation_config.hpp>
