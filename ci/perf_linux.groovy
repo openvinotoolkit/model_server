@@ -85,10 +85,12 @@ pipeline {
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE}  --cache_size 1 --log_level INFO && \
                     echo wait for model server to be ready && \
-                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done && \
+                    echo Server is ready"
                 }
                 sh "echo Running latency test && \
                 mkdir -p results && touch results/results.json && \
+                echo docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost -v ${modelsPath}:/models --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 20 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result --tokenizer /models/${model_name} && \
                 docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost -v ${modelsPath}:/models --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 1024 --random-output-len 128 --max-concurrency 1 --num-prompts 20 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result --tokenizer /models/${model_name} && \
                 cat results/results.json | jq ."
                 script {
@@ -155,7 +157,7 @@ pipeline {
                 }
                 sh "echo Running latency test && \
                 mkdir -p results && touch results/results.json && \
-                echo docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost -v ${modelsPath}:/models --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 256 --random-output-len 128 --random-range-ratio 0.2 --max-concurrency 100 --num-prompts 500 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result --tokenizer /models/${model_name} && \
+                docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost -v ${modelsPath}:/models --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 256 --random-output-len 128 --random-range-ratio 0.2 --max-concurrency 100 --num-prompts 500 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result --tokenizer /models/${model_name} && \
                 docker run -v \$(pwd)/results:/results --rm --network=host -e https_proxy=${env.HTTPS_PROXY} -e no_proxy=localhost -v ${modelsPath}:/models --entrypoint vllm openeuler/vllm-cpu:0.10.1-oe2403lts bench serve --dataset-name random --host localhost --port 9000 --endpoint /v3/chat/completions --endpoint-type openai-chat  --random-input-len 256 --random-output-len 128 --random-range-ratio 0.2 --max-concurrency 100 --num-prompts 500 --model ${params.MODEL} --ignore-eos --result-dir /results/ --result-filename results.json --save-result --tokenizer /models/${model_name} && \
                 cat results/results.json | jq ."
                 script {
