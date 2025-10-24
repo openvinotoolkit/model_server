@@ -3,8 +3,8 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 @Library(value='mainlib@master', changelog=false) _
 
 def model_need_copy = true
-def model_name = params.MODEL
-def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+def model_name = ""
+def modelsPath = ""
 
 pipeline {
     options {
@@ -76,6 +76,8 @@ pipeline {
             steps {
                 script {    
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
+                    modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
                         sh "cp -R ${params.MODEL} ${modelsPath}"
@@ -140,6 +142,8 @@ pipeline {
             steps {
                 
                 script {
+                    modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    model_name = params.MODEL
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
@@ -216,6 +220,8 @@ pipeline {
             steps {
                 sh "echo Start docker container"
                 script {
+                    modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    model_name = params.MODEL
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
@@ -281,6 +287,8 @@ pipeline {
             steps {
                 sh "echo Start docker container"
                 script {
+                    modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
+                    model_name = params.MODEL
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
