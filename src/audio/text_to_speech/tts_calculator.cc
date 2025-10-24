@@ -24,6 +24,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "src/timer.hpp"
 #include "src/http_payload.hpp"
 #include "src/logging.hpp"
 #include <mutex>
@@ -106,6 +107,12 @@ public:
             std::unique_lock lock(pipe->ttsPipelineMutex);
             auto gen_speech = pipe->ttsPipeline->generate(inputIt->value.GetString());
 
+            enum : unsigned int {
+                OUTPUT_PREPARATION,
+                TIMER_END
+            };
+            Timer<TIMER_END> timer;
+            timer.start(OUTPUT_PREPARATION);
             drwav_data_format format;
             format.container = drwav_container_riff;
             format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
@@ -129,6 +136,9 @@ public:
             OPENVINO_ASSERT(frames_written == total_samples, "Failed to write all frames");
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             drwav_uninit(&wav);
+            timer.stop(OUTPUT_PREPARATION);
+            auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION))/1000;
+            SPDLOG_LOGGER_DEBUG(tts_calculator_logger, "Output preparation time: {} ms", outputPreparationTime);
             // drwav_free(ppData, NULL); TODO: is needed?
         } else {
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
