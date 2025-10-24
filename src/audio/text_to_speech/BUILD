@@ -35,7 +35,7 @@ ovms_cc_library(
         "//src/port:dr_audio",
         ":tts_servable",
         "//third_party:genai",
-         "//src:libovmstimer",
+        "//src/audio:audio_utils",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
