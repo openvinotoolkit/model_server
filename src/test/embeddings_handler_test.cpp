@@ -382,7 +382,7 @@ TEST(EmbeddingsSerializationNew, simplePositive) {
     ov::Tensor embeddingsTensor = ov::Tensor(ov::element::Type_t::f32, shape, tensorsData.data());
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
-    auto status = handler.parseResponseNew(buffer, embeddingsTensor);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
@@ -406,7 +406,7 @@ TEST(EmbeddingsSerializationNew, positiveBase64) {
     ovms::EmbeddingsHandler handler(document);
     auto status = handler.parseRequest();
     ASSERT_TRUE(status.ok());
-    status = handler.parseResponseNew(buffer, embeddingsTensor);
+    status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":"AACAPwAAAEAAAEBA","index":0},{"object":"embedding","embedding":"AACAPwAAAEAAAEBA","index":1}],"usage":{"prompt_tokens":0,"total_tokens":0}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
@@ -420,7 +420,7 @@ TEST(EmbeddingsSerializationNew, positiveUsage) {
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
     handler.setPromptTokensUsage(50);
-    auto status = handler.parseResponseNew(buffer, embeddingsTensor);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_TRUE(status.ok());
     std::string expectedResponse = R"({"object":"list","data":[{"object":"embedding","embedding":[1.0,2.0,3.0],"index":0},{"object":"embedding","embedding":[1.0,2.0,3.0],"index":1}],"usage":{"prompt_tokens":50,"total_tokens":50}})";
     EXPECT_STREQ(buffer.GetString(), expectedResponse.c_str());
@@ -434,6 +434,6 @@ TEST(EmbeddingsSerializationNew, negativeShapeMismatch) {
     rapidjson::Document notUsed;
     ovms::EmbeddingsHandler handler(notUsed);
     handler.setPromptTokensUsage(50);
-    auto status = handler.parseResponseNew(buffer, embeddingsTensor);
+    auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_FALSE(status.ok());
 }
