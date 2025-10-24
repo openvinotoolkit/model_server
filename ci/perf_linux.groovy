@@ -2,7 +2,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 @Library(value='mainlib@master', changelog=false) _
 
-
+def model_need_copy = true
 pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
@@ -74,12 +74,14 @@ pipeline {
                 script {    
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
+                    def model_name = params.MODEL
                     sh "echo Start docker container && \
                     mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
-                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE}  --cache_size 1 --log_level INFO && \
+                    if [ -d ${params.MODEL} && $model_need_copy ]; then rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL}); model_name = $(basename ${params.MODEL}); model_need_copy = false; fi && \
+                    docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${model_name} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE}  --cache_size 1 --log_level INFO && \
                     echo wait for model server to be ready && \
-                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
                 sh "echo Running latency test && \
                 mkdir -p results && touch results/results.json && \
@@ -87,15 +89,15 @@ pipeline {
                 cat results/results.json | jq ."
                 script {
                     def mean_tpot_ms_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_tpot_ms.txt")) {
-                            return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_tpot_ms.txt", returnStdout: true).trim().toFloat()
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_tpot_ms.txt")) {
+                            return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_tpot_ms.txt", returnStdout: true).trim().toFloat()
                         } else {
                             return 100000.0
                         }
                     }()
                     def mean_ttft_ms_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_ttft_ms.txt")) {
-                            return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_ttft_ms.txt", returnStdout: true).trim().toFloat()
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_ttft_ms.txt")) {
+                            return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_ttft_ms.txt", returnStdout: true).trim().toFloat()
                         } else {
                             return 100000.0
                         }
@@ -112,8 +114,8 @@ pipeline {
                 docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
                 script {
                     if (params.SAVE_REFERENCE) {
-                        sh "mkdir -p ${env.WORKSPACE}/reference/${params.MODEL} && jq -r '.mean_tpot_ms' results/results.json > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_tpot_ms.txt && \
-                        jq -r '.mean_ttft_ms' results/results.json > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_mean_ttft_ms.txt"
+                        sh "mkdir -p ${env.WORKSPACE}/reference/${model_name} && jq -r '.mean_tpot_ms' results/results.json > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_tpot_ms.txt && \
+                        jq -r '.mean_ttft_ms' results/results.json > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_mean_ttft_ms.txt"
                     }
                 }
             }
@@ -133,12 +135,14 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
+                    def model_name = params.MODEL
                     sh "echo Start docker container && \
                     mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
+                    if [ -d ${params.MODEL} && $model_need_copy ]; then rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL}); model_name = $(basename ${params.MODEL}); model_need_copy = false; fi && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --model_repository_path /models --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
-                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
                 sh "echo Running latency test && \
                 mkdir -p results && touch results/results.json && \
@@ -146,9 +150,9 @@ pipeline {
                 cat results/results.json | jq ."
                 script {
                     def total_token_throughput_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_total_token_throughput.txt")) {
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_total_token_throughput.txt")) {
                             try {
-                                return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_total_token_throughput.txt", returnStdout: true).trim().toFloat()
+                                return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_total_token_throughput.txt", returnStdout: true).trim().toFloat()
                             } catch (Exception e) {
                                 echo "Error reading total_token_throughput reference: ${e.getMessage()}"
                                 return 0.0
@@ -158,9 +162,9 @@ pipeline {
                         }
                     }()
                     def output_throughput_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_output_throughput.txt")) {
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_output_throughput.txt")) {
                             try {
-                                return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_output_throughput.txt", returnStdout: true).trim().toFloat()
+                                return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_output_throughput.txt", returnStdout: true).trim().toFloat()
                             } catch (Exception e) {
                                 echo "Error reading output_throughput reference: ${e.getMessage()}"
                                 return 0.0
@@ -181,9 +185,9 @@ pipeline {
                 docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
                 script {
                     if (params.SAVE_REFERENCE) {
-                        sh "mkdir -p ${env.WORKSPACE}/reference/${params.MODEL} && \
-                        jq -r '.total_token_throughput' results/results.json > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_total_token_throughput.txt && \
-                        jq -r '.output_throughput' results/results.json > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_output_throughput.txt"
+                        sh "mkdir -p ${env.WORKSPACE}/reference/${model_name} && \
+                        jq -r '.total_token_throughput' results/results.json > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_total_token_throughput.txt && \
+                        jq -r '.output_throughput' results/results.json > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_output_throughput.txt"
                     }
                 }
             }
@@ -203,11 +207,13 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
+                    def model_name = params.MODEL
                     sh "mkdir -p ${modelsPath} && \
                     docker pull ${params.DOCKER_IMAGE_NAME} && \
+                    if [ -d ${params.MODEL} && $model_need_copy ]; then rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL}); model_name = $(basename ${params.MODEL}); model_need_copy = false; fi && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_prefix_caching true --model_repository_path /models --target_device ${params.DEVICE} --log_level INFO --cache_size 3 && \
                     echo wait for model server to be ready && \
-                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${params.MODEL}\" ] ; do echo waiting for LLM model; sleep 1; done"
+                    while [ \"\$(curl -s http://localhost:9000/v3/models | jq -r '.data[0].id')\" != \"${model_name}\" ] ; do echo waiting for LLM model; sleep 1; done"
                 }
                 sh "echo Running agentic latency test && \
                 test -d .venv || python3 -m venv .venv && \
@@ -215,15 +221,15 @@ pipeline {
                 sed -i -e 's/if not os.path.exists(args.model)/if 1 == 0/g' vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py && \
                 test -f pg1184.txt || curl https://www.gutenberg.org/ebooks/1184.txt.utf-8 -o pg1184.txt"
                 sh ". .venv/bin/activate && pip install -r vllm/benchmarks/multi_turn/requirements.txt && \
-                python vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py -m ${params.MODEL} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${params.MODEL} --num-clients 1 -n 20 > results_agentic_latency.txt && \
+                python vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py -m ${model_name} --url http://localhost:9000/v3 -i vllm/benchmarks/multi_turn/generate_multi_turn.json --served-model-name ${model_name} --num-clients 1 -n 20 > results_agentic_latency.txt && \
                 cat results_agentic_latency.txt"
                 script {
                     // Check if requests_per_sec is above threshold
                     def requests_per_sec = sh(script: '''cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2''', returnStdout: true).trim()
                     def requests_per_sec_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_requests_per_sec.txt")) {
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_requests_per_sec.txt")) {
                             try{
-                                return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_requests_per_sec.txt", returnStdout: true).trim().toFloat()
+                                return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_requests_per_sec.txt", returnStdout: true).trim().toFloat()
                             } catch (Exception e) {
                                 echo "Error reading requests_per_sec reference: ${e.getMessage()}"
                                 return 0.0
@@ -243,8 +249,8 @@ pipeline {
                 docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
                 script {
                     if (params.SAVE_REFERENCE) {
-                        sh "mkdir -p ${env.WORKSPACE}/reference/${params.MODEL} && \
-                        cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2 > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_requests_per_sec.txt"
+                        sh "mkdir -p ${env.WORKSPACE}/reference/${model_name} && \
+                        cat results_agentic_latency.txt | grep requests_per_sec | cut -d= -f2 > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_requests_per_sec.txt"
                     }
                 }
             }
@@ -263,7 +269,9 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
+                    def model_name = params.MODEL
                     sh "docker pull ${params.DOCKER_IMAGE_NAME} && \
+                    if [ -d ${params.MODEL} && $model_need_copy ]; then rm -Rf ${modelsPath}/$(basename ${params.MODEL}) && cp -R ${params.MODEL} ${modelsPath}/$(basename ${params.MODEL}); model_name = $(basename ${params.MODEL}); model_need_copy = false; fi && \
                     mkdir -p ${modelsPath} && \
                     docker run --rm -d --user \$(id -u):\$(id -g) ${gpuFlags} -e https_proxy=${env.HTTPS_PROXY} --name model_server_${BUILD_NUMBER} -p 9000:9000 -v ${modelsPath}:/models ${params.DOCKER_IMAGE_NAME} --source_model ${params.MODEL} --rest_port 9000 --task text_generation --enable_tool_guided_generation true --tool_parser hermes3 --reasoning_parser qwen3 --model_repository_path /models --model_name ovms-model --target_device ${params.DEVICE} --cache_size 3 --log_level INFO && \
                     echo wait for model server to be ready && \
@@ -281,9 +289,9 @@ pipeline {
                 script {
                     def accuracy = sh(script: "cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy'", returnStdout: true).trim()
                     def accuracy_reference = {
-                        if (fileExists("${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_accuracy.txt")) {
+                        if (fileExists("${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt")) {
                             try {
-                                return sh(script: "cat ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_accuracy.txt", returnStdout: true).trim().toFloat()
+                                return sh(script: "cat ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt", returnStdout: true).trim().toFloat()
                             } catch (Exception e) {
                                 echo "Error reading accuracy reference: ${e.getMessage()}"
                                 return 0.0
@@ -303,8 +311,8 @@ pipeline {
                 docker ps -q --filter name=model_server_${BUILD_NUMBER} | xargs -r docker stop"
                 script {
                     if (params.SAVE_REFERENCE) {
-                        sh "mkdir -p ${env.WORKSPACE}/reference/${params.MODEL} && \
-                        cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy' > ${env.WORKSPACE}/reference/${params.MODEL}/${params.DEVICE}_agentic_accuracy.txt"
+                        sh "mkdir -p ${env.WORKSPACE}/reference/${model_name} && \
+                        cat gorilla/berkeley-function-call-leaderboard/bfcl_scores/ovms-model/BFCL_v3_simple_score.json | head -1 | jq -r '.accuracy' > ${env.WORKSPACE}/reference/${model_name}/${params.DEVICE}_agentic_accuracy.txt"
                     }
                 }
             }
