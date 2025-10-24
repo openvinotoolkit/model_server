@@ -1,4 +1,3 @@
-#pragma once
 //*****************************************************************************
 // Copyright 2025 Intel Corporation
 //
@@ -15,7 +14,15 @@
 // limitations under the License.
 //*****************************************************************************
 
-#pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
-#pragma warning(pop)
+#pragma once
+
+#include "openvino/genai/whisper_pipeline.hpp"
+#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+
+#include <string>
+
+bool isWavBuffer(const std::string buf);
+
+ov::genai::RawSpeechInput readWav(const std::string_view& wavData);
+ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data);
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpuTensor);
