@@ -3,6 +3,8 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 @Library(value='mainlib@master', changelog=false) _
 
 def model_need_copy = true
+def model_name = params.MODEL
+
 pipeline {
     options {
         timeout(time: 2, unit: 'HOURS')
@@ -74,7 +76,6 @@ pipeline {
                 script {    
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
-                    def model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
                         sh "cp -R ${params.MODEL} ${modelsPath}"
@@ -141,7 +142,6 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
-                    def model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
                         sh "cp -R ${params.MODEL} ${modelsPath}"
@@ -219,7 +219,6 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
-                    def model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
                         sh "cp -R ${params.MODEL} ${modelsPath}"
@@ -286,7 +285,6 @@ pipeline {
                 script {
                     def modelsPath = params.MODELS_REPOSITORY_PATH?.trim() ? params.MODELS_REPOSITORY_PATH : "${env.WORKSPACE}/models"
                     def gpuFlags = "--device /dev/dri --group-add=\$(stat -c \"%g\" /dev/dri/render* | head -n 1)"
-                    def model_name = params.MODEL
                     sh "mkdir -p ${modelsPath}"
                     if (fileExists(params.MODEL) && model_need_copy) {
                         sh "cp -R ${params.MODEL} ${modelsPath}"
