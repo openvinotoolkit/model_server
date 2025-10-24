@@ -9,6 +9,7 @@ ovms_demos_continuous_batching_accuracy
 ovms_demos_continuous_batching_rag
 ovms_demos_continuous_batching_scaling
 ovms_demos_continuous_batching_speculative_decoding
+ovms_demos_continuous_batching_rag_windows_service
 ```
 
 This demo shows how to deploy LLM models in the OpenVINO Model Server using continuous batching and paged attention algorithms.

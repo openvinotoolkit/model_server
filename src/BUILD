@@ -2372,7 +2372,9 @@ cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
-    ],
+    ] + select({
+        "//conditions:default": [],
+        "//src:windows" : ["main_windows.hpp", "main_windows.cpp",],}),
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [
