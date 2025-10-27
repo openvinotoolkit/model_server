@@ -91,6 +91,7 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
     std::optional<std::string> modelDistributionPolicy;
+    std::optional<std::string> cacheDir;
 };
 
 struct TextGenGraphSettingsImpl {
@@ -147,6 +148,8 @@ struct ExportSettings {
     std::string targetDevice = "CPU";
     std::optional<std::string> extraQuantizationParams;
     std::string precision = "int8";
+    std::optional<std::string> pluginConfig;
+    std::optional<std::string> cacheDir;
 };
 
 struct HFSettingsImpl {

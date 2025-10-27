@@ -83,11 +83,21 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
     return fullPath;
 }
 
-static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const TextGenGraphSettingsImpl& graphSettings, const std::optional<std::string> ggufFilename) {
+static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
+    if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {  // FIXME do for all
+        return StatusCode::INTERNAL_ERROR;
+    }
+    auto& graphSettings = std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    auto& ggufFilename = hfSettings.ggufFilename;
+    auto& exportSettings = hfSettings.exportSettings;
     std::ostringstream oss;
     oss << OVMS_VERSION_GRAPH_LINE;
     std::string modelsPath = constructModelsPath(graphSettings.modelPath, ggufFilename);
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
+    auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
+    if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
+        return std::get<Status>(pluginConfigOrStatus);
+    }
     // clang-format off
     oss << R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
@@ -113,7 +123,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             models_path: ")"
         << modelsPath << R"(",
             plugin_config: ')"
-        << GraphExport::createPluginString(graphSettings.pluginConfig) << R"(',
+        << std::get<std::string>(pluginConfigOrStatus) << R"(',
             enable_prefix_caching: )"
         << graphSettings.enablePrefixCaching << R"(,
             cache_size: )"
@@ -369,8 +379,8 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         }
     }
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
-        if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
-            return createTextGenerationGraphTemplate(directoryPath, std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings), hfSettings.ggufFilename);
+        if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {  // FIXME do for all
+            return createTextGenerationGraphTemplate(directoryPath, hfSettings);
         } else {
             SPDLOG_ERROR("Graph options not initialized for text generation.");
             return StatusCode::INTERNAL_ERROR;
@@ -403,14 +413,24 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
     return StatusCode::INTERNAL_ERROR;
 }
 
-std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig) {
+std::variant<std::string, Status> GraphExport::createPluginString(const PluginConfigSettingsImpl& pluginConfig, const ExportSettings& exportSettings) {
+    auto& stringPluginConfig = exportSettings.pluginConfig;
     rapidjson::Document d;
     d.SetObject();
+    if (stringPluginConfig.has_value() && !stringPluginConfig.value().empty()) {
+        if (d.Parse(stringPluginConfig.value().c_str()).HasParseError()) {
+            return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
+        }
+    }
     bool configNotEmpty = false;
 
     if (pluginConfig.kvCachePrecision.has_value()) {
         rapidjson::Value name;
         name.SetString(pluginConfig.kvCachePrecision.value().c_str(), d.GetAllocator());
+        auto itr = d.FindMember("KV_CACHE_PRECISION");
+        if (itr != d.MemberEnd()) {
+            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+        }
         d.AddMember("KV_CACHE_PRECISION", name, d.GetAllocator());
         configNotEmpty = true;
     }
@@ -418,6 +438,10 @@ std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& plug
     if (pluginConfig.maxPromptLength.has_value()) {
         rapidjson::Value value;
         value.SetUint(pluginConfig.maxPromptLength.value());
+        auto itr = d.FindMember("MAX_PROMPT_LEN");
+        if (itr != d.MemberEnd()) {
+            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+        }
         d.AddMember("MAX_PROMPT_LEN", value, d.GetAllocator());
         configNotEmpty = true;
     }
@@ -425,7 +449,21 @@ std::string GraphExport::createPluginString(const PluginConfigSettingsImpl& plug
     if (pluginConfig.modelDistributionPolicy.has_value()) {
         rapidjson::Value value;
         value.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
+        auto itr = d.FindMember("MODEL_DISTRIBUTION_POLICY");
+        if (itr != d.MemberEnd()) {
+            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+        }
         d.AddMember("MODEL_DISTRIBUTION_POLICY", value, d.GetAllocator());
+        configNotEmpty = true;
+    }
+    if (exportSettings.cacheDir.has_value()) {
+        rapidjson::Value value;
+        value.SetString(exportSettings.cacheDir.value().c_str(), d.GetAllocator());
+        auto itr = d.FindMember("CACHE_DIR");
+        if (itr != d.MemberEnd()) {
+            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+        }
+        d.AddMember("CACHE_DIR", value, d.GetAllocator());
         configNotEmpty = true;
     }
 
