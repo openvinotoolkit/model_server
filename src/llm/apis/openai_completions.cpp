@@ -431,6 +431,47 @@ std::optional<std::string> OpenAIChatCompletionsHandler::getResponseFormat() con
     return request.responseFormat;
 }
 
+std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat) {
+    // Build the new object: {"type": "structural_tag", "format": <openAIFormat>}
+    // If response_format has {"json_schema": {"schema": {...}}}, flatten it to {"json_schema": {...}}
+    rapidjson::Document flatFormatDoc;
+    flatFormatDoc.CopyFrom(openAIFormat, flatFormatDoc.GetAllocator());
+
+    if (flatFormatDoc.HasMember("json_schema") && flatFormatDoc["json_schema"].IsObject()) {
+        auto& jsonSchema = flatFormatDoc["json_schema"];
+        if (jsonSchema.HasMember("schema") && jsonSchema["schema"].IsObject()) {
+            // Move all members from "schema" to "json_schema"
+            auto& schemaObj = jsonSchema["schema"];
+            for (auto itr = schemaObj.MemberBegin(); itr != schemaObj.MemberEnd(); ++itr) {
+                // Move each member to jsonSchema
+                rapidjson::Value key;
+                key.CopyFrom(itr->name, flatFormatDoc.GetAllocator());
+                rapidjson::Value value;
+                value.CopyFrom(itr->value, flatFormatDoc.GetAllocator());
+                jsonSchema.AddMember(key, value, flatFormatDoc.GetAllocator());
+            }
+            // Remove the "schema" member
+            jsonSchema.RemoveMember("schema");
+        }
+    }
+
+    // Serialize the flattened response_format object
+    rapidjson::StringBuffer formatBuffer;
+    rapidjson::Writer<rapidjson::StringBuffer> formatWriter(formatBuffer);
+    flatFormatDoc.Accept(formatWriter);
+
+    // Build the new object: {"type": "structural_tag", "format": <flattened>}
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("type");
+    writer.String("structural_tag");
+    writer.Key("format");
+    writer.RawValue(formatBuffer.GetString(), formatBuffer.GetSize(), rapidjson::kObjectType);
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
     // messages: [{role: content}, {role: content}, ...]; required
     auto status = parseMessages(allowedLocalMediaPath);
@@ -476,10 +517,7 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
         if (!it->value.IsObject())
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        responseFormat.Accept(writer);
-        request.responseFormat = buffer.GetString();
+        request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
     }
 
     return absl::OkStatus();
