@@ -28,6 +28,7 @@ model_params["sentence-transformers/all-distilroberta-v1"]="--pooling MEAN"
 model_params["mixedbread-ai/deepset-mxbai-embed-de-large-v1"]="--pooling MEAN"
 model_params["intfloat/multilingual-e5-large-instruct"]="--pooling MEAN"
 model_params["intfloat/multilingual-e5-large"]="--pooling MEAN"
+model_params["sentence-transformers/all-mpnet-base-v2"]="--pooling MEAN"
 
 tested_models=(
     nomic-ai/nomic-embed-text-v1.5
@@ -41,6 +42,7 @@ tested_models=(
     mixedbread-ai/deepset-mxbai-embed-de-large-v1
     intfloat/multilingual-e5-large-instruct
     intfloat/multilingual-e5-large
+    sentence-transformers/all-mpnet-base-v2
 )
 
 mkdir models

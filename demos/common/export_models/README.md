@@ -16,15 +16,14 @@ python export_model.py --help
 ```
 Expected Output:
 ```console
-usage: export_model.py [-h] {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation} ...
+usage: export_model.py [-h] {text_generation,embeddings_ov,rerank,rerank_ov,image_generation} ...
 
 Export Hugging face models to OVMS models repository including all configuration for deployments
 
 positional arguments:
-  {text_generation,embeddings,embeddings_ov,rerank,rerank_ov,image_generation}
+  {text_generation,embeddings_ov,rerank,rerank_ov,image_generation}
                         subcommand help
     text_generation     export model for chat and completion endpoints
-    embeddings          [deprecated] export model for embeddings endpoint with models split into separate, versioned directories
     embeddings_ov       export model for embeddings endpoint with directory structure aligned with OpenVINO tools
     rerank              [deprecated] export model for rerank endpoint with models split into separate, versioned directories
     rerank_ov           export model for rerank endpoint with directory structure aligned with OpenVINO tools
@@ -163,7 +162,7 @@ Known models that require it:
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.
 ```console
-python export_model.py embeddings \
+python export_model.py embeddings_ov \
     --source_model BAAI/bge-large-en-v1.5 \
     --weight-format int8 \
     --config_file_path models/config_all.json \

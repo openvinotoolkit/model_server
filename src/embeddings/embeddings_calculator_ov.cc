@@ -240,7 +240,7 @@ public:
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        status = handler.parseResponseNew(buffer, embeddingsTensor);
+        status = handler.parseResponse(buffer, embeddingsTensor);
         if (!status.ok()) {
             return status;
         }

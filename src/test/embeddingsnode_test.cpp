@@ -377,6 +377,50 @@ TEST_F(EmbeddingsHttpTest, relativePath) {
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
 }
 
+TEST_F(EmbeddingsHttpTest, positivePoolingMean) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov_pooling_mean",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
+TEST_F(EmbeddingsHttpTest, positivePoolingLast) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov_pooling_last",
+            "input": [111, 222, 121]
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status,
+        ovms::StatusCode::OK)
+        << status.string();
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(d["object"], "list");
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 1);
+    ASSERT_EQ(d["data"][0]["object"], "embedding");
+    ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
+    ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
+}
+
 TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     std::string requestBody = R"(
         {
@@ -385,7 +429,7 @@ TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     )";
 
     // new routing will forward invalid JSON to graph named "embeddings"
-    const std::string uriThatMatchesGraphName = "/v3/embeddings";
+    const std::string uriThatMatchesGraphName = "/v3/embeddings_ov";
 
     headers.clear();  // no sign of application/json
     ASSERT_EQ(handler->parseRequestComponents(comp, "POST", uriThatMatchesGraphName, headers), ovms::StatusCode::OK);
@@ -397,8 +441,7 @@ TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
 INSTANTIATE_TEST_SUITE_P(
     EmbeddingsHttpTestInstances,
     EmbeddingsHttpTest,
-    ::testing::Values(
-        "embeddings", "embeddings_ov"));
+    ::testing::Values("embeddings_ov"));
 
 static bool isMpReady(const std::string name) {
     ovms::Server& server = ovms::Server::instance();
@@ -435,7 +478,7 @@ public:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpointEmbeddings = "/v3/embeddings";
+    const std::string endpointEmbeddings = "/v3/embeddings_ov";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -465,16 +508,16 @@ public:
         EnsureServerStartedWithTimeout(server, 15);
 
         t1.reset(new std::thread([]() {
-            const std::string embeddings{"embeddings"};
-            ASSERT_EQ(waitMpReady(embeddings), true);
-            const std::string embeddings_no_norm{"embeddings_no_norm"};
-            ASSERT_EQ(waitMpReady(embeddings_no_norm), true);
             const std::string embeddings_ov{"embeddings_ov"};
             ASSERT_EQ(waitMpReady(embeddings_ov), true);
             const std::string embeddings_ov_no_norm{"embeddings_ov_no_norm"};
             ASSERT_EQ(waitMpReady(embeddings_ov_no_norm), true);
             const std::string embeddings_ov_relative{"embeddings_ov_relative"};
             ASSERT_EQ(waitMpReady(embeddings_ov_relative), true);
+            const std::string embeddings_ov_pooling_mean{"embeddings_ov_pooling_mean"};
+            ASSERT_EQ(waitMpReady(embeddings_ov_pooling_mean), true);
+            const std::string embeddings_ov_pooling_last{"embeddings_ov_pooling_last"};
+            ASSERT_EQ(waitMpReady(embeddings_ov_pooling_last), true);
         }));
 
         if (t1->joinable())
@@ -516,7 +559,7 @@ std::unique_ptr<std::thread> EmbeddingsExtensionTest::t1;
 TEST_F(EmbeddingsExtensionTest, simplePositive) {
     std::string requestBody = R"(
         {
-            "model": "embeddings",
+            "model": "embeddings_ov",
             "input": "dummyInput"
         }
     )";
@@ -533,60 +576,4 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_TRUE(d["data"][0]["embedding"].IsArray());
     ASSERT_EQ(d["data"][0]["embedding"].Size(), EMBEDDING_OUTPUT_SIZE);
     ASSERT_EQ(d["data"][0]["index"], 0);
-}
-
-class EmbeddingsInvalidConfigTest : public V3HttpTest {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json");
-        SetUpSuite(port, configPath, t);
-    }
-
-    static void TearDownTestSuite() {
-        TearDownSuite(t);
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsInvalidConfigTest::t;
-
-TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-}
-
-class EmbeddingsInvalidTokenizerConfigTest : public V3HttpTest {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_tokenizer.json");
-        SetUpSuite(port, configPath, t);
-    }
-
-    static void TearDownTestSuite() {
-        TearDownSuite(t);
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsInvalidTokenizerConfigTest::t;
-
-TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
 }
