@@ -749,7 +749,7 @@ Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_c
     }
     auto& metricConfig = this->modelManager.getMetricConfig();
 
-    response_components.contentType = ContentType::PLAIN_TEXT;  // Prometheus exposition format, since v3 doesnt ignore quitely
+    response_components.contentType = ContentType::PLAIN_TEXT;  // Prometheus exposition format, since v3 does not ignore quietly
 
     if (!metricConfig.metricsEnabled) {
         return StatusCode::REST_INVALID_URL;
