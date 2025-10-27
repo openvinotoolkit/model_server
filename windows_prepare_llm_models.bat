@@ -43,7 +43,7 @@ set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE% %GPTOSS_MODEL%\%TOKENIZER_FILE%
+set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE% %GPTOSS_MODEL%\%TOKENIZER_FILE%
 
 set "ALL_EXIST=1"
 for %%M in (%MODELS_LIST%) do (
@@ -83,18 +83,6 @@ if exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 )
 if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
   echo Models file %~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% does not exists.
-  exit /b 1
-) 
-
-if exist "%~1\%EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE%" (
-  echo Models file %~1\%EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE% exists. Skipping downloading models.
-) else (
-  echo Downloading embeddings model to %~1\%EMBEDDING_MODEL% directory.
-  python demos\common\export_models\export_model.py embeddings --source_model "%EMBEDDING_MODEL%" --weight-format int8 --model_repository_path %~1
-  if !errorlevel! neq 0 exit /b !errorlevel!
-)
-if not exist "%~1\%EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE%" (
-  echo Models file %~1\%EMBEDDING_MODEL%\embeddings\%LEGACY_MODEL_FILE% does not exists.
   exit /b 1
 ) 
 

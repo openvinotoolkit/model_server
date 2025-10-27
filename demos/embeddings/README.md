@@ -53,7 +53,7 @@ python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --poo
 :::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
 :sync: bge-base-en-v1.5-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --task pooling CLS --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
 ```
 :::
 :::{tab-item} thenlper/gte-small
@@ -65,7 +65,7 @@ python export_model.py embeddings_ov --source_model thenlper/gte-small --pooling
 :::{tab-item} OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 :sync: Qwen3-Embedding-0.6B-int8-ov
 ```console
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --task pooling LAST --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
@@ -423,7 +423,7 @@ Difference score with HF AutoModel: 0.020293646680283224
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
 ```bash
-pip install mteb einops --extra-index-url "https://download.pytorch.org/whl/cpu"
+pip install "mteb<2" einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
 python ovms_mteb.py --model BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings
 ```
