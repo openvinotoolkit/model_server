@@ -71,9 +71,10 @@ if not exist "%~1\%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE%" (
 )
 
 if not exist "%~1\%TEXT_GENERATION_MODEL%\chat_template.jinja" (
+    echo Creating dummy chat template for %TEXT_GENERATION_MODEL% model.
     set "dummy_chat_template={%% for message in messages %%}^
 {%% if message['role'] == 'user' %%}{{ 'User: ' + message['content'] }}^
-{%% elif message['role'] == 'system' %%}{{ '<|system|>\n' + message['content'] + eos_token }}^
+{%% elif message['role'] == 'system' %%}{{ '<^|system^|>\n' + message['content'] + eos_token }}^
 {%% elif message['role'] == 'assistant' %%}{{ message['content'] + eos_token }}^
 {%% endif %%}^
 {%% endfor %%}"

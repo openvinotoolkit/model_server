@@ -64,6 +64,7 @@ if [ ! -f "$1/$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" ]; then
 fi
 
 if [ ! -f "$1/$TEXT_GENERATION_MODEL/chat_template.jinja" ]; then
+    echo "Creating dummy chat template for $TEXT_GENERATION_MODEL model."
     dummy_chat_template="{% for message in messages %}\
 {% if message['role'] == 'user' %}{{ 'User: ' + message['content'] }}\
 {% elif message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + eos_token }}\
