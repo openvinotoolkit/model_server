@@ -22,6 +22,7 @@
 #include <chrono>
 #include <iomanip>
 #include <utility>
+#include <vector>
 #pragma warning(push)
 #pragma warning(disable : 6553)
 #include <WinReg/WinReg.hpp>
@@ -81,16 +82,13 @@ std::string wstringToString(const std::wstring& wstr) {
     return strTo;
 }
 
-inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_THREAD_ACP)
-{
-    if (str.empty())
-    {
+inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_THREAD_ACP) {
+    if (str.empty()) {
         return std::wstring();
     }
 
     int required = ::MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), NULL, 0);
-    if (0 == required)
-    {
+    if (0 == required) {
         return std::wstring();
     }
 
@@ -98,8 +96,7 @@ inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_T
     str2.resize(required);
 
     int converted = ::MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), &str2[0], str2.capacity());
-    if (0 == converted)
-    {
+    if (0 == converted) {
         return std::wstring();
     }
 
@@ -113,9 +110,8 @@ int main_windows(int argc, char** argv) {
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
 
     // Install service with ovms.exe
-    if( CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL )
-    {
-        if(!OvmsWindowsServiceManager::serviceSetDescription()) {
+    if (CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL) {
+        if (!OvmsWindowsServiceManager::serviceSetDescription()) {
             DEBUG_LOG("serviceSetDescription returned failure");
             return -1;
         }
@@ -125,10 +121,9 @@ int main_windows(int argc, char** argv) {
     }
 
     SERVICE_TABLE_ENTRY ServiceTable[] =
-    {
-        {OvmsWindowsServiceManager::serviceName, (LPSERVICE_MAIN_FUNCTION)WinServiceMain},
-        {NULL, NULL}
-    };
+        {
+            {OvmsWindowsServiceManager::serviceName, (LPSERVICE_MAIN_FUNCTION)WinServiceMain},
+            {NULL, NULL}};
 
     // Service start on windows success
     if (StartServiceCtrlDispatcher(ServiceTable) == TRUE) {
@@ -323,10 +318,9 @@ bool OvmsWindowsServiceManager::serviceSetDescription() {
 
     // Create the service
     std::unique_ptr<SC_HANDLE, WinSCHandleDeleter> schService(OpenServiceA(
-        schSCManager.get(),                             // SCM database
-        OvmsWindowsServiceManager::serviceName,         // name of service
-        SERVICE_ALL_ACCESS                              // desired access
-    ));
+        schSCManager.get(),                      // SCM database
+        OvmsWindowsServiceManager::serviceName,  // name of service
+        SERVICE_ALL_ACCESS));                    // desired access
 
     if (schService.get() == NULL || schService.get() == INVALID_HANDLE_VALUE) {
         DEBUG_LOG("OpenService failed");
@@ -554,18 +548,16 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
 void OvmsWindowsServiceManager::setPythonPathRegistry() {
     try {
         const std::wstring ovmsServiceKey = L"SYSTEM\\CurrentControlSet\\Services\\ovms";
-        winreg::RegKey key{ HKEY_LOCAL_MACHINE, ovmsServiceKey};
+        winreg::RegKey key{HKEY_LOCAL_MACHINE, ovmsServiceKey};
         DEBUG_LOG(wstringToString(ovmsServiceKey));
         std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
         DEBUG_LOG("SubKeys:");
-        for (const auto& s : subKeyNames)
-        {
+        for (const auto& s : subKeyNames) {
             DEBUG_LOG(wstringToString(s));
         }
         std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
         DEBUG_LOG("Values:");
-        for (const auto& [valueName, valueType] : values)
-        {
+        for (const auto& [valueName, valueType] : values) {
             std::stringstream ss2;
             // TODO: ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << ")";
             DEBUG_LOG(ss2.rdbuf());

@@ -75,7 +75,7 @@ public:
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
     static void serviceReportEvent(LPSTR szFunction);
     void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
-        
+
     // Registry manipulation
     static void setPythonPathRegistry();
 
