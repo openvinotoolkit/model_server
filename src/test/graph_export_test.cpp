@@ -810,3 +810,46 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     std::string graphContents = GetFileContents(graphPath);
     ASSERT_EQ(expectedImageGenerationGraphContents, removeVersionString(graphContents)) << graphContents;
 }
+TEST_F(GraphCreationTest, pluginConfigAsString) {
+    ovms::PluginConfigSettingsImpl pluginConfig;
+    std::optional<std::string> stringPluginConfig;
+    pluginConfig.kvCachePrecision = "u8";
+    pluginConfig.maxPromptLength = 256;
+    pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+    ovms::ExportSettings exportSettings;
+    exportSettings.pluginConfig = "{\"NUM_STREAMS\":\"4\"}";
+    auto res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
+    ASSERT_TRUE(std::holds_alternative<std::string>(res));
+    ASSERT_EQ(std::get<std::string>(res),
+        "{\"NUM_STREAMS\":\"4\",\"KV_CACHE_PRECISION\":\"u8\",\"MAX_PROMPT_LEN\":256,\"MODEL_DISTRIBUTION_POLICY\":\"TENSOR_PARALLEL\"}");
+    //   ovms::Model
+}
+TEST_F(GraphCreationTest, pluginConfigNegative) {
+    using ovms::Status;
+    ovms::PluginConfigSettingsImpl pluginConfig;
+    ovms::ExportSettings exportSettings;
+    std::optional<std::string> stringPluginConfig;
+    pluginConfig.kvCachePrecision = "u8";
+    pluginConfig.maxPromptLength = 256;
+    pluginConfig.modelDistributionPolicy = "TENSOR_PARALLEL";
+
+    exportSettings.pluginConfig = "{\"KV_CACHE_PRECISION\":\"fp16\"}";
+    exportSettings.cacheDir = "/cache";
+    auto res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
+    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+
+    exportSettings.pluginConfig = "{\"MAX_PROMPT_LEN\":512}";
+    res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
+    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+
+    exportSettings.pluginConfig = "{\"CACHE_DIR\":\"/cache\"}";
+    res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
+    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+    exportSettings.pluginConfig = "{\"MODEL_DISTRIBUTION_POLICY\":\"PIPELINE_PARALLEL\"}";
+    res = ovms::GraphExport::createPluginString(pluginConfig, exportSettings);
+    ASSERT_FALSE(std::holds_alternative<std::string>(res));
+    ASSERT_EQ(std::get<Status>(res), ovms::StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS);
+}

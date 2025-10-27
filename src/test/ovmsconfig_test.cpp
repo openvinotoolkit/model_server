@@ -1229,13 +1229,17 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/testchachedir"};
 
-    int arg_count = 15;
+    int arg_count = 19;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
-    auto& hfSettings = config.getServerSettings().hfSettings;
+    auto& serverSettings = config.getServerSettings();
+    auto& hfSettings = serverSettings.hfSettings;
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.overwriteModels, true);
@@ -1243,6 +1247,10 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/testchachedir");
+    // here we expect only what is passed by user not all plugin parameters passed to genai
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(serverSettings.cacheDir, "/tmp/testchachedir");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1266,9 +1274,12 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"NPU",
         (char*)"--task",
         (char*)"text_generation",
-    };
+        (char*)"--plugin_config",
+        (char*)"{\"NUM_STREAMS\":\"2\"}",
+        (char*)"--cache_dir",
+        (char*)"/tmp/testchachedir"};
 
-    int arg_count = 16;
+    int arg_count = 20;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -1281,6 +1292,8 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
+    ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/testchachedir");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
