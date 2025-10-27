@@ -35,23 +35,6 @@ PHI4_MODEL="microsoft/Phi-4-mini-instruct"
 MISTRAL_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 GPT_OSS="openai/gpt-oss-20b"
 
-MODELS=("$TEXT_GENERATION_MODEL/$TOKENIZER_FILE" "$EMBEDDING_MODEL/embeddings/$LEGACY_MODEL_FILE" "$RERANK_MODEL/rerank/$LEGACY_MODEL_FILE" "$VLM_MODEL/$TOKENIZER_FILE" "$QWEN3_MODEL/$TOKENIZER_FILE" "$LLAMA3_MODEL/$TOKENIZER_FILE" "$HERMES3_MODEL/$TOKENIZER_FILE" "$PHI4_MODEL/$TOKENIZER_FILE" "$MISTRAL_MODEL/$TOKENIZER_FILE" "$GPT_OSS/$TOKENIZER_FILE" "$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" "$RERANK_MODEL/ov/$TOKENIZER_FILE")
-
-all_exist=true
-for model in "${MODELS[@]}"; do
-  if [ ! -f "$1/$model" ]; then
-    echo "Model file does not exist $1/$model"
-    all_exist=false
-    break
-  fi
-  echo "Model file exist $1/$model"
-done
-
-if $all_exist; then
-  echo "All model directories exist in $1. Skipping downloading models."
-  exit 0
-fi
-
 if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then echo "Prepare models with python > 3.8."; exit 1 ; fi
 
 echo "Downloading LLM testing models to directory $1"

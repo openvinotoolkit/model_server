@@ -43,22 +43,6 @@ set "PHI4_MODEL=microsoft/Phi-4-mini-instruct"
 set "MISTRAL_MODEL=mistralai/Mistral-7B-Instruct-v0.3"
 set "GPTOSS_MODEL=openai/gpt-oss-20b"
 
-set MODELS_LIST=%TEXT_GENERATION_MODEL%\%TOKENIZER_FILE% %EMBEDDING_MODEL%\ov\%TOKENIZER_FILE% %RERANK_MODEL%\rerank\%LEGACY_MODEL_FILE% %VLM_MODEL%\%TOKENIZER_FILE% %QWEN3_MODEL%\%TOKENIZER_FILE% %LLAMA3_MODEL%\%TOKENIZER_FILE% %HERMES3_MODEL%\%TOKENIZER_FILE% %PHI4_MODEL%\%TOKENIZER_FILE% %MISTRAL_MODEL%\%TOKENIZER_FILE% %GPTOSS_MODEL%\%TOKENIZER_FILE%
-
-set "ALL_EXIST=1"
-for %%M in (%MODELS_LIST%) do (
-  if not exist "%~1\%%~M" (
-    echo "%~1\%%~M" does not exist
-    set "ALL_EXIST=0"
-  )
-  echo "%~1\%%~M" exists
-)
-
-if "!ALL_EXIST!"=="1" (
-  echo All required models exist in %~1. Skipping downloading models.
-  exit /b 0
-)
-
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
