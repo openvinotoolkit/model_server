@@ -204,8 +204,6 @@ P99 TPOT (ms):                           122.52
 
 It is possible to load models bigger in size from the single GPU card capacity. 
 Below is an example of the deployment 32B parameters LLM model on 2 BMG cards.
-This configuration currently doesn't support continuous batching. It process the requests sequentially so it can be use effectively with a single client use case.
-Continuous batching with Multi GPU configuration will be added soon.
 
 ### Start the Model Server instances
 
