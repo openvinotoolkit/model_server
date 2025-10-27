@@ -216,7 +216,12 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
             output = buffer.GetString();
         }
         auto resp = drogon::HttpResponse::newHttpResponse();
-        resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+
+        if (responseComponents.contentType == ContentType::PLAIN_TEXT) {
+            resp->setContentTypeCode(drogon::CT_TEXT_PLAIN);
+        } else {
+            resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
+        }
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
             resp->addHeader("inference-header-content-length", std::to_string(responseComponents.inferenceHeaderContentLength.value()));
