@@ -274,7 +274,7 @@ TEST(EmbeddingsDeserialization, positiveTokenize) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
     auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
     ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
@@ -295,7 +295,7 @@ TEST(EmbeddingsDeserialization, invalidTextFieldMissing) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "text field is required");
@@ -311,7 +311,7 @@ TEST(EmbeddingsDeserialization, invalidTextFieldType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "text should be string, array of strings or array of integers");
@@ -327,7 +327,7 @@ TEST(EmbeddingsDeserialization, invalidTextFieldEmptyArray) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "text array should not be empty");
@@ -343,7 +343,7 @@ TEST(EmbeddingsDeserialization, invalidTextFieldMalformedArray) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "text must be homogeneous");
@@ -363,7 +363,7 @@ TEST(EmbeddingsDeserialization, positiveTokenizeParamsParse) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_EQ(std::get_if<std::string>(&request), nullptr);
     auto embeddingsRequest = std::get<ovms::EmbeddingsRequest>(request);
     ASSERT_EQ(embeddingsRequest.encoding_format, ovms::EmbeddingsRequest::EncodingFormat::FLOAT);
@@ -391,7 +391,7 @@ TEST(EmbeddingsDeserialization, invalidTokenizeMaxLengthType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "max_length should be integer");
@@ -408,7 +408,7 @@ TEST(EmbeddingsDeserialization, invalidTokenizePadToMaxLengthType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "pad_to_max_length should be boolean");
@@ -425,7 +425,7 @@ TEST(EmbeddingsDeserialization, invalidTokenizeAddSpecialTokensType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "add_special_tokens should be boolean");
@@ -442,7 +442,7 @@ TEST(EmbeddingsDeserialization, invalidTokenizePaddingSideType) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "padding_side should be string, either left or right");
@@ -459,7 +459,7 @@ TEST(EmbeddingsDeserialization, invalidTokenizePaddingSideValue) {
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
     ASSERT_EQ(ok.Code(), 0);
-    auto request = ovms::EmbeddingsRequest::fromJson(&d, true);
+    auto request = ovms::EmbeddingsRequest::fromJson(&d);
     ASSERT_NE(std::get_if<std::string>(&request), nullptr);
     auto error = *std::get_if<std::string>(&request);
     ASSERT_EQ(error, "padding_side should be either left or right");

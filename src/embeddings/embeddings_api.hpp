@@ -42,15 +42,18 @@ enum class PoolingMode {
 };
 
 struct EmbeddingsRequest {
+    using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>;
     enum class EncodingFormat {
         FLOAT,
         BASE64
     };
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>> input;
+    InputDataType input;
     EncodingFormat encoding_format;
     ov::AnyMap parameters = {};
 
-    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request, const bool& useTokenizeEndpoint = false);
+    static std::variant<InputDataType, std::string> parseInput(rapidjson::Document* parsedJson, const std::string& field_name);
+    static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
+    static std::variant<EmbeddingsRequest, std::string> validateTokenizeRequest(rapidjson::Document* request);
 };
 
 class EmbeddingsHandler {

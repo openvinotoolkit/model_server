@@ -44,21 +44,17 @@ using namespace rapidjson;
 
 namespace ovms {
 
-std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson, const bool& useTokenizeEndpoint) {
+std::variant<EmbeddingsRequest::InputDataType, std::string> EmbeddingsRequest::parseInput(rapidjson::Document* parsedJson, const std::string& field_name) {
     enum class InputType {
         NONE,
         STRING,
         INT,
         INT_VEC
     };
-    EmbeddingsRequest request;
+
     std::vector<std::string> input_strings;
     std::vector<std::vector<int64_t>> input_tokens;
 
-    if (!parsedJson->IsObject())
-        return "Received json is not an object";
-
-    const std::string field_name = useTokenizeEndpoint ? "text" : "input";
     auto it = parsedJson->FindMember(field_name.c_str());
 
     if (it != parsedJson->MemberEnd()) {
@@ -107,7 +103,34 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         return field_name + " field is required";
     }
 
-    it = parsedJson->FindMember("encoding_format");
+    if (input_strings.size() > 0) {
+        return input_strings;
+    } else if (input_tokens.size() > 0) {
+        return input_tokens;
+    } else {
+        return field_name + " field is required";
+    }
+}
+
+std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
+    EmbeddingsRequest request;
+    if (!parsedJson->IsObject())
+        return "Received json is not an object";
+
+    auto result = parseInput(parsedJson, "input");
+
+    if (std::holds_alternative<std::string>(result)) {
+        return std::get<std::string>(result);
+    } else {
+        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(result);
+        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
+            request.input = std::get<std::vector<std::string>>(inputVariant);
+        } else {
+            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
+        }
+    }
+
+    auto it = parsedJson->FindMember("encoding_format");
     request.encoding_format = EncodingFormat::FLOAT;
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
@@ -123,57 +146,68 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         }
     }
 
-    if (useTokenizeEndpoint) {
-        it = parsedJson->FindMember("max_length");
-        if (it != parsedJson->MemberEnd()) {
-            if (it->value.IsInt()) {
-                size_t max_length = it->value.GetInt();
-                request.parameters["max_length"] = max_length;
-            } else {
-                return "max_length should be integer";
-            }
-        }
-        it = parsedJson->FindMember("pad_to_max_length");
-        if (it != parsedJson->MemberEnd()) {
-            if (it->value.IsBool()) {
-                bool pad_to_max_length = it->value.GetBool();
-                request.parameters["pad_to_max_length"] = pad_to_max_length;
-            } else {
-                return "pad_to_max_length should be boolean";
-            }
-        }
-        it = parsedJson->FindMember("add_special_tokens");
-        if (it != parsedJson->MemberEnd()) {
-            if (it->value.IsBool()) {
-                bool add_special_tokens = it->value.GetBool();
-                request.parameters["add_special_tokens"] = add_special_tokens;
-            } else {
-                return "add_special_tokens should be boolean";
-            }
-        }
+    // TODO: dimensions (optional)
+    // TODO: user (optional)
+    return request;
+}
 
-        it = parsedJson->FindMember("padding_side");
-        if (it != parsedJson->MemberEnd()) {
-            if (it->value.IsString()) {
-                std::string padding_side = it->value.GetString();
-                if (padding_side != "left" && padding_side != "right") {
-                    return "padding_side should be either left or right";
-                }
-                request.parameters["padding_side"] = padding_side;
-            } else {
-                return "padding_side should be string, either left or right";
-            }
+std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::validateTokenizeRequest(rapidjson::Document* parsedJson) {
+    EmbeddingsRequest request;
+    if (!parsedJson->IsObject())
+        return "Received json is not an object";
+
+    auto parsedInput = parseInput(parsedJson, "text");
+
+    if (std::holds_alternative<std::string>(parsedInput)) {
+        return std::get<std::string>(parsedInput);
+    } else {
+        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
+        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
+            request.input = std::get<std::vector<std::string>>(inputVariant);
+        } else {
+            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
         }
     }
 
-    // TODO: dimensions (optional)
-    // TODO: user (optional)
-    if (input_strings.size() > 0) {
-        request.input = input_strings;
-    } else if (input_tokens.size() > 0) {
-        request.input = input_tokens;
-    } else {
-        return "input field is required";
+    auto it = parsedJson->FindMember("max_length");
+    if (it != parsedJson->MemberEnd()) {
+        if (it->value.IsInt()) {
+            size_t max_length = it->value.GetInt();
+            request.parameters["max_length"] = max_length;
+        } else {
+            return "max_length should be integer";
+        }
+    }
+    it = parsedJson->FindMember("pad_to_max_length");
+    if (it != parsedJson->MemberEnd()) {
+        if (it->value.IsBool()) {
+            bool pad_to_max_length = it->value.GetBool();
+            request.parameters["pad_to_max_length"] = pad_to_max_length;
+        } else {
+            return "pad_to_max_length should be boolean";
+        }
+    }
+    it = parsedJson->FindMember("add_special_tokens");
+    if (it != parsedJson->MemberEnd()) {
+        if (it->value.IsBool()) {
+            bool add_special_tokens = it->value.GetBool();
+            request.parameters["add_special_tokens"] = add_special_tokens;
+        } else {
+            return "add_special_tokens should be boolean";
+        }
+    }
+
+    it = parsedJson->FindMember("padding_side");
+    if (it != parsedJson->MemberEnd()) {
+        if (it->value.IsString()) {
+            std::string padding_side = it->value.GetString();
+            if (padding_side != "left" && padding_side != "right") {
+                return "padding_side should be either left or right";
+            }
+            request.parameters["padding_side"] = padding_side;
+        } else {
+            return "padding_side should be string, either left or right";
+        }
     }
     return request;
 }
@@ -185,7 +219,7 @@ absl::Status EmbeddingsHandler::parseRequest(const bool& useTokenizeEndpoint) {
         return absl::InvalidArgumentError("Non-json request received in embeddings calculator");
     }
 
-    auto parsed = EmbeddingsRequest::fromJson(&(this->doc), useTokenizeEndpoint);
+    auto parsed = useTokenizeEndpoint ? EmbeddingsRequest::validateTokenizeRequest(&(this->doc)) : EmbeddingsRequest::fromJson(&(this->doc));
 
     if (auto error = std::get_if<std::string>(&parsed)) {
         return absl::InvalidArgumentError(*error);

@@ -596,7 +596,7 @@ protected:
     static std::unique_ptr<std::thread> t;
 
 public:
-    const std::string endpointTokenize = "/v3/embeddings/tokenize";
+    const std::string endpointTokenize = "/v3/tokenize";
     static void SetUpTestSuite() {
         std::string port = "9173";
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/config_embeddings.json");
