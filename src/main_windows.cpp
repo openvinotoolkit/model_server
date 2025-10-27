@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -21,7 +22,10 @@
 #include <chrono>
 #include <iomanip>
 #include <utility>
-
+#pragma warning(push)
+#pragma warning(disable : 6553)
+#include <WinReg/WinReg.hpp>
+#pragma warning(pop)
 #include <strsafe.h>
 #include <windows.h>
 #include <tchar.h>
@@ -42,7 +46,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
 
 #define DEBUG_LOG_ENABLE 1
 // TODO: Implement windows logging mechanism with events
-std::ofstream logFile("C:\\test2\\ovms.log");
+std::ofstream logFile("C:\\test2\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
     {                                                                                    \
         if (DEBUG_LOG_ENABLE) {                                                          \
@@ -62,6 +66,46 @@ void WINAPI WinServiceMain(DWORD argc, LPTSTR* argv) {
     manager.serviceMain(argc, argv);
 }
 
+std::string wstringToString(const std::wstring& wstr) {
+    if (wstr.empty()) {
+        return std::string();
+    }
+
+    // First, determine the required buffer size
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    std::string strTo(size_needed, 0);
+
+    // Perform the actual conversion
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, strTo.data(), size_needed, nullptr, nullptr);
+
+    return strTo;
+}
+
+inline std::wstring stringToWstring(const std::string& str, UINT codePage = CP_THREAD_ACP)
+{
+    if (str.empty())
+    {
+        return std::wstring();
+    }
+
+    int required = ::MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), NULL, 0);
+    if (0 == required)
+    {
+        return std::wstring();
+    }
+
+    std::wstring str2;
+    str2.resize(required);
+
+    int converted = ::MultiByteToWideChar(codePage, 0, str.data(), (int)str.size(), &str2[0], str2.capacity());
+    if (0 == converted)
+    {
+        return std::wstring();
+    }
+
+    return str2;
+}
+
 int main_windows(int argc, char** argv) {
     DEBUG_LOG("Windows Main - Entry");
     manager.ovmsParams.argc = argc;
@@ -69,15 +113,22 @@ int main_windows(int argc, char** argv) {
     OvmsWindowsServiceManager::logParameters(argc, argv, "OVMS Main Argument");
 
     // Install service with ovms.exe
-    if (CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL) {
-        OvmsWindowsServiceManager::serviceInstall();
+    if( CompareString(LOCALE_INVARIANT, NORM_IGNORECASE, argv[1], -1, TEXT("install"), -1) == CSTR_EQUAL )
+    {
+        if(!OvmsWindowsServiceManager::serviceSetDescription()) {
+            DEBUG_LOG("serviceSetDescription returned failure");
+            return -1;
+        }
+
+        OvmsWindowsServiceManager::setPythonPathRegistry();
         return 0;
     }
 
     SERVICE_TABLE_ENTRY ServiceTable[] =
-        {
-            {OvmsWindowsServiceManager::serviceName, (LPSERVICE_MAIN_FUNCTION)WinServiceMain},
-            {NULL, NULL}};
+    {
+        {OvmsWindowsServiceManager::serviceName, (LPSERVICE_MAIN_FUNCTION)WinServiceMain},
+        {NULL, NULL}
+    };
 
     // Service start on windows success
     if (StartServiceCtrlDispatcher(ServiceTable) == TRUE) {
@@ -189,6 +240,11 @@ struct WinSCHandleDeleter {
     }
 };
 
+// Deprecated ovms self install method
+// Use sc create ... instead
+// Cannot be used as it does not create the registry entry for the service
+// Registry entry required to add ovms\python to PATH
+// TODO: add serviceReportEvent to the stanrad main path
 void OvmsWindowsServiceManager::serviceInstall() {
     TCHAR szUnquotedPath[MAX_PATH];
     DEBUG_LOG("Installing Openvino Model Server service");
@@ -250,6 +306,44 @@ void OvmsWindowsServiceManager::serviceInstall() {
     DEBUG_LOG("Openvino Model Server service installed successfully.");
     std::cout << "Openvino Model Server service installed successfully" << std::endl;
     return;
+}
+
+bool OvmsWindowsServiceManager::serviceSetDescription() {
+    // Get a handle to the SCM database.
+    std::unique_ptr<SC_HANDLE, WinSCHandleDeleter> schSCManager(OpenSCManager(
+        NULL,                     // local computer
+        NULL,                     // ServicesActive database
+        SC_MANAGER_ALL_ACCESS));  // full access rights
+
+    if (schSCManager.get() == NULL || schSCManager.get() == INVALID_HANDLE_VALUE) {
+        DEBUG_LOG("OpenSCManager failed");
+        std::cout << "OpenSCManager failed" << std::endl;
+        return false;
+    }
+
+    // Create the service
+    std::unique_ptr<SC_HANDLE, WinSCHandleDeleter> schService(OpenServiceA(
+        schSCManager.get(),                             // SCM database
+        OvmsWindowsServiceManager::serviceName,         // name of service
+        SERVICE_ALL_ACCESS                              // desired access
+    ));
+
+    if (schService.get() == NULL || schService.get() == INVALID_HANDLE_VALUE) {
+        DEBUG_LOG("OpenService failed");
+        std::cout << "OpenService failed" << std::endl;
+        return false;
+    }
+
+    SERVICE_DESCRIPTION sd;
+    sd.lpDescription = OvmsWindowsServiceManager::serviceDesc;
+    if (!ChangeServiceConfig2(schService.get(), SERVICE_CONFIG_DESCRIPTION, &sd)) {
+        DEBUG_LOG("ChangeServiceConfig2 failed");
+        std::cout << "ChangeServiceConfig2 failed" << std::endl;
+        return false;
+    }
+    DEBUG_LOG("Openvino Model Server service description updated.");
+    std::cout << "Openvino Model Server service description updated." << std::endl;
+    return true;
 }
 
 void OvmsWindowsServiceManager::logParameters(DWORD argc, LPTSTR* argv, const std::string& logText) {
@@ -454,6 +548,51 @@ void OvmsWindowsServiceManager::setServiceRunningStatus() {
         serviceReportEvent("SetServiceStatus");
     }
     DEBUG_LOG("ServiceMain: SetServiceStatus running");
+}
+
+// Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ovms
+void OvmsWindowsServiceManager::setPythonPathRegistry() {
+    try {
+        const std::wstring ovmsServiceKey = L"SYSTEM\\CurrentControlSet\\Services\\ovms";
+        winreg::RegKey key{ HKEY_LOCAL_MACHINE, ovmsServiceKey};
+        DEBUG_LOG(wstringToString(ovmsServiceKey));
+        std::vector<std::wstring> subKeyNames = key.EnumSubKeys();
+        DEBUG_LOG("SubKeys:");
+        for (const auto& s : subKeyNames)
+        {
+            DEBUG_LOG(wstringToString(s));
+        }
+        std::vector<std::pair<std::wstring, DWORD>> values = key.EnumValues();
+        DEBUG_LOG("Values:");
+        for (const auto& [valueName, valueType] : values)
+        {
+            std::stringstream ss2;
+            // TODO: ss2 << "  [" << wstringToString(valueName) << "](" << wstringToString(winreg::RegKey::RegTypeToString(valueType)) << ")";
+            DEBUG_LOG(ss2.rdbuf());
+        }
+
+        TCHAR szUnquotedPath[MAX_PATH];
+        if (!GetModuleFileName(NULL, szUnquotedPath, MAX_PATH)) {
+            DEBUG_LOG("setPythonPathRegistry, GetModuleFileName failed.");
+            return;
+        }
+
+        //  create PATH=c:\test2\ovms\python;%PATH%
+        std::string ovmsDirectory = std::filesystem::path(szUnquotedPath).parent_path().string();
+        std::stringstream ss3;
+        ss3 << "PATH=" << ovmsDirectory << "\\python;%PATH%";
+        DEBUG_LOG(ss3.str());
+        std::vector<std::wstring> multiString;
+        multiString.push_back(stringToWstring(ss3.str()));
+        key.Open(HKEY_LOCAL_MACHINE, ovmsServiceKey);
+        key.SetMultiStringValue(L"Environment", multiString);
+        key.Close();
+    } catch (const std::exception& e) {
+        DEBUG_LOG("setPythonPathRegistry: Add python path variableFailed:");
+        DEBUG_LOG(e.what());
+        std::cout << "Installing Openvino Model Server service PATH environment variable failed." << std::endl;
+    }
+    std::cout << "Installed Openvino Model Server service PATH environment variable." << std::endl;
 }
 
 void OvmsWindowsServiceManager::setServiceStopStatusPending() {

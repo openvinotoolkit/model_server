@@ -2388,7 +2388,7 @@ cc_binary(
                 "//src:libcustom_node_model_zoo_intel_object_detection.so",
                 "//src:libcustom_node_image_transformation.so",
             ],
-            "//src:windows" : [],
+            "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
             "//conditions:default": [

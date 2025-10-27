@@ -29,6 +29,11 @@ ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --mo
 sc create ovms binPath= "%cd%\ovms\ovms.exe --rest_port 8000 --config_path %cd%\models\config.json --log_level INFO --log_path %cd%\ovms_server.log" DisplayName= "OpenVino Model Server"
 ```
 
+## Optionally set your own service description
+```bat
+sc description ovms "Hosts models and makes them accessible to software components over standard network protocols."
+```
+
 ### Start the service
 ```bat
 sc start ovms

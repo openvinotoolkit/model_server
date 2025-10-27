@@ -72,10 +72,16 @@ public:
 
     // Methods
     static std::string getCurrentTimeString();
-    static void serviceInstall();
     static void logParameters(DWORD argc, LPTSTR* argv, const std::string& logText);
     static void serviceReportEvent(LPSTR szFunction);
     void WINAPI serviceMain(DWORD argc, LPTSTR* argv);
+        
+    // Registry manipulation
+    static void setPythonPathRegistry();
+
+    // Service install
+    static void serviceInstall();
+    static bool serviceSetDescription();
 
 private:
     // Members

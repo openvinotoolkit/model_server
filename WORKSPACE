@@ -636,3 +636,19 @@ cc_library(
 )
 """,
 )
+
+new_git_repository(
+    name = "winreg",
+    remote = "https://github.com/GiovanniDicanio/WinReg.git",
+    commit = "4e1fab61959ca7a43c2627251ba306ebbbec7f7a", # master Aug 22 2025
+    build_file_content = """
+cc_library(
+    name = "winreg",
+    hdrs = glob(["WinReg/WinReg.hpp"]),
+    visibility = ["//visibility:public"],
+    local_defines = [],
+)
+""",
+)
+
+
