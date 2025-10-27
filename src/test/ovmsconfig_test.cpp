@@ -1059,7 +1059,7 @@ TEST(OvmsGraphConfigTest, positiveAllChanged) {
     ASSERT_EQ(graphSettings.modelPath, "./");
     ASSERT_EQ(graphSettings.maxNumSeqs, 128);
     ASSERT_EQ(graphSettings.targetDevice, "GPU");
-    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), false);
+    ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.has_value(), true);
     ASSERT_EQ(graphSettings.pluginConfig.kvCachePrecision.value(), "u8");
     ASSERT_EQ(graphSettings.enablePrefixCaching, "false");
     ASSERT_EQ(graphSettings.cacheSize, 20);
