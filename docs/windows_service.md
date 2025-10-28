@@ -6,25 +6,9 @@
 
 **Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
 
-## Deploying the model server service
+## Starting the model server service
 
-### Install service
-```bat
-sc create ovms binPath= "%cd%\ovms\ovms.exe --rest_port 8000 --config_path %cd%\models\config.json --log_level INFO --log_path %cd%\ovms_server.log" DisplayName= "OpenVino Model Server"
-```
-
-### Add python dependency
-For windows package with python this step is required add python dependency to PATH for the service, it also adds default service description.
-```bat
-ovms install
-```
-
-#### Optionally set your own service description
-```bat
-sc description ovms "Hosts models and makes them accessible to software components over standard network protocols."
-```
-
-### Start the service with arguments passed during the `sc create ovms` service installation
+### Start the service with arguments passed during the `.\ovms\install_ovms_service.bat` service installation
 ```bat
 sc start ovms
 ```
