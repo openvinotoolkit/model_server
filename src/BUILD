@@ -1,17 +1,17 @@
 #
-#Copyright(c) 2020 - 2023 Intel Corporation
+# Copyright (c) 2020-2023 Intel Corporation
 #
-#Licensed under the Apache License, Version 2.0(the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#http:  //www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
@@ -56,7 +56,7 @@ cc_shared_library(
     name = "ovms_shared",
     dynamic_deps = [],
     static_deps = [
-#"//src:libovmsfilesystemfactory", // TODO missing symbols
+        #"//src:libovmsfilesystemfactory", // TODO missing symbols
         "@tensorflow_serving//:__subpackages__",
         "@minitrace//:__subpackages__",
         "@com_github_gabime_spdlog//:__subpackages__",
@@ -566,14 +566,14 @@ ovms_cc_library(
                 "//src/rerank:rerankcalculator_ov",
                 "//src/llm:llmcalculator",],
         }) + select({
-    "//:enable_drogon" : [
-        "libdrogon_http_server",
-        "libmultipart_parser_drogon_impl",
-    ],
-                         "//conditions:default" : [
-                             "libnet_http_server",
-#Add net - http implementation here if we ever want one
-                         ],
+            "//:enable_drogon": [
+                "libdrogon_http_server",
+                "libmultipart_parser_drogon_impl",
+            ],
+            "//conditions:default" : [
+                "libnet_http_server",
+                # Add net-http implementation here if we ever want one
+            ],
         }) + [
             "cpp_headers",
             "ovms_header",
@@ -648,7 +648,7 @@ ovms_cc_library(
             "libovmsmodelversioning",
             "httppayload",
             "libhttpclientconnection",
-#"libovmsoclutils", #TODO decide if will need
+            #"libovmsoclutils", # TODO decide if will need
             "libovmstensorfactory",
             "libovms_threadsafequeue",
             "//:ovms_dependencies", # TODO dispose or replace
@@ -1038,8 +1038,8 @@ cc_binary(
     copts = COMMON_STATIC_LIBS_COPTS,
 )
 
-#POC which can start OVMS with C - API built by bazel
-#Standalone example for building outside of bazel(with bare g++ is inside MakefileCapi)
+# POC which can start OVMS with C-API built by bazel
+# Standalone example for building outside of bazel (with bare g++ is inside MakefileCapi)
 cc_binary(
     name = "capi_cpp_example",
     srcs = [
@@ -1055,7 +1055,7 @@ cc_binary(
     linkstatic = True,
 )
 
-#Use for dynamic linking when necessary
+# Use for dynamic linking when necessary
 cc_import(
   name = "shared_lib",
   hdrs = ["ovms.h"],
@@ -1082,7 +1082,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-#Unused
+# Unused
 ovms_cc_library( # TODO split dependencies
     name = "libovmshttpservermodule",
     hdrs = [
@@ -1232,7 +1232,7 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-#TODO split
+# TODO split
 ovms_cc_library(
     name = "libovmstensorfactory",
     hdrs = ["regularovtensorfactory.hpp",] + select({
@@ -1751,7 +1751,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-#TODO needs further splitting
+    # TODO needs further splitting
     name = "libovms_dags_pipelinedefinition",
     hdrs = ["dags/pipelinedefinition.hpp",],
     srcs = ["dags/pipelinedefinition.cpp",],
@@ -1831,7 +1831,7 @@ ovms_cc_library(
     deps = [
         "custom_node_interface",
         "libovms_dags_pipelineeventqueue",
-#"nodeinfo",
+#        "nodeinfo",
         "libovms_dags_node",
         "node_library",
         "node_library_utils",
@@ -2236,7 +2236,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-#interface for http output streaming
+  # interface for http output streaming
 ovms_cc_library(
     name = "libhttp_async_writer_interface",
     hdrs = [
@@ -2258,8 +2258,8 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 
-#HTTP Server implementation using Drogon
-#To use other library simply create new target and implementation of libhttp_async_writer_interface
+# HTTP Server implementation using Drogon
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
 ovms_cc_library(
     name = "libdrogon_http_server",
     srcs = [
@@ -2299,8 +2299,8 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 
-#HTTP Server implementation using net_http of tensorflow
-#To use other library simply create new target and implementation of libhttp_async_writer_interface
+# HTTP Server implementation using net_http of tensorflow
+# To use other library simply create new target and implementation of libhttp_async_writer_interface
 ovms_cc_library(
     name = "libnet_http_server",
     srcs = [
@@ -2365,7 +2365,7 @@ cc_binary(
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [],
-#linkstatic = False, #Use for dynamic linking when necessary
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_binary(
@@ -2400,7 +2400,7 @@ cc_binary(
         ],
         "//:disable_python": []
     }),
-#linkstatic = False, #Use for dynamic linking when necessary
+    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_test(
@@ -2410,7 +2410,7 @@ cc_test(
         "test/c_api_stress_tests.cpp",
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
-#"test/custom_loader_test.cpp", #TODO remove ?
+        #"test/custom_loader_test.cpp", # TODO remove?
         "test/custom_node_buffersqueue_test.cpp",
         "test/custom_node_output_allocator_test.cpp",
         "test/demultiplexer_node_test.cpp",
@@ -2459,7 +2459,7 @@ cc_test(
         "test/server_test.cpp",
         "test/shape_test.cpp",
         "test/stateful_config_test.cpp",
-#"test/stateful_modelinstance_test.cpp", #TODO remove ?
+        #"test/stateful_modelinstance_test.cpp", # TODO remove?
         "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
@@ -2508,14 +2508,14 @@ cc_test(
                 "test/disabled_mediapipe_test.cpp",
             ],
         }) + select({
-    "//:not_disable_python" : [
-#OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
-#"test/python/ovms_py_tensor_test.cpp",
-        "test/pythonnode_test.cpp",
-#LLM logic uses Python for processing Jinja templates when built with Python enabled
-        "test/llm/llmtemplate_test.cpp",
-    ],
-                              "//:disable_python" : [],
+            "//:not_disable_python": [
+                # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
+                # "test/python/ovms_py_tensor_test.cpp",
+                "test/pythonnode_test.cpp",
+                # LLM logic uses Python for processing Jinja templates when built with Python enabled
+                "test/llm/llmtemplate_test.cpp",
+            ],
+            "//:disable_python" : [],
         }) + select({
             "//:enable_drogon": [
                 "test/multi_part_parser_drogon_test.cpp",
@@ -3011,7 +3011,7 @@ cc_library(
     ],
     linkopts = [
         "-lstdc++fs",
-#lib va
+	# lib va
     ] + select({
         "//conditions:default": [
             "-lva",
@@ -3122,6 +3122,7 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = [],
 )
+
 
 cc_library(
     name = "test_llm_output_parser_tests",
