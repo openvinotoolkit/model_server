@@ -28,6 +28,7 @@
 #include "logging.hpp"
 #include "mediapipe/framework/port/threadpool.h"
 #include "timer.hpp"
+#include "stringutils.hpp"
 
 namespace ovms {
 
@@ -129,9 +130,13 @@ Status DrogonHttpServer::startAcceptingRequests() {
                         if (allowedHeaders.size()) {
                             resp->addHeader("Access-Control-Allow-Headers", allowedHeaders);
                         }
-                    })
-                    .addListener(this->address, this->port)
-                    .run();
+                    });
+
+                auto ips = ovms::tokenize(this->address, ',');
+                for (const auto& ip : ips) {
+                    drogon::app().addListener(ip, this->port);
+                }
+                drogon::app().run();
             } catch (...) {
                 SPDLOG_ERROR("Exception occurred during drogon::run()");
             }
