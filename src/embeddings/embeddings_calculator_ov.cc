@@ -214,18 +214,11 @@ public:
             inferRequest.start_async();
             inferRequest.wait();
             std::string outputTensorName;
-            if (inferRequest.get_compiled_model().outputs().size() == 2) {  // GTE
-                // Search by number of dimensions, should be 3
-                bool found = false;
-                for (const auto& output : inferRequest.get_compiled_model().outputs()) {
-                    if (output.get_partial_shape().size() == 3) {
-                        outputTensorName = output.get_any_name();
-                        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
-                        found = true;
-                        break;
-                    }
-                }
-                RET_CHECK(found);
+            if (inferRequest.get_compiled_model().outputs().size() >= 2) {  // GTE
+                int targetOutputIndex = embeddings_session->getTargetOutputIndex();
+                RET_CHECK(targetOutputIndex >= 0) << "No output with 3 dimensions found";  // this should never happen as pipeline is unavailable if pooling operation could not be added
+                outputTensorName = inferRequest.get_compiled_model().outputs()[targetOutputIndex].get_any_name();
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Multiple embedding model outputs found, 3-dim output with name {} will be used", outputTensorName);
             } else {  // BGE
                 RET_CHECK(inferRequest.get_compiled_model().outputs().size() == 1);
                 outputTensorName = inferRequest.get_compiled_model().outputs().begin()->get_any_name();
@@ -241,19 +234,13 @@ public:
             RET_CHECK(false);
         }
 
-        RET_CHECK(embeddingsTensor.get_shape().size() == 3);
+        RET_CHECK(embeddingsTensor.get_shape().size() == 2);
         RET_CHECK(embeddingsTensor.get_shape()[0] == received_batch_size);
-        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);
+        RET_CHECK(embeddingsTensor.get_element_type() == ov::element::f32);  // do we still need it?
 
         auto parseResponseStartTime = std::chrono::high_resolution_clock::now();
         StringBuffer buffer;
-        PoolingMode mode;
-        if (cc->Options<EmbeddingsCalculatorOVOptions>().pooling() == mediapipe::EmbeddingsCalculatorOVOptions::LAST) {
-            mode = PoolingMode::LAST;
-        } else {
-            mode = PoolingMode::CLS;
-        }
-        status = handler.parseResponse(buffer, embeddingsTensor, cc->Options<EmbeddingsCalculatorOVOptions>().normalize_embeddings(), mode, tokens.attention_mask);
+        status = handler.parseResponse(buffer, embeddingsTensor);
         if (!status.ok()) {
             return status;
         }
