@@ -108,13 +108,13 @@ public:
             auto generatedSpeech = pipe->ttsPipeline->generate(inputIt->value.GetString());
             auto bitsPerSample = generatedSpeech.speeches[0].get_element_type().bitwidth();
             auto speechSize = generatedSpeech.speeches[0].get_size();
-            ov::Tensor cpu_tensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
+            ov::Tensor cpuTensor(generatedSpeech.speeches[0].get_element_type(), generatedSpeech.speeches[0].get_shape());
             // copy results to release inference request
-            generatedSpeech.speeches[0].copy_to(cpu_tensor);
+            generatedSpeech.speeches[0].copy_to(cpuTensor);
             lock.unlock();
             void* ppData;
             size_t pDataSize;
-            prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpu_tensor);
+            prepareAudioOutput(&ppData, pDataSize, bitsPerSample, speechSize, cpuTensor.data<const float>());
             output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
             // drwav_free(ppData, NULL); TODO: is needed?
         } else {

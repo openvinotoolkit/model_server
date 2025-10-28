@@ -163,8 +163,8 @@ ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data) {
     std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
-#pragma warning(pop)
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, ov::Tensor& cpuTensor) {
+
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr) {
     enum : unsigned int {
         OUTPUT_PREPARATION,
         TIMER_END
@@ -181,7 +181,6 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     auto waveformSize = speechSize;
     size_t totalSamples = waveformSize * format.channels;
 
-    auto waveformPtr = cpuTensor.data<const float>();
     OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr),
         "Failed to initialize WAV writer");
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
