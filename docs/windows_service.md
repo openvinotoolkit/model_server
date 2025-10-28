@@ -13,7 +13,8 @@
 sc create ovms binPath= "%cd%\ovms\ovms.exe --rest_port 8000 --config_path %cd%\models\config.json --log_level INFO --log_path %cd%\ovms_server.log" DisplayName= "OpenVino Model Server"
 ```
 
-### For windows package with python this step is required to set service description and add python dependency to PATH for the service
+### Add python dependency
+For windows package with python this step is required add python dependency to PATH for the service, it also adds default service description.
 ```bat
 ovms install
 ```
@@ -51,10 +52,13 @@ Start it by writing services in the windows start search bar.
 ## Service registry settings
 You can monitor the service settings in the native windows registry editor application.
 Start it by writing regedit in the windows start search bar.
+The service settings after installation are available at the `Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ovms` path:
 ![Service Status](windows_service_registry1.jpg)
 
 ## Service log and events
 You can monitor the detailed service log with the --log_level [INFO,DEBUG,TRACE] option during the service creation and tje --log_path path_to_file paramter.
+
 Additionally you can review the ket service events and errors in the native windows event viewer application.
 Start it by writing event viewer in the windows start search bar.
+The service events are visible in the `Windows Logs -> System` tab.
 ![Service Status](windows_service_events1.jpg)
