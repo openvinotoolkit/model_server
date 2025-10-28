@@ -2,9 +2,9 @@
 
 You can review general [Windows service instructions](../../../docs/windows_service.md) for details.
 
-## Creating models repository for all the endpoints with ovms --pull or python export_model.py script
+## Creating models repository for all the endpoints with ovms --pull mode
 
-### 1. Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
+### Download the preconfigured models using ovms --pull option from [HugginFaces Hub OpenVINO organization](https://huggingface.co/OpenVINO) (Simple usage)
 ::::{tab-set}
 
 :::{tab-item} On Baremetal Host
@@ -31,7 +31,7 @@ ovms --add_to_config models --model_name OpenVINO/bge-reranker-base-fp16-ov --mo
 sc create ovms binPath= "%cd%\ovms\ovms.exe --rest_port 8000 --config_path %cd%\models\config.json --log_level INFO --log_path %cd%\ovms_server.log" DisplayName= "OpenVino Model Server"
 ```
 
-## Add python dependency to PATH for the service
+### Add python dependency to PATH for the service
 ```bat
 ovms install
 ```
