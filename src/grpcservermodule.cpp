@@ -123,7 +123,11 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
-    builder.AddListeningPort(config.grpcBindAddress() + ":" + std::to_string(config.port()), grpc::InsecureServerCredentials());
+
+    auto ips = ovms::tokenize(config.grpcBindAddress(), ',');
+    for (const auto& ip : ips) {
+        builder.AddListeningPort(ip + ":" + std::to_string(config.port()), grpc::InsecureServerCredentials());
+    }
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);
     builder.RegisterService(&kfsGrpcInferenceService);

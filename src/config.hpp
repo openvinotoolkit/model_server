@@ -91,7 +91,7 @@ public:
          *
          * @return bool
          */
-    static bool check_hostname_or_ip(const std::string& input);
+    static bool check_hostname_or_ip(const std::string& input, bool isGrpc = true);
 
     /**
          * @brief Get the config path

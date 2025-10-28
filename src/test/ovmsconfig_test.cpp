@@ -1966,7 +1966,7 @@ TEST(OvmsAPIKeyConfig, positiveAPIKeyEnv) {
 class OvmsParamsTest : public ::testing::Test {
 };
 
-TEST_F(OvmsParamsTest, DISABLED_hostname_ip_regex) {
+TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("0.0.0.0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("127.0.0.1"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("localhost"), true);
