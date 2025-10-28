@@ -91,7 +91,7 @@ struct PluginConfigSettingsImpl {
     std::optional<std::string> kvCachePrecision;
     std::optional<uint32_t> maxPromptLength;
     std::optional<std::string> modelDistributionPolicy;
-    std::optional<std::string> cacheDir;
+    //std::optional<std::string> cacheDir;
 };
 
 struct TextGenGraphSettingsImpl {
