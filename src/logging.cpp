@@ -33,6 +33,8 @@ std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
 std::shared_ptr<spdlog::logger> llm_calculator_logger = std::make_shared<spdlog::logger>("llm_calculator");
+std::shared_ptr<spdlog::logger> stt_calculator_logger = std::make_shared<spdlog::logger>("stt_calculator");
+std::shared_ptr<spdlog::logger> tts_calculator_logger = std::make_shared<spdlog::logger>("tts_calculator");
 std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
 std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
 #endif
@@ -74,6 +76,8 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     mediapipe_logger->set_pattern(default_pattern);
     llm_executor_logger->set_pattern(default_pattern);
     llm_calculator_logger->set_pattern(default_pattern);
+    stt_calculator_logger->set_pattern(default_pattern);
+    tts_calculator_logger->set_pattern(default_pattern);
     rerank_calculator_logger->set_pattern(default_pattern);
     embeddings_calculator_logger->set_pattern(default_pattern);
 #endif
@@ -92,6 +96,8 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         mediapipe_logger->sinks().push_back(sink);
         llm_executor_logger->sinks().push_back(sink);
         llm_calculator_logger->sinks().push_back(sink);
+        stt_calculator_logger->sinks().push_back(sink);
+        tts_calculator_logger->sinks().push_back(sink);
         rerank_calculator_logger->sinks().push_back(sink);
         embeddings_calculator_logger->sinks().push_back(sink);
 #endif
@@ -111,6 +117,8 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, mediapipe_logger);
     set_log_level(log_level, llm_executor_logger);
     set_log_level(log_level, llm_calculator_logger);
+    set_log_level(log_level, stt_calculator_logger);
+    set_log_level(log_level, tts_calculator_logger);
     set_log_level(log_level, rerank_calculator_logger);
     set_log_level(log_level, embeddings_calculator_logger);
 #endif

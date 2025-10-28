@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("//:common_settings.bzl","ovms_cc_library")
 
-ovms_cc_library(
-    name = "rapidjson_document",
-    hdrs = ["rapidjson_document.hpp"],
-    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
-    visibility = ["//visibility:public",],
+from pathlib import Path
+from openai import OpenAI
+
+filename = "speech.wav"
+url="http://localhost:8125/v3"
+
+
+speech_file_path = Path(__file__).parent / filename
+client = OpenAI(base_url=url, api_key="not_used")
+
+audio_file = open(filename, "rb")
+transcript = client.audio.transcriptions.create(
+  model="openai/whisper-large-v2",
+  file=audio_file
 )
 
-ovms_cc_library(
-    name = "dr_audio",
-    hdrs = ["dr_audio.hpp"],
-    deps = ["@dr_libs//:dr"],
-    visibility = ["//visibility:public",],
-)
+print(transcript)
