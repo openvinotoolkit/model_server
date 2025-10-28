@@ -16,13 +16,12 @@
 
 #pragma once
 
-#include "openvino/genai/whisper_pipeline.hpp"
-#include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
-
 #include <string>
+#include <vector>
+#include <stdint.h>
 
 bool isWavBuffer(const std::string buf);
 
-ov::genai::RawSpeechInput readWav(const std::string_view& wavData);
-ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data);
+std::vector<float> readWav(const std::string_view& wavData);
+std::vector<float> readMp3(const std::string_view& mp3Data);
 void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);

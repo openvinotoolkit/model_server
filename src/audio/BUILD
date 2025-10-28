@@ -25,7 +25,6 @@ ovms_cc_library(
         deps = [
         "//src:libovmslogging",
         "//src/port:dr_audio",
-        "//third_party:genai",
         "//src:libovmstimer",
     ],
     alwayslink = 1,

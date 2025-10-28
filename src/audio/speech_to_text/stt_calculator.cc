@@ -97,7 +97,7 @@ public:
                 return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
             }
 
-            ov::genai::RawSpeechInput rawSpeech;
+            std::vector<float> rawSpeech;
             try {
                 if (isWavBuffer(std::string(file))) {
                     SPDLOG_DEBUG("Received file format: wav");

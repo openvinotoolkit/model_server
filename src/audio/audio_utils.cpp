@@ -79,7 +79,7 @@ enum : unsigned int {
     TIMER_END
 };
 
-ov::genai::RawSpeechInput readWav(const std::string_view& wavData) {
+std::vector<float> readWav(const std::string_view& wavData) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drwav wav;
@@ -130,7 +130,7 @@ ov::genai::RawSpeechInput readWav(const std::string_view& wavData) {
 }
 #pragma warning(push)
 #pragma warning(disable : 6262)
-ov::genai::RawSpeechInput readMp3(const std::string_view& mp3Data) {
+std::vector<float> readMp3(const std::string_view& mp3Data) {
     Timer<TIMER_END> timer;
     timer.start(TENSOR_PREPARATION);
     drmp3 mp3;
@@ -180,11 +180,14 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     drwav wav;
     auto waveformSize = speechSize;
     size_t totalSamples = waveformSize * format.channels;
-
-    OPENVINO_ASSERT(drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr),
-        "Failed to initialize WAV writer");
+    auto status = drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr);
+    if(status == DRWAV_FALSE){
+        throw std::runtime_error("Failed to write all frames");
+    }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
-    OPENVINO_ASSERT(framesWritten == totalSamples, "Failed to write all frames");
+    if(framesWritten != totalSamples){
+        throw std::runtime_error("Failed to write all frames");
+    }
     drwav_uninit(&wav);
     timer.stop(OUTPUT_PREPARATION);
     auto outputPreparationTime = (timer.elapsed<std::chrono::microseconds>(OUTPUT_PREPARATION)) / 1000;
