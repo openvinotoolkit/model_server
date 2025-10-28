@@ -43,34 +43,27 @@ bool isWavBuffer(const std::string buf) {
     return true;
 }
 // https://github.com/openvinotoolkit/openvino.genai/blob/8698683535fe32b5e3cb6953000c4e0175841bd3/samples/c/whisper_speech_recognition/whisper_utils.c#L105
-float* resample_audio(const float* input,
+void resample_audio(const float* input,
     size_t inputLength,
     float inputRate,
     float targetRate,
-    size_t* outputLength) {
+    std::vector<float>& output) {
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", inputRate, targetRate);
     float ratio = inputRate / targetRate;
-    *outputLength = (size_t)(inputLength / ratio);
-    float* output = (float*)malloc(*outputLength * sizeof(float));
+    size_t outputLength = (size_t)(inputLength / ratio);
 
-    if (!output) {
-        return NULL;
-    }
-
-    for (size_t i = 0; i < *outputLength; i++) {
+    for (size_t i = 0; i < outputLength; i++) {
         float src_idx = i * ratio;
         size_t idx0 = (size_t)src_idx;
         size_t idx1 = idx0 + 1;
 
         if (idx1 >= inputLength) {
-            output[i] = input[inputLength - 1];
+            output.data()[i] = input[inputLength - 1];
         } else {
             float frac = src_idx - idx0;
-            output[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
+            output.data()[i] = input[idx0] * (1.0f - frac) + input[idx1] * frac;
         }
     }
-
-    return output;
 }
 
 enum : unsigned int {
@@ -119,13 +112,13 @@ std::vector<float> readWav(const std::string_view& wavData) {
         return pcmf32;
     }
 
-    size_t outputLength;
     timer.start(RESAMPLING);
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &outputLength);
+    size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / wav.sampleRate);
+    std::vector<float> output(outputLength);
+    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), wav.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
-    std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
 #pragma warning(push)
@@ -155,12 +148,12 @@ std::vector<float> readMp3(const std::string_view& mp3Data) {
         return pcmf32;
     }
     timer.start(RESAMPLING);
-    size_t outputLength;
-    auto buffer = resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, &outputLength);
+    size_t outputLength = (size_t)(pcmf32.size() * PIPELINE_SUPPORTED_SAMPLE_RATE / mp3.sampleRate);
+    std::vector<float> output(outputLength);
+    resample_audio(reinterpret_cast<float*>(pcmf32.data()), pcmf32.size(), mp3.sampleRate, PIPELINE_SUPPORTED_SAMPLE_RATE, output);
     timer.stop(RESAMPLING);
     auto resamplingTime = (timer.elapsed<std::chrono::microseconds>(RESAMPLING)) / 1000;
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Resampling time: {} ms", resamplingTime);
-    std::vector<float> output(buffer, buffer + outputLength);
     return output;
 }
 
