@@ -1232,7 +1232,7 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
         (char*)"--plugin_config",
         (char*)"{\"NUM_STREAMS\":\"2\"}",
         (char*)"--cache_dir",
-        (char*)"/tmp/testchachedir"};
+        (char*)"/tmp/cache_dir_with_gold"};
 
     int arg_count = 19;
     ConstructorEnabledConfig config;
@@ -1247,10 +1247,10 @@ TEST(OvmsExportHfSettingsTest, allChanged) {
     ASSERT_EQ(hfSettings.exportSettings.targetDevice, "NPU");
     ASSERT_EQ(hfSettings.downloadType, ovms::OPTIMUM_CLI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
-    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/testchachedir");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_gold");
     // here we expect only what is passed by user not all plugin parameters passed to genai
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
-    ASSERT_EQ(serverSettings.cacheDir, "/tmp/testchachedir");
+    ASSERT_EQ(serverSettings.cacheDir, "/tmp/cache_dir_with_gold");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1277,7 +1277,7 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
         (char*)"--plugin_config",
         (char*)"{\"NUM_STREAMS\":\"2\"}",
         (char*)"--cache_dir",
-        (char*)"/tmp/testchachedir"};
+        (char*)"/tmp/cache_dir_with_gold"};
 
     int arg_count = 20;
     ConstructorEnabledConfig config;
@@ -1293,7 +1293,7 @@ TEST(OvmsExportHfSettingsTest, allChangedPullAndStart) {
     ASSERT_EQ(hfSettings.exportSettings.extraQuantizationParams.value(), "--sym --ratio 1.0");
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_AND_START_MODE);
     ASSERT_EQ(hfSettings.exportSettings.pluginConfig, "{\"NUM_STREAMS\":\"2\"}");
-    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/testchachedir");
+    ASSERT_EQ(hfSettings.exportSettings.cacheDir.value(), "/tmp/cache_dir_with_gold");
 }
 
 TEST(OvmsGraphConfigTest, positiveDefault) {
