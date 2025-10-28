@@ -84,7 +84,7 @@ std::string GraphExport::getDraftModelDirectoryPath(const std::string& directory
 }
 
 static Status createTextGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
-    if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {  // FIXME do for all
+    if (!std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {
         return StatusCode::INTERNAL_ERROR;
     }
     auto& graphSettings = std::get<TextGenGraphSettingsImpl>(hfSettings.graphSettings);
@@ -96,7 +96,9 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     SPDLOG_TRACE("modelsPath: {}, directoryPath: {}, ggufFilename: {}", modelsPath, directoryPath, ggufFilename.value_or("std::nullopt"));
     auto pluginConfigOrStatus = GraphExport::createPluginString(graphSettings.pluginConfig, exportSettings);
     if (std::holds_alternative<Status>(pluginConfigOrStatus)) {
-        return std::get<Status>(pluginConfigOrStatus);
+        auto status = std::get<Status>(pluginConfigOrStatus);
+        SPDLOG_ERROR("Failed to create plugin config: {}", status.string());
+        return status;
     }
     // clang-format off
     oss << R"(
@@ -379,12 +381,7 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         }
     }
     if (hfSettings.task == TEXT_GENERATION_GRAPH) {
-        if (std::holds_alternative<TextGenGraphSettingsImpl>(hfSettings.graphSettings)) {  // FIXME do for all
-            return createTextGenerationGraphTemplate(directoryPath, hfSettings);
-        } else {
-            SPDLOG_ERROR("Graph options not initialized for text generation.");
-            return StatusCode::INTERNAL_ERROR;
-        }
+        return createTextGenerationGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == EMBEDDINGS_GRAPH) {
         if (std::holds_alternative<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings)) {
             return createEmbeddingsGraphTemplate(directoryPath, std::get<EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings));
@@ -429,7 +426,7 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         name.SetString(pluginConfig.kvCachePrecision.value().c_str(), d.GetAllocator());
         auto itr = d.FindMember("KV_CACHE_PRECISION");
         if (itr != d.MemberEnd()) {
-            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled KV_CACHE_PRECISION parameter in plugin config.");
         }
         d.AddMember("KV_CACHE_PRECISION", name, d.GetAllocator());
         configNotEmpty = true;
@@ -440,7 +437,7 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         value.SetUint(pluginConfig.maxPromptLength.value());
         auto itr = d.FindMember("MAX_PROMPT_LEN");
         if (itr != d.MemberEnd()) {
-            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled MAX_PROMPT_LEN parameter in plugin config.");
         }
         d.AddMember("MAX_PROMPT_LEN", value, d.GetAllocator());
         configNotEmpty = true;
@@ -451,7 +448,7 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         value.SetString(pluginConfig.modelDistributionPolicy.value().c_str(), d.GetAllocator());
         auto itr = d.FindMember("MODEL_DISTRIBUTION_POLICY");
         if (itr != d.MemberEnd()) {
-            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled MODEL_DISTRIBUTION_POLICY parameter in plugin config.");
         }
         d.AddMember("MODEL_DISTRIBUTION_POLICY", value, d.GetAllocator());
         configNotEmpty = true;
@@ -461,7 +458,7 @@ std::variant<std::string, Status> GraphExport::createPluginString(const PluginCo
         value.SetString(exportSettings.cacheDir.value().c_str(), d.GetAllocator());
         auto itr = d.FindMember("CACHE_DIR");
         if (itr != d.MemberEnd()) {
-            return StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS;
+            return Status(StatusCode::PLUGIN_CONFIG_CONFLICTING_PARAMETERS, "Doubled CACHE_DIR parameter in plugin config.");
         }
         d.AddMember("CACHE_DIR", value, d.GetAllocator());
         configNotEmpty = true;
