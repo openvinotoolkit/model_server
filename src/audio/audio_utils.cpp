@@ -181,11 +181,11 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint16_t bitsPerSample
     auto waveformSize = speechSize;
     size_t totalSamples = waveformSize * format.channels;
     auto status = drwav_init_memory_write_sequential_pcm_frames(&wav, ppData, &pDataSize, &format, totalSamples, nullptr);
-    if(status == DRWAV_FALSE){
+    if (status == DRWAV_FALSE) {
         throw std::runtime_error("Failed to write all frames");
     }
     drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
-    if(framesWritten != totalSamples){
+    if (framesWritten != totalSamples) {
         throw std::runtime_error("Failed to write all frames");
     }
     drwav_uninit(&wav);
