@@ -3116,7 +3116,7 @@ cc_library(
     srcs = ["test/tokenize_parser_test.cpp"],
     data = [],
     deps = [
-        "//src/embeddings:tokenize_parser",
+        "//src/tokenize:tokenize_parser",
         "@com_google_googletest//:gtest",
     ],
     copts = COPTS_TESTS,

@@ -34,7 +34,7 @@
 #include <rapidjson/stringbuffer.h>
 #pragma warning(pop)
 
-#include "./tokenize_parser.hpp"
+#include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
 

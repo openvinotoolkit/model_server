@@ -18,26 +18,14 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "tokenize_parser",
-    hdrs = ["tokenize_parser.hpp"],
-    srcs = ["tokenize_parser.cpp"],
-    deps = ["//src:libovmslogging",
-            "@mediapipe//mediapipe/framework:calculator_framework",
-            "//third_party:openvino",
-            "@com_github_tencent_rapidjson//:rapidjson",],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
-ovms_cc_library(
     name = "embeddings_api",
     hdrs = ["embeddings_api.hpp"],
     srcs = ["embeddings_api.cpp"],
     deps = ["//src:libovmslogging",
+            "//src/tokenize:tokenize_parser",
             "@mediapipe//mediapipe/framework:calculator_framework",
             "//third_party:openvino",
-            "@com_github_tencent_rapidjson//:rapidjson",
-            ":tokenize_parser",],
+            "@com_github_tencent_rapidjson//:rapidjson",],
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
