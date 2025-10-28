@@ -34,6 +34,8 @@
 #include <rapidjson/stringbuffer.h>
 #pragma warning(pop)
 
+#include "./tokenize_parser.hpp"
+
 namespace ovms {
 
 enum class PoolingMode {
@@ -41,19 +43,14 @@ enum class PoolingMode {
     LAST
 };
 
-struct EmbeddingsRequest {
-    using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>;
+struct EmbeddingsRequest : TokenizeRequest {
     enum class EncodingFormat {
         FLOAT,
         BASE64
     };
-    InputDataType input;
     EncodingFormat encoding_format;
-    ov::AnyMap parameters = {};
 
-    static std::variant<InputDataType, std::string> parseInput(rapidjson::Document* parsedJson, const std::string& field_name);
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
-    static std::variant<EmbeddingsRequest, std::string> validateTokenizeRequest(rapidjson::Document* request);
 };
 
 class EmbeddingsHandler {
@@ -69,9 +66,8 @@ public:
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
     ov::AnyMap& getParameters();
 
-    absl::Status parseRequest(const bool& useTokenizeEndpoint = false);
+    absl::Status parseRequest();
     absl::Status parseResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& embeddingsTensor, const bool normalizeEmbeddings, const PoolingMode poolingMode = PoolingMode::CLS, const std::optional<ov::Tensor>& attentionMask = std::nullopt);
-    absl::Status parseResponseTokenize(rapidjson::StringBuffer& buffer, const ov::Tensor& inputIdsTensor);
     void setPromptTokensUsage(int promptTokens);
 };
 }  // namespace ovms

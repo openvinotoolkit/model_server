@@ -63,6 +63,17 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
 
     mediapipe::Timestamp timestamp{0};
 
+    absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens, const size_t& max_context_length) {
+        tokens = tokenizer.encode(inputStrings, parameters);
+        RET_CHECK(tokens.input_ids.get_shape().size() == 2);
+        size_t input_ids_size = tokens.input_ids.get_shape()[1];
+        if (input_ids_size > max_context_length) {
+            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+            return absl::InvalidArgumentError("Input length " + std::to_string(input_ids_size) + " longer than allowed " + std::to_string(max_context_length));
+        }
+        return absl::OkStatus();
+    }
+
 protected:
     std::shared_ptr<ovms::EmbeddingsServable> embeddings_session{nullptr};
 
@@ -106,22 +117,9 @@ public:
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request body: {}", payload.body);
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Request uri: {}", payload.uri);
 
-        const int endpoint_len = EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX.size();
-        bool useTokenizeEndpoint = payload.uri.size() >= endpoint_len && payload.uri.compare(payload.uri.size() - endpoint_len, endpoint_len, EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX) == 0;
-        ovms::EmbeddingsHandler handler(*payload.parsedJson);
-        auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
-        absl::Status status = handler.parseRequest(useTokenizeEndpoint);
-
-        if (!status.ok()) {
-            return status;
-        }
-        double time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseRequestStartTime).count();
-        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings request deserialization time: {} ms", time / 1000);
-
         ov::Tensor embeddingsTensor;
         size_t received_batch_size = 1;
         size_t max_context_length = 1024;  // default allowed input length. Otherwise, it will be read from model config.json file
-        ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
         ov::genai::TokenizedInputs tokens;
         ov::Tensor typeIds;
         if (embeddings_session->getMaxModelLength().has_value()) {
@@ -129,6 +127,46 @@ public:
         } else {
             SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "max_position_embeddings nor max_trained_positions included in config.json. Using default value {}", max_context_length);
         }
+        const int endpoint_len = EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX.size();
+        const bool useTokenizeEndpoint = payload.uri.size() >= endpoint_len &&
+                                         payload.uri.compare(payload.uri.size() - endpoint_len, endpoint_len, EMBEDDINGS_TOKENIZE_ENDPOINT_SUFFIX) == 0;
+        if (useTokenizeEndpoint) {
+            ovms::TokenizeRequest tokenizeRequest;
+            absl::Status parsingStatus = ovms::TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
+            if (!parsingStatus.ok()) {
+                return parsingStatus;
+            }
+            auto input = tokenizeRequest.input;
+            if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
+                auto tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, tokenizeRequest.parameters, tokens, max_context_length);
+                if (!tokenizationStatus.ok()) {
+                    return tokenizationStatus;
+                }
+            } else {
+                SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings tokenize input is of not supported type");
+                return absl::InvalidArgumentError("Input should be string or array of strings");
+            }
+
+            StringBuffer responseBuffer;
+            auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens.input_ids);
+            if (!responseStatus.ok()) {
+                return responseStatus;
+            }
+            cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
+            return absl::OkStatus();
+        }
+        ovms::EmbeddingsHandler handler(*payload.parsedJson);
+        auto parseRequestStartTime = std::chrono::high_resolution_clock::now();
+        absl::Status status = handler.parseRequest();
+
+        if (!status.ok()) {
+            return status;
+        }
+        double time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - parseRequestStartTime).count();
+        SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Embeddings request deserialization time: {} ms", time / 1000);
+
+        ModelMetricReporter unused(nullptr, nullptr, "unused", 1);
+
         try {
             auto input = handler.getInput();
             if (auto strings = std::get_if<std::vector<std::string>>(&input)) {
@@ -138,23 +176,9 @@ public:
                     params["max_length"] = max_context_length;
                 }
 
-                tokens = embeddings_session->getTokenizer().encode(*strings, params);
-                RET_CHECK(tokens.input_ids.get_shape().size() == 2);
-
-                size_t input_ids_size = tokens.input_ids.get_shape()[1];
-                if (input_ids_size > max_context_length) {
-                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
-                    return absl::InvalidArgumentError(absl::StrCat("Input length ", input_ids_size, " longer than allowed ", max_context_length));
-                }
-
-                if (useTokenizeEndpoint) {
-                    StringBuffer responseBuffer;
-                    auto responseStatus = handler.parseResponseTokenize(responseBuffer, tokens.input_ids);
-                    if (!responseStatus.ok()) {
-                        return responseStatus;
-                    }
-                    cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(responseBuffer.GetString()), timestamp);
-                    return absl::OkStatus();
+                absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens, max_context_length);
+                if (!tokenizationStatus.ok()) {
+                    return tokenizationStatus;
                 }
 
                 if (embeddings_session->getNumberOfModelInputs() == 3) {

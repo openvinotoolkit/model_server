@@ -44,85 +44,17 @@ using namespace rapidjson;
 
 namespace ovms {
 
-std::variant<EmbeddingsRequest::InputDataType, std::string> EmbeddingsRequest::parseInput(rapidjson::Document* parsedJson, const std::string& field_name) {
-    enum class InputType {
-        NONE,
-        STRING,
-        INT,
-        INT_VEC
-    };
-
-    std::vector<std::string> input_strings;
-    std::vector<std::vector<int64_t>> input_tokens;
-
-    auto it = parsedJson->FindMember(field_name.c_str());
-
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsString()) {
-            input_strings.push_back(it->value.GetString());
-        } else if (it->value.IsArray()) {
-            if (it->value.GetArray().Size() == 0) {
-                return field_name + " array should not be empty";
-            }
-            InputType input_type = InputType::NONE;
-            for (auto& input : it->value.GetArray()) {
-                if (input.IsArray()) {
-                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
-                        return field_name + " must be homogeneous";
-                    input_type = InputType::INT_VEC;
-                    std::vector<int64_t> ints;
-                    ints.reserve(input.GetArray().Size());
-                    for (auto& val : input.GetArray()) {
-                        if (val.IsInt())
-                            ints.push_back(val.GetInt());
-                        else
-                            return field_name + " must be homogeneous";
-                    }
-                    input_tokens.emplace_back(std::move(ints));
-                } else if (input.IsString()) {
-                    if (input_type != InputType::NONE && input_type != InputType::STRING)
-                        return field_name + " must be homogeneous";
-                    input_type = InputType::STRING;
-                    input_strings.push_back(input.GetString());
-                } else if (input.IsInt()) {
-                    if (input_type != InputType::NONE && input_type != InputType::INT)
-                        return field_name + " must be homogeneous";
-                    input_type = InputType::INT;
-                    if (input_tokens.size() == 0) {
-                        input_tokens.push_back(std::vector<int64_t>());
-                    }
-                    input_tokens[0].push_back(input.GetInt());
-                } else {
-                    return "every element in " + field_name + " array should be either string or int";
-                }
-            }
-        } else {
-            return field_name + " should be string, array of strings or array of integers";
-        }
-    } else {
-        return field_name + " field is required";
-    }
-
-    if (input_strings.size() > 0) {
-        return input_strings;
-    } else if (input_tokens.size() > 0) {
-        return input_tokens;
-    } else {
-        return field_name + " field is required";
-    }
-}
-
 std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjson::Document* parsedJson) {
     EmbeddingsRequest request;
     if (!parsedJson->IsObject())
         return "Received json is not an object";
 
-    auto result = parseInput(parsedJson, "input");
+    auto parsedInput = TokenizeParser::parseInput(*parsedJson, "input");
 
-    if (std::holds_alternative<std::string>(result)) {
-        return std::get<std::string>(result);
+    if (std::holds_alternative<std::string>(parsedInput)) {
+        return std::get<std::string>(parsedInput);
     } else {
-        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(result);
+        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
         if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
             request.input = std::get<std::vector<std::string>>(inputVariant);
         } else {
@@ -151,75 +83,14 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     return request;
 }
 
-std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::validateTokenizeRequest(rapidjson::Document* parsedJson) {
-    EmbeddingsRequest request;
-    if (!parsedJson->IsObject())
-        return "Received json is not an object";
-
-    auto parsedInput = parseInput(parsedJson, "text");
-
-    if (std::holds_alternative<std::string>(parsedInput)) {
-        return std::get<std::string>(parsedInput);
-    } else {
-        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
-        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
-            request.input = std::get<std::vector<std::string>>(inputVariant);
-        } else {
-            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
-        }
-    }
-
-    auto it = parsedJson->FindMember("max_length");
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsInt()) {
-            size_t max_length = it->value.GetInt();
-            request.parameters["max_length"] = max_length;
-        } else {
-            return "max_length should be integer";
-        }
-    }
-    it = parsedJson->FindMember("pad_to_max_length");
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsBool()) {
-            bool pad_to_max_length = it->value.GetBool();
-            request.parameters["pad_to_max_length"] = pad_to_max_length;
-        } else {
-            return "pad_to_max_length should be boolean";
-        }
-    }
-    it = parsedJson->FindMember("add_special_tokens");
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsBool()) {
-            bool add_special_tokens = it->value.GetBool();
-            request.parameters["add_special_tokens"] = add_special_tokens;
-        } else {
-            return "add_special_tokens should be boolean";
-        }
-    }
-
-    it = parsedJson->FindMember("padding_side");
-    if (it != parsedJson->MemberEnd()) {
-        if (it->value.IsString()) {
-            std::string padding_side = it->value.GetString();
-            if (padding_side != "left" && padding_side != "right") {
-                return "padding_side should be either left or right";
-            }
-            request.parameters["padding_side"] = padding_side;
-        } else {
-            return "padding_side should be string, either left or right";
-        }
-    }
-    return request;
-}
-
-absl::Status EmbeddingsHandler::parseRequest(const bool& useTokenizeEndpoint) {
+absl::Status EmbeddingsHandler::parseRequest() {
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
     if (this->doc.HasParseError()) {
         SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Non-json request received in embeddings calculator");
         return absl::InvalidArgumentError("Non-json request received in embeddings calculator");
     }
 
-    auto parsed = useTokenizeEndpoint ? EmbeddingsRequest::validateTokenizeRequest(&(this->doc)) : EmbeddingsRequest::fromJson(&(this->doc));
+    auto parsed = EmbeddingsRequest::fromJson(&(this->doc));
 
     if (auto error = std::get_if<std::string>(&parsed)) {
         return absl::InvalidArgumentError(*error);
@@ -329,28 +200,6 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.Uint(promptTokens);
     writer.EndObject();
 
-    writer.EndObject();
-    return absl::OkStatus();
-}
-
-absl::Status EmbeddingsHandler::parseResponseTokenize(StringBuffer& buffer, const ov::Tensor& inputIdsTensor) {
-    Writer<StringBuffer> writer(buffer);
-
-    writer.StartObject();
-    writer.String("tokens");
-    ov::Shape outputShape = inputIdsTensor.get_shape();
-    if (outputShape.size() != 2) {
-        return absl::InvalidArgumentError("Invalid input ids tensor shape");
-    }
-    writer.StartArray();
-    for (size_t batchIterator = 0; batchIterator < outputShape[0]; batchIterator++) {
-        size_t size = outputShape[1];
-        int64_t* dataPtr = reinterpret_cast<int64_t*>(inputIdsTensor.data()) + batchIterator * size;
-        for (size_t i = 0; i < size; ++i) {
-            writer.Int64(dataPtr[i]);
-        }
-    }
-    writer.EndArray();
     writer.EndObject();
     return absl::OkStatus();
 }
