@@ -50,9 +50,8 @@ void resample_audio(const float* input,
     std::vector<float>& output) {
     SPDLOG_LOGGER_DEBUG(stt_calculator_logger, "Input file sample rate: {}. Resampling to {} required", inputRate, targetRate);
     float ratio = inputRate / targetRate;
-    size_t outputLength = (size_t)(inputLength / ratio);
 
-    for (size_t i = 0; i < outputLength; i++) {
+    for (size_t i = 0; i < output.size(); i++) {
         float src_idx = i * ratio;
         size_t idx0 = (size_t)src_idx;
         size_t idx1 = idx0 + 1;
