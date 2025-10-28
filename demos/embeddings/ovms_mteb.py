@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 import mteb
-from mteb.model_meta import ModelMeta
 logger = logging.getLogger(__name__)
 import argparse
 
@@ -31,6 +30,8 @@ parser.add_argument('--service_url', required=False, default='http://localhost:6
                     help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
                     dest='model_name')
+parser.add_argument('--dataset', default='Banking77Classification', help='Dataset to benchmark. default: Banking77Classification',
+                    dest='dataset')
 args = vars(parser.parse_args())
 
 
@@ -69,7 +70,7 @@ class OVMSModel:
         return np.array([e.embedding for e in embedding_response.data])
 
 model = OVMSModel(args['model_name'], args['service_url'] ,1)
-tasks = mteb.get_task("Banking77Classification")
+tasks = mteb.get_task(args['dataset'])
 evaluation = mteb.MTEB(tasks=[tasks])
 evaluation.run(model,verbosity=3,overwrite_results=True,output_folder='results')
 # For full leaderboard tests set run:

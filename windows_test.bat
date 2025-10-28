@@ -34,9 +34,15 @@ IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
 )
 
+IF "%~3"=="" (
+    set "gtestFilter=*"
+) ELSE (
+    set "gtestFilter=%3"
+)
+
 set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 > win_full_test.log"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! 2>&1 | tee win_full_test.log"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
@@ -75,10 +81,8 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Start bazel build test
-%buildTestCommand% > win_build_test.log 2>&1
+%buildTestCommand% 2>&1 | tee win_build_test.log
 set "bazelExitCode=!errorlevel!"
-:: Output the log to the console
-type win_build_test.log
 :: Check the exit code and exit if it's not 0
 if !bazelExitCode! neq 0 exit /b !bazelExitCode!
 
