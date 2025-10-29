@@ -72,27 +72,11 @@ enum class StatusCode {
     MODEL_NAME_OCCUPIED,                               /*!< Given model name is already occupied */
     MODEL_VERSION_MISSING,                             /*!< Model with requested version is not found */
     MODEL_VERSION_NOT_LOADED_ANYMORE,                  /*!< Model with requested version is retired */
-    MODEL_VERSION_NOT_LOADED_YET,                      /*!< Model with requested version is not loaded yet */
-    INVALID_NIREQ,                                     /*!< Invalid NIREQ requested */
-    REQUESTED_DYNAMIC_PARAMETERS_ON_STATEFUL_MODEL,    /*!< Dynamic shape and dynamic batch size not supported for stateful models */
-    REQUESTED_STATEFUL_PARAMETERS_ON_SUBSCRIBED_MODEL, /*!< Stateful model cannot be subscribed to pipeline */
-    REQUESTED_MODEL_TYPE_CHANGE,                       /*!< Model type cannot be changed after it's loaded */
-    INVALID_NON_STATEFUL_MODEL_PARAMETER,              /*!< Stateful model config parameter used for non stateful model */
-    INVALID_MAX_SEQUENCE_NUMBER,                       /*!< Sequence max number parameter too high */
-
-    // Sequence management
-    SEQUENCE_MISSING,                /*!< Sequence with provided ID does not exist */
-    SEQUENCE_ALREADY_EXISTS,         /*!< Sequence with provided ID already exists */
-    SEQUENCE_ID_NOT_PROVIDED,        /*!< Sequence ID has not been provided in request inputs */
-    SEQUENCE_ID_BAD_TYPE,            /*!< Wrong sequence ID type */
-    INVALID_SEQUENCE_CONTROL_INPUT,  /*!< Unexpected value of sequence control input */
-    SEQUENCE_CONTROL_INPUT_BAD_TYPE, /*!< Sequence control input in bad type */
-    SEQUENCE_TERMINATED,             /*!< Sequence last request is being processed and it's not available anymore */
-    SPECIAL_INPUT_NO_TENSOR_SHAPE,   /*!< Special input proto does not contain tensor shape information */
-    MAX_SEQUENCE_NUMBER_REACHED,     /*!< Model handles maximum number of sequences and will not accept new ones */
+    MODEL_VERSION_NOT_LOADED_YET,  /*!< Model with requested version is not loaded yet */
+    INVALID_NIREQ,                 /*!< Invalid NIREQ requested */
 
     // Predict request validation
-    INVALID_NO_OF_INPUTS,             /*!< Invalid number of inputs */
+    INVALID_NO_OF_INPUTS,  /*!< Invalid number of inputs */
     INVALID_MISSING_INPUT,            /*!< Missing one or more of inputs */
     INVALID_UNEXPECTED_INPUT,         /*!< Unexpected one or more of inputs */
     INVALID_MISSING_OUTPUT,           /*!< Missing one or more of outputs */

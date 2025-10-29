@@ -257,23 +257,7 @@ void CLIParser::parse(int argc, char** argv) {
             ("plugin_config",
                 "A dictionary of plugin configuration keys and their values, eg \"{\\\"NUM_STREAMS\\\": \\\"1\\\"}\". Default number of streams is optimized to optimal latency with low concurrency.",
                 cxxopts::value<std::string>(),
-                "PLUGIN_CONFIG")
-            ("stateful",
-                "Flag indicating model is stateful",
-                cxxopts::value<bool>()->default_value("false"),
-                "STATEFUL")
-            ("idle_sequence_cleanup",
-                "Flag indicating if model is subject to sequence cleaner scans",
-                cxxopts::value<bool>()->default_value("true"),
-                "IDLE_SEQUENCE_CLEANUP")
-            ("low_latency_transformation",
-                "Flag indicating that Model Server should perform low latency transformation on that model",
-                cxxopts::value<bool>()->default_value("false"),
-                "LOW_LATENCY_TRANSFORMATION")
-            ("max_sequence_number",
-                "Determines how many sequences can be processed concurrently by one model instance. When that value is reached, attempt to start a new sequence will result in error.",
-                cxxopts::value<uint32_t>(),
-                "MAX_SEQUENCE_NUMBER");
+                "PLUGIN_CONFIG");
         configOptions->custom_help("");
         configOptions->add_options(CONFIG_MANAGEMENT_HELP_GROUP)
             ("list_models",
@@ -533,10 +517,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("model_path");
     }
-    if (result->count("max_sequence_number")) {
-        modelsSettings.maxSequenceNumber = result->operator[]("max_sequence_number").as<uint32_t>();
-        modelsSettings.userSetSingleModelArguments.push_back("max_sequence_number");
-    }
 
     if (result->count("batch_size")) {
         modelsSettings.batchSize = result->operator[]("batch_size").as<std::string>();
@@ -575,21 +555,6 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
     if (result->count("plugin_config")) {
         modelsSettings.pluginConfig = result->operator[]("plugin_config").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("plugin_config");
-    }
-
-    if (result->count("stateful")) {
-        modelsSettings.stateful = result->operator[]("stateful").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("stateful");
-    }
-
-    if (result->count("idle_sequence_cleanup")) {
-        modelsSettings.idleSequenceCleanup = result->operator[]("idle_sequence_cleanup").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("idle_sequence_cleanup");
-    }
-
-    if (result->count("low_latency_transformation")) {
-        modelsSettings.lowLatencyTransformation = result->operator[]("low_latency_transformation").as<bool>();
-        modelsSettings.userSetSingleModelArguments.push_back("low_latency_transformation");
     }
 
     if (result->count("config_path")) {

@@ -205,10 +205,6 @@ struct ModelsSettingsImpl {
     uint32_t nireq = 0;
     std::string targetDevice;
     std::string pluginConfig;
-    std::optional<bool> stateful;
-    std::optional<bool> lowLatencyTransformation;
-    std::optional<uint32_t> maxSequenceNumber;
-    std::optional<bool> idleSequenceCleanup;
     std::vector<std::string> userSetSingleModelArguments;
 
     std::string configPath;

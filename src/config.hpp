@@ -227,13 +227,6 @@ public:
     const std::string& pluginConfig() const;
 
     /**
-         * @brief Get stateful flag
-         *
-         * @return bool
-         */
-    bool stateful() const;
-
-    /**
      * @brief Get metrics enabled flag
      *
      * @return bool
@@ -246,27 +239,6 @@ public:
         * @return std::string
         */
     std::string metricsList() const;
-
-    /**
-     * @brief Get idle sequence cleanup flag
-     *
-     * @return uint
-     */
-    bool idleSequenceCleanup() const;
-
-    /**
-         * @brief Get low latency transformation flag
-         *
-         * @return bool
-         */
-    bool lowLatencyTransformation() const;
-
-    /**
-     * @brief Get max number of sequences that can be processed concurrently 
-     *
-     * @return uint
-     */
-    uint32_t maxSequenceNumber() const;
 
     /**
         * @brief Get the log level
