@@ -128,37 +128,12 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         std::string toolsString = immediateParsingEnabled ? parsedOutput.content : parsedOutput.content.substr(toolsStartPos + toolsStartString.length());
         rapidjson::Document toolsDoc;
         toolsDoc.Parse(toolsString.c_str());
-        if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
-            for (auto& toolVal : toolsDoc.GetArray()) {
-                if (!toolVal.IsObject()) {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                    continue;
-                }
-                ToolCall toolCall;
-                toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-                if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                    toolCall.name = toolVal["name"].GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                    continue;
-                }
-
-                if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                    rapidjson::StringBuffer sb;
-                    rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                    toolVal["arguments"].Accept(toolWriter);
-                    toolCall.arguments = sb.GetString();
-                } else {
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                    continue;
-                }
-                parsedOutput.toolCalls.push_back(toolCall);
-            }
+        if (!toolsDoc.HasParseError() && parseToolCallsFromJsonArray(toolsDoc, parsedOutput.toolCalls)) {
+            // Successfully parsed tool calls, remove the tools part from the content
+            parsedOutput.content.erase(toolsStartPos);
         } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
         }
-        // Remove the tools part from the content
-        parsedOutput.content.erase(toolsStartPos);
     }
 }
 

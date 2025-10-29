@@ -45,32 +45,7 @@ void MistralToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int6
     rapidjson::Document toolsDoc;
     toolsDoc.Parse(parsedOutput.content.c_str());
 
-    if (!toolsDoc.HasParseError() && toolsDoc.IsArray()) {
-        for (auto& toolVal : toolsDoc.GetArray()) {
-            if (!toolVal.IsObject()) {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call is not a valid JSON object");
-                continue;
-            }
-            ToolCall toolCall;
-            if (toolVal.HasMember("name") && toolVal["name"].IsString()) {
-                toolCall.name = toolVal["name"].GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid name field");
-                continue;
-            }
-
-            if (toolVal.HasMember("arguments") && toolVal["arguments"].IsObject()) {
-                rapidjson::StringBuffer sb;
-                rapidjson::Writer<rapidjson::StringBuffer> toolWriter(sb);
-                toolVal["arguments"].Accept(toolWriter);
-                toolCall.arguments = sb.GetString();
-            } else {
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool call does not contain valid parameters object");
-                continue;
-            }
-            toolCall.id = generateRandomId();  // Generate a random ID for the tool call
-            parsedOutput.toolCalls.push_back(toolCall);
-        }
+    if (!toolsDoc.HasParseError() && parseToolCallsFromJsonArray(toolsDoc, parsedOutput.toolCalls)) {
         parsedOutput.content.clear();
     } else {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
