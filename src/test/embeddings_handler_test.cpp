@@ -340,7 +340,7 @@ TEST(EmbeddingsDeserialization, multipleStringInputFloat) {
         {
             "model": "embeddings",
             "input": ["one", "two", "three"],
-"encoding_format": "float"
+            "encoding_format": "float"
         }
     )";
     rapidjson::Document d;

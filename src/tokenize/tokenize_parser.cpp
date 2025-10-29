@@ -38,7 +38,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
     }
 
     const bool isBatched = outputShape[0] > 1;
-    if(isBatched) {
+    if (isBatched) {
         writer.StartArray();
     }
     for (size_t batchIterator = 0; batchIterator < outputShape[0]; batchIterator++) {
@@ -54,7 +54,7 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
         }
         writer.EndArray();
     }
-    if(isBatched) {
+    if (isBatched) {
         writer.EndArray();
     }
     writer.EndObject();
@@ -162,7 +162,7 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
                             else
                                 return field_name + " must be homogeneous";
                         }
-                    input_tokens.emplace_back(std::move(ints));
+                        input_tokens.emplace_back(std::move(ints));
                     } else if (input.GetArray()[0].IsString()) {
                         input_type = InputType::STRING_VEC;
                         std::vector<std::string> strings;

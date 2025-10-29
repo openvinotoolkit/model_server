@@ -828,7 +828,6 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveMaxLengthIgnored) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
-
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveBatch) {
     std::string requestBody = R"(
         {
@@ -848,7 +847,6 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveBatch) {
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
-
 }
 
 TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
@@ -872,5 +870,4 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
         handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
     AssertTokenizationResult(response, expectedTokens);
-
 }
