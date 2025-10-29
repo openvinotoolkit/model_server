@@ -21,6 +21,12 @@
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#endif
+
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
 
@@ -59,22 +65,23 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
-bool Config::check_hostname_or_ip(const std::string& input, bool isGrpc) {
+static bool is_ipv6(const std::string& s) {
+    addrinfo hints{}; hints.ai_family = AF_INET6; hints.ai_flags = AI_NUMERICHOST;
+    addrinfo* res = nullptr;
+    const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
+    if (res) freeaddrinfo(res);
+    return rc == 0;  // accepts compressed forms and scope IDs like "%eth0"
+}
+
+bool Config::check_hostname_or_ip(const std::string& input) {
     auto split = ovms::tokenize(input, ',');
     if (split.size() > 1) {
         for (const auto& part : split) {
-            if (!check_hostname_or_ip(part, isGrpc)) {
+            if (!check_hostname_or_ip(part)) {
                 return false;
             }
         }
         return true;
-    }
-
-    // if there is isGrpc, allow for [ ]
-    if (isGrpc) {
-        if (input.size() >= 2 && input.front() == '[' && input.back() == ']') {
-            return check_hostname_or_ip(input.substr(1, input.size() - 2), false);
-        }
     }
 
     if (input.size() > 255) {
@@ -91,9 +98,9 @@ bool Config::check_hostname_or_ip(const std::string& input, bool isGrpc) {
     }
     if (all_numeric) {
         static const std::regex valid_ipv4_regex("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$");
-        static const std::regex valid_ipv6_regex(R"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))");
+        // static const std::regex valid_ipv6_regex(R"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))");
         return std::regex_match(input, valid_ipv4_regex) ||
-               std::regex_match(input, valid_ipv6_regex);
+               is_ipv6(input);
     } else {
         std::regex valid_hostname_regex("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$");
         return std::regex_match(input, valid_hostname_regex);
@@ -304,11 +311,11 @@ bool Config::validate() {
     }
 
     // check bind addresses:
-    if (!restBindAddress().empty() && check_hostname_or_ip(restBindAddress(), false) == false) {
+    if (!restBindAddress().empty() && check_hostname_or_ip(restBindAddress()) == false) {
         std::cerr << "rest_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         return false;
     }
-    if (!grpcBindAddress().empty() && check_hostname_or_ip(grpcBindAddress(), true) == false) {
+    if (!grpcBindAddress().empty() && check_hostname_or_ip(grpcBindAddress()) == false) {
         std::cerr << "grpc_bind_address has invalid format: proper hostname or IP address expected." << std::endl;
         return false;
     }
