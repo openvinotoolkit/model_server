@@ -67,6 +67,20 @@ protected:
     }
 
     void LoadTemplateProcessor() {
+        servable = std::make_shared<ContinuousBatchingServable>();
+        servable->getProperties()->modelsPath = directoryPath;
+        servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
+        std::cout << "Chat template to be used: \n"
+                  << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
+        ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(servable->getProperties(), directoryPath);
+        GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
+    }
+
+    void SetUp() {
+        TestWithTempDir::SetUp();
+        tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
+        jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
+
         // We need real model tokenizer and detokenizer as we rely on them to load chat template properly
         std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
 
@@ -85,23 +99,11 @@ protected:
         std::string srcDetokenizerBinPath = ovms::FileSystem::joinPath({realModelPath, "openvino_detokenizer.bin"});
         std::string dstDetokenizerBinPath = ovms::FileSystem::joinPath({directoryPath, "openvino_detokenizer.bin"});
         std::filesystem::copy_file(srcDetokenizerBinPath, dstDetokenizerBinPath, std::filesystem::copy_options::overwrite_existing);
-
-        servable = std::make_shared<ContinuousBatchingServable>();
-        servable->getProperties()->modelsPath = directoryPath;
-        servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
-        std::cout << "Chat template to be used: \n"
-                  << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
-        ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(servable->getProperties(), directoryPath);
-        GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
-    }
-
-    void SetUp() {
-        TestWithTempDir::SetUp();
-        tokenizerConfigFilePath = directoryPath + "/tokenizer_config.json";
-        jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
     }
 
     void TearDown() {
+        servable.reset();
+        std::filesystem::remove_all(directoryPath);
         TestWithTempDir::TearDown();
     }
 
