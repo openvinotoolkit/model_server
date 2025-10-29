@@ -66,10 +66,13 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
 }
 
 bool Config::is_ipv6(const std::string& s) {
-    addrinfo hints{}; hints.ai_family = AF_INET6; hints.ai_flags = AI_NUMERICHOST;
+    addrinfo hints{};
+    hints.ai_family = AF_INET6;
+    hints.ai_flags = AI_NUMERICHOST;
     addrinfo* res = nullptr;
     const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
-    if (res) freeaddrinfo(res);
+    if (res)
+        freeaddrinfo(res);
     return rc == 0;  // accepts compressed forms and scope IDs like "%eth0"
 }
 

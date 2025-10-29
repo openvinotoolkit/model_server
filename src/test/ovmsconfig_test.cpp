@@ -1983,6 +1983,7 @@ TEST_F(OvmsParamsTest, hostname_ip_regex) {
     EXPECT_EQ(ovms::Config::check_hostname_or_ip(
                   "2001:db8:85a3::8a2e:370:7334"),
         true);
+    EXPECT_EQ(ovms::Config::check_hostname_or_ip("0:0:0:0:0:0:0:0"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::1"), true);
     EXPECT_EQ(ovms::Config::check_hostname_or_ip("::"), true);
     // Link-local IPv6 with zone index (RFC 4007 § 11) - unsupported
