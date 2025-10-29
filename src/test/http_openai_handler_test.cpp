@@ -40,7 +40,7 @@ protected:
 
     std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
     ovms::HttpRequestComponents comp;
-    const std::string endpoint = "/v3/chat/completions";
+    std::string endpoint = "/v3/chat/completions";
     std::shared_ptr<MockedServerRequestInterface> writer;
     std::shared_ptr<MockedMultiPartParser> multiPartParser;
     std::string response;
@@ -1150,6 +1150,28 @@ TEST_F(HttpOpenAIHandlerTest, V3ApiWithNonLLMCalculator) {
 
     auto status = handler->dispatchToProcessor("/v3/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+}
+
+TEST_F(HttpOpenAIHandlerTest, DefaultContentTypeJSON) {
+    std::string requestBody = "";
+    endpoint = "/v3/chat/completions";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpoint, headers), ovms::StatusCode::OK);
+    ASSERT_NE(  // Not equal because we do not expect for the workload to be processed
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    ASSERT_EQ(responseComponents.contentType, ovms::ContentType::JSON);
+}
+
+TEST_F(HttpOpenAIHandlerTest, MetricsEndpointContentTypePlainText) {
+    std::string requestBody = "";
+    endpoint = "/metrics";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::OK);
+    ASSERT_NE(  // Not equal because we do not expect for the workload to be processed
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    ASSERT_EQ(responseComponents.contentType, ovms::ContentType::PLAIN_TEXT);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, responseFormatValid) {

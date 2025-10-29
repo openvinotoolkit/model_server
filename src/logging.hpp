@@ -36,6 +36,8 @@ extern std::shared_ptr<spdlog::logger> capi_logger;
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;
 extern std::shared_ptr<spdlog::logger> llm_executor_logger;
 extern std::shared_ptr<spdlog::logger> llm_calculator_logger;
+extern std::shared_ptr<spdlog::logger> stt_calculator_logger;
+extern std::shared_ptr<spdlog::logger> tts_calculator_logger;
 extern std::shared_ptr<spdlog::logger> embeddings_calculator_logger;
 extern std::shared_ptr<spdlog::logger> rerank_calculator_logger;
 #endif

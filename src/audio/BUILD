@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("//:common_settings.bzl","ovms_cc_library")
+
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
+load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "rapidjson_document",
-    hdrs = ["rapidjson_document.hpp"],
-    deps = ["@com_github_tencent_rapidjson//:rapidjson"],
-    visibility = ["//visibility:public",],
-)
-
-ovms_cc_library(
-    name = "dr_audio",
-    hdrs = ["dr_audio.hpp"],
-    deps = ["@dr_libs//:dr"],
-    visibility = ["//visibility:public",],
+    name = "audio_utils",
+    hdrs = ["audio_utils.hpp"],
+    srcs = ["audio_utils.cpp"],
+    visibility = ["//visibility:public"],
+        deps = [
+        "//src:libovmslogging",
+        "//src/port:dr_audio",
+        "//src:libovmstimer",
+    ],
+    alwayslink = 1,
 )
