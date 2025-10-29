@@ -39,14 +39,16 @@ ovms.exe --rest_port 8000 --config_path models\config.json
 :sync: Linux
 ```bash
 mkdir models
-docker run -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models
-docker run -v $PWD/models:/models openvino/model_server:weekly --add_to_config /models --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
-docker run -v $PWD/models:/models -p 8000:8000 openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_repository_path /models --task text_generation
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config /models --model_path Godreign/llama-3.2-3b-instruct-openvino-int4-model --model_name Godreign/llama-3.2-3b-instruct-openvino-int4-model
+docker run -d -u $(id -u):$(id -g) -v $PWD/models:/models -p 8000:8000 openvino/model_server:weekly --rest_port 8000 --config_path /models/config.json
 ```
+:::
+::::
 
 Here is the basic call to check if it works:
 
-```bash
+```console
 curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"Godreign/llama-3.2-3b-instruct-openvino-int4-model\",\"messages\":[{\"role\":\"system\",\"content\":\"You are a helpful assistant.\"},{\"role\":\"user\",\"content\":\"Say this is a test\"}]}"
 ```
 
@@ -54,13 +56,13 @@ curl http://localhost:8000/v3/chat/completions -H "Content-Type: application/jso
 
 Install Open WebUI:
 
-```bash
+```console
 pip install open-webui
 ```
 
 Running Open WebUI:
 
-```bash
+```console
 open-webui serve
 ```
 
@@ -102,15 +104,30 @@ Click **New Chat** and select the model to start chatting
 ### Step 1: Model Preparation
 
 In addition to text generation, endpoints for embedding and reranking in Retrieval Augmented Generation can also be deployed with OpenVINO Model Server. In this demo, the embedding model is [OpenVINO/Qwen3-Embedding-0.6B-fp16-ov](https://huggingface.co/OpenVINO/Qwen3-Embedding-0.6B-fp16-ov) and the the reranking model is [OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov](https://huggingface.co/OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov). Run the export script to download and quantize the models:
-```console
-ovms --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
-ovms --add_to_config models --model_path OpenVINO\Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
-ovms --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
-ovms --add_to_config models --model_path OpenVINO\Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
+
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
+ovms.exe --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
+ovms.exe --add_to_config models --model_path OpenVINO\Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+ovms.exe --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
+ovms.exe --add_to_config models --model_path OpenVINO\Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
 ```
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
+```bash
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_repository_path models --task embeddings
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/Qwen3-Embedding-0.6B-fp16-ov --model_name OpenVINO/Qwen3-Embedding-0.6B-fp16-ov
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_repository_path models --task rerank
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov --model_name OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov
+```
+:::
+::::
 
 Keep the model server running or restart it. Here are the basic calls to check if they work:
-```bash
+```console
 curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/Qwen3-Embedding-0.6B-fp16-ov\",\"input\":\"hello world\"}"
 curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov\",\"query\":\"welcome\",\"documents\":[\"good morning\",\"farewell\"]}"
 ```
@@ -185,14 +202,26 @@ curl http://localhost:8000/v3/rerank -H "Content-Type: application/json" -d "{\"
 
 The image generation model used in this demo is [OpenVINO/FLUX.1-schnell-int4-ov](https://huggingface.co/OpenVINO/FLUX.1-schnell-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
 
-```bash
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
 ovms.exe --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
 ovms.exe --add_to_config models --model_path OpenVINO\FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
 ```
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
+```bash
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/FLUX.1-schnell-int4-ov --model_repository_path models --model_name OpenVINO/FLUX.1-schnell-int4-ov --task image_generation --default_num_inference_steps 3
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly  --add_to_config models --model_path OpenVINO/FLUX.1-schnell-int4-ov --model_name OpenVINO/FLUX.1-schnell-int4-ov
+```
+:::
+::::
 
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
-```bash
+```console
 curl http://localhost:8000/v3/images/generations -H "Content-Type: application/json" -d "{\"model\":\"OpenVINO/FLUX.1-schnell-int4-ov\",\"prompt\":\"anime\",\"num_inference_steps\":1,\"size\":\"256x256\",\"response_format\":\"b64_json\"}"
 ```
 
@@ -237,14 +266,26 @@ Method 2:
 
 The vision language model used in this demo is [OpenVINO/InternVL2-2B-int4-ov](https://huggingface.co/OpenVINO/InternVL2-2B-int4-ov). Run the ovms with --pull parameter to download and quantize the model:
 
-```bash
+::::{tab-set}
+:::{tab-item} Windows
+:sync: Windows
+```bat
 ovms.exe --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
 ovms.exe --add_to_config models --model_path OpenVINO\InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
 ```
+:::
+:::{tab-item} Linux (using Docker)
+:sync: Linux
+```bash
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --pull --source_model OpenVINO/InternVL2-2B-int4-ov --model_repository_path models --model_name OpenVINO/InternVL2-2B-int4-ov --task text_generation
+docker run --rm -u $(id -u):$(id -g) -v $PWD/models:/models openvino/model_server:weekly --add_to_config models --model_path OpenVINO/InternVL2-2B-int4-ov --model_name OpenVINO/InternVL2-2B-int4-ov
+```
+:::
+::::
 
 Keep the model server running or restart it. Here is the basic call to check if it works:
 
-```bash
+```console
 curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/InternVL2-2B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"what is in the picture?\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2025/3/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
 ```
 
@@ -269,17 +310,17 @@ curl http://localhost:8000/v3/chat/completions  -H "Content-Type: application/js
 
 Start a OpenAPI tool server available in the [openapi-servers repo](https://github.com/open-webui/openapi-servers). The server used in this demo is [https://github.com/open-webui/openapi-servers/tree/main/servers/time](https://github.com/open-webui/openapi-servers/tree/main/servers/time). Run it locally at `http://localhost:18000`:
 
-```bash
+```console
 pip install mcpo
 pip install mcp_weather_server
-mcpo --port 8001 -- python -m mcp_weather_server
+mcpo --port 9000 -- python -m mcp_weather_server
 ```
 
 ### Step 2: Tools Setting
 
 1. Go to **Admin Panel** → **Settings** → **External Tools** 
 2. Click **+Add Connection**
-   * URL: `http://localhost:8001`
+   * URL: `http://localhost:9000`
    * Name the tool
 3. Click **Save**
 
