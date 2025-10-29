@@ -185,7 +185,6 @@ ovms_cc_library(
     hdrs = ["inference_executor.hpp"],
     deps = ["libovms_outputkeeper",
             "modelinstance_h",
-            "statefulrequestprocessor",
             "modelinstanceunloadguard",
     ],
     visibility = ["//visibility:public",],
@@ -320,17 +319,6 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
-    name = "libovms_sequence",
-    hdrs = ["sequence.hpp"],
-    srcs = ["sequence.cpp"],
-    deps = [
-        "libovmsstatus",
-        "libovms_ov_utils",
-        "//third_party:openvino",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
     name = "model_metric_reporter",
     hdrs = ["model_metric_reporter.hpp"],
     srcs = ["model_metric_reporter.cpp"],
@@ -415,25 +403,6 @@ ovms_cc_library(
         "libovms_dags_pipelineeventqueue",
         "libovms_dags_nodesession",
     ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "libovms_sequence_manager",
-    hdrs = ["sequence_manager.hpp"],
-    srcs = ["sequence_manager.cpp"],
-    deps = [
-        "libovms_sequence",
-        "libovmsmodelversion",
-        "libovmsstatus",
-        "libovmslogging",
-        "libovms_sequence_processing_spec",
-    ],
-    visibility = ["//visibility:public",],
-)
-ovms_cc_library(
-    name = "libovms_sequence_processing_spec",
-    hdrs = ["sequence_processing_spec.hpp"],
-    deps = [],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -529,8 +498,6 @@ ovms_cc_library(
         "servablemanagermodule.hpp",
         "server.cpp",
         "server.hpp",
-        "statefulmodelinstance.cpp",
-        "statefulmodelinstance.hpp",
          ] + select({
             "//:not_disable_mediapipe": [
                 "mediapipe_internal/mediapipefactory.cpp",
@@ -639,9 +606,6 @@ ovms_cc_library(
             "serialization_common",
             "libovmsprofiler",
             "libovmsstatus",
-            "libovms_sequence",
-            "libovms_sequence_manager",
-            "libovms_sequence_processing_spec",
             "libovms_queue",
             "libovms_ovinferrequestsqueue",
             "libovmstensor_utils",
@@ -1386,7 +1350,6 @@ ovms_cc_library(
             "libovmsshape",
             "extractchoice",
             "requesttensorextractor",
-            "statefulrequestprocessor",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2014,19 +1977,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
-    name = "statefulrequestprocessor",
-    hdrs = ["statefulrequestprocessor.hpp",],
-    deps = [
-            "//third_party:openvino",
-            "libovmsstatus",
-            "requestprocessor",
-            "libovms_sequence",
-            "libovms_sequence_manager",
-            "libovms_sequence_processing_spec",
-    ],
-    visibility = ["//visibility:public"],
-)
-ovms_cc_library(
     name = "libovms_ov_utils",
     hdrs = ["ov_utils.hpp",],
     srcs = ["ov_utils.cpp",],
@@ -2455,14 +2405,9 @@ cc_test(
         "test/prediction_service_test.cpp",
         "test/rest_utils_test.cpp",
         "test/schema_test.cpp",
-        "test/sequence_manager_test.cpp",
-        "test/sequence_test.cpp",
         "test/serialization_tests.cpp",
         "test/server_test.cpp",
         "test/shape_test.cpp",
-        "test/stateful_config_test.cpp",
-        #"test/stateful_modelinstance_test.cpp", # TODO remove?
-        "test/stateful_test_utils.hpp",
         "test/status_test.cpp",
         "test/stringutils_test.cpp",
         "test/systeminfo_test.cpp",
