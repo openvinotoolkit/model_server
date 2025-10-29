@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package tensorflow.serving;
+
+import "google/protobuf/wrappers.proto";
+
+option cc_enable_arenas = true;
+
+// Metadata for an inference request such as the model name and version.
+message ModelSpec {
+  // Required servable name.
+  string name = 1;
+
+  // Optional choice of which version of the model to use.
+  //
+  // Expected to be left unset in the common case. Should be specified when
+  // there is a strong version consistency requirement (e.g. when the model
+  // signature changes across versions and requests need to be
+  // version-specific).
+  //
+  // When left unspecified, the system will serve the best available version.
+  // This is typically the latest version, though during version transitions,
+  // notably when serving on a fleet of instances, may be either the previous or
+  // new version.
+  oneof version_choice {
+    // Use this specific version number.
+    google.protobuf.Int64Value version = 2;
+
+    // Use the version associated with the given label.
+    string version_label = 4;
+  }
+
+  // A named signature to evaluate. If unspecified, the default signature will
+  // be used.
+  string signature_name = 3;
+}

@@ -1070,8 +1070,7 @@ ovms_cc_library(
     srcs = [
         "tfs_frontend/tfs_utils.cpp",],
     deps = [
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
-        "@tensorflow_serving//tensorflow_serving/apis:model_service_cc_proto",
+        "@tensorflow_serving_protos//:tensorflow_serving_apis_cc_proto",
         "@org_tensorflow//tensorflow/core:framework", # Eigen Tensor
         "libovmslogging",
         "libovmsprofiler",
@@ -1100,7 +1099,7 @@ ovms_cc_library( # TODO split dependencies
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@mediapipe//mediapipe/framework:calculator_framework",
-        "@tensorflow_serving//tensorflow_serving/apis:prediction_service_cc_proto",
+        "@tensorflow_serving_protos//:tensorflow_serving_apis_cc_proto",
         "@tensorflow_serving//tensorflow_serving/util:threadpool_executor",
         "@tensorflow_serving//tensorflow_serving/util:json_tensor",
         "libovms_module",

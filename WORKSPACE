@@ -158,6 +158,13 @@ cc_library(
 )
 
 
+# TensorFlow Serving API protos only (no build dependencies)
+new_local_repository(
+    name = "tensorflow_serving_protos",
+    build_file = "@//third_party/tensorflow_serving_protos:BUILD",
+    path = "third_party/tensorflow_serving_protos",
+)
+
 # Used for gRPC API protos only
 # Tensorflow serving
 git_repository(
