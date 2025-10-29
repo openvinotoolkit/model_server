@@ -60,7 +60,7 @@ absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<Co
                                           " > " + std::to_string(properties->schedulerConfig.max_num_batched_tokens));
     }
     ov::genai::GenerationConfig& config = executionContext->generationConfigBuilder->getConfig();
-    if (config.is_assisting_generation() and config.assistant_confidence_threshold == 0.0f and config.num_assistant_tokens == 0) {
+    if (config.is_assisting_generation() && config.assistant_confidence_threshold == 0.0f && config.num_assistant_tokens == 0) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Assisting generation requested but assistant confidence threshold is not set");
         config.num_assistant_tokens = 5;  // default value for speculative decoding if not set
     }
