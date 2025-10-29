@@ -65,7 +65,7 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
-static bool is_ipv6(const std::string& s) {
+bool Config::is_ipv6(const std::string& s) {
     addrinfo hints{}; hints.ai_family = AF_INET6; hints.ai_flags = AI_NUMERICHOST;
     addrinfo* res = nullptr;
     const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);

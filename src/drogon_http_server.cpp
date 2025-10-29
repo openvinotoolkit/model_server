@@ -134,6 +134,7 @@ Status DrogonHttpServer::startAcceptingRequests() {
 
                 auto ips = ovms::tokenize(this->address, ',');
                 for (const auto& ip : ips) {
+                    SPDLOG_INFO("Binding REST server to address: {}:{}", ip, this->port);
                     drogon::app().addListener(ip, this->port);
                 }
                 drogon::app().run();

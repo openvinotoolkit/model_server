@@ -97,6 +97,14 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
 
+std::string host_with_port(const std::string& host, int port) {
+    if (Config::is_ipv6(host)) {
+        return "[" + host + "]:" + std::to_string(port);
+    } else {
+        return host + ":" + std::to_string(port);
+    }
+}
+
 Status GRPCServerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", GRPC_SERVER_MODULE_NAME);
@@ -123,10 +131,11 @@ Status GRPCServerModule::start(const ovms::Config& config) {
     ServerBuilder builder;
     builder.SetMaxReceiveMessageSize(GIGABYTE);
     builder.SetMaxSendMessageSize(GIGABYTE);
-
     auto ips = ovms::tokenize(config.grpcBindAddress(), ',');
     for (const auto& ip : ips) {
-        builder.AddListeningPort(ip + ":" + std::to_string(config.port()), grpc::InsecureServerCredentials());
+        auto hostWithPort = host_with_port(ip, config.port());
+        SPDLOG_INFO("Binding gRPC server to address: {}", hostWithPort);
+        builder.AddListeningPort(hostWithPort, grpc::InsecureServerCredentials());
     }
     builder.RegisterService(&tfsPredictService);
     builder.RegisterService(&tfsModelService);
