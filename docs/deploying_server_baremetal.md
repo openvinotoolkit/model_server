@@ -148,6 +148,7 @@ Run `setupvars` script to set required environment variables.
 ```
 
 Additionally you can install [ovms as a windows service](windows_service.md)
+
 **Windows install service**
 ```bat
 .\ovms\install_ovms_service.bat

@@ -40,9 +40,9 @@ The service settings after installation are available at the `Computer\HKEY_LOCA
 ![Service Status](windows_service_registry1.jpg)
 
 ## Service log and events
-You can monitor the detailed service log with the --log_level [INFO,DEBUG,TRACE] option during the service creation and tje --log_path path_to_file paramter.
+You can monitor the detailed service log with the --log_level [INFO,DEBUG,TRACE] option during the service creation and the --log_path path_to_file parameter.
 
-Additionally you can review the ket service events and errors in the native windows event viewer application.
+Additionally you can review the service events and errors in the native windows event viewer application.
 Start it by writing event viewer in the windows start search bar.
 The service events are visible in the `Windows Logs -> System` tab.
 ![Service Status](windows_service_events1.jpg)
