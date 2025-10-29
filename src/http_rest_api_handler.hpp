@@ -74,8 +74,14 @@ struct HttpRequestComponents {
     std::unordered_map<std::string, std::string> headers;
 };
 
+enum class ContentType {
+    JSON,
+    PLAIN_TEXT
+};
+
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
+    ContentType contentType = ContentType::JSON;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -231,7 +237,7 @@ public:
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
-    Status processMetrics(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);

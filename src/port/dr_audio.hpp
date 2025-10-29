@@ -16,6 +16,10 @@
 //*****************************************************************************
 
 #pragma warning(push)
-#pragma warning(disable : 6313)
-#include <rapidjson/document.h>
+#pragma warning(disable : 4245 4220)
+#include "dr_wav.h"  // NOLINT
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 6386 6262)
+#include "dr_mp3.h"  // NOLINT
 #pragma warning(pop)
