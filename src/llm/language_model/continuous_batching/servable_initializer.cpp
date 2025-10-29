@@ -78,7 +78,7 @@ ov::genai::CacheEvictionConfig prepareCacheEvictionConfig(const mediapipe::LLMCa
     bool applyRotation = nodeOptions.cache_eviction_config().apply_rotation();
     size_t snapkvWindowSize = nodeOptions.cache_eviction_config().snapkv_window_size();
 
-     ov::genai::KVCrushConfig kvcrushConfig;
+    ov::genai::KVCrushConfig kvcrushConfig;
     if (nodeOptions.cache_eviction_config().has_kv_crush_config()) {
         ov::genai::KVCrushAnchorPointMode anchorPointMode;
         switch (nodeOptions.cache_eviction_config().kv_crush_config().anchor_point_mode()) {
