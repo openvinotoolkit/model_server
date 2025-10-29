@@ -98,3 +98,31 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+ovms_cc_library(
+    name = "tts_graph_cli_parser",
+    srcs = ["tts_graph_cli_parser.cpp"],
+    hdrs = ["tts_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "stt_graph_cli_parser",
+    srcs = ["stt_graph_cli_parser.cpp"],
+    hdrs = ["stt_graph_cli_parser.hpp"],
+    deps =  [
+        "@ovms//src/graph_export:graph_cli_parser",
+        "@ovms//src:cpp_headers",
+        "@ovms//src:libovms_server_settings",
+        "@ovms//src:ovms_exit_codes",
+        "@com_github_jarro2783_cxxopts//:cxxopts",
+    ],
+    visibility = ["//visibility:public"],
+)

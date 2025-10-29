@@ -28,6 +28,8 @@ enum GraphExportType : unsigned int {
     RERANK_GRAPH,
     EMBEDDINGS_GRAPH,
     IMAGE_GENERATION_GRAPH,
+    TEXT_TO_SPEECH_GRAPH,
+    SPEECH_TO_TEXT_GRAPH,
     UNKNOWN_GRAPH
 };
 
@@ -43,6 +45,8 @@ const std::map<GraphExportType, std::string> typeToString = {
     {RERANK_GRAPH, "rerank"},
     {EMBEDDINGS_GRAPH, "embeddings"},
     {IMAGE_GENERATION_GRAPH, "image_generation"},
+    {TEXT_TO_SPEECH_GRAPH, "text_to_speech"},
+    {SPEECH_TO_TEXT_GRAPH, "speech_to_text"},
     {UNKNOWN_GRAPH, "unknown_graph"}};
 
 const std::map<std::string, GraphExportType> stringToType = {
@@ -50,6 +54,8 @@ const std::map<std::string, GraphExportType> stringToType = {
     {"rerank", RERANK_GRAPH},
     {"embeddings", EMBEDDINGS_GRAPH},
     {"image_generation", IMAGE_GENERATION_GRAPH},
+    {"text_to_speech", TEXT_TO_SPEECH_GRAPH},
+    {"speech_to_text", SPEECH_TO_TEXT_GRAPH},
     {"unknown_graph", UNKNOWN_GRAPH}};
 
 std::string enumToString(GraphExportType type);
@@ -120,6 +126,22 @@ struct EmbeddingsGraphSettingsImpl {
     std::string pooling = "CLS";
 };
 
+struct TextToSpeechGraphSettingsImpl {
+    std::string modelPath = "./";
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+};
+
+
+struct SpeechToTextGraphSettingsImpl {
+    std::string modelPath = "./";
+    std::string targetDevice = "CPU";
+    std::string modelName = "";
+    uint32_t numStreams = 1;
+};
+
+
 struct RerankGraphSettingsImpl {
     std::string modelPath = "./";
     std::string targetDevice = "CPU";
@@ -146,6 +168,7 @@ struct ImageGenerationGraphSettingsImpl {
 struct ExportSettings {
     std::string targetDevice = "CPU";
     std::optional<std::string> extraQuantizationParams;
+    std::optional<std::string> vocoder;
     std::string precision = "int8";
 };
 
@@ -157,7 +180,7 @@ struct HFSettingsImpl {
     bool overwriteModels = false;
     ModelDownlaodType downloadType = GIT_CLONE_DOWNLOAD;
     GraphExportType task = TEXT_GENERATION_GRAPH;
-    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
+    std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, TextToSpeechGraphSettingsImpl, SpeechToTextGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
 struct ServerSettingsImpl {

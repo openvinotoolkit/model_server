@@ -52,6 +52,8 @@ protected:
     std::string getConvertCmdOnlyTokenizer();
     std::string getExportCmdText();
     std::string getExportCmdEmbeddings();
+    std::string getExportCmdTextToSpeech();
+    std::string getExportCmdSpeechToText();
     std::string getExportCmdRerank();
     std::string getExportCmdImageGeneration();
 };
