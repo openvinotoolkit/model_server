@@ -89,9 +89,9 @@ TEST(CAPIConfigTest, MultiModelConfiguration) {
     EXPECT_EQ(serverSettings->grpcPort, 0);
     EXPECT_EQ(serverSettings->restPort, 0);
     EXPECT_EQ(serverSettings->grpcWorkers, 1);
-    EXPECT_EQ(serverSettings->grpcBindAddress, "0:0:0:0:0:0:0:0");
+    EXPECT_EQ(serverSettings->grpcBindAddress, "0.0.0.0,::");
     EXPECT_EQ(serverSettings->restWorkers, std::nullopt);
-    EXPECT_EQ(serverSettings->restBindAddress, "0:0:0:0:0:0:0:0");
+    EXPECT_EQ(serverSettings->restBindAddress, "0.0.0.0,::");
     EXPECT_EQ(serverSettings->metricsEnabled, false);
     EXPECT_EQ(serverSettings->metricsList, "");
     EXPECT_EQ(serverSettings->cpuExtensionLibraryPath, "");
