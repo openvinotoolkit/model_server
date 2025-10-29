@@ -2016,9 +2016,9 @@ TEST_F(OvmsParamsTest, check_is_ipv6_address) {
     EXPECT_EQ(ovms::Config::is_ipv6("::"), true);
     EXPECT_EQ(ovms::Config::is_ipv6("64:ff9b::192.0.2.33"), true);
     EXPECT_EQ(ovms::Config::is_ipv6("2001:db8:122:344::192.0.2.33"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:192.0.2.128"), true);
+    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:0:192.0.2.128"), true);
 
-    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:192.0.2.128"), false);
-    EXPECT_EQ(ovms::Config::is_ipv6("::ffff:0:192.0.2.128"), false);
     EXPECT_EQ(ovms::Config::is_ipv6("127.0.0.1"), false);
     EXPECT_EQ(ovms::Config::is_ipv6("192.0.2.33"), false);
 }
