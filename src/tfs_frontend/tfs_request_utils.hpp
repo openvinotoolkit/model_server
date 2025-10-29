@@ -25,7 +25,6 @@
 #pragma GCC diagnostic pop
 #include "../extractchoice.hpp"
 #include "../requesttensorextractor.hpp"
-#include "../statefulrequestprocessor.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
 #include "../shape.hpp"
@@ -56,9 +55,4 @@ public:
  * any other frontend.
  */
 bool useSharedOutputContentFn(const tensorflow::serving::PredictRequest* request);
-
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::extractRequestParameters(const tensorflow::serving::PredictRequest* request);
-template <>
-Status StatefulRequestProcessor<tensorflow::serving::PredictRequest, tensorflow::serving::PredictResponse>::postInferenceProcessing(tensorflow::serving::PredictResponse* response, ov::InferRequest& inferRequest);
 }  // namespace ovms

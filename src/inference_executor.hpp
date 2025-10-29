@@ -32,7 +32,6 @@
 #include "outputkeeper.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "requestprocessor.hpp"
-#include "statefulrequestprocessor.hpp"
 
 #include "deserialization_common.hpp"
 #include "serialization_common.hpp"
@@ -223,14 +222,7 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
     OVMS_PROFILE_FUNCTION();
     Timer<TIMER_END> timer;
     using std::chrono::microseconds;
-    auto processorManager = instance.getSequenceManager();
-    std::unique_ptr<RequestProcessor<RequestType, ResponseType>> requestProcessor;
-    if (processorManager) {
-        requestProcessor = std::make_unique<StatefulRequestProcessor<RequestType, ResponseType>>(*processorManager);
-
-    } else {
-        requestProcessor = std::make_unique<RequestProcessor<RequestType, ResponseType>>();
-    }
+    std::unique_ptr<RequestProcessor<RequestType, ResponseType>> requestProcessor = std::make_unique<RequestProcessor<RequestType, ResponseType>>();
     auto status = requestProcessor->extractRequestParameters(requestProto);
     if (!status.ok())
         return status;

@@ -57,7 +57,6 @@ class MetricRegistry;
 class ModelConfig;
 class FileSystem;
 class MediapipeGraphExecutor;
-struct FunctorSequenceCleaner;
 struct FunctorResourcesCleaner;
 class PythonBackend;
 /**
@@ -73,9 +72,7 @@ public:
 protected:
     void logPluginConfiguration();
 
-    Status checkStatefulFlagChange(const std::string& modelName, bool configStatefulFlag);
-
-    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name, const bool isStateful);
+    std::shared_ptr<ovms::Model> getModelIfExistCreateElse(const std::string& name);
 
     /**
      * @brief A collection of models
@@ -90,7 +87,6 @@ protected:
 #endif
     std::unique_ptr<CustomNodeLibraryManager> customNodeLibraryManager;
     std::vector<std::shared_ptr<CNLIMWrapper>> resources = {};
-    GlobalSequencesViewer globalSequencesViewer;
     uint32_t waitForModelLoadedTimeoutMs;
 
 private:
@@ -445,8 +441,8 @@ public:
      * 
      * @return std::shared_ptr<Model> 
      */
-    virtual std::shared_ptr<Model> modelFactory(const std::string& name, const bool isStateful) {
-        return std::make_shared<Model>(name, isStateful, &this->globalSequencesViewer);
+    virtual std::shared_ptr<Model> modelFactory(const std::string& name) {
+        return std::make_shared<Model>(name);
     }
 
     /**
@@ -507,6 +503,6 @@ public:
     MetricRegistry* getMetricRegistry() const { return this->metricRegistry; }
 };
 
-void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, uint32_t sequenceCleanerInterval, FunctorSequenceCleaner& functorSequenceCleaner, std::future<void>& cleanerExitSignal);
+void cleanerRoutine(uint32_t resourcesCleanupInterval, FunctorResourcesCleaner& functorResourcesCleaner, std::future<void>& cleanerExitSignal);
 
 }  // namespace ovms

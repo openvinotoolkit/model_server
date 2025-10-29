@@ -24,13 +24,10 @@
 #include <crtdbg.h>
 #endif
 
-#include "global_sequences_viewer.hpp"
 #include "logging.hpp"
 #include "modelmanager.hpp"
 
 namespace ovms {
-FunctorSequenceCleaner::FunctorSequenceCleaner(GlobalSequencesViewer& globalSequencesViewer) :
-    globalSequencesViewer(globalSequencesViewer) {}
 
 #ifdef _WIN32
 bool malloc_trim_win() {
@@ -44,18 +41,6 @@ bool malloc_trim_win() {
     return true;
 }
 #endif
-
-void FunctorSequenceCleaner::cleanup() {
-    globalSequencesViewer.removeIdleSequences();
-    SPDLOG_TRACE("malloc_trim(0)");
-#ifdef __linux__
-    malloc_trim(0);
-#elif _WIN32
-    malloc_trim_win();
-#endif
-}
-
-FunctorSequenceCleaner::~FunctorSequenceCleaner() = default;
 
 FunctorResourcesCleaner::~FunctorResourcesCleaner() = default;
 
