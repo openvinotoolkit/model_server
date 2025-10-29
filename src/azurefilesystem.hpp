@@ -133,6 +133,15 @@ public:
 
 private:
     /**
+   * @brief Helper method to create Azure storage object and check path
+   *
+   * @param path Remote path to check
+   * @param azureStorageObj Output parameter for the created storage object
+   * @return StatusCode
+   */
+    StatusCode createAndCheckAzureStorageObject(const std::string& path, std::shared_ptr<AzureStorageAdapter>& azureStorageObj);
+
+    /**
    *
    * @brief
    *
