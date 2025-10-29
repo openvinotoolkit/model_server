@@ -129,11 +129,12 @@ void Phi4ToolParser::parse(ParsedOutput& parsedOutput, const std::vector<int64_t
         rapidjson::Document toolsDoc;
         toolsDoc.Parse(toolsString.c_str());
         if (!toolsDoc.HasParseError() && parseToolCallsFromJsonArray(toolsDoc, parsedOutput.toolCalls)) {
-            // Successfully parsed tool calls, remove the tools part from the content
-            parsedOutput.content.erase(toolsStartPos);
+            // Successfully parsed tool calls
         } else {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse functools content or extract tools array");
         }
+        // Remove the tools part from the content regardless of parsing success
+        parsedOutput.content.erase(toolsStartPos);
     }
 }
 
