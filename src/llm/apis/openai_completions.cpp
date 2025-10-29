@@ -441,9 +441,9 @@ std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjs
         auto& jsonSchema = flatFormatDoc["json_schema"];
         if (jsonSchema.HasMember("schema") && jsonSchema["schema"].IsObject()) {
             // Move all members from "schema" to "json_schema"
-            auto& schemaObj = jsonSchema["schema"];
-            for (auto itr = schemaObj.MemberBegin(); itr != schemaObj.MemberEnd(); ++itr) {
-                // Move each member to jsonSchema
+            rapidjson::Value schemaObjCopy;
+            schemaObjCopy.CopyFrom(jsonSchema["schema"], flatFormatDoc.GetAllocator());  // Make a copy as we will modify jsonSchema
+            for (auto itr = schemaObjCopy.MemberBegin(); itr != schemaObjCopy.MemberEnd(); ++itr) {
                 rapidjson::Value key;
                 key.CopyFrom(itr->name, flatFormatDoc.GetAllocator());
                 rapidjson::Value value;
