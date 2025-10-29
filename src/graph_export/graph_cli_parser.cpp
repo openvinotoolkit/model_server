@@ -57,8 +57,8 @@ void GraphCLIParser::createOptions() {
             cxxopts::value<uint32_t>(),
             "MAX_NUM_BATCHED_TOKENS")
         ("cache_size",
-            "cache size in GB, default is 1.",
-            cxxopts::value<uint32_t>()->default_value("1"),
+            "cache size in GB, default is 10.",
+            cxxopts::value<uint32_t>()->default_value("10"),
             "CACHE_SIZE")
         ("draft_source_model",
             "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
