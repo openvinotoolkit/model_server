@@ -427,8 +427,49 @@ std::optional<int> OpenAIChatCompletionsHandler::getMaxTokens() const {
     return request.maxTokens;
 }
 
-std::optional<std::string> OpenAIChatCompletionsHandler::getResponseSchema() const {
-    return request.responseSchema;
+std::optional<std::string> OpenAIChatCompletionsHandler::getResponseFormat() const {
+    return request.responseFormat;
+}
+
+std::string convertOpenAIResponseFormatToStructuralTagStringFormat(const rapidjson::Value& openAIFormat) {
+    // Build the new object: {"type": "structural_tag", "format": <openAIFormat>}
+    // If response_format has {"json_schema": {"schema": {...}}}, flatten it to {"json_schema": {...}}
+    rapidjson::Document flatFormatDoc;
+    flatFormatDoc.CopyFrom(openAIFormat, flatFormatDoc.GetAllocator());
+
+    if (flatFormatDoc.HasMember("json_schema") && flatFormatDoc["json_schema"].IsObject()) {
+        auto& jsonSchema = flatFormatDoc["json_schema"];
+        if (jsonSchema.HasMember("schema") && jsonSchema["schema"].IsObject()) {
+            // Move all members from "schema" to "json_schema"
+            rapidjson::Value schemaObjCopy;
+            schemaObjCopy.CopyFrom(jsonSchema["schema"], flatFormatDoc.GetAllocator());  // Make a copy as we will modify jsonSchema
+            for (auto itr = schemaObjCopy.MemberBegin(); itr != schemaObjCopy.MemberEnd(); ++itr) {
+                rapidjson::Value key;
+                key.CopyFrom(itr->name, flatFormatDoc.GetAllocator());
+                rapidjson::Value value;
+                value.CopyFrom(itr->value, flatFormatDoc.GetAllocator());
+                jsonSchema.AddMember(key, value, flatFormatDoc.GetAllocator());
+            }
+            // Remove the "schema" member
+            jsonSchema.RemoveMember("schema");
+        }
+    }
+
+    // Serialize the flattened response_format object
+    rapidjson::StringBuffer formatBuffer;
+    rapidjson::Writer<rapidjson::StringBuffer> formatWriter(formatBuffer);
+    flatFormatDoc.Accept(formatWriter);
+
+    // Build the new object: {"type": "structural_tag", "format": <flattened>}
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("type");
+    writer.String("structural_tag");
+    writer.Key("format");
+    writer.RawValue(formatBuffer.GetString(), formatBuffer.GetSize(), rapidjson::kObjectType);
+    writer.EndObject();
+    return buffer.GetString();
 }
 
 absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optional<uint32_t> maxTokensLimit, std::optional<std::string> allowedLocalMediaPath) {
@@ -475,36 +516,8 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             return absl::OkStatus();
         if (!it->value.IsObject())
             return absl::InvalidArgumentError("response_format is not an object");
-        auto responseFormat = it->value.GetObject();
-        auto typeIt = responseFormat.FindMember("type");
-        if (typeIt != responseFormat.MemberEnd()) {
-            if (!typeIt->value.IsString())
-                return absl::InvalidArgumentError("response_format.type is not a string");
-            if (std::string(typeIt->value.GetString()) != "json_schema") {
-                return absl::InvalidArgumentError("response_format.type can be only json_schema");
-            } else {
-                auto jsonSchemaIt = responseFormat.FindMember("json_schema");
-                if (jsonSchemaIt != responseFormat.MemberEnd()) {
-                    if (!jsonSchemaIt->value.IsObject())
-                        return absl::InvalidArgumentError("response_format.json_schema is not an object");
-                    auto jsonSchema = jsonSchemaIt->value.GetObject();
-                    auto schemaIt = jsonSchema.FindMember("schema");
-                    if (schemaIt == jsonSchema.MemberEnd())
-                        return absl::InvalidArgumentError("response_format.json_schema.schema is missing");
-                    if (!schemaIt->value.IsObject())
-                        return absl::InvalidArgumentError("response_format.json_schema.schema is not an object");
-                    // Convert schema value to a JSON string and assign to optional string responseSchema
-                    StringBuffer schemaBuffer;
-                    Writer<StringBuffer> schemaWriter(schemaBuffer);
-                    schemaIt->value.Accept(schemaWriter);
-                    request.responseSchema = std::make_optional<std::string>(schemaBuffer.GetString());
-                } else {
-                    return absl::InvalidArgumentError("response_format.json_schema is missing");
-                }
-            }
-        } else {
-            return absl::InvalidArgumentError("response_format.type is missing");
-        }
+        const rapidjson::Value& responseFormat = it->value;
+        request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
     }
 
     return absl::OkStatus();
