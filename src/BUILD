@@ -2278,7 +2278,8 @@ ovms_cc_library(
         "libovmslogging",
         "libovmsstatus",
         "libhttp_status_code",
-        "libovms_config"
+        "libovms_config",
+        "libovmsstring_utils",
     ],
     visibility = ["//visibility:public",],
 )

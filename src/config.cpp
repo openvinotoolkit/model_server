@@ -73,7 +73,7 @@ bool Config::is_ipv6(const std::string& s) {
     const int rc = getaddrinfo(s.c_str(), nullptr, &hints, &res);
     if (res)
         freeaddrinfo(res);
-    return rc == 0;  // accepts compressed forms and scope IDs like "%eth0"
+    return rc == 0;
 }
 
 bool Config::check_hostname_or_ip(const std::string& input) {

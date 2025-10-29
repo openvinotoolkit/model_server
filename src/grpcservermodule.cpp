@@ -97,7 +97,7 @@ GRPCServerModule::GRPCServerModule(Server& server) :
     tfsModelService(this->server),
     kfsGrpcInferenceService(this->server) {}
 
-std::string host_with_port(const std::string& host, int port) {
+static std::string host_with_port(const std::string& host, int port) {
     if (Config::is_ipv6(host)) {
         return "[" + host + "]:" + std::to_string(port);
     } else {
