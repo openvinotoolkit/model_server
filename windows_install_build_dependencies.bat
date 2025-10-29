@@ -208,10 +208,10 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 if "%OV_SOURCE_BRANCH%"=="" (
-    set "OV_SOURCE_BRANCH=d19dc49a3adc1c8d76f97961452e79809d7ab615"
+    set "OV_SOURCE_BRANCH=75faaca08be7fa9649cf9949381e3c0a9c36409d"
 )
 if "%OV_SOURCE_ORG%"=="" (
-    set "OV_SOURCE_ORG=openvinotoolkit"
+    set "OV_SOURCE_ORG=praasz"
 )
 if "%TOKENIZER_SOURCE_ORG%"=="" (
     set "TOKENIZER_SOURCE_ORG=openvinotoolkit"
@@ -223,7 +223,7 @@ if "%GENAI_SOURCE_ORG%"=="" (
     set "GENAI_SOURCE_ORG=openvinotoolkit"
 )
 if "%GENAI_SOURCE_BRANCH%"=="" (
-    set "GENAI_SOURCE_BRANCH=5099a65f86ded4e281519b51c2cd15f863163f71"
+    set "GENAI_SOURCE_BRANCH=5a24025053ed3635ec7731d6e6f978f6b0b5ad3e"
 )
 
 IF /I NOT EXIST %BAZEL_SHORT_PATH%\openvino_src (
