@@ -282,7 +282,6 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t sequenceCleanerPollWaitMinutes() const;
 
     /**
      * @brief Get the resources cleanup poll wait time in seconds

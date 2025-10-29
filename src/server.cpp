@@ -105,12 +105,8 @@ static void logConfig(const Config& config) {
         SPDLOG_DEBUG("nireq: {}", config.nireq());
         SPDLOG_DEBUG("target_device: {}", config.targetDevice());
         SPDLOG_DEBUG("plugin_config: {}", config.pluginConfig());
-        SPDLOG_DEBUG("stateful: {}", config.stateful());
         SPDLOG_DEBUG("metrics_enabled: {}", config.metricsEnabled());
         SPDLOG_DEBUG("metrics_list: {}", config.metricsList());
-        SPDLOG_DEBUG("idle_sequence_cleanup: {}", config.idleSequenceCleanup());
-        SPDLOG_DEBUG("max_sequence_number: {}", config.maxSequenceNumber());
-        SPDLOG_DEBUG("low_latency_transformation: {}", config.lowLatencyTransformation());
     } else {
         SPDLOG_DEBUG("config_path: {}", config.configPath());
     }
@@ -125,7 +121,6 @@ static void logConfig(const Config& config) {
     SPDLOG_DEBUG("log path: {}", config.logPath());
     SPDLOG_TRACE("API key: {}", config.getServerSettings().apiKey);
     SPDLOG_DEBUG("file system poll wait milliseconds: {}", config.filesystemPollWaitMilliseconds());
-    SPDLOG_DEBUG("sequence cleaner poll wait minutes: {}", config.sequenceCleanerPollWaitMinutes());
     SPDLOG_DEBUG("model_repository_path: {}", config.getServerSettings().hfSettings.downloadPath);
 }
 
