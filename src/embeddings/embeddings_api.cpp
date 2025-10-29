@@ -57,8 +57,10 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
         if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
             request.input = std::get<std::vector<std::string>>(inputVariant);
-        } else {
+        } else if (std::holds_alternative<std::vector<std::vector<int64_t>>>(inputVariant)) {
             request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
+        } else {
+            return "input must be either array of strings or array of array of integers";
         }
     }
 
@@ -99,7 +101,7 @@ absl::Status EmbeddingsHandler::parseRequest() {
     return absl::OkStatus();
 }
 
-std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& EmbeddingsHandler::getInput() {
+TokenizeRequest::InputDataType& EmbeddingsHandler::getInput() {
     return request.input;
 }
 EmbeddingsRequest::EncodingFormat EmbeddingsHandler::getEncodingFormat() const {

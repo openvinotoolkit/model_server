@@ -62,7 +62,7 @@ public:
     EmbeddingsHandler(rapidjson::Document& document) :
         doc(document) {}
 
-    std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>& getInput();
+    TokenizeRequest::InputDataType& getInput();
     EmbeddingsRequest::EncodingFormat getEncodingFormat() const;
     ov::AnyMap& getParameters();
 

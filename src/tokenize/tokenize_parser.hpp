@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <openvino/runtime/tensor.hpp>
+#include <openvino/genai/tokenizer.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386 6011 6246)
@@ -42,7 +43,7 @@
 namespace ovms {
 
 struct TokenizeRequest {
-    using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>>;
+    using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>, std::vector<std::vector<std::string>>>;
     InputDataType input;
     ov::AnyMap parameters = {};
 };
@@ -50,7 +51,7 @@ struct TokenizeRequest {
 class TokenizeParser {
 public:
     static std::variant<TokenizeRequest::InputDataType, std::string> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
-    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& inputIdsTensor);
+    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {});
     static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request);
     static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson);
 };

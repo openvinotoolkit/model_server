@@ -24,24 +24,39 @@
 #pragma warning(pop)
 
 namespace ovms {
-absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::Tensor& inputIdsTensor) {
+absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
     writer.StartObject();
     writer.String("tokens");
-    ov::Shape outputShape = inputIdsTensor.get_shape();
+    ov::Shape outputShape = tokens.input_ids.get_shape();
+    auto inputIdsTensor = tokens.input_ids;
+    auto attentionMaskTensor = tokens.attention_mask;
+    auto pad_to_max_length = parameters.find("pad_to_max_length") != parameters.end() ? parameters.at("pad_to_max_length").as<bool>() : false;
     if (outputShape.size() != 2) {
         return absl::InvalidArgumentError("Invalid input ids tensor shape");
     }
-    writer.StartArray();
+
+    const bool isBatched = outputShape[0] > 1;
+    if(isBatched) {
+        writer.StartArray();
+    }
     for (size_t batchIterator = 0; batchIterator < outputShape[0]; batchIterator++) {
+        writer.StartArray();
         size_t size = outputShape[1];
         int64_t* dataPtr = reinterpret_cast<int64_t*>(inputIdsTensor.data()) + batchIterator * size;
+        int64_t* attentionMaskPtr = reinterpret_cast<int64_t*>(attentionMaskTensor.data()) + batchIterator * size;
         for (size_t i = 0; i < size; ++i) {
+            if (attentionMaskPtr[i] == 0 && !pad_to_max_length) {
+                break;
+            }
             writer.Int64(dataPtr[i]);
         }
+        writer.EndArray();
     }
-    writer.EndArray();
+    if(isBatched) {
+        writer.EndArray();
+    }
     writer.EndObject();
     return absl::OkStatus();
 }
@@ -114,11 +129,13 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
     enum class InputType {
         NONE,
         STRING,
+        STRING_VEC,
         INT,
         INT_VEC
     };
 
     std::vector<std::string> input_strings;
+    std::vector<std::vector<std::string>> input_string_vectors;
     std::vector<std::vector<int64_t>> input_tokens;
 
     auto it = parsedJson.FindMember(field_name.c_str());
@@ -133,18 +150,33 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
-                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC)
+                    if (input_type != InputType::NONE && input_type != InputType::INT_VEC && input_type != InputType::STRING_VEC)
                         return field_name + " must be homogeneous";
-                    input_type = InputType::INT_VEC;
-                    std::vector<int64_t> ints;
-                    ints.reserve(input.GetArray().Size());
-                    for (auto& val : input.GetArray()) {
-                        if (val.IsInt())
-                            ints.push_back(val.GetInt());
-                        else
-                            return field_name + " must be homogeneous";
-                    }
+                    if (input.GetArray()[0].IsInt()) {
+                        input_type = InputType::INT_VEC;
+                        std::vector<int64_t> ints;
+                        ints.reserve(input.GetArray().Size());
+                        for (auto& val : input.GetArray()) {
+                            if (val.IsInt())
+                                ints.push_back(val.GetInt());
+                            else
+                                return field_name + " must be homogeneous";
+                        }
                     input_tokens.emplace_back(std::move(ints));
+                    } else if (input.GetArray()[0].IsString()) {
+                        input_type = InputType::STRING_VEC;
+                        std::vector<std::string> strings;
+                        strings.reserve(input.GetArray().Size());
+                        for (auto& val : input.GetArray()) {
+                            if (val.IsString())
+                                strings.push_back(val.GetString());
+                            else
+                                return field_name + " must be homogeneous";
+                        }
+                        input_string_vectors.emplace_back(std::move(strings));
+                    } else {
+                        return "every element in " + field_name + " array should be either string or int";
+                    }
                 } else if (input.IsString()) {
                     if (input_type != InputType::NONE && input_type != InputType::STRING)
                         return field_name + " must be homogeneous";
@@ -173,6 +205,8 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
         return input_strings;
     } else if (input_tokens.size() > 0) {
         return input_tokens;
+    } else if (input_string_vectors.size() > 0) {
+        return input_string_vectors;
     } else {
         return field_name + " field is required";
     }

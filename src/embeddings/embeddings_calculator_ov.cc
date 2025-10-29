@@ -66,11 +66,7 @@ class EmbeddingsCalculatorOV : public CalculatorBase {
     absl::Status tokenizeStrings(ov::genai::Tokenizer& tokenizer, const std::vector<std::string>& inputStrings, const ov::AnyMap& parameters, ov::genai::TokenizedInputs& tokens, const size_t& max_context_length) {
         tokens = tokenizer.encode(inputStrings, parameters);
         RET_CHECK(tokens.input_ids.get_shape().size() == 2);
-        size_t input_ids_size = tokens.input_ids.get_shape()[1];
-        if (input_ids_size > max_context_length) {
-            SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
-            return absl::InvalidArgumentError("Input length " + std::to_string(input_ids_size) + " longer than allowed " + std::to_string(max_context_length));
-        }
+
         return absl::OkStatus();
     }
 
@@ -148,7 +144,7 @@ public:
             }
 
             StringBuffer responseBuffer;
-            auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens.input_ids);
+            auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
             if (!responseStatus.ok()) {
                 return responseStatus;
             }
@@ -179,6 +175,12 @@ public:
                 absl::Status tokenizationStatus = this->tokenizeStrings(embeddings_session->getTokenizer(), *strings, params, tokens, max_context_length);
                 if (!tokenizationStatus.ok()) {
                     return tokenizationStatus;
+                }
+
+                size_t input_ids_size = tokens.input_ids.get_shape()[1];
+                if (input_ids_size > max_context_length) {
+                    SPDLOG_LOGGER_DEBUG(embeddings_calculator_logger, "Input size {} exceeds max_context_length {}", input_ids_size, max_context_length);
+                    return absl::InvalidArgumentError("Input length " + std::to_string(input_ids_size) + " longer than allowed " + std::to_string(max_context_length));
                 }
 
                 if (embeddings_session->getNumberOfModelInputs() == 3) {

@@ -661,6 +661,23 @@ public:
             ASSERT_EQ(d["tokens"][(rapidjson::SizeType)i].GetInt(), expectedTokens[i]);
         }
     }
+
+    static void AssertTokenizationResult(const std::string& response, const std::vector<std::vector<int>>& expectedTokensBatch) {
+        rapidjson::Document d;
+        rapidjson::ParseResult ok = d.Parse(response.c_str());
+        ASSERT_EQ(ok.Code(), 0);
+        ASSERT_TRUE(d.HasMember("tokens"));
+        ASSERT_TRUE(d["tokens"].IsArray());
+        ASSERT_EQ(d["tokens"].Size(), expectedTokensBatch.size());
+        for (size_t i = 0; i < expectedTokensBatch.size(); ++i) {
+            const auto& expectedTokens = expectedTokensBatch[i];
+            ASSERT_TRUE(d["tokens"][(rapidjson::SizeType)i].IsArray());
+            ASSERT_EQ(d["tokens"][(rapidjson::SizeType)i].Size(), expectedTokens.size());
+            for (size_t j = 0; j < expectedTokens.size(); ++j) {
+                ASSERT_EQ(d["tokens"][(rapidjson::SizeType)i][(rapidjson::SizeType)j].GetInt(), expectedTokens[j]);
+            }
+        }
+    }
 };
 
 std::unique_ptr<std::thread> EmbeddingsTokenizeHttpTest::t;
@@ -795,7 +812,7 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveAddSpecialTokensFalse) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
-TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLengthExceeded) {
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveMaxLengthIgnored) {
     std::string requestBody = R"(
         {
             "model": "embeddings_ov",
@@ -804,9 +821,56 @@ TEST_F(EmbeddingsTokenizeHttpTest, tokenizeNegativeMaxLengthExceeded) {
             "pad_to_max_length": true
         }
     )";
+    std::vector<int> expectedTokens(509, 0);
+    expectedTokens.insert(expectedTokens.begin(), {101, 7592, 2088, 102});
+    ASSERT_EQ(handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    AssertTokenizationResult(response, expectedTokens);
+}
+
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizePositiveBatch) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": ["hello", "hello world", "hello hello hello world"]
+        }
+    )";
     Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    std::vector<std::vector<int>> expectedTokens = {
+        {101, 7592, 102},
+        {101, 7592, 2088, 102},
+        {101, 7592, 7592, 7592, 2088, 102}};
     rapidjson::Document d;
     rapidjson::ParseResult ok = d.Parse(response.c_str());
-    ASSERT_EQ(ok.Code(), 1);
-    ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    AssertTokenizationResult(response, expectedTokens);
+
+}
+
+TEST_F(EmbeddingsTokenizeHttpTest, tokenizeBatchWithPadToMaxLen) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings_ov",
+            "text": ["hello", "hello world", "hello hello hello world"],
+            "max_length": 6,
+            "pad_to_max_length": true
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    std::vector<std::vector<int>> expectedTokens = {
+        {101, 7592, 102, 0, 0, 0},
+        {101, 7592, 2088, 102, 0, 0},
+        {101, 7592, 7592, 7592, 2088, 102}};
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(response.c_str());
+    ASSERT_EQ(ok.Code(), 0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    AssertTokenizationResult(response, expectedTokens);
+
 }
