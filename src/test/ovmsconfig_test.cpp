@@ -2021,6 +2021,7 @@ TEST_F(OvmsParamsTest, check_is_ipv6_address) {
 
     EXPECT_EQ(ovms::Config::is_ipv6("127.0.0.1"), false);
     EXPECT_EQ(ovms::Config::is_ipv6("192.0.2.33"), false);
+    EXPECT_EQ(ovms::Config::is_ipv6("10.0.0.255"), false);
 }
 
 TEST(OvmsConfigTest, positiveMulti) {
