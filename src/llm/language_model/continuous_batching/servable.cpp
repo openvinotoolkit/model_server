@@ -59,6 +59,11 @@ absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<Co
         return absl::InvalidArgumentError("Input length exceeds pipeline capabilities: " + std::to_string(executionContext->inputIds.get_size()) +
                                           " > " + std::to_string(properties->schedulerConfig.max_num_batched_tokens));
     }
+    ov::genai::GenerationConfig& config = executionContext->generationConfigBuilder->getConfig();
+    if (config.is_assisting_generation() and config.assistant_confidence_threshold == 0.0f and config.num_assistant_tokens == 0) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Assisting generation requested but assistant confidence threshold is not set");
+        config.num_assistant_tokens = 5;  // default value for speculative decoding if not set
+    }
     executionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         executionContext->inputIds,
         executionContext->generationConfigBuilder->getConfig());
