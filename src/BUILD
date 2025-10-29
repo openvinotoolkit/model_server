@@ -305,6 +305,8 @@ ovms_cc_library(
         "//src/graph_export:graph_cli_parser",
         "//src/graph_export:rerank_graph_cli_parser",
         "//src/graph_export:embeddings_graph_cli_parser",
+        "//src/graph_export:tts_graph_cli_parser",
+        "//src/graph_export:stt_graph_cli_parser",
         "//src/graph_export:image_generation_graph_cli_parser",
     ],
     visibility = ["//visibility:public",],

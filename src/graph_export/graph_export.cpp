@@ -292,6 +292,93 @@ node {
     return createPbtxtFile(directoryPath, oss.str());
 }
 
+static Status createTextToSpeechGraphTemplate(const std::string& directoryPath, const TextToSpeechGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
+
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "TtsCalculator"
+    input_side_packet: "TTS_NODE_RESOURCES:tts_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.TtsCalculatorOptions]: {
+            models_path: ")"
+            << graphOkPath << R"(",
+            target_device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+        }
+    }
+})";
+
+#if (MEDIAPIPE_DISABLE == 0)
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+#endif
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
+static Status createSpeechToTextGraphTemplate(const std::string& directoryPath, const SpeechToTextGraphSettingsImpl& graphSettings) {
+    std::ostringstream oss;
+    oss << OVMS_VERSION_GRAPH_LINE;
+    // Windows path creation - graph parser needs forward slashes in paths
+    std::string graphOkPath = graphSettings.modelPath;
+    if (FileSystem::getOsSeparator() != "/") {
+        std::replace(graphOkPath.begin(), graphOkPath.end(), '\\', '/');
+    }
+
+    // clang-format off
+    oss << R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: ")"
+    << graphSettings.modelName << R"(",
+    calculator: "SttCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:stt_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com / mediapipe.SttCalculatorOptions]: {
+            models_path: ")"
+            << graphOkPath << R"(",
+            target_device: ")" << graphSettings.targetDevice << R"(",
+            plugin_config: '{ "NUM_STREAMS": ")" << graphSettings.numStreams << R"("}',
+        }
+    }
+})";
+
+#if (MEDIAPIPE_DISABLE == 0)
+    ::mediapipe::CalculatorGraphConfig config;
+    bool success = ::google::protobuf::TextFormat::ParseFromString(oss.str(), &config);
+    if (!success) {
+        SPDLOG_ERROR("Created embeddings graph config couldn't be parsed.");
+        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+#endif
+    // clang-format on
+    std::string fullPath = FileSystem::joinPath({directoryPath, "graph.pbtxt"});
+    return FileSystem::createFileOverwrite(fullPath, oss.str());
+}
+
+
 static Status createImageGenerationGraphTemplate(const std::string& directoryPath, const HFSettingsImpl& hfSettings) {
     if (!std::holds_alternative<ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings)) {
         SPDLOG_ERROR("Graph options not initialized for image generation.");
@@ -408,6 +495,20 @@ Status GraphExport::createServableConfig(const std::string& directoryPath, const
         return createRerankGraphTemplate(directoryPath, hfSettings);
     } else if (hfSettings.task == IMAGE_GENERATION_GRAPH) {
         return createImageGenerationGraphTemplate(directoryPath, hfSettings);
+    } else if (hfSettings.task == TEXT_TO_SPEECH_GRAPH) {
+        if (std::holds_alternative<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createTextToSpeechGraphTemplate(directoryPath, std::get<TextToSpeechGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for image generation.");
+            return StatusCode::INTERNAL_ERROR;
+        }
+    } else if (hfSettings.task == SPEECH_TO_TEXT_GRAPH) {
+        if (std::holds_alternative<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings)) {
+            return createSpeechToTextGraphTemplate(directoryPath, std::get<SpeechToTextGraphSettingsImpl>(hfSettings.graphSettings));
+        } else {
+            SPDLOG_ERROR("Graph options not initialized for image generation.");
+            return StatusCode::INTERNAL_ERROR;
+        }
     } else if (hfSettings.task == UNKNOWN_GRAPH) {
         SPDLOG_ERROR("Graph options not initialized.");
         return StatusCode::INTERNAL_ERROR;
