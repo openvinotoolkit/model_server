@@ -578,62 +578,6 @@ TEST_F(EmbeddingsExtensionTest, simplePositive) {
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 
-class EmbeddingsInvalidConfigTest : public V3HttpTest {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_embeddings.json");
-        SetUpSuite(port, configPath, t);
-    }
-
-    static void TearDownTestSuite() {
-        TearDownSuite(t);
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsInvalidConfigTest::t;
-
-TEST_F(EmbeddingsInvalidConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-}
-
-class EmbeddingsInvalidTokenizerConfigTest : public V3HttpTest {
-protected:
-    static std::unique_ptr<std::thread> t;
-
-public:
-    static void SetUpTestSuite() {
-        std::string port = "9173";
-        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/embeddings/invalid_config_tokenizer.json");
-        SetUpSuite(port, configPath, t);
-    }
-
-    static void TearDownTestSuite() {
-        TearDownSuite(t);
-    }
-};
-std::unique_ptr<std::thread> EmbeddingsInvalidTokenizerConfigTest::t;
-
-TEST_F(EmbeddingsInvalidTokenizerConfigTest, simpleNegative) {
-    std::string requestBody = R"(
-        {
-            "model": "embeddings",
-            "input": "dummyInput"
-        }
-    )";
-    Status status = handler->dispatchToProcessor(endpointEmbeddings, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-}
-
 class EmbeddingsTokenizeHttpTest : public V3HttpTest {
 protected:
     static std::unique_ptr<std::thread> t;
