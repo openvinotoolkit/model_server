@@ -66,10 +66,6 @@ OpenVINO Model Server regularly checks for changes to the configuration file and
 
 [Learn more](online_config_changes.md)
 
-## Working with Stateful Models
-Serve models that operate on sequences of data and maintain their state between inference requests.
-
-[Learn more](stateful_models.md)
 
 ## Metrics
 Use the metrics endpoint compatible with the Prometheus to access performance and utilization statistics.
