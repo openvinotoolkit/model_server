@@ -88,6 +88,8 @@ curl -L -o models/microsoft/Phi-4-mini-instruct/chat_template.jinja https://raw.
 :::
 ::::
 
+> **Note:** To use these models on NPU, set `--weight_format` to either **int4** or **nf4**. When specifying `--extra_quantization_params`, ensure that `ratio` is set to **1.0** and `group_size` is set to **-1** or **128**. For more details, see [OpenVINO GenAI on NPU](https://docs.openvino.ai/nightly/openvino-workflow-generative/inference-with-genai/inference-with-genai-on-npu.html).
+
 ### Direct pulling of pre-configured HuggingFace models from docker containers
 
 This procedure can be used to pull preconfigured models from OpenVINO organization in HuggingFace Hub
@@ -216,6 +218,66 @@ ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-4-mini-instruct-int
 :::
 ::::
 
+### Deploying on Windows with NPU
+
+::::{tab-set}
+:::{tab-item} Qwen3-8B
+:sync: Qwen3-8B
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-8B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Qwen3-4B
+:sync: Qwen3-4B
+```bat
+ovms.exe --rest_port 8000 --source_model Qwen/Qwen3-4B --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Llama-3.1-8B-Instruct
+:sync: Llama-3.1-8B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.1-8B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Llama-3.2-3B-Instruct
+:sync: Llama-3.2-3B-Instruct
+```bat
+ovms.exe --rest_port 8000 --source_model meta-llama/Llama-3.2-3B-Instruct --model_repository_path models --tool_parser llama3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3
+:sync: Mistral-7B-Instruct-v0.3
+```bat
+ovms.exe --rest_port 8000 --source_model mistralai/Mistral-7B-Instruct-v0.3 --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Phi-4-mini-instruct
+:sync: Phi-4-mini-instruct
+```bat
+ovms.exe --rest_port 8000 --source_model microsoft/Phi-4-mini-instruct --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Qwen3-4B-int4-ov
+:sync: Qwen3-4B-int4-ov
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Qwen3-4B-int4-ov --model_repository_path models --tool_parser hermes3 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Mistral-7B-Instruct-v0.3-cw-int4-ov
+:sync: Mistral-7B-Instruct-v0.3-cw-int4-ov
+```bat
+ovms.exe --rest_port 8000 --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path models --tool_parser mistral --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+:::{tab-item} Phi-3-mini-4k-instruct-int4-cw-ov
+:sync: Phi-3-mini-4k-instruct-int4-cw-ov
+```bat
+ovms.exe --rest_port 8000 --source_model models/OpenVINO/Phi-3-mini-4k-instruct-int4-cw-ov --model_repository_path models --tool_parser phi4 --target_device NPU --cache_size 2 --task text_generation --max_num_batched_tokens 99999 --enable_tool_guided_generation true --enable_prefix_caching true --ov_cache .cache --max_prompt_len 4000
+```
+:::
+::::
+
+> **Note:** Setting the `--max_prompt_len` parameter too high may lead to performance degradation. It is recommended to use the smallest value that meets your requirements.
 
 ### Deploying in a docker container on CPU
 
@@ -536,6 +598,7 @@ input_num_tokens    50.0  2298.92   973.02   520.00  1556.50  2367.00  3100.75  
 
 Testing model accuracy is critical for a successful adoption in AI application. The recommended methodology is to use BFCL tool like describe in the [testing guide](../accuracy/README.md#running-the-tests-for-agentic-models-with-function-calls).
 Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
+#TODO correct these metrics to show labels 
 ```
 {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
 {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
