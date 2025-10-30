@@ -1,7 +1,5 @@
 # Agentic AI with OpenVINO Model Server {#ovms_demos_continuous_batching_agent}
 
-This demo version requires OVMS version 2025.3. Build it from [source](../../../docs/build_from_source.md) before it is published.
-
 OpenVINO Model Server can be used to serve language models for AI Agents. It supports the usage of tools in the context of content generation.
 It can be integrated with MCP servers and AI agent frameworks. 
 You can learn more about [tools calling based on OpenAI API](https://platform.openai.com/docs/guides/function-calling?api-mode=responses)
@@ -131,7 +129,7 @@ ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bat
 ovms.exe --pull --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --task text_generation --tool_parser mistral
-curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral.jinja
+curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
