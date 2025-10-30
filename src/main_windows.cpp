@@ -679,4 +679,4 @@ WinServiceEventWrapper::~WinServiceEventWrapper() {
     }
 }
 
-} // namespace ovms_service
+}  // namespace ovms_service

@@ -422,7 +422,7 @@ int Server::start(int argc, char** argv) {
         ModelsSettingsImpl modelsSettings;
         parser.parse(argc, argv);
         parser.prepare(&serverSettings, &modelsSettings);
-        
+
         Status ret = start(&serverSettings, &modelsSettings);
         ModulesShutdownGuard shutdownGuard(*this);
         if (!ret.ok()) {

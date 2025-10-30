@@ -104,4 +104,4 @@ private:
     void setServiceRunningStatus();
 };
 
-} // namespace ovms_service
+}  // namespace ovms_service
