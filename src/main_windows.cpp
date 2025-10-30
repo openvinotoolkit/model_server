@@ -46,7 +46,7 @@ std::string OvmsWindowsServiceManager::getCurrentTimeString() {
     return oss.str();
 }
 
-#define DEBUG_LOG_ENABLE 1
+#define DEBUG_LOG_ENABLE 0
 // TODO: Implement windows logging mechanism with events
 static std::ofstream logFile("C:\\temp\\ovms.log", std::ios::app);
 #define DEBUG_LOG(msg)                                                                   \
@@ -601,7 +601,7 @@ bool OvmsService::isLive(const std::string& moduleName) {
 }
 
 bool OvmsService::checkModulesStarted() {
-    // TODO:Set false for required modules, add logic for start control - timeout?
+    // TODO: Set false for required modules, add logic for start control - timeout?
     // Currently we return true on isReady = true;
     static bool SERVER_READY = false;
     static bool PROFILER_MODULE_LIVE = false;
