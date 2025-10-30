@@ -131,7 +131,7 @@ ovms.exe --pull --model_repository_path models --source_model OpenVINO/Qwen3-8B-
 :sync: Mistral-7B-Instruct-v0.3-int4-ov
 ```bat
 ovms.exe --pull --model_repository_path models --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov --task text_generation --tool_parser mistral
-curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.9.0/examples/tool_chat_template_mistral.jinja
+curl -L -o models\OpenVINO\Mistral-7B-Instruct-v0.3-int4-ov\chat_template.jinja https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.10.1.1/examples/tool_chat_template_mistral_parallel.jinja
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct-int4-ov
@@ -411,7 +411,7 @@ Run the agentic application:
 :::{tab-item} Qwen3-8B
 :sync: Qwen3-8B
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream --enable-thinking
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream --enable-thinking
 ```
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-8B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
@@ -420,7 +420,7 @@ python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwe
 :::{tab-item} Qwen3-4B 
 :sync: Qwen3-4B
 ```bash
-python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --stream
+python openai_agent.py --query "What is the current weather in Tokyo?" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather --stream
 ```
 ```bash
 python openai_agent.py --query "List the files in folder /root" --model Qwen/Qwen3-4B --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
@@ -435,13 +435,13 @@ python openai_agent.py --query "List the files in folder /root" --model meta-lla
 :::{tab-item} Mistral-7B-Instruct-v0.3
 :sync: Mistral-7B-Instruct-v0.3
 ```bash
-python openai_agent.py --query "List the files in folder /root" --model mistralai/Mistral-7B-Instruct-v0.3 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "List the files in folder /root" --model mistralai/Mistral-7B-Instruct-v0.3 --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all --tool_choice required
 ```
 :::
 :::{tab-item} Llama-3.2-3B-Instruct
 :sync: Llama-3.2-3B-Instruct
 ```bash
-python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "List the files in folder /root" --model meta-llama/Llama-3.2-3B-Instruct --base-url http://localhost:8000/v3 --mcp-server-url http://localhost:8080/sse --mcp-server all
 ```
 :::
 :::{tab-item} Phi-4-mini-instruct
@@ -537,9 +537,16 @@ input_num_tokens    50.0  2298.92   973.02   520.00  1556.50  2367.00  3100.75  
 Testing model accuracy is critical for a successful adoption in AI application. The recommended methodology is to use BFCL tool like describe in the [testing guide](../accuracy/README.md#running-the-tests-for-agentic-models-with-function-calls).
 Here is example of the response from the OpenVINO/Qwen3-8B-int4-ov model:
 ```
+--test-category simple
 {"accuracy": 0.9525, "correct_count": 381, "total_count": 400}
+
+--test-category multiple
 {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+
+--test-category parallel
 {"accuracy": 0.89, "correct_count": 178, "total_count": 200}
+
+--test-category irrelevance
 {"accuracy": 0.825, "correct_count": 198, "total_count": 240}
 ```
 
