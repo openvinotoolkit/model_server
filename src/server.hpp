@@ -26,6 +26,8 @@
 namespace ovms {
 class Config;
 class Status;
+struct ServerSettingsImpl;
+struct ModelsSettingsImpl;
 
 class Server {
     mutable std::shared_mutex modulesMtx;
