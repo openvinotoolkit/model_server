@@ -1125,6 +1125,68 @@ TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputBadSchema) {
         ovms::StatusCode::OK);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, unaryStructuredOutputNonOpenAI) {
+    auto params = GetParam();
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": false,
+            "seed" : 1,
+            "temperature": 0.0,
+            "messages": [
+            {"role": "user",  "content": "Extract the name and age of the person from the text and structure the output in JSON format. Margaret is 20 years old."}
+            ],
+                "response_format": {
+                    "type": "sequence",
+                    "elements": [
+                        {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                    "type": "string"
+                                    },
+                                    "age": {
+                                    "type": "integer"
+                                    }
+                                },
+                                "required": ["name", "age"]
+                            }
+                        },
+                        {
+                            "type": "const_string",
+                            "value": "\n\nYou're welcome!"
+                        }
+                    ]
+                }
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_TRUE(parsedResponse["choices"].IsArray());
+    for (auto& choice : parsedResponse["choices"].GetArray()) {
+        ASSERT_TRUE(choice["message"]["content"].IsString());
+        std::string content = choice["message"]["content"].GetString();
+        // Check if content ends with "\n\nYou're welcome!" and extract JSON part
+        const std::string suffix = "\n\nYou're welcome!";
+        ASSERT_TRUE(content.size() >= suffix.size());
+        ASSERT_EQ(content.compare(content.size() - suffix.size(), suffix.size(), suffix), 0);
+        std::string jsonPart = content.substr(0, content.size() - suffix.size());
+        rapidjson::Document parsedContent;
+        parsedContent.Parse(jsonPart.c_str());
+        ASSERT_TRUE(parsedContent.IsObject());
+        ASSERT_TRUE(parsedContent.HasMember("name"));
+        ASSERT_TRUE(parsedContent["name"].IsString());
+        ASSERT_TRUE(parsedContent.HasMember("age"));
+        ASSERT_TRUE(parsedContent["age"].IsInt());
+    }
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
     std::string requestBody = R"(
     {

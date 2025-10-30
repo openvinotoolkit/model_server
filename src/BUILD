@@ -2664,6 +2664,7 @@ cc_test(
             ":test_platform_utils",
             "//src/rerank:rerank_api_handler",
             ":embeddings_handler_tests",
+            ":tokenize_parser_tests",
             ":inferencerequest_test",
             ":libtest_environment",
             ":libtest_gpuenvironment",
@@ -3111,6 +3112,21 @@ cc_library(
     copts = COPTS_TESTS,
     linkopts = [],
 )
+
+cc_library(
+    name = "tokenize_parser_tests",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/tokenize_parser_test.cpp"],
+    data = [],
+    deps = [
+        "//src/tokenize:tokenize_parser",
+        "@com_google_googletest//:gtest",
+    ],
+    copts = COPTS_TESTS,
+    linkopts = [],
+)
+
 
 cc_library(
     name = "test_llm_output_parser_tests",
